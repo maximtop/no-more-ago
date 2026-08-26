@@ -35,6 +35,15 @@ export const BUILD_MODE = {
 export const BUILD_MODES = [BUILD_MODE.DEV, BUILD_MODE.RELEASE] as const;
 
 /**
+ * Process exit codes exposed by the extension build command.
+ */
+export const BUILD_EXIT_CODE = {
+    SUCCESS: 0,
+    FAILURE: 1,
+    USAGE: 2,
+} as const;
+
+/**
  * Build mode accepted by the pipeline.
  */
 export type BuildMode = (typeof BUILD_MODES)[number];

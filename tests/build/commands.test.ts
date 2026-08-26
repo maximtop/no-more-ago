@@ -31,7 +31,7 @@ describe("build request and publication contracts", () => {
     it.each([
         ["dev", "--watch"],
         ["release", "build release artifacts"],
-    ])("shows Commander help for build %s", async (mode, expectedText) => {
+    ])("shows Commander help for pnpm %s", async (mode, expectedText) => {
         const workspace = makeWorkspace();
         try {
             const result = await execFileAsync(
@@ -39,7 +39,7 @@ describe("build request and publication contracts", () => {
                 [mode, "--help"],
                 { cwd: workspace },
             );
-            expect(result.stdout).toContain(`Usage: build ${mode}`);
+            expect(result.stdout).toContain(`Usage: pnpm ${mode}`);
             expect(result.stdout).toContain("choices: \"chrome\", \"firefox\", \"edge\"");
             expect(result.stdout).toContain(expectedText);
             expect(existsSync(`${workspace}/dist`)).toBe(false);
@@ -99,7 +99,7 @@ describe("build request and publication contracts", () => {
                 }
                 expect(failure?.code).toBe(2);
                 expect(`${failure?.stdout ?? ""}${failure?.stderr ?? ""}`).toMatch(
-                    /Usage: build|Makefile|browser|mode/i,
+                    /Usage: pnpm|Makefile|browser|mode/i,
                 );
                 expect(hashPath(`${workspace}/dist`)).toBe(before);
                 expect(

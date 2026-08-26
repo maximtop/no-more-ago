@@ -2,20 +2,15 @@
  * @file Commander-based parsing for development and release build commands.
  */
 
-import { Argument, Command, CommanderError } from "commander";
+import { Argument, Command } from "commander";
 import {
     BROWSERS,
+    BUILD_EXIT_CODE,
     BUILD_MODE,
     isBrowser,
     type Browser,
     type BuildMode,
 } from "./contracts.ts";
-
-/**
- * Compact usage text appended to build command errors.
- */
-export const USAGE = `Usage: build ${BUILD_MODE.DEV}|${BUILD_MODE.RELEASE} `
-    + `[${BROWSERS.join("|")}] [--watch]`;
 
 /**
  * Validated build request passed from the command-line adapter to the build pipeline.
@@ -35,30 +30,6 @@ export interface BuildRequest {
      * Whether the selected development target remains active and watches for changes.
      */
     readonly watch: boolean;
-}
-
-/**
- * Reports invalid command-line usage together with the supported invocation syntax.
- */
-export class UsageError extends Error {
-    /**
-     * Creates an actionable CLI error whose message includes the supported build invocation.
-     *
-     * @param message - Specific command-line usage error.
-     */
-    public constructor(message: string) {
-        super(`${message}\n${USAGE}`);
-        this.name = "UsageError";
-    }
-}
-
-/**
- * Writes Commander help text to standard output.
- *
- * @param value - Formatted help text produced by Commander.
- */
-function writeHelp(value: string): void {
-    process.stdout.write(value);
 }
 
 /**
@@ -84,7 +55,7 @@ export function createBuildRequest(
     watch: boolean,
 ): BuildRequest {
     if (browser !== undefined && !isBrowser(browser)) {
-        throw new UsageError(`Unknown browser: ${browser}`);
+        throw new Error(`Unknown browser: ${browser}`);
     }
     return {
         mode,
@@ -94,29 +65,21 @@ export function createBuildRequest(
 }
 
 /**
- * Removes Commander's presentation prefix before wrapping an error in the project CLI contract.
- *
- * @param error - Commander parsing error.
- * @returns - Concise human-readable parsing failure.
- */
-function commanderMessage(error: CommanderError): string {
-    return error.message.replace(/^error:\s*/u, "");
-}
-
-/**
  * Parses the current process arguments into one validated build request.
  *
- * @returns - Validated request, or null after displaying requested help.
+ * @returns - Validated request selected by the build command.
  */
-export function parseBuildCli(): BuildRequest | null {
+export function parseBuildCli(): BuildRequest {
     let request: BuildRequest | undefined;
     const program = new Command()
+        .name("pnpm")
         .description("Build No More Ago browser extension artifacts.")
         .showSuggestionAfterError()
-        .exitOverride()
-        .configureOutput({
-            writeOut: writeHelp,
-            writeErr: () => undefined,
+        .showHelpAfterError()
+        .exitOverride((error) => {
+            process.exit(error.exitCode === BUILD_EXIT_CODE.SUCCESS
+                ? BUILD_EXIT_CODE.SUCCESS
+                : BUILD_EXIT_CODE.USAGE);
         });
 
     program
@@ -127,7 +90,7 @@ export function parseBuildCli(): BuildRequest | null {
         .action((browser: string | undefined, options: { readonly watch?: boolean }) => {
             const watch = options.watch === true;
             if (watch && browser === undefined) {
-                throw new UsageError("Watch requires one browser");
+                program.error("Watch requires one browser");
             }
             request = createBuildRequest(BUILD_MODE.DEV, browser, watch);
         });
@@ -140,22 +103,6 @@ export function parseBuildCli(): BuildRequest | null {
             request = createBuildRequest(BUILD_MODE.RELEASE, browser, false);
         });
 
-    try {
-        program.parse();
-    } catch (error) {
-        if (error instanceof UsageError) {
-            throw error;
-        }
-        if (error instanceof CommanderError) {
-            if (error.code === "commander.helpDisplayed") {
-                return null;
-            }
-            throw new UsageError(commanderMessage(error));
-        }
-        throw error;
-    }
-    if (request === undefined) {
-        throw new UsageError("Choose dev or release");
-    }
-    return request;
+    program.parse();
+    return request ?? program.help({ error: true });
 }
