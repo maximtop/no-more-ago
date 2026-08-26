@@ -1,5 +1,5 @@
 /**
- * @file Build request parsing, compilation, publication, and watch-mode lifecycle orchestration.
+ * @file Build compilation, artifact publication, and watch-mode lifecycle orchestration.
  */
 
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
@@ -8,43 +8,12 @@ import path from "node:path";
 import rspack from "@rspack/core";
 import { createRspackConfig } from "../../rspack.config.ts";
 import { assertSafe, createArtifactServices } from "./artifacts.ts";
-import {
-    BROWSERS,
-    isBrowser,
-    isBuildMode,
-    type Browser,
-    type BuildMode,
-} from "./contracts.ts";
-
-/**
- * Command-line usage text for the build entry point.
- */
-export const USAGE = "Usage: pnpm dev|release [chrome|firefox|edge] [--watch]";
+import type { BuildRequest } from "./cli.ts";
 
 /**
  * Maximum time allowed for the watch compiler to close after an interrupted build.
  */
 const WATCH_CLOSE_TIMEOUT_MS = 5_000;
-
-/**
- * Normalized command-line request describing the build mode, target browsers, and watch behavior.
- */
-type BuildRequest = {
-    /**
-     * Validated development or release mode.
-     */
-    mode: BuildMode;
-
-    /**
-     * Browser targets selected for this build.
-     */
-    browsers: Browser[];
-
-    /**
-     * Whether the selected development target remains active and watches for changes.
-     */
-    watch: boolean;
-};
 
 /**
  * Lifecycle notification emitted around compile, package, publish, and watch transitions.
@@ -146,14 +115,9 @@ type BuildOptions = {
     workspaceRoot?: string;
 
     /**
-     * Requested development or release mode before CLI validation.
+     * Commander-validated build mode, browser targets, and watch behavior.
      */
-    mode: string;
-
-    /**
-     * Browser target and optional watch flag supplied by the CLI.
-     */
-    argv?: string[];
+    request: BuildRequest;
 
     /**
      * Optional compiler factory used instead of the production Rspack factory.
@@ -188,12 +152,12 @@ type BuildContext = {
     /**
      * Validated development or release mode.
      */
-    mode: string;
+    mode: BuildRequest["mode"];
 
     /**
      * Validated browser targets selected for compilation.
      */
-    browsers: string[];
+    browsers: BuildRequest["browsers"];
 
     /**
      * Guarded temporary directory allocated for the complete build.
@@ -227,59 +191,6 @@ type BuildError = Error & {
 };
 
 const defaultCompilerFactory = rspack as unknown as CompilerFactory;
-
-/**
- * Rejects invalid CLI arguments and returns the normalized mode, browser list, and watch flag.
- *
- * @param mode - Requested build mode.
- * @param argv - Browser and watch arguments supplied after the mode.
- * @returns - Normalized build request.
- */
-export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
-    if (!isBuildMode(mode)) {
-        throw new UsageError(`Unknown mode: ${mode}`);
-    }
-    const args = [...argv];
-    const watch = args.includes("--watch");
-    if (args.includes("--watch")) {
-        args.splice(args.indexOf("--watch"), 1);
-    }
-    if (args.some((arg) => arg.startsWith("-"))) {
-        throw new UsageError("Unknown flag");
-    }
-    if (args.length > 1) {
-        throw new UsageError("Expected at most one browser");
-    }
-    if (watch && mode !== "dev") {
-        throw new UsageError("Watch is available only for dev");
-    }
-    if (watch && args.length !== 1) {
-        throw new UsageError("Watch requires one browser");
-    }
-    const requestedBrowser = args[0];
-    if (requestedBrowser !== undefined && !isBrowser(requestedBrowser)) {
-        throw new UsageError(`Unknown browser: ${requestedBrowser}`);
-    }
-    const browsers: Browser[] = requestedBrowser === undefined
-        ? [...BROWSERS]
-        : [requestedBrowser];
-    return { mode, browsers, watch };
-}
-
-/**
- * Reports invalid command-line usage together with the supported invocation syntax.
- */
-export class UsageError extends Error {
-    /**
-     * Creates an actionable CLI error whose message includes the supported build invocation.
-     *
-     * @param message - Specific command-line usage error.
-     */
-    constructor(message: string) {
-        super(`${message}\n${USAGE}`);
-        this.name = "UsageError";
-    }
-}
 
 /**
  * Removes an incomplete candidate artifact left after a recoverable build failure.
@@ -442,8 +353,7 @@ async function buildAll({
  *
  * @param options - Command inputs and injectable build dependencies.
  * @param options.workspaceRoot - Project workspace path.
- * @param options.mode - Requested build mode.
- * @param options.argv - Browser and watch arguments.
+ * @param options.request - Commander-validated build request.
  * @param options.compilerFactory - Factory used to construct compilers.
  * @param options.artifacts - Guarded artifact services.
  * @param options.events - Build progress event sink.
@@ -452,14 +362,12 @@ async function buildAll({
  */
 export async function runBuildCommand({
     workspaceRoot = process.cwd(),
-    mode,
-    argv = [],
+    request,
     compilerFactory = defaultCompilerFactory,
     artifacts = createArtifactServices(),
     events = () => undefined,
     phaseHooks = {},
 }: BuildOptions): Promise<Promise<void> | void> {
-    const request = parseBuildRequest(mode, argv);
     const root = path.resolve(workspaceRoot);
     const dist = path.join(root, "dist");
     if (existsSync(dist)) {

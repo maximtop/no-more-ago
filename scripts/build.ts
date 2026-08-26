@@ -2,23 +2,21 @@
  * @file Command-line entry point for development and release artifact builds.
  */
 
-import { runBuildCommand, UsageError } from "./build/pipeline.ts";
-
-const mode = process.argv[2] ?? "";
-const argv = process.argv.slice(3);
-const workspaceRoot = process.cwd();
+import { parseBuildCli, UsageError } from "./build/cli.ts";
+import { runBuildCommand } from "./build/pipeline.ts";
 
 try {
-    await runBuildCommand({
-        workspaceRoot,
-        mode,
-        argv,
-        events: (event: Record<string, unknown>) => {
-            if (process.env.NO_MORE_AGO_BUILD_EVENTS !== "1") {
-                process.stdout.write(`${JSON.stringify(event)}\n`);
-            }
-        },
-    });
+    const request = parseBuildCli(process.argv);
+    if (request !== null) {
+        await runBuildCommand({
+            request,
+            events: (event: Record<string, unknown>) => {
+                if (process.env.NO_MORE_AGO_BUILD_EVENTS !== "1") {
+                    process.stdout.write(`${JSON.stringify(event)}\n`);
+                }
+            },
+        });
+    }
 } catch (error) {
     if (error instanceof UsageError) {
         console.error(error.message);

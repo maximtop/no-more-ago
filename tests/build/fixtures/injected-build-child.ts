@@ -3,6 +3,7 @@
  */
 
 import rspack from "@rspack/core";
+import { parseBuildRequest } from "../../../scripts/build/cli.ts";
 import { runBuildCommand } from "../../../scripts/build/pipeline.ts";
 
 const phase = process.env.NO_MORE_AGO_INJECT_PHASE;
@@ -20,8 +21,7 @@ const events = (event: Record<string, unknown>): void => {
 };
 await runBuildCommand({
     workspaceRoot: process.cwd(),
-    mode: "dev",
-    argv: ["chrome", "--watch"],
+    request: parseBuildRequest("dev", ["chrome", "--watch"]),
     compilerFactory: (config: Parameters<typeof rspack>[0]) => {
         events({ type: "build-pid", pid: process.pid });
         if (phase === "compile") {

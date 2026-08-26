@@ -20,12 +20,21 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { createArtifactServices } from "../../scripts/build/artifacts.ts";
-import { parseBuildRequest, runBuildCommand } from "../../scripts/build/pipeline.ts";
+import { parseBuildRequest } from "../../scripts/build/cli.ts";
+import { runBuildCommand } from "../../scripts/build/pipeline.ts";
 import { artifactBytes, hashPath, makeWorkspace, removeWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
 
 describe("build request and publication contracts", () => {
+    it.each([
+        ["dev", [], { mode: "dev", browsers: ["chrome", "firefox", "edge"], watch: false }],
+        ["dev", ["chrome", "--watch"], { mode: "dev", browsers: ["chrome"], watch: true }],
+        ["release", ["firefox"], { mode: "release", browsers: ["firefox"], watch: false }],
+    ])("parses valid Commander request %s %j", (mode, argv, expected) => {
+        expect(parseBuildRequest(mode, argv)).toEqual(expected);
+    });
+
     it.each([
         ["dev", ["safari"]],
         ["dev", ["chrome", "firefox"]],
@@ -34,6 +43,26 @@ describe("build request and publication contracts", () => {
         ["dev", ["chrome", "--watc"]],
     ])("rejects invalid request %s %j", (mode, argv) => {
         expect(() => parseBuildRequest(mode, argv)).toThrow(/Usage: pnpm/);
+    });
+
+    it.each([
+        ["dev", "--watch"],
+        ["release", "build release artifacts"],
+    ])("shows Commander help for pnpm %s", async (mode, expectedText) => {
+        const workspace = makeWorkspace();
+        try {
+            const result = await execFileAsync(
+                process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+                [mode, "--help"],
+                { cwd: workspace },
+            );
+            expect(result.stdout).toContain(`Usage: pnpm ${mode}`);
+            expect(result.stdout).toContain("choices: \"chrome\", \"firefox\", \"edge\"");
+            expect(result.stdout).toContain(expectedText);
+            expect(existsSync(`${workspace}/dist`)).toBe(false);
+        } finally {
+            removeWorkspace(workspace);
+        }
     });
 
     it("rejects invalid public pnpm input before creating dist", async () => {
@@ -340,8 +369,7 @@ describe("build request and publication contracts", () => {
             try {
                 await runBuildCommand({
                     workspaceRoot: workspace,
-                    mode: "dev",
-                    argv: browserArgs,
+                    request: parseBuildRequest("dev", browserArgs),
                     artifacts: createArtifactServices({ fs: native }),
                 });
                 expect(promotions).toBe(1);
