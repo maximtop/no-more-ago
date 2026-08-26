@@ -14,7 +14,7 @@ import {
 /**
  * Compact usage text appended to build command errors.
  */
-export const USAGE = `Usage: pnpm ${BUILD_MODE.DEV}|${BUILD_MODE.RELEASE} `
+export const USAGE = `Usage: build ${BUILD_MODE.DEV}|${BUILD_MODE.RELEASE} `
     + `[${BROWSERS.join("|")}] [--watch]`;
 
 /**
@@ -111,7 +111,6 @@ function commanderMessage(error: CommanderError): string {
 export function parseBuildCli(): BuildRequest | null {
     let request: BuildRequest | undefined;
     const program = new Command()
-        .name("pnpm")
         .description("Build No More Ago browser extension artifacts.")
         .showSuggestionAfterError()
         .exitOverride()
