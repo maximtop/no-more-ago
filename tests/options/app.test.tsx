@@ -1,3 +1,7 @@
+/**
+ * @file Verifies options UI rendering, settings mutations, diagnostics, and reporting.
+ */
+
 /* eslint-disable @typescript-eslint/require-await */
 import { beforeAll, describe, expect, it } from "vitest";
 import { act } from "react";
@@ -37,6 +41,17 @@ beforeAll(() => {
     });
 });
 
+/**
+ * Renders the options application with injectable background and browser dependencies.
+ *
+ * @param state - Initial sites settings state.
+ * @param transport - Background message transport used by the client.
+ * @param initialDisplayState - Initial display settings state.
+ * @param initialDebugState - Initial diagnostic logging state.
+ * @param archiveRuntime - Optional diagnostics archive download runtime.
+ * @param reporter - Optional site-report service.
+ * @returns - Mounted container and asynchronous cleanup action.
+ */
 async function renderOptions(state: SitesState, transport: SitesTransport = { sendMessage: () => Promise.resolve(state) }, initialDisplayState: DisplayState | undefined = displayReady, initialDebugState: DebugState | undefined = debugReady, archiveRuntime?: DownloadRuntime, reporter?: SiteReportReporter): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
     const container = document.createElement("div");
     document.body.append(container);
@@ -56,6 +71,12 @@ async function renderOptions(state: SitesState, transport: SitesTransport = { se
     };
 }
 
+/**
+ * Updates a controlled input through its native value setter and DOM events.
+ *
+ * @param control - Input or select element to update.
+ * @param value - New control value.
+ */
 function setControlValue(control: HTMLInputElement | HTMLSelectElement, value: string): void {
     const prototype = control instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
     // React's controlled-input tracker requires the native setter.

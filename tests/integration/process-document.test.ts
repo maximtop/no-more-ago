@@ -1,3 +1,7 @@
+/**
+ * @file Exercises complete document processing against GitHub fixtures.
+ */
+
 import { readFile } from "node:fs/promises";
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";

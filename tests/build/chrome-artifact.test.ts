@@ -1,3 +1,7 @@
+/**
+ * @file Validates assembled Chrome extension artifacts and browser behavior.
+ */
+
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await */
 import { execFile } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
@@ -25,6 +29,14 @@ const settingsV5 = (revision: number, globalEnabled: boolean, sitePreferences: R
     debugEnabled: false
 });
 
+/**
+ * Reads one emitted browser manifest from an isolated build workspace.
+ *
+ * @param workspace - Isolated build workspace.
+ * @param mode - Development or release output mode.
+ * @param browser - Browser artifact whose manifest is requested.
+ * @returns - Parsed manifest record.
+ */
 function manifestFor(workspace: string, mode: string, browser: string): Record<string, unknown> {
     return JSON.parse(readFileSync(`${workspace}/dist/${mode}/${browser}/manifest.json`, "utf8")) as Record<string, unknown>;
 }
@@ -1550,6 +1562,13 @@ describe("fresh browser artifacts", () => {
     }, 240_000);
 });
 
+/**
+ * Creates a CSP-restricted VM context backed by a JSDOM window and Chrome mock.
+ *
+ * @param dom - JSDOM instance supplying safe browser globals.
+ * @param chrome - Chrome API mock exposed to the bundle.
+ * @returns - Context that blocks dynamic code generation.
+ */
 function createCspDomContext(dom: JSDOM, chrome: unknown): vm.Context {
     const sandbox: Record<string, unknown> = {};
     const blockedGlobals = new Set(["eval", "Function", "AsyncFunction", "GeneratorFunction", "AsyncGeneratorFunction", "WebAssembly", "window", "self", "globalThis"]);
@@ -1569,6 +1588,12 @@ function createCspDomContext(dom: JSDOM, chrome: unknown): vm.Context {
     return vm.createContext(sandbox, { codeGeneration: { strings: false, wasm: false } });
 }
 
+/**
+ * Extracts DOS calendar dates from ZIP central-directory entries.
+ *
+ * @param zip - ZIP archive bytes to inspect.
+ * @returns - Encoded calendar dates for every central-directory entry.
+ */
 function dosDates(zip: Buffer): Array<{ year: number; month: number; day: number }> {
     const dates: Array<{ year: number; month: number; day: number }> = [];
     for (let offset = 0; offset + 16 <= zip.length; offset += 1) {
@@ -1579,6 +1604,12 @@ function dosDates(zip: Buffer): Array<{ year: number; month: number; day: number
     return dates;
 }
 
+/**
+ * Calculates the CRC-32 checksum used by generated PNG chunks.
+ *
+ * @param buffer - PNG chunk type and data bytes covered by the checksum.
+ * @returns - Unsigned CRC-32 checksum.
+ */
 function pngCrc32(buffer: Buffer): number {
     let crc = ~0; for (const byte of buffer) {
         crc ^= byte; for (let i = 0; i < 8; i += 1) {
@@ -1586,6 +1617,13 @@ function pngCrc32(buffer: Buffer): number {
         }
     } return (~crc) >>> 0;
 }
+
+/**
+ * Creates a minimal square RGBA PNG for artifact validation tests.
+ *
+ * @param size - Required image width and height in pixels.
+ * @returns - Complete PNG file bytes.
+ */
 function shellPng(size: number): Buffer {
     const signature = Buffer.from("89504e470d0a1a0a", "hex"); const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 6;
     const chunk = (type: string, data: Buffer): Buffer => {
@@ -1594,6 +1632,12 @@ function shellPng(size: number): Buffer {
     return Buffer.concat([signature, chunk("IHDR", ihdr), chunk("IEND", Buffer.alloc(0))]);
 }
 
+/**
+ * Reads PNG width and height from the IHDR chunk.
+ *
+ * @param file - PNG file to inspect.
+ * @returns - Width and height in pixels.
+ */
 function pngDimensions(file: string): [number, number] {
     const bytes = readFileSync(file); return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
 }

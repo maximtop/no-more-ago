@@ -1,3 +1,7 @@
+/**
+ * @file Exercises mutation batching, ownership restoration, and scheduler lifecycle.
+ */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DocumentMutationScheduler, type AffectedMutationBatch } from "../../src/core/document-mutation-scheduler";
@@ -39,13 +43,33 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("normalizes nested and sibling roots from one delivery and ignores text work", () => {
+        /**
+         * Callback captured from a controllable mutation observer.
+         */
         type Callback = (records: readonly MutationRecord[]) => void;
         const callbacks: Callback[] = [];
+
+        /**
+         * MutationObserver double that exposes deliveries to the test.
+         */
         class ControllableObserver {
+            /**
+             * Captures the scheduler callback for manual delivery.
+             *
+             * @param callback - Mutation callback registered by the scheduler.
+             */
             constructor(callback: Callback) {
                 callbacks.push(callback);
             }
+
+            /**
+             * Accepts observation requests without installing a native observer.
+             */
             observe(): void {}
+
+            /**
+             * Accepts disconnect requests without clearing captured callbacks.
+             */
             disconnect(): void {}
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
@@ -207,7 +231,16 @@ describe("DocumentMutationScheduler", () => {
     it("receives one raw suppressed removal without a public batch", async () => {
         const NativeObserver = MutationObserver;
         let rawDeliveries = 0;
+
+        /**
+         * Native MutationObserver wrapper that counts raw deliveries.
+         */
         class CountingObserver extends NativeObserver {
+            /**
+             * Wraps the scheduler callback with delivery counting.
+             *
+             * @param callback - Native mutation callback registered by the scheduler.
+             */
             constructor(callback: MutationCallback) {
                 super((records, observer) => {
                     rawDeliveries += 1;
@@ -288,13 +321,33 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("rejects a queued callback from a stopped lifecycle after restart", () => {
+        /**
+         * Callback captured from a controllable mutation observer.
+         */
         type Callback = (records: readonly MutationRecord[]) => void;
         const callbacks: Callback[] = [];
+
+        /**
+         * MutationObserver double that exposes stale lifecycle deliveries.
+         */
         class ControllableObserver {
+            /**
+             * Captures each lifecycle callback for manual delivery.
+             *
+             * @param callback - Mutation callback registered by the scheduler.
+             */
             constructor(callback: Callback) {
                 callbacks.push(callback);
             }
+
+            /**
+             * Accepts observation requests without installing a native observer.
+             */
             observe(): void {}
+
+            /**
+             * Accepts disconnect requests while retaining stale callbacks for the test.
+             */
             disconnect(): void {}
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
@@ -327,13 +380,33 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("does not carry a suppression identity into a restarted lifecycle", () => {
+        /**
+         * Callback captured from a controllable mutation observer.
+         */
         type Callback = (records: readonly MutationRecord[]) => void;
         const callbacks: Callback[] = [];
+
+        /**
+         * MutationObserver double that exposes deliveries across lifecycle restarts.
+         */
         class ControllableObserver {
+            /**
+             * Captures each lifecycle callback for manual delivery.
+             *
+             * @param callback - Mutation callback registered by the scheduler.
+             */
             constructor(callback: Callback) {
                 callbacks.push(callback);
             }
+
+            /**
+             * Accepts observation requests without installing a native observer.
+             */
             observe(): void {}
+
+            /**
+             * Accepts disconnect requests while retaining callbacks for the test.
+             */
             disconnect(): void {}
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);

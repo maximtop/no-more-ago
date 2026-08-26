@@ -1,3 +1,7 @@
+/**
+ * @file Exercises background application lifecycle, settings, and tab coordination.
+ */
+
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unnecessary-condition */
 import { describe, expect, it, vi } from "vitest";
 import { BackgroundApplication, type BackgroundApplicationOptions, type SetDisplaySettingsResponse } from "../../src/background/application";
@@ -24,6 +28,12 @@ const adapter: RuntimeAdapterDefinition = {
     matches: (url) => url.hostname === "github.com"
 };
 
+/**
+ * Creates a background application fixture with injectable activation reconciliation.
+ *
+ * @param reconcile - Activation reconciliation implementation used by the fixture.
+ * @returns - Application, storage, tab, and coordinator test doubles.
+ */
 function appWith(reconcile: (input: { revision: number | null; mode: string; policy: string }) => Promise<unknown> | unknown = async (input) => ({ ...input, failures: [], registration: {}, tabs: [] })) {
     let stored: unknown;
     let previous: unknown;
@@ -47,6 +57,13 @@ function appWith(reconcile: (input: { revision: number | null; mode: string; pol
     return { app: new BackgroundApplication({ settings: new SettingsService(storage), coordinator: coordinator as never, tabs, adapters: [adapter] }), storage, tabs, coordinator };
 }
 
+/**
+ * Creates a background application fixture backed by real settings and diagnostic services.
+ *
+ * @param initial - Initial persisted settings value.
+ * @param diagnosticEnvironment - Trusted extension and browser metadata.
+ * @returns - Application and controllable storage, tab, and diagnostics doubles.
+ */
 function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<BackgroundApplicationOptions["diagnosticEnvironment"]> = { extensionVersion: "9.8.7", browserFamily: "firefox" }) {
     let stored = initial;
     let previous: unknown;

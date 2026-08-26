@@ -95,7 +95,7 @@ export default tseslint.config(
     },
     {
         ...jsdocConfig,
-        files: ["src/**/*.ts", "src/**/*.tsx"]
+        files: ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
     },
     {
         ...eslint.configs.recommended,
@@ -124,17 +124,6 @@ export default tseslint.config(
             "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
             "@stylistic/no-trailing-spaces": "error",
             "curly": ["error", "all"]
-        }
-    },
-    {
-        files: ["tests/**/*.ts", "tests/**/*.tsx"],
-        rules: {
-            "jsdoc/require-file-overview": "off",
-            "jsdoc/require-jsdoc": "off",
-            "jsdoc/require-description": "off",
-            "jsdoc/multiline-blocks": "off",
-            "jsdoc/lines-before-block": "off",
-            "jsdoc/tag-lines": "off"
         }
     }
 );

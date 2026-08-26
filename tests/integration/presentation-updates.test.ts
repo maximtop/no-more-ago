@@ -1,3 +1,7 @@
+/**
+ * @file Verifies end-to-end presentation updates across background and content runtimes.
+ */
+
 /* eslint-disable @typescript-eslint/require-await */
 import { describe, expect, it, vi, type Mock } from "vitest";
 
@@ -10,6 +14,9 @@ import type { RegisteredContentScriptSpec } from "../../src/runtime/scripting";
 import { SettingsService } from "../../src/settings/settings-service";
 import { createSettingsSnapshot, DEFAULT_SETTINGS_SNAPSHOT, isSettingsSnapshotV5, SETTINGS_PREVIOUS_STORAGE_KEY, SETTINGS_STORAGE_KEY, type DisplaySettings, type SettingsSnapshotV5 } from "../../src/settings/snapshot";
 
+/**
+ * Content-runtime message listener retained for one simulated browser tab.
+ */
 type Listener = (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown;
 
 const SOURCE_INSTANT = "2026-08-23T10:15:00Z";
@@ -32,6 +39,12 @@ const adapter: RuntimeAdapterDefinition = {
     matches: (url) => url.hostname === "github.com"
 };
 
+/**
+ * Creates a ready GitHub document with one relative timestamp source.
+ *
+ * @param label - Distinguishing document title and source text.
+ * @returns - Ready isolated test document.
+ */
 function createDocument(label: string): Document {
     const result = document.implementation.createHTMLDocument(label);
     Object.defineProperty(result, "defaultView", { configurable: true, value: window });
@@ -40,10 +53,22 @@ function createDocument(label: string): Document {
     return result;
 }
 
+/**
+ * Formats the shared source instant with the system presentation under test.
+ *
+ * @param timeZone - Effective IANA time zone.
+ * @returns - Expected localized timestamp text.
+ */
 function expected(timeZone: string): string {
     return new Intl.DateTimeFormat(["en-US"], { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(SOURCE_INSTANT));
 }
 
+/**
+ * Creates connected background and content runtimes for presentation update tests.
+ *
+ * @param initialDisplay - Display settings stored before startup.
+ * @returns - Connected runtime fixture and observable test controls.
+ */
 function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
     let stored: SettingsSnapshotV5 = createSettingsSnapshot(3, true, {}, initialDisplay);
     let storedPrevious: SettingsSnapshotV5 = createSettingsSnapshot(2, true, {}, initialDisplay);
@@ -178,17 +203,31 @@ function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
     const application = new BackgroundApplication({ settings: new SettingsService(storage), coordinator, tabs, adapters: [adapter], journal: new DiagnosticJournal(storage), diagnosticEnvironment });
     let currentApplication = application;
 
+    /**
+     * Recreates the background application over retained storage and tab runtimes.
+     *
+     * @returns - Newly active background application.
+     */
     function restart(): BackgroundApplication {
         currentApplication = new BackgroundApplication({ settings: new SettingsService(storage), coordinator, tabs, adapters: [adapter], journal: new DiagnosticJournal(storage), diagnosticEnvironment });
         return currentApplication;
     }
 
+    /**
+     * Waits for all recorded content hydration requests and queued microtasks.
+     */
     async function settle(): Promise<void> {
         const reads = [...hydration.values()].flatMap((load) => load.mock.results.map((result) => result.value as Promise<unknown>));
         await Promise.all(reads);
         await Promise.resolve();
     }
 
+    /**
+     * Finds the generated exact-time output in one simulated tab document.
+     *
+     * @param tabId - Simulated browser tab identifier.
+     * @returns - Generated output element, or null when no output exists.
+     */
     function output(tabId: number): HTMLTimeElement | null {
         return documents.get(tabId)?.querySelector("time[data-no-more-ago-output]") ?? null;
     }

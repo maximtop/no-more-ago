@@ -1,3 +1,7 @@
+/**
+ * @file Verifies popup UI status, activation controls, navigation, and reporting.
+ */
+
 /* eslint-disable @typescript-eslint/require-await */
 import { beforeAll, describe, expect, it } from "vitest";
 import { act } from "react";
@@ -18,6 +22,14 @@ beforeAll(() => {
     });
 });
 
+/**
+ * Renders the popup application with injectable background and reporting dependencies.
+ *
+ * @param state - Optional preloaded popup state.
+ * @param transport - Background message transport used by the client.
+ * @param reporter - Optional site-report service.
+ * @returns - Mounted container and asynchronous cleanup action.
+ */
 async function renderPopup(state: PopupState | undefined, transport: PopupTransport = { sendMessage: () => Promise.resolve(state) }, reporter?: SiteReportReporter): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
     const container = document.createElement("div");
     document.body.append(container);
@@ -37,6 +49,12 @@ async function renderPopup(state: PopupState | undefined, transport: PopupTransp
     };
 }
 
+/**
+ * Creates an observable site-report service around one active-tab response.
+ *
+ * @param tab - Active tab returned to the reporter, when available.
+ * @returns - Reporter and captured query, open, and manifest-read state.
+ */
 function createReportingFixture(tab: SiteReportTab | undefined): {
     readonly reporter: SiteReportReporter;
     readonly queries: { readonly active: true; readonly currentWindow: true }[];

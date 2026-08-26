@@ -1,3 +1,7 @@
+/**
+ * @file Verifies exact-date formatting across locale and time-zone choices.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import { formatDateWithPresentation, formatDefaultDate } from "../../src/core/format-default-date";

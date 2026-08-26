@@ -1,3 +1,7 @@
+/**
+ * @file Exercises incremental watch builds and atomic artifact publication.
+ */
+
 import { execFile } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { promisify } from "node:util";
@@ -9,6 +13,12 @@ import { createArtifactServices } from "../../scripts/build/artifacts.ts";
 const execFileAsync = promisify(execFile);
 const browsers = ["chrome", "firefox", "edge"] as const;
 
+/**
+ * Runs one package-manager build command in an isolated workspace.
+ *
+ * @param workspace - Isolated workspace used as the process directory.
+ * @param args - Package-manager arguments for the command.
+ */
 async function command(workspace: string, args: string[]): Promise<void> {
     await execFileAsync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, { cwd: workspace, timeout: 60_000 });
 }
@@ -239,6 +249,12 @@ describe("selected browser watch lifecycle", () => {
     }, 120_000);
 });
 
+/**
+ * Asserts that one build mode contains a complete Chrome artifact pair.
+ *
+ * @param workspace - Isolated build workspace.
+ * @param mode - Build output mode to inspect.
+ */
 function expectModeRoot(workspace: string, mode: string): void {
     const root = `${workspace}/dist/${mode}`;
     expect(existsSync(root)).toBe(true);
@@ -248,10 +264,22 @@ function expectModeRoot(workspace: string, mode: string): void {
     expect(manifest.manifest_version).toBe(3); expect(manifest.version).toBeTypeOf("string");
 }
 
+/**
+ * Counts transient generation and candidate directories below dist.
+ *
+ * @param workspace - Isolated build workspace to inspect.
+ * @returns - Total transient directory count.
+ */
 function countResidue(workspace: string): number {
     const kinds = countResidueKinds(workspace); return kinds.generation + kinds.candidate;
 }
 
+/**
+ * Counts transient build directories by lifecycle kind.
+ *
+ * @param workspace - Isolated build workspace to inspect.
+ * @returns - Separate generation and candidate counts.
+ */
 function countResidueKinds(workspace: string): { generation: number; candidate: number } {
     const result = { generation: 0, candidate: 0 };
     const visit = (directory: string): void => {
@@ -282,10 +310,23 @@ function countResidueKinds(workspace: string): { generation: number; candidate: 
 }
 
 
+/**
+ * Inserts a PNG text chunk before the terminal IEND chunk.
+ *
+ * @param png - Source PNG file bytes.
+ * @param value - Text payload that makes a rebuild observable.
+ * @returns - PNG bytes containing the added text chunk.
+ */
 function addPngText(png: Buffer, value: string): Buffer {
     const marker = Buffer.from("IEND"); const iend = png.lastIndexOf(marker) - 4; const text = Buffer.from(`watch\0${value}`); const type = Buffer.from("tEXt"); const body = Buffer.concat([type, text]); const chunk = Buffer.alloc(text.length + 12); chunk.writeUInt32BE(text.length, 0); body.copy(chunk, 4); chunk.writeUInt32BE(pngCrc32(body), text.length + 8); return Buffer.concat([png.subarray(0, iend), chunk, png.subarray(iend)]);
 }
 
+/**
+ * Calculates the CRC-32 checksum used by generated PNG chunks.
+ *
+ * @param buffer - PNG chunk type and data bytes covered by the checksum.
+ * @returns - Unsigned CRC-32 checksum.
+ */
 function pngCrc32(buffer: Buffer): number {
     let crc = ~0; for (const byte of buffer) {
         crc ^= byte; for (let i = 0; i < 8; i += 1) {

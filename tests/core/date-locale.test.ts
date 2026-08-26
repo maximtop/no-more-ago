@@ -1,3 +1,7 @@
+/**
+ * @file Verifies browser locale normalization and date-fns locale selection.
+ */
+
 import { describe, expect, it } from "vitest";
 import { resolveDateLocale } from "../../src/core/date-locale";
 

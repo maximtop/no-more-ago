@@ -1,3 +1,7 @@
+/**
+ * @file Exercises versioned settings persistence, recovery, and serialized updates.
+ */
+
 /* eslint-disable @typescript-eslint/require-await */
 import { describe, expect, it, vi } from "vitest";
 import { SettingsService } from "../../src/settings/settings-service";
@@ -11,6 +15,13 @@ import {
 
 const v5 = (revision = 0, globalEnabled = true, sitePreferences: Record<string, boolean> = {}, display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } }, debugEnabled = false) => ({ schemaVersion: 5 as const, revision, globalEnabled, sitePreferences, display, debugEnabled });
 
+/**
+ * Creates observable in-memory storage for settings service tests.
+ *
+ * @param initial - Initial current snapshot value.
+ * @param previous - Initial recovery snapshot value.
+ * @returns - Storage double with inspection and replacement helpers.
+ */
 function storage(initial?: unknown, previous?: unknown) {
     let value = initial;
     let previousValue = previous;

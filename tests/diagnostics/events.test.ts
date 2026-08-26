@@ -1,3 +1,7 @@
+/**
+ * @file Verifies diagnostic context derivation, redaction, and event sanitization.
+ */
+
 import { describe, expect, it } from "vitest";
 import { createDiagnosticEvent, deriveDiagnosticContext, sanitizeDiagnosticEvent } from "../../src/diagnostics/events";
 import { DIAGNOSTIC_EVENT_MESSAGE, DEBUG_POLICY_UPDATED_MESSAGE, UPDATE_DEBUG_POLICY_MESSAGE, isDebugPolicyUpdateAcknowledgement, isDebugPolicyUpdateMessage, isDiagnosticEventMessage } from "../../src/runtime/messages";

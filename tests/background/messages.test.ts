@@ -1,3 +1,7 @@
+/**
+ * @file Verifies background request and response message validators.
+ */
+
 import { describe, expect, it } from "vitest";
 import { DIAGNOSTICS_MAX_BYTES } from "../../src/diagnostics/journal";
 import {

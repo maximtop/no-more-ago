@@ -1,3 +1,7 @@
+/**
+ * @file Exercises adapter extensibility through a synthetic-site integration flow.
+ */
+
 /* eslint-disable @typescript-eslint/require-await */
 import { readFileSync } from "node:fs";
 
@@ -16,6 +20,9 @@ import { SettingsService } from "../../src/settings/settings-service";
 import { createSettingsSnapshot, isSettingsSnapshotV5, SETTINGS_PREVIOUS_STORAGE_KEY, SETTINGS_STORAGE_KEY, type DisplaySettings, type SettingsSnapshotV5 } from "../../src/settings/snapshot";
 import { createSyntheticRegistry, SYNTHETIC_HOSTNAME, syntheticRuntimeDefinition } from "../fixtures/synthetic/adapter";
 
+/**
+ * Content-runtime message listener retained for one simulated browser tab.
+ */
 type Listener = (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown;
 
 const SYNTHETIC_FIXTURE = readFileSync("tests/fixtures/synthetic/site.html", "utf8");
@@ -23,6 +30,11 @@ const SYNTHETIC_URL = "https://synthetic.test/activity?private=secret#fragment";
 const PRIMARY_INSTANT = "2026-08-25T10:15:00Z";
 const CUSTOM_UTC: DisplaySettings = { formatMode: "custom", pattern: "yyyy-MM-dd HH:mm 'UTC'", timeZone: { mode: "utc" } };
 
+/**
+ * Creates a ready document populated from the synthetic site fixture.
+ *
+ * @returns - Ready synthetic-site document.
+ */
 function syntheticDocument(): Document {
     const page = document.implementation.createHTMLDocument("Synthetic activity");
     Object.defineProperty(page, "defaultView", { configurable: true, value: window });
@@ -31,6 +43,12 @@ function syntheticDocument(): Document {
     return page;
 }
 
+/**
+ * Finds the authoritative synthetic timestamp source.
+ *
+ * @param page - Synthetic fixture document.
+ * @returns - Trusted source element.
+ */
 function source(page: Document): Element {
     const current = page.querySelector("time-ago.synthetic-event");
     if (!current) {
@@ -39,16 +57,30 @@ function source(page: Document): Element {
     return current;
 }
 
+/**
+ * Collects generated exact-time output elements in a document.
+ *
+ * @param page - Document to inspect.
+ * @returns - Current extension-owned output elements.
+ */
 function outputs(page: Document): HTMLTimeElement[] {
     return [...page.querySelectorAll<HTMLTimeElement>("time[data-no-more-ago-output]")];
 }
 
+/**
+ * Drains the bounded sequence of microtasks used by mutation reconciliation.
+ */
 async function settleMutations(): Promise<void> {
     for (let turn = 0; turn < 6; turn += 1) {
         await Promise.resolve();
     }
 }
 
+/**
+ * Creates connected GitHub and synthetic runtimes over shared background services.
+ *
+ * @returns - Cross-site runtime fixture and observable test controls.
+ */
 function createConnectedFixture() {
     let stored: SettingsSnapshotV5 = createSettingsSnapshot(0, true);
     let previous: SettingsSnapshotV5 = createSettingsSnapshot(0, true);
@@ -184,11 +216,17 @@ function createConnectedFixture() {
         diagnosticEnvironment: { extensionVersion: "0.1.0", browserFamily: "chromium" }
     });
 
+    /**
+     * Waits for content hydration and mutation reconciliation to settle.
+     */
     async function settle(): Promise<void> {
         await Promise.all([...hydrations.values()].flatMap((load) => load.mock.results.map((result) => result.value as Promise<unknown>)));
         await settleMutations();
     }
 
+    /**
+     * Sends teardown to every simulated document runtime.
+     */
     function teardown(): void {
         for (const listener of listeners.values()) {
             listener({ type: TEARDOWN_DOCUMENT_MESSAGE });

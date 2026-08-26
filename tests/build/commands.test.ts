@@ -1,3 +1,7 @@
+/**
+ * @file Exercises build command parsing, packaging, and failure handling.
+ */
+
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { execFile } from "node:child_process";

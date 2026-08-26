@@ -1,3 +1,7 @@
+/**
+ * @file Verifies document transformation controller activation and reconciliation.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
 import { AdapterRegistry } from "../../src/adapters/registry";

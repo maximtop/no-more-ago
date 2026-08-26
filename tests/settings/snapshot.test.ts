@@ -1,3 +1,7 @@
+/**
+ * @file Verifies strict V5 settings snapshot validation and canonicalization.
+ */
+
 import { describe, expect, it } from "vitest";
 import {
     DEFAULT_DISPLAY_SETTINGS,

@@ -1,3 +1,7 @@
+/**
+ * @file Verifies custom date-format pattern validation boundaries.
+ */
+
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CUSTOM_FORMAT_PATTERN, validateCustomFormatPattern } from "../../src/settings/custom-format";
 

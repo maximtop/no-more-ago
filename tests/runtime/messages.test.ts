@@ -1,3 +1,7 @@
+/**
+ * @file Verifies content runtime command and acknowledgement validators.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import {

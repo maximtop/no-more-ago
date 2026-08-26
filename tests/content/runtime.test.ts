@@ -1,3 +1,7 @@
+/**
+ * @file Exercises content runtime hydration, messaging, and teardown behavior.
+ */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DocumentTransformationController } from "../../src/core/document-transformation-controller";
@@ -7,10 +11,20 @@ import { createSyntheticRegistry } from "../fixtures/synthetic/adapter";
 
 const SLOT = Symbol.for("no-more-ago.document-runtime");
 
+/**
+ * Overrides the JSDOM document readiness state for runtime tests.
+ *
+ * @param value - Readiness state exposed by the test document.
+ */
 function setReadyState(value: DocumentReadyState): void {
     Object.defineProperty(document, "readyState", { configurable: true, value });
 }
 
+/**
+ * Creates a controllable content-runtime message source.
+ *
+ * @returns - Message source and synchronous dispatch helper.
+ */
 function createMessages() {
     let listener: ((message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown) | undefined;
     return {
@@ -29,6 +43,12 @@ function createMessages() {
     };
 }
 
+/**
+ * Installs the content runtime with common GitHub test dependencies.
+ *
+ * @param messages - Controllable runtime message source.
+ * @returns - Installed singleton content runtime handle.
+ */
 function install(messages: ReturnType<typeof createMessages>) {
     return installContentRuntime({
         document,
@@ -38,6 +58,15 @@ function install(messages: ReturnType<typeof createMessages>) {
     });
 }
 
+/**
+ * Creates a ready persisted-state response for hydration tests.
+ *
+ * @param revision - Persisted settings revision.
+ * @param mode - Effective time-zone selection mode.
+ * @param identifier - IANA identifier used by named-zone mode.
+ * @param debugEnabled - Whether document diagnostics should be forwarded.
+ * @returns - Ready background display-state response.
+ */
 function state(revision: number, mode: "system" | "utc" | "iana", identifier = "America/New_York", debugEnabled = false) {
     return {
         availability: "ready" as const,

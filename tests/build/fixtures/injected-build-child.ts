@@ -1,3 +1,7 @@
+/**
+ * @file Runs an injected child build used by build-process integration tests.
+ */
+
 import rspack from "@rspack/core";
 import { runBuildCommand } from "../../../scripts/build/pipeline.ts";
 

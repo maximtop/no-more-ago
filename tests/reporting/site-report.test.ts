@@ -1,3 +1,7 @@
+/**
+ * @file Exercises safe site-report context validation and GitHub issue creation.
+ */
+
 import { describe, expect, it } from "vitest";
 import {
     browserContextFromUserAgent,
@@ -9,6 +13,16 @@ import {
 
 const manifest = { version: "1.2.3" };
 
+/**
+ * Creates an observable browser runtime for site-report tests.
+ *
+ * @param tab - Active tab returned by the tabs API.
+ * @param options - Optional browser behavior overrides.
+ * @param options.create - Tab creation implementation.
+ * @param options.manifest - Manifest value returned by the runtime API.
+ * @param options.userAgent - Browser user agent exposed to the reporter.
+ * @returns - Browser runtime with query and creation counters.
+ */
 function runtime(tab?: SiteReportTab, options: { readonly create?: () => Promise<unknown>; readonly manifest?: unknown; readonly userAgent?: string } = {}): SiteReportBrowserRuntime & { queries: number; creates: Array<Record<string, unknown>> } {
     const result = {
         queries: 0,

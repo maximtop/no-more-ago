@@ -1,3 +1,7 @@
+/**
+ * @file Exercises GitHub adapter behavior against representative HTML fixtures.
+ */
+
 import { readFile } from "node:fs/promises";
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -17,6 +21,9 @@ const githubPages = [
     "/github/docs/actions/runs/32653376977"
 ];
 
+/**
+ * GitHub fixture case describing either one trusted timestamp or expected no-op selectors.
+ */
 type SourceFixture =
   | {
       readonly name: string;

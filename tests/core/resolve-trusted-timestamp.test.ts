@@ -1,3 +1,7 @@
+/**
+ * @file Verifies strict resolution of explicit-zone adapter timestamps.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,3 +1,7 @@
+/**
+ * @file Verifies the trusted site-adapter contract and architecture boundaries.
+ */
+
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";

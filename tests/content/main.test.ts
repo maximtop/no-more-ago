@@ -1,11 +1,26 @@
+/**
+ * @file Verifies content-script bootstrap and persisted display-state requests.
+ */
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const SLOT = Symbol.for("no-more-ago.document-runtime");
 
+/**
+ * Overrides the JSDOM document readiness state for bootstrap tests.
+ *
+ * @param value - Readiness state exposed by the test document.
+ */
 function setReadyState(value: DocumentReadyState): void {
     Object.defineProperty(document, "readyState", { configurable: true, value });
 }
 
+/**
+ * Installs a minimal Chrome runtime mock and captures its content listener.
+ *
+ * @param sendMessage - Optional background request implementation.
+ * @returns - Runtime message mock and listener dispatch helper.
+ */
 function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>) {
     let listener: ((message: unknown) => void) | undefined;
     const messages = {
@@ -19,6 +34,14 @@ function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>)
     return { messages, dispatch: (message: unknown) => listener?.(message) };
 }
 
+/**
+ * Creates a ready display-state response for content bootstrap tests.
+ *
+ * @param revision - Persisted display-settings revision.
+ * @param mode - Effective time-zone selection mode.
+ * @param identifier - IANA identifier used by named-zone mode.
+ * @returns - Ready background display-state response.
+ */
 function displayState(revision: number, mode: "system" | "utc" | "iana", identifier = "America/New_York") {
     return {
         availability: "ready" as const,

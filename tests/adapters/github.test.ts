@@ -1,3 +1,7 @@
+/**
+ * @file Verifies GitHub timestamp discovery and extraction behavior.
+ */
+
 import { describe, expect, it } from "vitest";
 
 import { defaultRegistry } from "../../src/adapters/registry";

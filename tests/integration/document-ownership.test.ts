@@ -1,3 +1,7 @@
+/**
+ * @file Verifies document ownership isolation across complete processing flows.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
 import { processDocument } from "../../src/core/process-document";

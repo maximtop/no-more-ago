@@ -1,3 +1,7 @@
+/**
+ * @file Verifies content-script registration and tab activation reconciliation.
+ */
+
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-floating-promises, @typescript-eslint/no-unused-vars */
 import { describe, expect, it, vi } from "vitest";
 import { AdapterActivationCoordinator, type RuntimeAdapterDefinition } from "../../src/runtime/adapter-activation";
@@ -17,6 +21,11 @@ const sibling: RuntimeAdapterDefinition = {
     matches: (url) => url.hostname === "sibling.test"
 };
 
+/**
+ * Creates single-adapter scripting and tab runtime doubles.
+ *
+ * @returns - Observable runtime doubles and registration state.
+ */
 function fakes() {
     const registered = new Map<string, typeof github.registration>();
     const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();
@@ -46,6 +55,11 @@ function fakes() {
     return { scripting, tabs, registered, phases };
 }
 
+/**
+ * Creates multi-adapter scripting and tab runtime doubles.
+ *
+ * @returns - Observable runtime doubles and registration state.
+ */
 function multiFakes() {
     const registered = new Map<string, typeof github.registration>();
     const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();

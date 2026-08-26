@@ -1,3 +1,7 @@
+/**
+ * @file Verifies GitHub content-script registration reconciliation.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
 import { ensureGitHubRuntime, GITHUB_REGISTRATION } from "../../src/runtime/register-github";

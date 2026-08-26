@@ -1,3 +1,7 @@
+/**
+ * @file Exercises reversible ownership and rendering of exact timestamp elements.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -11,6 +15,12 @@ import {
 
 const DATETIME = "2026-08-23T10:15:00+03:00";
 
+/**
+ * Creates a relative-time source element with optional preexisting visibility state.
+ *
+ * @param hidden - Whether the page source starts hidden.
+ * @returns - Connected relative-time source element.
+ */
 function createSource(hidden = false): Element {
     document.body.innerHTML = `<div id="host"><relative-time${hidden ? " hidden" : ""}>2 hours ago</relative-time></div>`;
     const source = document.querySelector("relative-time");

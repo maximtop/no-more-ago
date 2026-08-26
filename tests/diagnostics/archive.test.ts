@@ -1,3 +1,7 @@
+/**
+ * @file Verifies diagnostics archive validation, compression, and download handling.
+ */
+
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
@@ -22,6 +26,12 @@ const snapshot: DiagnosticArchiveSnapshot = {
     environment: { browserFamily: "chromium", extensionVersion: "1.2.3" }
 };
 
+/**
+ * Asserts that an archive action throws the expected typed failure.
+ *
+ * @param action - Archive operation expected to fail.
+ * @param code - Stable diagnostic archive error code.
+ */
 function expectArchiveError(action: () => unknown, code: DiagnosticArchiveError["code"]): void {
     try {
         action();

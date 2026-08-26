@@ -1,9 +1,19 @@
+/**
+ * @file Exercises bounded diagnostic journal persistence and recovery.
+ */
+
 import { describe, expect, it, vi } from "vitest";
 import { DiagnosticJournal, DIAGNOSTICS_MAX_BYTES, DIAGNOSTICS_STORAGE_KEY, type DiagnosticStorage } from "../../src/diagnostics/journal";
 import type { DiagnosticEvent } from "../../src/diagnostics/events";
 
 const event = (n: number, text = "") : DiagnosticEvent => ({ category: "mutation", timestamp: n, hostname: "github.com", pageCategory: "repository", incognito: false, count: n, ...(text ? { reason: text } : {}) });
 
+/**
+ * Creates observable in-memory storage for diagnostic journal tests.
+ *
+ * @param initial - Initial persisted journal envelope.
+ * @returns - Storage double with current value and operation history.
+ */
 function storage(initial?: unknown): DiagnosticStorage & { value: unknown; calls: string[] } {
     const state = { value: initial, calls: [] as string[] };
     return {
