@@ -76,8 +76,14 @@ const REASONS = new Set(["adapter-matched", "adapter-missing", "candidate-skippe
  */
 export function hasOnlyOwnDiagnosticProperties(value: object): boolean {
     try {
-        if ("toJSON" in value) return false;
-        for (const key in value) if (!Object.hasOwn(value, key)) return false;
+        if ("toJSON" in value) {
+            return false;
+        }
+        for (const key in value) {
+            if (!Object.hasOwn(value, key)) {
+                return false;
+            }
+        }
         return Object.keys(value).every((key) => {
             const property = Object.getOwnPropertyDescriptor(value, key);
             return property !== undefined && Object.hasOwn(property, "value");
@@ -91,7 +97,9 @@ export function hasOnlyOwnDiagnosticProperties(value: object): boolean {
  * Accepts only bounded arrays whose items satisfy the durable diagnostic event shape.
  */
 function isSafeDiagnosticArray(value: unknown): value is readonly unknown[] {
-    if (!Array.isArray(value) || !hasOnlyOwnDiagnosticProperties(value)) return false;
+    if (!Array.isArray(value) || !hasOnlyOwnDiagnosticProperties(value)) {
+        return false;
+    }
     const keys = Object.keys(value);
     return keys.length === value.length && keys.every((key, index) => key === String(index));
 }
@@ -100,17 +108,39 @@ function isSafeDiagnosticArray(value: unknown): value is readonly unknown[] {
  * Verifies every persisted event has the finite categories and redacted fields expected by the journal.
  */
 export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEvent {
-    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "category") || !Object.hasOwn(value, "timestamp") || !Object.hasOwn(value, "hostname") || !Object.hasOwn(value, "pageCategory") || !Object.hasOwn(value, "incognito")) return false;
-    if (!CATEGORIES.has(String(value.category)) || typeof value.timestamp !== "number" || !Number.isSafeInteger(value.timestamp) || value.timestamp < 0 || typeof value.hostname !== "string" || !isCanonicalHostname(value.hostname) || !PAGES.has(String(value.pageCategory)) || typeof value.incognito !== "boolean") return false;
-    if (Object.keys(value).some((key) => !["category", "timestamp", "hostname", "pageCategory", "incognito", ...OPTIONAL].includes(key))) return false;
-    if ([...OPTIONAL].some((key) => key in value && !Object.hasOwn(value, key))) return false;
-    if (Object.hasOwn(value, "count") && (typeof value.count !== "number" || !Number.isFinite(value.count) || value.count < 0 || value.count > 1_000_000)) return false;
-    if (Object.hasOwn(value, "durationMs") && (typeof value.durationMs !== "number" || !Number.isFinite(value.durationMs) || value.durationMs < 0 || value.durationMs > 86_400_000)) return false;
-    if (Object.hasOwn(value, "adapterVersion") && (typeof value.adapterVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.adapterVersion))) return false;
-    if (Object.hasOwn(value, "extensionVersion") && (typeof value.extensionVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.extensionVersion))) return false;
-    if (Object.hasOwn(value, "browserFamily") && (typeof value.browserFamily !== "string" || !BROWSERS.has(value.browserFamily))) return false;
-    if (Object.hasOwn(value, "reason") && (typeof value.reason !== "string" || !REASONS.has(value.reason))) return false;
-    if (Object.hasOwn(value, "stack") && (!isSafeDiagnosticArray(value.stack) || value.stack.length > 16 || value.stack.some((frame) => typeof frame !== "string" || !/^frame(?::\d+(?::\d+)?)?$/u.test(frame)))) return false;
+    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "category") || !Object.hasOwn(value, "timestamp") || !Object.hasOwn(value, "hostname") || !Object.hasOwn(value, "pageCategory") || !Object.hasOwn(value, "incognito")) {
+        return false;
+    }
+    if (!CATEGORIES.has(String(value.category)) || typeof value.timestamp !== "number" || !Number.isSafeInteger(value.timestamp) || value.timestamp < 0 || typeof value.hostname !== "string" || !isCanonicalHostname(value.hostname) || !PAGES.has(String(value.pageCategory)) || typeof value.incognito !== "boolean") {
+        return false;
+    }
+    if (Object.keys(value).some((key) => !["category", "timestamp", "hostname", "pageCategory", "incognito", ...OPTIONAL].includes(key))) {
+        return false;
+    }
+    if ([...OPTIONAL].some((key) => key in value && !Object.hasOwn(value, key))) {
+        return false;
+    }
+    if (Object.hasOwn(value, "count") && (typeof value.count !== "number" || !Number.isFinite(value.count) || value.count < 0 || value.count > 1_000_000)) {
+        return false;
+    }
+    if (Object.hasOwn(value, "durationMs") && (typeof value.durationMs !== "number" || !Number.isFinite(value.durationMs) || value.durationMs < 0 || value.durationMs > 86_400_000)) {
+        return false;
+    }
+    if (Object.hasOwn(value, "adapterVersion") && (typeof value.adapterVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.adapterVersion))) {
+        return false;
+    }
+    if (Object.hasOwn(value, "extensionVersion") && (typeof value.extensionVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.extensionVersion))) {
+        return false;
+    }
+    if (Object.hasOwn(value, "browserFamily") && (typeof value.browserFamily !== "string" || !BROWSERS.has(value.browserFamily))) {
+        return false;
+    }
+    if (Object.hasOwn(value, "reason") && (typeof value.reason !== "string" || !REASONS.has(value.reason))) {
+        return false;
+    }
+    if (Object.hasOwn(value, "stack") && (!isSafeDiagnosticArray(value.stack) || value.stack.length > 16 || value.stack.some((frame) => typeof frame !== "string" || !/^frame(?::\d+(?::\d+)?)?$/u.test(frame)))) {
+        return false;
+    }
     return true;
 }
 
@@ -118,7 +148,9 @@ export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEve
  * Validates the exact persisted journal envelope, including its complete UTF-8 byte limit.
  */
 export function isDiagnosticJournalEntries(value: unknown, maxBytes: number = DIAGNOSTICS_MAX_BYTES): value is readonly DiagnosticEvent[] {
-    if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || !isSafeDiagnosticArray(value) || !value.every(isDiagnosticJournalEvent)) return false;
+    if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || !isSafeDiagnosticArray(value) || !value.every(isDiagnosticJournalEvent)) {
+        return false;
+    }
     try {
         return bytes({ entries: value }) <= maxBytes;
     } catch {
@@ -130,7 +162,9 @@ export function isDiagnosticJournalEntries(value: unknown, maxBytes: number = DI
  * Returns journal entries only when the persisted envelope has the exact shape and fits its byte budget.
  */
 function readEntries(value: unknown): DiagnosticEvent[] {
-    if (!isRecord(value) || Object.keys(value).length !== 1 || !Object.hasOwn(value, "entries") || !Array.isArray(value.entries)) return [];
+    if (!isRecord(value) || Object.keys(value).length !== 1 || !Object.hasOwn(value, "entries") || !Array.isArray(value.entries)) {
+        return [];
+    }
     return value.entries.filter(isDiagnosticJournalEvent);
 }
 
@@ -164,50 +198,82 @@ export class DiagnosticJournal {
      * Initializes durable storage access and rejects a non-positive journal byte limit.
      */
     public constructor(private readonly storage: DiagnosticStorage, private readonly maxBytes: number = DIAGNOSTICS_MAX_BYTES) {
-        if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new TypeError("Invalid diagnostics limit");
+        if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+            throw new TypeError("Invalid diagnostics limit");
+        }
     }
 
     /**
      * Indicates whether new diagnostic events are currently persisted.
      */
-    public get enabled(): boolean { return this.enabledState; }
+    public get enabled(): boolean {
+        return this.enabledState;
+    }
 
     /**
      * Enables or disables future journal writes without discarding stored entries.
      */
     public setEnabled(enabled: boolean): Promise<void> {
-        if (typeof enabled !== "boolean") return Promise.resolve();
+        if (typeof enabled !== "boolean") {
+            return Promise.resolve();
+        }
         this.generation += 1;
         this.enabledState = enabled;
-        if (!enabled) return this.enqueue(async () => { try { await this.storage.remove(DIAGNOSTICS_STORAGE_KEY); } catch { /* diagnostics must not affect processing */ } });
+        if (!enabled) {
+            return this.enqueue(async () => {
+                try {
+                    await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
+                } catch { /* diagnostics must not affect processing */ }
+            });
+        }
         return Promise.resolve();
     }
 
     /**
      * Records a bounded diagnostic event when journaling is enabled.
      */
-    public record(event: DiagnosticEvent): Promise<void> { return this.append(event); }
+    public record(event: DiagnosticEvent): Promise<void> {
+        return this.append(event);
+    }
 
     /**
      * Appends an event and trims oldest entries until the serialized envelope fits.
      */
     public append(event: DiagnosticEvent): Promise<void> {
-        if (!this.enabledState) return Promise.resolve();
+        if (!this.enabledState) {
+            return Promise.resolve();
+        }
         const generation = this.generation;
         return this.enqueue(async () => {
-            if (!this.isCurrentGeneration(generation) || !isDiagnosticJournalEvent(event)) return;
+            if (!this.isCurrentGeneration(generation) || !isDiagnosticJournalEvent(event)) {
+                return;
+            }
             let current: DiagnosticEvent[];
             try {
                 const values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
-                if (!this.isCurrentGeneration(generation)) return;
+                if (!this.isCurrentGeneration(generation)) {
+                    return;
+                }
                 current = readEntries(values[DIAGNOSTICS_STORAGE_KEY]);
-            } catch { return; }
-            if (bytes({ entries: [event] }) > this.maxBytes) return;
+            } catch {
+                return;
+            }
+            if (bytes({ entries: [event] }) > this.maxBytes) {
+                return;
+            }
             const entries = [...current, event];
-            while (entries.length > 0 && bytes({ entries }) > this.maxBytes) entries.shift();
-            if (entries.length === 0) return;
-            if (!this.isCurrentGeneration(generation)) return;
-            try { await this.storage.set({ [DIAGNOSTICS_STORAGE_KEY]: { entries } satisfies DiagnosticEnvelope }); } catch { /* isolated failure */ }
+            while (entries.length > 0 && bytes({ entries }) > this.maxBytes) {
+                entries.shift();
+            }
+            if (entries.length === 0) {
+                return;
+            }
+            if (!this.isCurrentGeneration(generation)) {
+                return;
+            }
+            try {
+                await this.storage.set({ [DIAGNOSTICS_STORAGE_KEY]: { entries } satisfies DiagnosticEnvelope });
+            } catch { /* isolated failure */ }
         });
     }
 
@@ -217,28 +283,47 @@ export class DiagnosticJournal {
     public clear(): Promise<void> {
         this.generation += 1;
         this.enabledState = false;
-        return this.enqueue(async () => { try { await this.storage.remove(DIAGNOSTICS_STORAGE_KEY); } catch { /* isolated failure */ } });
+        return this.enqueue(async () => {
+            try {
+                await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
+            } catch { /* isolated failure */ }
+        });
     }
 
     /**
      * Returns the current journal snapshot without exposing storage failures.
      */
     public readSnapshot(): Promise<DiagnosticJournalSnapshotResult> {
-        if (!this.enabledState) return Promise.resolve({ ok: false, error: "disabled" });
+        if (!this.enabledState) {
+            return Promise.resolve({ ok: false, error: "disabled" });
+        }
         const generation = this.generation;
         return this.serialize(async (): Promise<DiagnosticJournalSnapshotResult> => {
-            if (!this.isCurrentGeneration(generation)) return { ok: false, error: "disabled" };
+            if (!this.isCurrentGeneration(generation)) {
+                return { ok: false, error: "disabled" };
+            }
             let values: Record<string, unknown>;
-            try { values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY); }
-            catch { return { ok: false, error: "storage-failed" }; }
-            if (!this.isCurrentGeneration(generation)) return { ok: false, error: "disabled" };
-            if (!isRecord(values)) return { ok: false, error: "invalid-journal" };
-            if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) return { ok: false, error: "empty" };
+            try {
+                values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
+            } catch {
+                return { ok: false, error: "storage-failed" };
+            }
+            if (!this.isCurrentGeneration(generation)) {
+                return { ok: false, error: "disabled" };
+            }
+            if (!isRecord(values)) {
+                return { ok: false, error: "invalid-journal" };
+            }
+            if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
+                return { ok: false, error: "empty" };
+            }
             const value = values[DIAGNOSTICS_STORAGE_KEY];
             if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 1 || !Object.hasOwn(value, "entries") || !isDiagnosticJournalEntries(value.entries, this.maxBytes)) {
                 return { ok: false, error: "invalid-journal" };
             }
-            if (value.entries.length === 0) return { ok: false, error: "empty" };
+            if (value.entries.length === 0) {
+                return { ok: false, error: "empty" };
+            }
             return { ok: true, entries: [...value.entries] };
         });
     }
@@ -248,13 +333,20 @@ export class DiagnosticJournal {
      * the journal enabled but reports a contained clear error.
      */
     public clearEntries(): Promise<DiagnosticJournalClearResult> {
-        if (!this.enabledState) return Promise.resolve({ ok: false, error: "disabled" });
+        if (!this.enabledState) {
+            return Promise.resolve({ ok: false, error: "disabled" });
+        }
         this.generation += 1;
         const generation = this.generation;
         return this.serialize(async (): Promise<DiagnosticJournalClearResult> => {
-            if (!this.isCurrentGeneration(generation)) return { ok: false, error: "disabled" };
-            try { await this.storage.remove(DIAGNOSTICS_STORAGE_KEY); }
-            catch { return { ok: false, error: "storage-failed" }; }
+            if (!this.isCurrentGeneration(generation)) {
+                return { ok: false, error: "disabled" };
+            }
+            try {
+                await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
+            } catch {
+                return { ok: false, error: "storage-failed" };
+            }
             return this.isCurrentGeneration(generation) ? { ok: true } : { ok: false, error: "disabled" };
         });
     }

@@ -27,11 +27,17 @@ export const githubAdapter: SiteAdapter = {
     },
     extract: (element) => {
         const sourceKind = element.localName as TimestampSourceKind;
-        if (!APPROVED_KINDS.has(sourceKind)) return null;
+        if (!APPROVED_KINDS.has(sourceKind)) {
+            return null;
+        }
         const format = element.getAttribute("format")?.trim().toLowerCase();
-        if (format === "datetime") return null;
+        if (format === "datetime") {
+            return null;
+        }
         const rawDatetime = element.getAttribute("datetime");
-        if (!rawDatetime || rawDatetime.trim() === "") return null;
+        if (!rawDatetime || rawDatetime.trim() === "") {
+            return null;
+        }
         return rawDatetime
             ? {
                 adapterId: "github",

@@ -42,7 +42,9 @@ describe("DocumentMutationScheduler", () => {
         type Callback = (records: readonly MutationRecord[]) => void;
         const callbacks: Callback[] = [];
         class ControllableObserver {
-            constructor(callback: Callback) { callbacks.push(callback); }
+            constructor(callback: Callback) {
+                callbacks.push(callback);
+            }
             observe(): void {}
             disconnect(): void {}
         }
@@ -131,9 +133,13 @@ describe("DocumentMutationScheduler", () => {
     it("routes an exact output displacement to its recorded source", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
@@ -153,9 +159,13 @@ describe("DocumentMutationScheduler", () => {
     it("does not emit work when an exact output is displaced and restored before delivery", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
@@ -173,9 +183,13 @@ describe("DocumentMutationScheduler", () => {
     it("suppresses the observer delivery caused by owned restoration", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
@@ -205,9 +219,13 @@ describe("DocumentMutationScheduler", () => {
         try {
             document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
             const source = document.querySelector("relative-time");
-            if (!source) throw new Error("Expected source");
+            if (!source) {
+                throw new Error("Expected source");
+            }
             const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-            if (!output) throw new Error("Expected output");
+            if (!output) {
+                throw new Error("Expected output");
+            }
             const batches: AffectedMutationBatch[] = [];
             const scheduler = new DocumentMutationScheduler({
                 document,
@@ -228,9 +246,13 @@ describe("DocumentMutationScheduler", () => {
     it("ignores a child-list record targeted at an exact owned output", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
@@ -308,7 +330,9 @@ describe("DocumentMutationScheduler", () => {
         type Callback = (records: readonly MutationRecord[]) => void;
         const callbacks: Callback[] = [];
         class ControllableObserver {
-            constructor(callback: Callback) { callbacks.push(callback); }
+            constructor(callback: Callback) {
+                callbacks.push(callback);
+            }
             observe(): void {}
             disconnect(): void {}
         }
@@ -316,9 +340,13 @@ describe("DocumentMutationScheduler", () => {
         try {
             document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
             const source = document.querySelector("relative-time");
-            if (!source) throw new Error("Expected source");
+            if (!source) {
+                throw new Error("Expected source");
+            }
             const output = renderExactTime(source, "2026-08-23T10:15:00Z", "exact");
-            if (!output) throw new Error("Expected output");
+            if (!output) {
+                throw new Error("Expected output");
+            }
             const batches: AffectedMutationBatch[] = [];
             const scheduler = new DocumentMutationScheduler({
                 document,

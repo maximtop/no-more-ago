@@ -33,7 +33,9 @@ function syntheticDocument(): Document {
 
 function source(page: Document): Element {
     const current = page.querySelector("time-ago.synthetic-event");
-    if (!current) throw new Error("Synthetic authoritative source missing");
+    if (!current) {
+        throw new Error("Synthetic authoritative source missing");
+    }
     return current;
 }
 
@@ -42,7 +44,9 @@ function outputs(page: Document): HTMLTimeElement[] {
 }
 
 async function settleMutations(): Promise<void> {
-    for (let turn = 0; turn < 6; turn += 1) await Promise.resolve();
+    for (let turn = 0; turn < 6; turn += 1) {
+        await Promise.resolve();
+    }
 }
 
 function createConnectedFixture() {
@@ -69,38 +73,54 @@ function createConnectedFixture() {
 
     const storage = {
         get: vi.fn(async (keys?: string | readonly string[] | Record<string, unknown>) => {
-            if (keys === DIAGNOSTICS_STORAGE_KEY) return diagnostics === undefined ? {} : { [DIAGNOSTICS_STORAGE_KEY]: diagnostics };
+            if (keys === DIAGNOSTICS_STORAGE_KEY) {
+                return diagnostics === undefined ? {} : { [DIAGNOSTICS_STORAGE_KEY]: diagnostics };
+            }
             return { [SETTINGS_STORAGE_KEY]: stored, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
         }),
         set: vi.fn(async (items: Record<string, unknown>) => {
             if (Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY)) {
-                if (rejectDiagnosticWrite) { rejectDiagnosticWrite = false; throw new Error("diagnostic storage unavailable"); }
+                if (rejectDiagnosticWrite) {
+                    rejectDiagnosticWrite = false; throw new Error("diagnostic storage unavailable");
+                }
                 diagnostics = items[DIAGNOSTICS_STORAGE_KEY];
                 return;
             }
             const next = items[SETTINGS_STORAGE_KEY];
             const old = items[SETTINGS_PREVIOUS_STORAGE_KEY];
-            if (!isSettingsSnapshotV5(next) || !isSettingsSnapshotV5(old)) throw new Error("Atomic settings snapshot required");
+            if (!isSettingsSnapshotV5(next) || !isSettingsSnapshotV5(old)) {
+                throw new Error("Atomic settings snapshot required");
+            }
             stored = next;
             previous = old;
         }),
         remove: vi.fn(async (keys: string | readonly string[]) => {
-            if (keys === DIAGNOSTICS_STORAGE_KEY || (Array.isArray(keys) && keys.includes(DIAGNOSTICS_STORAGE_KEY))) diagnostics = undefined;
+            if (keys === DIAGNOSTICS_STORAGE_KEY || (Array.isArray(keys) && keys.includes(DIAGNOSTICS_STORAGE_KEY))) {
+                diagnostics = undefined;
+            }
         })
     };
 
     const tabs = {
         query: vi.fn(async (query: { readonly active?: boolean; readonly url?: readonly string[] }) => {
-            if (query.active) return [browserTabs[1]];
-            if (!query.url) return [];
+            if (query.active) {
+                return [browserTabs[1]];
+            }
+            if (!query.url) {
+                return [];
+            }
             return browserTabs.filter((tab) => query.url?.some((pattern) => pattern.includes(`${new URL(tab.url).hostname}/`)));
         }),
         sendMessage: vi.fn(async (tabId: number, message: unknown, options: { readonly frameId: 0 }) => {
             expect(options).toEqual({ frameId: 0 });
             const listener = listeners.get(tabId);
-            if (!listener) throw new Error("Content runtime not installed");
+            if (!listener) {
+                throw new Error("Content runtime not installed");
+            }
             let response: unknown;
-            const result = listener(message, undefined, (value) => { response = value; });
+            const result = listener(message, undefined, (value) => {
+                response = value;
+            });
             return response ?? result;
         })
     };
@@ -111,19 +131,29 @@ function createConnectedFixture() {
             return registration === undefined ? [] : [registration];
         })),
         registerContentScripts: vi.fn(async (scripts: readonly RegisteredContentScriptSpec[]) => {
-            for (const script of scripts) registrations.set(script.id, script);
+            for (const script of scripts) {
+                registrations.set(script.id, script);
+            }
         }),
         updateContentScripts: vi.fn(async (scripts: readonly RegisteredContentScriptSpec[]) => {
-            for (const script of scripts) registrations.set(script.id, script);
+            for (const script of scripts) {
+                registrations.set(script.id, script);
+            }
         }),
         unregisterContentScripts: vi.fn(async ({ ids }: { readonly ids: readonly string[] }) => {
-            for (const id of ids) registrations.delete(id);
+            for (const id of ids) {
+                registrations.delete(id);
+            }
         }),
         executeScript: vi.fn(async ({ target }: { readonly target: { readonly tabId: number; readonly allFrames: false } }) => {
             const page = pages.get(target.tabId);
             const browserTab = browserTabs.find((tab) => tab.id === target.tabId);
-            if (!page || !browserTab) throw new Error("Unknown browser tab");
-            const listener = additions.get(target.tabId) ?? vi.fn<(next: Listener) => void>((next) => { listeners.set(target.tabId, next); });
+            if (!page || !browserTab) {
+                throw new Error("Unknown browser tab");
+            }
+            const listener = additions.get(target.tabId) ?? vi.fn<(next: Listener) => void>((next) => {
+                listeners.set(target.tabId, next);
+            });
             additions.set(target.tabId, listener);
             const load = hydrations.get(target.tabId) ?? vi.fn<() => Promise<unknown>>(() => app.getDisplayState());
             hydrations.set(target.tabId, load);
@@ -160,7 +190,9 @@ function createConnectedFixture() {
     }
 
     function teardown(): void {
-        for (const listener of listeners.values()) listener({ type: TEARDOWN_DOCUMENT_MESSAGE });
+        for (const listener of listeners.values()) {
+            listener({ type: TEARDOWN_DOCUMENT_MESSAGE });
+        }
     }
 
     return {
@@ -176,10 +208,18 @@ function createConnectedFixture() {
         syntheticPage,
         settle,
         teardown,
-        rejectNextDiagnosticWrite: () => { rejectDiagnosticWrite = true; },
-        get stored() { return stored; },
-        get previous() { return previous; },
-        get diagnostics() { return diagnostics; }
+        rejectNextDiagnosticWrite: () => {
+            rejectDiagnosticWrite = true;
+        },
+        get stored() {
+            return stored;
+        },
+        get previous() {
+            return previous;
+        },
+        get diagnostics() {
+            return diagnostics;
+        }
     };
 }
 
@@ -212,7 +252,9 @@ describe("synthetic adapter through shared document processing", () => {
         const observe = vi.spyOn(MutationObserver.prototype, "observe");
         const events: unknown[] = [];
         const controller = new DocumentTransformationController({
-            url: new URL(SYNTHETIC_URL), root: page, locales: ["en-US"], display: CUSTOM_UTC, registry: createSyntheticRegistry(), diagnosticSink: (event) => { events.push(event); }
+            url: new URL(SYNTHETIC_URL), root: page, locales: ["en-US"], display: CUSTOM_UTC, registry: createSyntheticRegistry(), diagnosticSink: (event) => {
+                events.push(event);
+            }
         });
         try {
             const first = controller.start();
@@ -261,7 +303,9 @@ describe("synthetic adapter through shared document processing", () => {
             controller.teardown();
             expect(outputs(page)).toHaveLength(0);
             expect(primary.hasAttribute("hidden")).toBe(false);
-        } finally { controller.teardown(); observe.mockRestore(); }
+        } finally {
+            controller.teardown(); observe.mockRestore();
+        }
     });
 });
 
@@ -283,7 +327,9 @@ describe("synthetic adapter through real settings, activation, diagnostics, and 
                 sites: [{ hostname: "github.com", enabled: true, hasAdapter: true }, { hostname: SYNTHETIC_HOSTNAME, enabled: true, hasAdapter: true }]
             });
             expect(fixture.diagnostics).toBeUndefined();
-        } finally { fixture.teardown(); }
+        } finally {
+            fixture.teardown();
+        }
     });
 
     it("applies committed custom/UTC settings to existing and future synthetic sources", async () => {
@@ -304,7 +350,9 @@ describe("synthetic adapter through real settings, activation, diagnostics, and 
             await settleMutations();
             expect(outputs(fixture.syntheticPage)[2]?.textContent).toBe("2026-08-29 12:19 UTC");
             expect(fixture.additions.get(21)).toHaveBeenCalledTimes(1);
-        } finally { fixture.teardown(); }
+        } finally {
+            fixture.teardown();
+        }
     });
 
     it.each(["site", "global"] as const)("restores exact originals on %s disable and rehydrates the same runtime on enable", async (policy) => {
@@ -313,20 +361,28 @@ describe("synthetic adapter through real settings, activation, diagnostics, and 
             await fixture.app.ensureReady("startup");
             await fixture.settle();
             expect(outputs(fixture.syntheticPage)).toHaveLength(2);
-            if (policy === "site") await fixture.app.setSiteEnabled(SYNTHETIC_HOSTNAME, false, "popup");
-            else await fixture.app.setGlobalEnabled(false);
+            if (policy === "site") {
+                await fixture.app.setSiteEnabled(SYNTHETIC_HOSTNAME, false, "popup");
+            } else {
+                await fixture.app.setGlobalEnabled(false);
+            }
             expect(outputs(fixture.syntheticPage)).toHaveLength(0);
             expect(source(fixture.syntheticPage).hasAttribute("hidden")).toBe(false);
             expect(source(fixture.syntheticPage).textContent).toBe("2 hours ago");
             expect(outputs(fixture.githubPage)).toHaveLength(policy === "site" ? 1 : 0);
-            if (policy === "site") await fixture.app.setSiteEnabled(SYNTHETIC_HOSTNAME, true, "popup");
-            else await fixture.app.setGlobalEnabled(true);
+            if (policy === "site") {
+                await fixture.app.setSiteEnabled(SYNTHETIC_HOSTNAME, true, "popup");
+            } else {
+                await fixture.app.setGlobalEnabled(true);
+            }
             await fixture.settle();
             expect(outputs(fixture.syntheticPage)).toHaveLength(2);
             expect(outputs(fixture.githubPage)).toHaveLength(1);
             expect(fixture.additions.get(21)).toHaveBeenCalledTimes(1);
             expect(fixture.hydrations.get(21)).toHaveBeenCalledTimes(2);
-        } finally { fixture.teardown(); }
+        } finally {
+            fixture.teardown();
+        }
     });
 
     it("collects sanitized synthetic diagnostics only while opted in and isolates journal failures", async () => {
@@ -348,7 +404,9 @@ describe("synthetic adapter through real settings, activation, diagnostics, and 
             fixture.syntheticPage.body.append(dynamic);
             await settleMutations();
             const snapshot = await fixture.app.getDiagnosticsSnapshot();
-            if (!snapshot.ok) throw new Error(`Synthetic diagnostic snapshot unavailable: ${snapshot.error}`);
+            if (!snapshot.ok) {
+                throw new Error(`Synthetic diagnostic snapshot unavailable: ${snapshot.error}`);
+            }
             expect(snapshot.snapshot.environment).toEqual({ extensionVersion: "0.1.0", browserFamily: "chromium" });
             expect(snapshot.snapshot.entries.some((event) =>
                 event.hostname === SYNTHETIC_HOSTNAME && event.incognito && event.extensionVersion === "0.1.0" && event.browserFamily === "chromium"
@@ -368,6 +426,8 @@ describe("synthetic adapter through real settings, activation, diagnostics, and 
             expect(fixture.reports).not.toHaveBeenCalled();
             expect(fixture.diagnostics).toBeUndefined();
             expect(outputs(fixture.syntheticPage)).toHaveLength(3);
-        } finally { fixture.teardown(); }
+        } finally {
+            fixture.teardown();
+        }
     });
 });

@@ -30,7 +30,9 @@ function storage(initial?: unknown, previous?: unknown) {
         }),
         remove: vi.fn(async () => undefined),
         pair: () => ({ current: value, previous: previousValue }),
-        replace: (current: unknown, backup: unknown) => { value = current; previousValue = backup; }
+        replace: (current: unknown, backup: unknown) => {
+            value = current; previousValue = backup;
+        }
     };
 }
 
@@ -298,7 +300,9 @@ describe("SettingsService global and exact-host policy", () => {
         await service.setSiteEnabled("constructor", true);
 
         const result = backend.pair().current;
-        if (!isSettingsSnapshotV5(result)) throw new Error("Expected a complete V5 snapshot");
+        if (!isSettingsSnapshotV5(result)) {
+            throw new Error("Expected a complete V5 snapshot");
+        }
         expect(Object.hasOwn(result.sitePreferences, "__proto__")).toBe(true);
         expect(Object.hasOwn(result.sitePreferences, "constructor")).toBe(true);
         expect(result.sitePreferences["__proto__"]).toBe(false);
@@ -367,8 +371,11 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         await expect(service.setDisplaySettings(display)).resolves.toEqual({ ok: true, changed: true, snapshot: v5(5, false, { "github.com": false }, display, true) });
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({ current: v5(5, false, { "github.com": false }, display, true), previous: initial });
-        if (timeZone.mode === "iana") expect(available).toHaveBeenCalledWith(timeZone.identifier);
-        else expect(available).not.toHaveBeenCalled();
+        if (timeZone.mode === "iana") {
+            expect(available).toHaveBeenCalledWith(timeZone.identifier);
+        } else {
+            expect(available).not.toHaveBeenCalled();
+        }
     });
 
     it("preserves a valid custom pattern and selected IANA zone in the full atomic pair", async () => {
@@ -692,11 +699,17 @@ describe("SettingsService explicit failed-closed reset", () => {
     it("queues a hostname edit behind an in-flight recovery reset", async () => {
         const backend = storage({ schemaVersion: 4 }, { schemaVersion: 2 });
         const originalSet = backend.set.getMockImplementation();
-        if (!originalSet) throw new Error("Expected genuine atomic fake storage");
+        if (!originalSet) {
+            throw new Error("Expected genuine atomic fake storage");
+        }
         let release: (() => void) | undefined;
         let entered: (() => void) | undefined;
-        const gate = new Promise<void>((resolve) => { release = resolve; });
-        const started = new Promise<void>((resolve) => { entered = resolve; });
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const started = new Promise<void>((resolve) => {
+            entered = resolve;
+        });
         backend.set.mockImplementationOnce(async (items) => {
             entered?.();
             await gate;

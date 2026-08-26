@@ -167,7 +167,9 @@ export interface ReconcileInput {
  * Compares optional script fields with the exact order Chrome returned or expects.
  */
 function sameArray(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
-    if (left === undefined || right === undefined) return left === right;
+    if (left === undefined || right === undefined) {
+        return left === right;
+    }
     return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
@@ -190,8 +192,14 @@ export function registrationMatches(
  * Parses a tab URL, excluding absent or malformed values from adapter matching.
  */
 function getUrl(tab: RuntimeTab): URL | null {
-    if (!tab.url) return null;
-    try { return new URL(tab.url); } catch { return null; }
+    if (!tab.url) {
+        return null;
+    }
+    try {
+        return new URL(tab.url);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -255,9 +263,13 @@ async function registrationState(
     // describes registration inspection.
     }
     if (!desiredEnabled) {
-        if (!present) { registration[definition.id] = "unchanged"; return { present: false, changed: false }; }
+        if (!present) {
+            registration[definition.id] = "unchanged"; return { present: false, changed: false };
+        }
         try {
-            if (!scripting.unregisterContentScripts) throw new Error("Unregister is unavailable");
+            if (!scripting.unregisterContentScripts) {
+                throw new Error("Unregister is unavailable");
+            }
             await scripting.unregisterContentScripts({ ids: [definition.registration.id] });
             registration[definition.id] = "unregistered";
             return { present: true, changed: true };
@@ -364,7 +376,9 @@ export class AdapterActivationCoordinator {
         const registration: Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed"> = {};
         const records: ActivationReconcileResult["tabs"] = [];
         for (const definition of this.adapters) {
-            if (input.affectedHostnames !== undefined && !input.affectedHostnames.includes(definition.hostname)) continue;
+            if (input.affectedHostnames !== undefined && !input.affectedHostnames.includes(definition.hostname)) {
+                continue;
+            }
             const desiredEnabled = input.policy === "enabled" && isSiteEnabled(input.sitePreferences ?? {}, definition.hostname);
             const state = await registrationState(
                 definition,
@@ -376,11 +390,15 @@ export class AdapterActivationCoordinator {
             );
             if (desiredEnabled) {
                 const shouldInject = input.mode !== "cold-worker" || state.changed;
-                if (!shouldInject) continue;
+                if (!shouldInject) {
+                    continue;
+                }
                 const matching = await queryMatchingTabs(definition, this.tabs, failures);
                 await Promise.all(matching.map(async (tab) => {
                     try {
-                        if (!this.scripting.executeScript) throw new Error("Script execution is unavailable");
+                        if (!this.scripting.executeScript) {
+                            throw new Error("Script execution is unavailable");
+                        }
                         await this.scripting.executeScript({ target: { tabId: tab.id, allFrames: false }, files: definition.registration.js });
                         records.push({ adapterId: definition.id, tabId: tab.id, action: "inject", ok: true });
                     } catch {

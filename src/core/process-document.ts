@@ -124,11 +124,15 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const diagnosticSink = input.diagnosticSink;
     const adapter = registry.select(url);
     if (!adapter) {
-        if (diagnosticSink) diagnosticSink({ category: "skip", reason: "adapter-missing", count: 1 });
+        if (diagnosticSink) {
+            diagnosticSink({ category: "skip", reason: "adapter-missing", count: 1 });
+        }
         return [];
     }
     const started = diagnosticSink ? performance.now() : undefined;
-    if (diagnosticSink) diagnosticSink({ category: "adapter", reason: "adapter-matched", count: 1 });
+    if (diagnosticSink) {
+        diagnosticSink({ category: "adapter", reason: "adapter-matched", count: 1 });
+    }
 
     const outputs: HTMLTimeElement[] = [];
     for (const element of adapter.discover(root)) {
@@ -136,7 +140,9 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         const resolved = candidate ? resolveTrustedTimestamp(candidate) : null;
         if (!resolved) {
             restoreExactTime(element, ownedOutputMutations);
-            if (diagnosticSink) diagnosticSink({ category: "skip", reason: "invalid-timestamp", count: 1 });
+            if (diagnosticSink) {
+                diagnosticSink({ category: "skip", reason: "invalid-timestamp", count: 1 });
+            }
             continue;
         }
         const presentation = formatDateWithPresentation(
@@ -146,13 +152,19 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         );
         if (presentation.text.length === 0) {
             restoreExactTime(element, ownedOutputMutations);
-            if (diagnosticSink && presentation.error === "invalid-format") diagnosticSink({ category: "error", reason: "processing-failed", count: 1 });
-            if (diagnosticSink) diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
+            if (diagnosticSink && presentation.error === "invalid-format") {
+                diagnosticSink({ category: "error", reason: "processing-failed", count: 1 });
+            }
+            if (diagnosticSink) {
+                diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
+            }
             continue;
         }
         if (presentation.error === "invalid-format") {
             restoreExactTime(element, ownedOutputMutations);
-            if (diagnosticSink) diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
+            if (diagnosticSink) {
+                diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
+            }
             continue;
         }
         const output = renderExactTime(
@@ -160,9 +172,13 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             resolved.sourceDatetime,
             presentation.text
         );
-        if (output) outputs.push(output);
+        if (output) {
+            outputs.push(output);
+        }
     }
-    if (diagnosticSink && started !== undefined) diagnosticSink({ category: "timing", count: outputs.length, durationMs: Math.max(0, performance.now() - started) });
+    if (diagnosticSink && started !== undefined) {
+        diagnosticSink({ category: "timing", count: outputs.length, durationMs: Math.max(0, performance.now() - started) });
+    }
     return outputs;
 }
 

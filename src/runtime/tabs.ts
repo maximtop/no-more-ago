@@ -63,7 +63,9 @@ export type DocumentPhase = "waiting" | "active" | "stopped" | "failed";
  * Recognizes browser tab records with a safe numeric ID and optional string URL.
  */
 export function isRuntimeTab(value: unknown): value is RuntimeTab {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
     const record = value as Record<string, unknown>;
     return Number.isSafeInteger(record.id) && (record.url === undefined || typeof record.url === "string");
 }

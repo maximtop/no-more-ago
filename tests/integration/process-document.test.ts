@@ -144,14 +144,18 @@ describe("processDocument", () => {
 
     it("reconciles one owned source in a bounded region and restores invalid values", () => {
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const initial = processDocument({
             url: new URL("https://github.com/maximtop/no-more-ago/commit/abc"),
             root: document,
             locales: ["en-GB"]
         });
         const output = initial[0];
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const sink = { beforeOwnedOutputRemoval: vi.fn() };
 
         source.setAttribute("datetime", "2026-08-24T10:15:00Z");
@@ -176,15 +180,21 @@ describe("processDocument", () => {
     });
 
     it.each([
-        ["missing datetime", (source: Element) => { source.removeAttribute("datetime"); }],
-        ["zone-less datetime", (source: Element) => { source.setAttribute("datetime", "2026-08-24T10:15:00"); }]
+        ["missing datetime", (source: Element) => {
+            source.removeAttribute("datetime");
+        }],
+        ["zone-less datetime", (source: Element) => {
+            source.setAttribute("datetime", "2026-08-24T10:15:00");
+        }]
     ])("restores an invalid owned source without a mutation sink (%s)", (_label, invalidate) => {
         document.body.innerHTML = `
       <relative-time id="first" datetime="2026-08-23T10:15:00Z">first</relative-time>
       <relative-time id="second" datetime="2026-08-23T11:15:00Z">second</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!first || !second) throw new Error("Expected sources");
+        if (!first || !second) {
+            throw new Error("Expected sources");
+        }
         processDocument({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -217,7 +227,9 @@ describe("processDocument", () => {
       <relative-time id="second" datetime="2026-08-23T11:15:00Z">second</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!first || !second) throw new Error("Expected sources");
+        if (!first || !second) {
+            throw new Error("Expected sources");
+        }
 
         processDocument({
             url: new URL("https://github.com/example/repo"),

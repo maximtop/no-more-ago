@@ -81,7 +81,9 @@ describe("background V3 message contracts", () => {
     it("accepts only strict preserving-enable clear outcomes", () => {
         expect(isClearDiagnosticsResponse({ ok: true })).toBe(true);
         expect(isClearDiagnosticsResponse({ ok: true, extra: true })).toBe(false);
-        for (const error of ["disabled", "unavailable", "storage-failed"]) expect(isClearDiagnosticsResponse({ ok: false, error })).toBe(true);
+        for (const error of ["disabled", "unavailable", "storage-failed"]) {
+            expect(isClearDiagnosticsResponse({ ok: false, error })).toBe(true);
+        }
         expect(isClearDiagnosticsResponse({ ok: false, error: "empty" })).toBe(false);
         expect(isClearDiagnosticsResponse(Object.assign(Object.create({ error: "storage-failed" }) as Record<string, unknown>, { ok: false }))).toBe(false);
     });

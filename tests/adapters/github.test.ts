@@ -16,11 +16,15 @@ describe("GitHub adapter registry", () => {
             '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const adapter = defaultRegistry.select(new URL("https://github.com/org/repo"));
         expect(adapter).not.toBeNull();
-        if (!adapter) throw new Error("Expected the GitHub adapter");
+        if (!adapter) {
+            throw new Error("Expected the GitHub adapter");
+        }
 
         const [element] = adapter.discover(document);
         expect(element).toBeDefined();
-        if (!element) throw new Error("Expected one discovered relative-time element");
+        if (!element) {
+            throw new Error("Expected one discovered relative-time element");
+        }
 
         expect(adapter.extract(element)).toMatchObject({
             adapterId: "github",
@@ -34,7 +38,9 @@ describe("GitHub adapter registry", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z"><time-ago datetime="2026-08-24T10:15:00Z">nested</time-ago></relative-time>';
         const adapter = defaultRegistry.select(new URL("https://github.com/org/repo"));
         const root = document.body.firstElementChild;
-        if (!adapter || !root) throw new Error("Expected adapter and root");
+        if (!adapter || !root) {
+            throw new Error("Expected adapter and root");
+        }
         expect(adapter.discover(root)).toEqual([root, root.firstElementChild]);
         expect(adapter.discover(document.createElement("aside"))).toEqual([]);
     });
@@ -49,7 +55,9 @@ describe("GitHub adapter registry", () => {
         expect(adapter).not.toBeNull();
         const element = document.body.firstElementChild;
         expect(element).not.toBeNull();
-        if (!element) throw new Error("Expected an approved source element");
+        if (!element) {
+            throw new Error("Expected an approved source element");
+        }
         expect(adapter?.discover(document)).toEqual([element]);
         expect(adapter?.extract(element)).toEqual({
             adapterId: "github",

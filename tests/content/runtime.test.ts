@@ -15,11 +15,15 @@ function createMessages() {
     let listener: ((message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown) | undefined;
     return {
         onMessage: {
-            addListener: vi.fn((next: (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown) => { listener = next; })
+            addListener: vi.fn((next: (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown) => {
+                listener = next;
+            })
         },
         dispatch(message: unknown) {
             let response: unknown;
-            listener?.(message, undefined, (value) => { response = value; });
+            listener?.(message, undefined, (value) => {
+                response = value;
+            });
             return response;
         }
     };
@@ -123,11 +127,17 @@ describe("installContentRuntime", () => {
         const handle = install(messages);
         const firstCallback = readiness.mock.calls
             .find(([type]) => type === "DOMContentLoaded")?.[1];
-        if (typeof firstCallback !== "function") throw new Error("Expected readiness callback");
+        if (typeof firstCallback !== "function") {
+            throw new Error("Expected readiness callback");
+        }
 
-        expect(() => { firstCallback(new Event("DOMContentLoaded")); }).toThrow(error);
+        expect(() => {
+            firstCallback(new Event("DOMContentLoaded"));
+        }).toThrow(error);
         expect(document.querySelector("time")).toBeNull();
-        expect(() => { firstCallback(new Event("DOMContentLoaded")); }).not.toThrow();
+        expect(() => {
+            firstCallback(new Event("DOMContentLoaded"));
+        }).not.toThrow();
 
         observe.mockRestore();
         const installsBeforeRetry = readiness.mock.calls.filter(([type]) => type === "DOMContentLoaded").length;
@@ -160,7 +170,9 @@ describe("installContentRuntime", () => {
     it("marks a failed start and retries the same controller without adding a listener", () => {
         setReadyState("complete");
         const messages = createMessages();
-        const observe = vi.spyOn(MutationObserver.prototype, "observe").mockImplementationOnce(() => { throw new Error("observer failed"); });
+        const observe = vi.spyOn(MutationObserver.prototype, "observe").mockImplementationOnce(() => {
+            throw new Error("observer failed");
+        });
         expect(() => install(messages)).toThrow("observer failed");
         expect(messages.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({ type: DOCUMENT_STATUS_MESSAGE, phase: "failed" });
         observe.mockRestore();
@@ -200,7 +212,9 @@ describe("installContentRuntime", () => {
         setReadyState("complete");
         const messages = createMessages();
         let resolveLoad: ((value: unknown) => void) | undefined;
-        const load = vi.fn(() => new Promise<unknown>((resolve) => { resolveLoad = resolve; }));
+        const load = vi.fn(() => new Promise<unknown>((resolve) => {
+            resolveLoad = resolve;
+        }));
         installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: load, messages });
         expect(messages.onMessage.addListener).toHaveBeenCalledTimes(1);
         expect(load).toHaveBeenCalledTimes(1);
@@ -217,7 +231,9 @@ describe("installContentRuntime", () => {
     it("shares one hydration read across duplicate activations and waits for document readiness", async () => {
         const messages = createMessages();
         let resolveLoad: ((value: unknown) => void) | undefined;
-        const load = vi.fn(() => new Promise<unknown>((resolve) => { resolveLoad = resolve; }));
+        const load = vi.fn(() => new Promise<unknown>((resolve) => {
+            resolveLoad = resolve;
+        }));
         const handle = installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: load, messages });
         expect(installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: load, messages })).toBe(handle);
         expect(load).toHaveBeenCalledTimes(1);
@@ -235,7 +251,9 @@ describe("installContentRuntime", () => {
         setReadyState("complete");
         const messages = createMessages();
         let resolveLoad: ((value: unknown) => void) | undefined;
-        const load = new Promise<unknown>((resolve) => { resolveLoad = resolve; });
+        const load = new Promise<unknown>((resolve) => {
+            resolveLoad = resolve;
+        });
         installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: () => load, messages });
         expect(messages.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 8, display: state(8, "utc").display })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 8 });
         resolveLoad?.(state(7, "iana"));
@@ -268,8 +286,12 @@ describe("installContentRuntime", () => {
         const messages = createMessages();
         let resolveOld: ((value: unknown) => void) | undefined;
         let resolveNew: ((value: unknown) => void) | undefined;
-        const oldLoad = vi.fn(() => new Promise<unknown>((resolve) => { resolveOld = resolve; }));
-        const newLoad = vi.fn(() => new Promise<unknown>((resolve) => { resolveNew = resolve; }));
+        const oldLoad = vi.fn(() => new Promise<unknown>((resolve) => {
+            resolveOld = resolve;
+        }));
+        const newLoad = vi.fn(() => new Promise<unknown>((resolve) => {
+            resolveNew = resolve;
+        }));
         const handle = installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: oldLoad, messages });
         messages.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE });
         expect(installContentRuntime({ document, url: new URL("https://github.com/example/repo"), locales: ["en-US"], loadDisplayState: newLoad, messages })).toBe(handle);
@@ -495,6 +517,8 @@ describe("installContentRuntime", () => {
             first.teardown();
             expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
             expect(source?.hasAttribute("hidden")).toBe(false);
-        } finally { observe.mockRestore(); }
+        } finally {
+            observe.mockRestore();
+        }
     });
 });

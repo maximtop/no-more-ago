@@ -8,12 +8,18 @@ describe("document ownership integration", () => {
         document.body.innerHTML = '<a id="link" href="/activity"><relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time></a>';
         const link = document.getElementById("link");
         const source = link?.querySelector("relative-time");
-        if (!link || !source) throw new Error("Expected link source");
+        if (!link || !source) {
+            throw new Error("Expected link source");
+        }
         let clicks = 0;
         let keys = 0;
-        link.addEventListener("click", () => { clicks += 1; });
+        link.addEventListener("click", () => {
+            clicks += 1;
+        });
         link.addEventListener("keydown", (event) => {
-            if (event.key === "Enter") keys += 1;
+            if (event.key === "Enter") {
+                keys += 1;
+            }
         });
 
         const outputs = processDocument({
@@ -41,7 +47,9 @@ describe("document ownership integration", () => {
         document.body.innerHTML = '<relative-time id="source" datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time><span id="foreign">nearby</span>';
         const source = document.getElementById("source");
         const foreign = document.getElementById("foreign");
-        if (!source || !foreign) throw new Error("Expected fixture");
+        if (!source || !foreign) {
+            throw new Error("Expected fixture");
+        }
         const shadow = source.attachShadow({ mode: "open" });
         const shadowChild = document.createElement("span");
         shadowChild.textContent = "shadow content";
@@ -69,7 +77,9 @@ describe("document ownership integration", () => {
         const link = document.getElementById("link");
         const source = link?.querySelector("relative-time");
         const foreign = document.getElementById("foreign");
-        if (!link || !source || !foreign) throw new Error("Expected document sources");
+        if (!link || !source || !foreign) {
+            throw new Error("Expected document sources");
+        }
         const diagnostics = vi.fn();
         const foreignBefore = foreign.outerHTML;
 

@@ -16,7 +16,9 @@ describe("DocumentTransformationController", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time><span id="foreign">foreign</span>';
         const source = document.querySelector("relative-time");
         const foreign = document.getElementById("foreign");
-        if (!source || !foreign) throw new Error("Expected fixture");
+        if (!source || !foreign) {
+            throw new Error("Expected fixture");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -46,7 +48,9 @@ describe("DocumentTransformationController", () => {
         let display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } };
         const source = document.querySelector("relative-time");
         const foreign = document.getElementById("foreign");
-        if (!source || !foreign) throw new Error("Expected fixture");
+        if (!source || !foreign) {
+            throw new Error("Expected fixture");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -55,7 +59,9 @@ describe("DocumentTransformationController", () => {
         });
         controller.start();
         const output = source.nextElementSibling;
-        if (!(output instanceof HTMLTimeElement)) throw new Error("Expected output");
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
         const before = output.textContent;
         display = { formatMode: "system", timeZone: { mode: "utc" } };
         controller.reformatOwned();
@@ -68,7 +74,9 @@ describe("DocumentTransformationController", () => {
     it("processes bounded additions and final datetime values, then restores removed subtrees", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">initial</relative-time>';
         const initial = document.querySelector("relative-time");
-        if (!initial) throw new Error("Expected initial source");
+        if (!initial) {
+            throw new Error("Expected initial source");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -76,7 +84,9 @@ describe("DocumentTransformationController", () => {
         });
         controller.start();
         const initialOutput = initial.nextElementSibling;
-        if (!(initialOutput instanceof HTMLTimeElement)) throw new Error("Expected initial output");
+        if (!(initialOutput instanceof HTMLTimeElement)) {
+            throw new Error("Expected initial output");
+        }
 
         const wrapper = document.createElement("section");
         wrapper.innerHTML = '<relative-time datetime="2026-08-24T10:15:00Z">new</relative-time><relative-time datetime="2026-08-25T10:15:00Z">newer</relative-time>';
@@ -106,7 +116,9 @@ describe("DocumentTransformationController", () => {
     it.each([false, true])("repairs moved outputs and preserves original hidden state (%s)", async (initiallyHidden) => {
         document.body.innerHTML = `<relative-time${initiallyHidden ? " hidden" : ""} datetime="2026-08-23T10:15:00Z">source</relative-time>`;
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -114,7 +126,9 @@ describe("DocumentTransformationController", () => {
         });
         controller.start();
         const output = source.nextElementSibling;
-        if (!(output instanceof HTMLTimeElement)) throw new Error("Expected output");
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
         const token = output.getAttribute("data-no-more-ago-output");
         const foreign = document.createElement("aside");
         document.body.append(foreign);
@@ -135,7 +149,9 @@ describe("DocumentTransformationController", () => {
         const wrapper = document.getElementById("one");
         const destination = document.getElementById("two");
         const source = wrapper?.querySelector("relative-time");
-        if (!wrapper || !destination || !source) throw new Error("Expected fixture");
+        if (!wrapper || !destination || !source) {
+            throw new Error("Expected fixture");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -143,7 +159,9 @@ describe("DocumentTransformationController", () => {
         });
         controller.start();
         const output = source.nextElementSibling;
-        if (!(output instanceof HTMLTimeElement)) throw new Error("Expected output");
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
         const token = output.getAttribute("data-no-more-ago-output");
         destination.append(wrapper);
         await flushMutations();
@@ -165,7 +183,9 @@ describe("DocumentTransformationController", () => {
     it("does not recurse when invalidation removes an owned output", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -173,7 +193,9 @@ describe("DocumentTransformationController", () => {
         });
         controller.start();
         const output = source.nextElementSibling;
-        if (!(output instanceof HTMLTimeElement)) throw new Error("Expected output");
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
         source.removeAttribute("datetime");
         await flushMutations();
         expect(output.isConnected).toBe(false);
@@ -189,7 +211,9 @@ describe("DocumentTransformationController", () => {
       <relative-time id="outside" datetime="2026-08-23T12:15:00Z">outside</relative-time>`;
         const moved = document.getElementById("moved");
         const removed = document.getElementById("removed");
-        if (!moved || !removed) throw new Error("Expected sources");
+        if (!moved || !removed) {
+            throw new Error("Expected sources");
+        }
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
         const adapter: SiteAdapter = {
@@ -203,7 +227,9 @@ describe("DocumentTransformationController", () => {
             extract: (element) => {
                 visits.push(element);
                 const datetime = element.getAttribute("datetime");
-                if (!datetime) return null;
+                if (!datetime) {
+                    return null;
+                }
                 return {
                     adapterId: "combined-instrumented",
                     source: element,
@@ -257,7 +283,9 @@ describe("DocumentTransformationController", () => {
     it("rolls back observer setup and succeeds on a later start", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -285,7 +313,9 @@ describe("DocumentTransformationController", () => {
       <relative-time id="second" datetime="2026-08-24T10:15:00Z">second</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!first || !second) throw new Error("Expected sources");
+        if (!first || !second) {
+            throw new Error("Expected sources");
+        }
         let shouldThrow = true;
         const adapter: SiteAdapter = {
             id: "test",
@@ -295,7 +325,9 @@ describe("DocumentTransformationController", () => {
                 ...Array.from(root.querySelectorAll("relative-time"))
             ],
             extract: (element) => {
-                if (shouldThrow && element === second) throw new Error("candidate extraction failed");
+                if (shouldThrow && element === second) {
+                    throw new Error("candidate extraction failed");
+                }
                 return {
                     adapterId: "test",
                     source: element,
@@ -359,7 +391,9 @@ describe("DocumentTransformationController", () => {
         wrapper.innerHTML = '<relative-time id="inside-one" datetime="2026-08-24T10:15:00Z">one</relative-time><relative-time id="inside-two" datetime="2026-08-25T10:15:00Z">two</relative-time>';
         document.body.append(wrapper);
         const insideOne = wrapper.querySelector("#inside-one");
-        if (!insideOne) throw new Error("Expected dynamic source");
+        if (!insideOne) {
+            throw new Error("Expected dynamic source");
+        }
         await flushMutations();
 
         expect(roots).toEqual([wrapper]);
@@ -367,7 +401,9 @@ describe("DocumentTransformationController", () => {
         expect(visits).toHaveLength(2);
         expect(document.getElementById("outside")?.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
         const output = insideOne.nextElementSibling;
-        if (!(output instanceof HTMLTimeElement)) throw new Error("Expected owned output");
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected owned output");
+        }
         const token = output.getAttribute("data-no-more-ago-output");
         roots.length = 0;
         visits.length = 0;
@@ -389,7 +425,9 @@ describe("DocumentTransformationController", () => {
     it("leaves forged output detach and reparent operations untouched", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         const controller = new DocumentTransformationController({
             url: new URL("https://github.com/example/repo"),
             root: document,
@@ -418,7 +456,9 @@ describe("DocumentTransformationController", () => {
     it("performs exactly one bounded invalidation reconciliation after observer drains", async () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
         const source = document.querySelector("relative-time");
-        if (!source) throw new Error("Expected source");
+        if (!source) {
+            throw new Error("Expected source");
+        }
         let visits = 0;
         const adapter: SiteAdapter = {
             id: "counting",
@@ -430,7 +470,9 @@ describe("DocumentTransformationController", () => {
             extract: (element) => {
                 visits += 1;
                 const datetime = element.getAttribute("datetime");
-                if (!datetime) return null;
+                if (!datetime) {
+                    return null;
+                }
                 return {
                     adapterId: "counting",
                     source: element,

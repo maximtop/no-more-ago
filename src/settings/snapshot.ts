@@ -112,8 +112,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * A site key is the canonical URL.hostname, never a URL or URL.host.
  */
 export function isCanonicalHostname(hostname: string): boolean {
-    if (typeof hostname !== "string" || hostname.length === 0 || hostname.trim() !== hostname) return false;
-    if (hostname.endsWith("..") || hostname.includes("*")) return false;
+    if (typeof hostname !== "string" || hostname.length === 0 || hostname.trim() !== hostname) {
+        return false;
+    }
+    if (hostname.endsWith("..") || hostname.includes("*")) {
+        return false;
+    }
     try {
         const parsed = new URL(`https://${hostname}`);
         return parsed.protocol === "https:"
@@ -134,10 +138,14 @@ export function isCanonicalHostname(hostname: string): boolean {
  * cannot mutate a validated settings snapshot through its input object.
  */
 function copySitePreferences(value: unknown): Readonly<Record<string, boolean>> | null {
-    if (!isRecord(value)) return null;
+    if (!isRecord(value)) {
+        return null;
+    }
     const entries: [string, boolean][] = [];
     for (const [hostname, enabled] of Object.entries(value)) {
-        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") return null;
+        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") {
+            return null;
+        }
         entries.push([hostname, enabled]);
     }
     return Object.freeze(Object.fromEntries(entries));
@@ -149,11 +157,17 @@ const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
  * Rejects whitespace, control characters, traversal segments, and invalid IANA name components.
  */
 export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): identifier is string {
-    if (typeof identifier !== "string" || identifier.length === 0 || identifier.trim() !== identifier) return false;
-    if (identifier.includes("\\") || /\s/u.test(identifier)) return false;
+    if (typeof identifier !== "string" || identifier.length === 0 || identifier.trim() !== identifier) {
+        return false;
+    }
+    if (identifier.includes("\\") || /\s/u.test(identifier)) {
+        return false;
+    }
     for (const character of identifier) {
         const code = character.codePointAt(0) ?? 0;
-        if (code <= 0x1f || code === 0x7f) return false;
+        if (code <= 0x1f || code === 0x7f) {
+            return false;
+        }
     }
     const components = identifier.split("/");
     return components.length > 0 && components.every((component) =>
@@ -165,8 +179,12 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): iden
  * Accepts only complete system, UTC, or structurally valid named-zone selections.
  */
 export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection {
-    if (!isRecord(value) || !Object.hasOwn(value, "mode")) return false;
-    if (value.mode === "system" || value.mode === "utc") return Object.keys(value).length === 1;
+    if (!isRecord(value) || !Object.hasOwn(value, "mode")) {
+        return false;
+    }
+    if (value.mode === "system" || value.mode === "utc") {
+        return Object.keys(value).length === 1;
+    }
     return value.mode === "iana"
     && Object.keys(value).length === 2
     && Object.hasOwn(value, "identifier")
@@ -177,7 +195,9 @@ export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection 
  * Returns an immutable time-zone selection or null without coercing untrusted input.
  */
 export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null {
-    if (!isTimeZoneSelection(value)) return null;
+    if (!isTimeZoneSelection(value)) {
+        return null;
+    }
     return value.mode === "iana"
         ? Object.freeze({ mode: "iana", identifier: value.identifier })
         : Object.freeze({ mode: value.mode });
@@ -187,10 +207,16 @@ export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null
  * Verifies the exact key set and validates custom patterns before accepting display choices.
  */
 export function isDisplaySettings(value: unknown): value is DisplaySettings {
-    if (!isRecord(value) || !Object.hasOwn(value, "formatMode") || !Object.hasOwn(value, "timeZone")) return false;
+    if (!isRecord(value) || !Object.hasOwn(value, "formatMode") || !Object.hasOwn(value, "timeZone")) {
+        return false;
+    }
     const timeZone = parseTimeZoneSelection(value.timeZone);
-    if (timeZone === null) return false;
-    if (value.formatMode === "system") return Object.keys(value).length === 2;
+    if (timeZone === null) {
+        return false;
+    }
+    if (value.formatMode === "system") {
+        return Object.keys(value).length === 2;
+    }
     return value.formatMode === "custom"
     && Object.keys(value).length === 3
     && Object.hasOwn(value, "pattern")
@@ -202,12 +228,20 @@ export function isDisplaySettings(value: unknown): value is DisplaySettings {
  * Copies validated display choices into an immutable representation, or returns null.
  */
 export function parseDisplaySettings(value: unknown): DisplaySettings | null {
-    if (!isDisplaySettings(value)) return null;
+    if (!isDisplaySettings(value)) {
+        return null;
+    }
     const timeZone = parseTimeZoneSelection(value.timeZone);
-    if (timeZone === null) return null;
-    if (value.formatMode === "system") return Object.freeze({ formatMode: "system", timeZone });
+    if (timeZone === null) {
+        return null;
+    }
+    if (value.formatMode === "system") {
+        return Object.freeze({ formatMode: "system", timeZone });
+    }
     const checked = validateCustomFormatPattern(value.pattern);
-    if (!checked.ok) return null;
+    if (!checked.ok) {
+        return null;
+    }
     return Object.freeze({ formatMode: "custom", pattern: checked.pattern, timeZone });
 }
 
@@ -215,7 +249,9 @@ export function parseDisplaySettings(value: unknown): DisplaySettings | null {
  * Enforces the exact V5 schema and validates every nested settings value.
  */
 export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV5 {
-    if (!isRecord(value)) return false;
+    if (!isRecord(value)) {
+        return false;
+    }
     const keys = Object.keys(value);
     if (keys.length !== 6
     || !Object.hasOwn(value, "schemaVersion")
@@ -223,7 +259,9 @@ export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV
     || !Object.hasOwn(value, "globalEnabled")
     || !Object.hasOwn(value, "sitePreferences")
     || !Object.hasOwn(value, "display")
-    || !Object.hasOwn(value, "debugEnabled")) return false;
+    || !Object.hasOwn(value, "debugEnabled")) {
+        return false;
+    }
     return value.schemaVersion === SETTINGS_SCHEMA_VERSION
     && typeof value.revision === "number"
     && Number.isSafeInteger(value.revision)
@@ -238,10 +276,14 @@ export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV
  * Produces an immutable V5 snapshot only from a fully validated storage record.
  */
 export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null {
-    if (!isSettingsSnapshotV5(value)) return null;
+    if (!isSettingsSnapshotV5(value)) {
+        return null;
+    }
     const sitePreferences = copySitePreferences(value.sitePreferences);
     const display = parseDisplaySettings(value.display);
-    if (sitePreferences === null || display === null) return null;
+    if (sitePreferences === null || display === null) {
+        return null;
+    }
     return Object.freeze({
         schemaVersion: SETTINGS_SCHEMA_VERSION,
         revision: value.revision,
@@ -267,9 +309,15 @@ export function createSettingsSnapshot(
     }
     const copied = copySitePreferences(sitePreferences);
     const parsedDisplay = parseDisplaySettings(display);
-    if (copied === null) throw new TypeError("Invalid V5 site preferences");
-    if (parsedDisplay === null) throw new TypeError("Invalid V5 display settings");
-    if (typeof debugEnabled !== "boolean") throw new TypeError("Invalid V5 debug setting");
+    if (copied === null) {
+        throw new TypeError("Invalid V5 site preferences");
+    }
+    if (parsedDisplay === null) {
+        throw new TypeError("Invalid V5 display settings");
+    }
+    if (typeof debugEnabled !== "boolean") {
+        throw new TypeError("Invalid V5 debug setting");
+    }
     return Object.freeze({ schemaVersion: SETTINGS_SCHEMA_VERSION, revision, globalEnabled, sitePreferences: copied, display: parsedDisplay, debugEnabled });
 }
 

@@ -295,11 +295,19 @@ function matchingTabFailure(
     tabId: number
 ): Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined {
     for (const failure of failures) {
-        if (failure.scope === "registration" && failure.adapterId === adapterId) return "registration";
-        if (failure.scope === "matching-tabs-query" && failure.adapterId === adapterId) return "matching-tabs-query";
+        if (failure.scope === "registration" && failure.adapterId === adapterId) {
+            return "registration";
+        }
+        if (failure.scope === "matching-tabs-query" && failure.adapterId === adapterId) {
+            return "matching-tabs-query";
+        }
         if (failure.scope === "tab" && failure.adapterId === adapterId && failure.tabId === tabId) {
-            if (failure.action === "inject") return "current-tab-inject";
-            if (failure.action === "teardown") return "current-tab-teardown";
+            if (failure.action === "inject") {
+                return "current-tab-inject";
+            }
+            if (failure.action === "teardown") {
+                return "current-tab-teardown";
+            }
             return "document-status";
         }
     }
@@ -310,8 +318,14 @@ function matchingTabFailure(
  * Parses a tab URL, returning null when it is absent or invalid.
  */
 function urlFromTab(tab: RuntimeTab | undefined): URL | null {
-    if (!tab?.url) return null;
-    try { return new URL(tab.url); } catch { return null; }
+    if (!tab?.url) {
+        return null;
+    }
+    try {
+        return new URL(tab.url);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -430,17 +444,23 @@ export class BackgroundApplication {
     /**
      * Current lifecycle phase.
      */
-    public get phase(): ApplicationPhase { return this.phaseValue; }
+    public get phase(): ApplicationPhase {
+        return this.phaseValue;
+    }
 
     /**
      * Most recently loaded settings snapshot, if settings are available.
      */
-    public get currentSnapshot(): SettingsSnapshotV5 | undefined { return this.snapshot; }
+    public get currentSnapshot(): SettingsSnapshotV5 | undefined {
+        return this.snapshot;
+    }
 
     /**
      * Most recent adapter reconciliation result, if one has completed.
      */
-    public get reconcileResult(): ActivationReconcileResult | undefined { return this.lastReconcile; }
+    public get reconcileResult(): ActivationReconcileResult | undefined {
+        return this.lastReconcile;
+    }
 
     /**
      * Serializes a state-changing operation after earlier background work.
@@ -486,9 +506,13 @@ export class BackgroundApplication {
             ];
             const registration: Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed"> = {};
             for (const [id, value] of Object.entries(this.lastReconcile.registration)) {
-                if (!affectedIds.has(id)) registration[id] = value;
+                if (!affectedIds.has(id)) {
+                    registration[id] = value;
+                }
             }
-            for (const [id, value] of Object.entries(result.registration)) registration[id] = value;
+            for (const [id, value] of Object.entries(result.registration)) {
+                registration[id] = value;
+            }
             const tabs = [
                 ...this.lastReconcile.tabs.filter((record) => !affectedIds.has(record.adapterId)),
                 ...result.tabs
@@ -497,7 +521,9 @@ export class BackgroundApplication {
         }
         // Calls are serialized, but retain the revision guard for injected/custom
         // coordinators that resolve after a newer result was published.
-        if (!this.lastReconcile || result.revision === null || this.lastReconcile.revision === null || result.revision >= this.lastReconcile.revision) this.lastReconcile = result;
+        if (!this.lastReconcile || result.revision === null || this.lastReconcile.revision === null || result.revision >= this.lastReconcile.revision) {
+            this.lastReconcile = result;
+        }
         this.refreshCachedPopupProjection();
         return result;
     }
@@ -506,7 +532,9 @@ export class BackgroundApplication {
      * Updates the cached reconciliation revision after a no-op settings write.
      */
     private advanceReconcileRevision(revision: number): void {
-        if (!this.lastReconcile) return;
+        if (!this.lastReconcile) {
+            return;
+        }
         this.lastReconcile = { ...this.lastReconcile, revision };
     }
 
@@ -521,7 +549,9 @@ export class BackgroundApplication {
             this.failure = "settings-load";
             try {
                 const cleanup = await this.performReconcile("failed-closed", "unknown", null);
-                if (cleanup.failures.length > 0) this.failure = "fail-closed-cleanup";
+                if (cleanup.failures.length > 0) {
+                    this.failure = "fail-closed-cleanup";
+                }
             } catch {
                 this.failure = "fail-closed-cleanup";
             }
@@ -531,7 +561,9 @@ export class BackgroundApplication {
         this.snapshot = loaded.snapshot;
         this.failure = undefined;
         if (loaded.snapshot.debugEnabled) {
-            try { await this.journal?.setEnabled(true); } catch { /* diagnostics never block activation */ }
+            try {
+                await this.journal?.setEnabled(true);
+            } catch { /* diagnostics never block activation */ }
         }
         const mode: ActivationMode = this.lifecycleReasons.size > 0 ? "activation-sweep" : "cold-worker";
         try {
@@ -561,8 +593,12 @@ export class BackgroundApplication {
      * Ensures settings are loaded and runtime activation is reconciled for a lifecycle reason.
      */
     public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
-        if (reason !== "cold-worker") this.lifecycleReasons.add(reason);
-        if (this.phaseValue === "ready") return this.requestLifecycleDrain();
+        if (reason !== "cold-worker") {
+            this.lifecycleReasons.add(reason);
+        }
+        if (this.phaseValue === "ready") {
+            return this.requestLifecycleDrain();
+        }
         if (this.phaseValue === "failed-closed" && this.readinessFlight === undefined) {
             // Retry cleanup/read only; a failed-closed worker never silently adopts
             // the enabled default after an unreadable snapshot.
@@ -572,23 +608,35 @@ export class BackgroundApplication {
                     try {
                         const cleanup = await this.performReconcile("failed-closed", "unknown", null);
                         this.failure = cleanup.failures.length > 0 ? "fail-closed-cleanup" : "settings-load";
-                    } catch { this.failure = "fail-closed-cleanup"; }
+                    } catch {
+                        this.failure = "fail-closed-cleanup";
+                    }
                     return;
                 }
                 this.snapshot = loaded.snapshot;
                 this.failure = undefined;
                 if (loaded.snapshot.debugEnabled) {
-                    try { await this.journal?.setEnabled(true); } catch { /* diagnostics never block recovery */ }
+                    try {
+                        await this.journal?.setEnabled(true);
+                    } catch { /* diagnostics never block recovery */ }
                 }
                 const result = await this.performReconcile("activation-sweep", loaded.snapshot.globalEnabled ? "enabled" : "disabled", loaded.snapshot.revision, loaded.snapshot.sitePreferences);
                 this.phaseValue = "ready";
                 await this.seedPopupProjection();
-                if (result.failures.length > 0) this.failure = undefined;
-            }).finally(() => { this.readinessFlight = undefined; });
+                if (result.failures.length > 0) {
+                    this.failure = undefined;
+                }
+            }).finally(() => {
+                this.readinessFlight = undefined;
+            });
             return this.readinessFlight;
         }
-        if (this.readinessFlight) return this.readinessFlight;
-        this.readinessFlight = this.enqueue(() => this.initialize()).finally(() => { this.readinessFlight = undefined; });
+        if (this.readinessFlight) {
+            return this.readinessFlight;
+        }
+        this.readinessFlight = this.enqueue(() => this.initialize()).finally(() => {
+            this.readinessFlight = undefined;
+        });
         return this.readinessFlight;
     }
 
@@ -596,16 +644,24 @@ export class BackgroundApplication {
      * Drains queued lifecycle events through one activation-sweep reconciliation.
      */
     private requestLifecycleDrain(): Promise<void> {
-        if (this.lifecycleReasons.size === 0) return Promise.resolve();
-        if (this.lifecycleFlight) return this.lifecycleFlight;
+        if (this.lifecycleReasons.size === 0) {
+            return Promise.resolve();
+        }
+        if (this.lifecycleFlight) {
+            return this.lifecycleFlight;
+        }
         this.lifecycleFlight = this.enqueue(async () => {
             while (this.lifecycleReasons.size > 0) {
-                if (this.phaseValue !== "ready" || !this.snapshot) return;
+                if (this.phaseValue !== "ready" || !this.snapshot) {
+                    return;
+                }
                 await this.performReconcile("activation-sweep", this.snapshot.globalEnabled ? "enabled" : "disabled", this.snapshot.revision, this.snapshot.sitePreferences);
                 this.lifecycleReasons.clear();
                 this.logBackgroundEvent({ category: "lifecycle", count: 1 });
             }
-        }).finally(() => { this.lifecycleFlight = undefined; });
+        }).finally(() => {
+            this.lifecycleFlight = undefined;
+        });
         return this.lifecycleFlight;
     }
 
@@ -634,7 +690,9 @@ export class BackgroundApplication {
      * Initializes the popup-state cache once the application is ready.
      */
     private async seedPopupProjection(): Promise<void> {
-        if (this.popupStateCache || this.phaseValue !== "ready" || !this.snapshot) return;
+        if (this.popupStateCache || this.phaseValue !== "ready" || !this.snapshot) {
+            return;
+        }
         const state = await this.derivePopupState();
         this.popupStateCache = state;
     }
@@ -644,7 +702,9 @@ export class BackgroundApplication {
      */
     private refreshCachedPopupProjection(): void {
         const cached = this.popupStateCache;
-        if (!cached || cached.availability !== "ready" || !this.snapshot) return;
+        if (!cached || cached.availability !== "ready" || !this.snapshot) {
+            return;
+        }
         const hostname = cached.hostname;
         if (hostname === null) {
             this.popupStateCache = {
@@ -742,7 +802,9 @@ export class BackgroundApplication {
      * Derives popup state from the active tab, settings, and document runtime status.
      */
     private async derivePopupState(): Promise<PopupState> {
-        if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableState();
+        if (this.phaseValue !== "ready" || !this.snapshot) {
+            return this.unavailableState();
+        }
         const current = await this.activeTab();
         this.popupTabId = current.tab?.id;
         if (current.error) {
@@ -789,7 +851,9 @@ export class BackgroundApplication {
      * Builds the sorted site list from adapters and explicit preferences.
      */
     private deriveSitesState(): SitesState {
-        if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableSitesState();
+        if (this.phaseValue !== "ready" || !this.snapshot) {
+            return this.unavailableSitesState();
+        }
         const adapterHostnames = this.adapters.map((adapter) => adapter.hostname);
         const explicitHostnames = Object.keys(this.snapshot.sitePreferences);
         const hostnames = [...new Set([...adapterHostnames, ...explicitHostnames])].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
@@ -858,10 +922,16 @@ export class BackgroundApplication {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         return this.enqueue(async (): Promise<GetDiagnosticsSnapshotResponse> => {
-            if (this.phaseValue !== "ready" || !this.snapshot || !this.journal) return { ok: false, error: "unavailable" };
-            if (!this.snapshot.debugEnabled) return { ok: false, error: "disabled" };
+            if (this.phaseValue !== "ready" || !this.snapshot || !this.journal) {
+                return { ok: false, error: "unavailable" };
+            }
+            if (!this.snapshot.debugEnabled) {
+                return { ok: false, error: "disabled" };
+            }
             const result = await this.journal.readSnapshot();
-            if (!result.ok) return result;
+            if (!result.ok) {
+                return result;
+            }
             const family = this.diagnosticEnvironment?.browserFamily;
             const browserFamily: DiagnosticBrowserFamily = family === "chromium" || family === "firefox" || family === "other" ? family : "other";
             const version = this.diagnosticEnvironment?.extensionVersion;
@@ -880,8 +950,12 @@ export class BackgroundApplication {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         return this.enqueue(async (): Promise<ClearDiagnosticsResponse> => {
-            if (this.phaseValue !== "ready" || !this.snapshot || !this.journal) return { ok: false, error: "unavailable" };
-            if (!this.snapshot.debugEnabled) return { ok: false, error: "disabled" };
+            if (this.phaseValue !== "ready" || !this.snapshot || !this.journal) {
+                return { ok: false, error: "unavailable" };
+            }
+            if (!this.snapshot.debugEnabled) {
+                return { ok: false, error: "disabled" };
+            }
             return this.journal.clearEntries();
         });
     }
@@ -895,9 +969,13 @@ export class BackgroundApplication {
         delete trusted.extensionVersion;
         delete trusted.browserFamily;
         const version = this.diagnosticEnvironment?.extensionVersion;
-        if (typeof version === "string" && /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(version)) trusted.extensionVersion = version;
+        if (typeof version === "string" && /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(version)) {
+            trusted.extensionVersion = version;
+        }
         const family = this.diagnosticEnvironment?.browserFamily;
-        if (family === "chromium" || family === "firefox" || family === "other") trusted.browserFamily = family;
+        if (family === "chromium" || family === "firefox" || family === "other") {
+            trusted.browserFamily = family;
+        }
         return Object.freeze(trusted);
     }
 
@@ -905,11 +983,17 @@ export class BackgroundApplication {
      * Appends a sanitized background diagnostic event without blocking background work.
      */
     private logBackgroundEvent(input: DiagnosticEventInput): void {
-        if (!this.snapshot?.debugEnabled || !this.journal) return;
+        if (!this.snapshot?.debugEnabled || !this.journal) {
+            return;
+        }
         const hostname = this.adapters[0]?.hostname;
-        if (!hostname) return;
+        if (!hostname) {
+            return;
+        }
         const event = sanitizeDiagnosticEvent(input, { hostname, pageCategory: "other", incognito: false });
-        if (!event) return;
+        if (!event) {
+            return;
+        }
         void this.journal.append(this.trustedDiagnosticEvent(event)).catch(() => undefined);
     }
 
@@ -920,12 +1004,22 @@ export class BackgroundApplication {
         input: unknown,
         sender: DiagnosticSender & { readonly frameId?: unknown }
     ): Promise<boolean> {
-        if (this.phaseValue !== "ready" || !this.snapshot?.debugEnabled || !this.snapshot.globalEnabled || !this.journal) return false;
-        if (sender.frameId !== undefined && sender.frameId !== 0) return false;
+        if (this.phaseValue !== "ready" || !this.snapshot?.debugEnabled || !this.snapshot.globalEnabled || !this.journal) {
+            return false;
+        }
+        if (sender.frameId !== undefined && sender.frameId !== 0) {
+            return false;
+        }
         const event = createDiagnosticEvent(input, sender);
-        if (!event || !isSiteEnabled(this.snapshot.sitePreferences, event.hostname)) return false;
-        if (!this.adapters.some((adapter) => adapter.hostname === event.hostname)) return false;
-        try { await this.journal.append(this.trustedDiagnosticEvent(event)); } catch { /* diagnostics never block timestamp processing */ }
+        if (!event || !isSiteEnabled(this.snapshot.sitePreferences, event.hostname)) {
+            return false;
+        }
+        if (!this.adapters.some((adapter) => adapter.hostname === event.hostname)) {
+            return false;
+        }
+        try {
+            await this.journal.append(this.trustedDiagnosticEvent(event));
+        } catch { /* diagnostics never block timestamp processing */ }
         return true;
     }
 
@@ -933,7 +1027,9 @@ export class BackgroundApplication {
      * Builds display state and flags an unavailable configured IANA time zone.
      */
     private displayState(): DisplayState {
-        if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableDisplayState();
+        if (this.phaseValue !== "ready" || !this.snapshot) {
+            return this.unavailableDisplayState();
+        }
         const display = this.snapshot.display;
         const unavailable = display.timeZone.mode === "iana" && !this.isZoneAvailable(display.timeZone.identifier);
         return {
@@ -964,7 +1060,9 @@ export class BackgroundApplication {
         try {
             new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions();
             return true;
-        } catch { return false; }
+        } catch {
+            return false;
+        }
     }
 
     /**
@@ -980,22 +1078,35 @@ export class BackgroundApplication {
      * Notifies matching enabled-site tabs of a diagnostic-policy revision and collects failures.
      */
     private async refreshDebugPolicyTabs(enabled: boolean, revision: number): Promise<readonly DebugRefreshFailure[]> {
-        if (!this.snapshot?.globalEnabled) return [];
+        if (!this.snapshot?.globalEnabled) {
+            return [];
+        }
         const failures: DebugRefreshFailure[] = [];
         for (const adapter of this.adapters) {
-            if (!isSiteEnabled(this.snapshot.sitePreferences, adapter.hostname)) continue;
+            if (!isSiteEnabled(this.snapshot.sitePreferences, adapter.hostname)) {
+                continue;
+            }
             let tabs: readonly RuntimeTab[];
-            try { tabs = await this.tabs.query({ url: adapter.registration.matches }); }
-            catch { failures.push({ hostname: adapter.hostname, reason: "matching-tabs-query" }); continue; }
+            try {
+                tabs = await this.tabs.query({ url: adapter.registration.matches });
+            } catch {
+                failures.push({ hostname: adapter.hostname, reason: "matching-tabs-query" }); continue;
+            }
             const seen = new Set<number>();
             for (const tab of tabs) {
                 const url = urlFromTab(tab);
-                if (!url || !adapter.matches(url) || seen.has(tab.id)) continue;
+                if (!url || !adapter.matches(url) || seen.has(tab.id)) {
+                    continue;
+                }
                 seen.add(tab.id);
                 try {
                     const acknowledgement = await this.tabs.sendMessage(tab.id, { type: UPDATE_DEBUG_POLICY_MESSAGE, revision, enabled }, { frameId: 0 });
-                    if (!isDebugPolicyUpdateAcknowledgement(acknowledgement, revision)) failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
-                } catch { failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" }); }
+                    if (!isDebugPolicyUpdateAcknowledgement(acknowledgement, revision)) {
+                        failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                    }
+                } catch {
+                    failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                }
             }
         }
         return failures;
@@ -1011,7 +1122,9 @@ export class BackgroundApplication {
         let refreshFailures: readonly DebugRefreshFailure[] = [];
         let error: "save-failed" | "settings-unavailable" | undefined;
         await this.enqueue(async () => {
-            if (this.phaseValue !== "ready" || !this.snapshot) { error = "settings-unavailable"; return; }
+            if (this.phaseValue !== "ready" || !this.snapshot) {
+                error = "settings-unavailable"; return;
+            }
             const write = await this.settings.setDebugEnabled(enabled);
             if (!write.ok) {
                 error = this.settings.lastLoadError ? "settings-unavailable" : "save-failed";
@@ -1026,20 +1139,30 @@ export class BackgroundApplication {
             this.snapshot = write.snapshot;
             acceptedRevision = write.snapshot.revision;
             this.advanceReconcileRevision(write.snapshot.revision);
-            if (!write.changed) return;
+            if (!write.changed) {
+                return;
+            }
             if (enabled) {
-                try { await this.journal?.setEnabled(true); } catch { /* diagnostics never block processing */ }
+                try {
+                    await this.journal?.setEnabled(true);
+                } catch { /* diagnostics never block processing */ }
                 this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
             }
             refreshFailures = await this.refreshDebugPolicyTabs(enabled, write.snapshot.revision);
             if (!enabled) {
-                try { await this.journal?.setEnabled(false); } catch { /* diagnostics never block processing */ }
+                try {
+                    await this.journal?.setEnabled(false);
+                } catch { /* diagnostics never block processing */ }
             }
             this.refreshCachedPopupProjection();
         });
         const state = await this.enqueue(() => Promise.resolve(this.debugState()));
-        if (error !== undefined) return { ok: false, error, state };
-        if (acceptedRevision === undefined) return { ok: false, error: "settings-unavailable", state };
+        if (error !== undefined) {
+            return { ok: false, error, state };
+        }
+        if (acceptedRevision === undefined) {
+            return { ok: false, error: "settings-unavailable", state };
+        }
         return { ok: true, acceptedRevision, state, ...(refreshFailures.length === 0 ? {} : { refreshFailures }) };
     }
 
@@ -1047,10 +1170,14 @@ export class BackgroundApplication {
      * Sends a display-settings revision to matching enabled-site tabs and collects failures.
      */
     private async refreshDisplayTabs(display: DisplaySettings, revision: number): Promise<readonly DisplayRefreshFailure[]> {
-        if (!this.snapshot?.globalEnabled) return [];
+        if (!this.snapshot?.globalEnabled) {
+            return [];
+        }
         const failures: DisplayRefreshFailure[] = [];
         for (const adapter of this.adapters) {
-            if (!isSiteEnabled(this.snapshot.sitePreferences, adapter.hostname)) continue;
+            if (!isSiteEnabled(this.snapshot.sitePreferences, adapter.hostname)) {
+                continue;
+            }
             let tabs: readonly RuntimeTab[];
             try {
                 tabs = await this.tabs.query({ url: adapter.registration.matches });
@@ -1064,7 +1191,9 @@ export class BackgroundApplication {
             });
             const seen = new Set<number>();
             for (const tab of matching) {
-                if (seen.has(tab.id)) continue;
+                if (seen.has(tab.id)) {
+                    continue;
+                }
                 seen.add(tab.id);
                 try {
                     const response = await this.tabs.sendMessage(tab.id, {
@@ -1072,7 +1201,9 @@ export class BackgroundApplication {
                         revision,
                         display
                     }, { frameId: 0 });
-                    if (!isPresentationUpdateAcknowledgement(response, revision)) failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                    if (!isPresentationUpdateAcknowledgement(response, revision)) {
+                        failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                    }
                 } catch {
                     failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
                 }
@@ -1091,7 +1222,9 @@ export class BackgroundApplication {
         let refreshFailures: readonly DisplayRefreshFailure[] = [];
         let error: "invalid-format" | "invalid-time-zone" | "invalid-display-settings" | "save-failed" | "settings-unavailable" | undefined;
         await this.enqueue(async () => {
-            if (this.phaseValue !== "ready" || !this.snapshot) { error = "settings-unavailable"; return; }
+            if (this.phaseValue !== "ready" || !this.snapshot) {
+                error = "settings-unavailable"; return;
+            }
             const write = await this.settings.setDisplaySettings(display);
             if (!write.ok) {
                 error = write.error === "invalid-format" || write.error === "invalid-time-zone" || write.error === "invalid-display-settings" ? write.error : (this.settings.lastLoadError ? "settings-unavailable" : "save-failed");
@@ -1113,8 +1246,12 @@ export class BackgroundApplication {
             this.refreshCachedPopupProjection();
         });
         const state = await this.enqueue(() => Promise.resolve(this.displayState()));
-        if (error !== undefined) return { ok: false, error, state };
-        if (acceptedRevision === undefined) return { ok: false, error: "settings-unavailable", state };
+        if (error !== undefined) {
+            return { ok: false, error, state };
+        }
+        if (acceptedRevision === undefined) {
+            return { ok: false, error: "settings-unavailable", state };
+        }
         return { ok: true, acceptedRevision, state, refreshFailures };
     }
 
@@ -1134,13 +1271,19 @@ export class BackgroundApplication {
                 // A failed recovery write must not tear down an already healthy
                 // application. Recovery is exposed only while unavailable, but the
                 // background method remains safe for direct callers as well.
-                if (this.phaseValue === "ready" && this.snapshot) return;
+                if (this.phaseValue === "ready" && this.snapshot) {
+                    return;
+                }
                 this.snapshot = undefined;
                 this.failure = "settings-load";
                 try {
                     const cleanup = await this.performReconcile("failed-closed", "unknown", null);
-                    if (cleanup.failures.length > 0) this.failure = "fail-closed-cleanup";
-                } catch { this.failure = "fail-closed-cleanup"; }
+                    if (cleanup.failures.length > 0) {
+                        this.failure = "fail-closed-cleanup";
+                    }
+                } catch {
+                    this.failure = "fail-closed-cleanup";
+                }
                 this.phaseValue = "failed-closed";
                 this.popupStateCache = undefined;
                 return;
@@ -1153,7 +1296,9 @@ export class BackgroundApplication {
             if (previousSnapshot?.globalEnabled) {
                 await this.performReconcile("settings-change", "disabled", write.snapshot.revision, previousSnapshot.sitePreferences);
             }
-            try { await this.journal?.clear(); } catch { /* recovery must not depend on diagnostics */ }
+            try {
+                await this.journal?.clear();
+            } catch { /* recovery must not depend on diagnostics */ }
             await this.performReconcile("activation-sweep", write.snapshot.globalEnabled ? "enabled" : "disabled", write.snapshot.revision, write.snapshot.sitePreferences);
             this.lifecycleReasons.clear();
             this.popupStateCache = undefined;
@@ -1199,14 +1344,18 @@ export class BackgroundApplication {
             this.snapshot = write.snapshot;
             acceptedRevision = write.snapshot.revision;
             await this.performReconcile("settings-change", write.snapshot.globalEnabled ? "enabled" : "disabled", write.snapshot.revision, write.snapshot.sitePreferences);
-            if (write.changed) this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+            if (write.changed) {
+                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+            }
         });
         const state = await this.enqueue(async () => {
             const next = await this.derivePopupState();
             this.popupStateCache = next;
             return next;
         });
-        if (outcome.value === "accepted" && acceptedRevision !== undefined) return { ok: true, acceptedRevision, state };
+        if (outcome.value === "accepted" && acceptedRevision !== undefined) {
+            return { ok: true, acceptedRevision, state };
+        }
         return { ok: false, error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable", state };
     }
 
@@ -1270,14 +1419,18 @@ export class BackgroundApplication {
                 this.advanceReconcileRevision(write.snapshot.revision);
             }
             this.refreshCachedPopupProjection();
-            if (write.changed) this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+            if (write.changed) {
+                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+            }
         });
         if (outcome.value === "invalid-hostname") {
             // Typed semantic rejection is deliberately side-effect free. Use the
             // latest already-read popup projection instead of querying the active tab
             // or document merely to construct an error response.
             const state = surface === "popup" ? (this.popupStateCache ?? this.unavailableState()) : this.deriveSitesState();
-            if (surface === "popup") return { ok: false, error: outcome.value, surface, state: state as PopupState };
+            if (surface === "popup") {
+                return { ok: false, error: outcome.value, surface, state: state as PopupState };
+            }
             return { ok: false, error: outcome.value, surface, state: state as SitesState };
         }
         const state = await this.enqueue(async () => {
@@ -1294,7 +1447,9 @@ export class BackgroundApplication {
                 : { ok: true, acceptedRevision, surface, state: state as SitesState };
         }
         const error = outcome.value === "accepted" ? "settings-unavailable" : outcome.value;
-        if (surface === "popup") return { ok: false, error, surface, state: state as PopupState };
+        if (surface === "popup") {
+            return { ok: false, error, surface, state: state as PopupState };
+        }
         return { ok: false, error, surface, state: state as SitesState };
     }
 }

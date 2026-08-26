@@ -63,15 +63,20 @@ export class DocumentTransformationController {
     setDiagnosticSink(sink: DocumentDiagnosticSink | undefined): void {
         this.diagnosticSink = sink;
         const mutableInput = this.input as { diagnosticSink?: DocumentDiagnosticSink };
-        if (sink) mutableInput.diagnosticSink = sink;
-        else Reflect.deleteProperty(mutableInput, "diagnosticSink");
+        if (sink) {
+            mutableInput.diagnosticSink = sink;
+        } else {
+            Reflect.deleteProperty(mutableInput, "diagnosticSink");
+        }
     }
 
     /**
      * Starts mutation scheduling and performs the initial document pass.
      */
     start(): readonly HTMLTimeElement[] {
-        if (this.phase === "active") return this.outputs;
+        if (this.phase === "active") {
+            return this.outputs;
+        }
 
         const scheduler = new DocumentMutationScheduler({
             document: this.input.root,
@@ -119,12 +124,18 @@ export class DocumentTransformationController {
      * @returns The time elements updated during the reformat operation.
      */
     reformatOwned(): readonly HTMLTimeElement[] {
-        if (this.phase !== "active") return this.outputs;
+        if (this.phase !== "active") {
+            return this.outputs;
+        }
         const scheduler = this.scheduler;
-        if (!scheduler) return this.outputs;
+        if (!scheduler) {
+            return this.outputs;
+        }
         const outputs: HTMLTimeElement[] = [];
         for (const { source } of getOwnedSourceEntries(this.input.root)) {
-            if (!isConnectedToDocument(source, this.input.root)) continue;
+            if (!isConnectedToDocument(source, this.input.root)) {
+                continue;
+            }
             outputs.push(...reconcileDocumentRegion({ ...this.input, root: source, ownedOutputMutations: scheduler }));
         }
         this.outputs = outputs;

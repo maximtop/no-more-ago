@@ -24,10 +24,16 @@ async function renderPopup(state: PopupState | undefined, transport: PopupTransp
     const root = createRoot(container);
     const initialProps = state ? { initialState: state } : {};
     const reportingProps = reporter ? { reporter } : {};
-    await act(async () => { root.render(<PopupApp {...initialProps} {...reportingProps} client={new PopupClient(transport)} />); });
+    await act(async () => {
+        root.render(<PopupApp {...initialProps} {...reportingProps} client={new PopupClient(transport)} />);
+    });
     return {
         container,
-        unmount: async () => { await act(async () => { root.unmount(); }); container.remove(); }
+        unmount: async () => {
+            await act(async () => {
+                root.unmount();
+            }); container.remove();
+        }
     };
 }
 
@@ -42,10 +48,16 @@ function createReportingFixture(tab: SiteReportTab | undefined): {
     let manifestReads = 0;
     const reporter = createSiteReportReporter({
         tabs: {
-            query: async (query) => { queries.push(query); return tab === undefined ? [] : [tab]; },
-            create: async (properties) => { opened.push(properties); }
+            query: async (query) => {
+                queries.push(query); return tab === undefined ? [] : [tab];
+            },
+            create: async (properties) => {
+                opened.push(properties);
+            }
         },
-        runtime: { getManifest: () => { manifestReads += 1; return { version: "1.2.3" }; } },
+        runtime: { getManifest: () => {
+            manifestReads += 1; return { version: "1.2.3" };
+        } },
         navigator: { userAgent: "Chrome/130.0" }
     });
     return { reporter, queries, opened, manifestReads: () => manifestReads };
@@ -60,7 +72,9 @@ describe("PopupApp contract", () => {
             expect(rendered.container.querySelector("input[type=checkbox]")).not.toBeNull();
             expect(rendered.container.textContent).not.toMatch(/counter|replacement|options|site switch/i);
             expect(Array.from(rendered.container.querySelectorAll("button"), (button) => button.textContent)).toEqual(["Report this site"]);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it.each([
@@ -74,7 +88,9 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(state);
         try {
             expect(rendered.container.textContent).toContain(wording);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("ignores a lower revision response and shows the typed save failure alert", async () => {
@@ -86,29 +102,41 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector("input[type=checkbox]") as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.checked).toBe(true);
             expect(rendered.container.textContent).toContain("Could not save this change. Try again.");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("rereads a committed state after an ambiguous response and gates revisions", async () => {
         const committed: PopupState = { ...active, revision: 3, globalEnabled: false, status: "global-disabled" };
         const transport: PopupTransport = {
             sendMessage: (message) => {
-                if (message && typeof message === "object" && "type" in message && message.type === SET_GLOBAL_ENABLED_MESSAGE) return Promise.reject(new Error("response lost"));
-                if (message && typeof message === "object" && "type" in message && message.type === GET_POPUP_STATE_MESSAGE) return Promise.resolve(committed);
+                if (message && typeof message === "object" && "type" in message && message.type === SET_GLOBAL_ENABLED_MESSAGE) {
+                    return Promise.reject(new Error("response lost"));
+                }
+                if (message && typeof message === "object" && "type" in message && message.type === GET_POPUP_STATE_MESSAGE) {
+                    return Promise.resolve(committed);
+                }
                 return Promise.reject(new Error("unexpected"));
             }
         };
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector("input[type=checkbox]") as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.checked).toBe(false);
             expect(rendered.container.textContent).toContain("The response was interrupted. Current state was reloaded.");
             expect(rendered.container.textContent).toContain("Extension is off");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("shows a disabled mixed switch when both the command and reread are lost", async () => {
@@ -116,14 +144,18 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector("input[type=checkbox]") as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.disabled).toBe(true);
             expect(input.indeterminate).toBe(true);
             expect(input.getAttribute("aria-checked")).toBe("mixed");
             expect(rendered.container.textContent).toContain("Could not confirm whether the change was saved");
             expect(rendered.container.textContent).toContain("Current state is unavailable");
             expect(rendered.container.textContent).not.toContain("Active on github.com");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("renders and edits an exact no-adapter host without calling it unsupported", async () => {
@@ -145,10 +177,14 @@ describe("PopupApp contract", () => {
             const siteInput = rendered.container.querySelector('input[aria-label="Enabled on example.test"]') as HTMLInputElement;
             expect(siteInput).not.toBeNull();
             expect(siteInput.checked).toBe(true);
-            await act(async () => { siteInput.click(); });
+            await act(async () => {
+                siteInput.click();
+            });
             expect(writes).toBe(1);
             expect(rendered.container.textContent).toContain("Disabled on example.test");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("keeps typed invalid-hostname responses distinct from response loss", async () => {
@@ -163,10 +199,14 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, invalid);
         try {
             const siteInput = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
-            await act(async () => { siteInput.click(); });
+            await act(async () => {
+                siteInput.click();
+            });
             expect(rendered.container.textContent).toContain("hostname is invalid");
             expect(rendered.container.textContent).not.toContain("response was interrupted");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("links to extension-local Settings and preserves the disabled-site wording", async () => {
@@ -176,7 +216,9 @@ describe("PopupApp contract", () => {
             const settings = rendered.container.querySelector('a[href="options.html"]');
             expect(settings?.textContent).toBe("Settings");
             expect(rendered.container.textContent).toContain("Disabled on github.com");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("preserves the authoritative checked site state after a typed save failure", async () => {
@@ -193,11 +235,15 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.checked).toBe(true);
             expect(rendered.container.textContent).toContain("Could not save this change. Try again.");
             expect(rereads).toBe(0);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("rereads the authoritative site state after a lost response", async () => {
@@ -205,7 +251,9 @@ describe("PopupApp contract", () => {
         let rereads = 0;
         const transport: PopupTransport = {
             sendMessage: (message) => {
-                if (message && typeof message === "object" && "type" in message && message.type === SET_SITE_ENABLED_MESSAGE) return Promise.reject(new Error("response lost"));
+                if (message && typeof message === "object" && "type" in message && message.type === SET_SITE_ENABLED_MESSAGE) {
+                    return Promise.reject(new Error("response lost"));
+                }
                 if (message && typeof message === "object" && "type" in message && message.type === GET_POPUP_STATE_MESSAGE) {
                     rereads += 1;
                     return Promise.resolve(committed);
@@ -216,25 +264,33 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.checked).toBe(false);
             expect(rereads).toBe(1);
             expect(rendered.container.textContent).toContain("The response was interrupted. Current state was reloaded.");
             expect(rendered.container.textContent).toContain("Disabled on github.com");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("fails closed with a disabled mixed global switch when site command and reread both fail", async () => {
         const transport: PopupTransport = {
             sendMessage: (message) => {
-                if (message && typeof message === "object" && "type" in message && (message.type === SET_SITE_ENABLED_MESSAGE || message.type === GET_POPUP_STATE_MESSAGE)) return Promise.reject(new Error("transport lost"));
+                if (message && typeof message === "object" && "type" in message && (message.type === SET_SITE_ENABLED_MESSAGE || message.type === GET_POPUP_STATE_MESSAGE)) {
+                    return Promise.reject(new Error("transport lost"));
+                }
                 return Promise.resolve(active);
             }
         };
         const rendered = await renderPopup(active, transport);
         try {
             const siteInput = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
-            await act(async () => { siteInput.click(); });
+            await act(async () => {
+                siteInput.click();
+            });
             const globalInput = rendered.container.querySelector('input[aria-label="Global enabled"]') as HTMLInputElement;
             expect(globalInput.disabled).toBe(true);
             expect(globalInput.indeterminate).toBe(true);
@@ -242,7 +298,9 @@ describe("PopupApp contract", () => {
             expect(rendered.container.querySelector('input[aria-label="Enabled on github.com"]')).toBeNull();
             expect(rendered.container.textContent).toContain("Could not confirm whether the change was saved");
             expect(rendered.container.textContent).toContain("Current state is unavailable");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("ignores an actual stale lower-revision site response", async () => {
@@ -255,11 +313,15 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, transport);
         try {
             const input = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(input.checked).toBe(true);
             expect(rendered.container.textContent).toContain("Active on github.com");
             expect(rendered.container.textContent).not.toContain("Disabled on github.com");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("keeps the exact-host control usable while global processing is off", async () => {
@@ -278,11 +340,15 @@ describe("PopupApp contract", () => {
         try {
             const input = rendered.container.querySelector('input[aria-label="Enabled on github.com"]') as HTMLInputElement;
             expect(input.disabled).toBe(false);
-            await act(async () => { input.click(); });
+            await act(async () => {
+                input.click();
+            });
             expect(write).toMatchObject({ type: SET_SITE_ENABLED_MESSAGE, hostname: "github.com", enabled: false, surface: "popup" });
             expect(rendered.container.textContent).toContain("Extension is off");
             expect(input.checked).toBe(false);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it.each([
@@ -295,7 +361,9 @@ describe("PopupApp contract", () => {
         try {
             expect(rendered.container.textContent).toContain(wording);
             expect(rendered.container.querySelector('input[aria-label="Enabled on github.com"]')).not.toBeNull();
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("reads the authoritative post-reset defaults on a fresh popup mount", async () => {
@@ -315,7 +383,9 @@ describe("PopupApp contract", () => {
             expect(rendered.container.textContent).toContain("Active on github.com");
             expect(rendered.container.querySelector<HTMLInputElement>('input[aria-label="Global enabled"]')?.checked).toBe(true);
             expect(rendered.container.querySelector("button")?.textContent).toBe("Report this site");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it.each([
@@ -326,18 +396,24 @@ describe("PopupApp contract", () => {
         [{ ...active, hostname: "example.test", hasAdapter: false, status: "no-rules" }, "Add support for this site"],
         [{ ...active, hostname: "example.test", hasAdapter: false, globalEnabled: false, status: "global-disabled" }, "Add support for this site"]
     ] as const)("opens exactly one site-specific report from eligible %s state", async (state, reason) => {
-        if (state.hostname === null) throw new Error("eligible popup hostname missing");
+        if (state.hostname === null) {
+            throw new Error("eligible popup hostname missing");
+        }
         const currentUrl = `https://${state.hostname}/issues/4?filter=recent#comment`;
         const fixture = createReportingFixture({ url: currentUrl, incognito: false });
         let settingsMessages = 0;
-        const rendered = await renderPopup(state, { sendMessage: () => { settingsMessages += 1; return Promise.resolve(state); } }, fixture.reporter);
+        const rendered = await renderPopup(state, { sendMessage: () => {
+            settingsMessages += 1; return Promise.resolve(state);
+        } }, fixture.reporter);
         try {
             expect(fixture.queries).toEqual([]);
             expect(fixture.opened).toEqual([]);
             expect(fixture.manifestReads()).toBe(0);
             const button = rendered.container.querySelector("button") as HTMLButtonElement;
             expect(button.textContent).toBe("Report this site");
-            await act(async () => { button.click(); });
+            await act(async () => {
+                button.click();
+            });
             expect(fixture.queries).toEqual([{ active: true, currentWindow: true }]);
             expect(fixture.opened).toHaveLength(1);
             expect(fixture.manifestReads()).toBe(1);
@@ -352,7 +428,9 @@ describe("PopupApp contract", () => {
                 extension_version: "1.2.3",
                 browser: "Chrome"
             });
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it.each([
@@ -366,7 +444,9 @@ describe("PopupApp contract", () => {
             expect(fixture.queries).toEqual([]);
             expect(fixture.opened).toEqual([]);
             expect(fixture.manifestReads()).toBe(0);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it.each([
@@ -379,23 +459,31 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, { sendMessage: () => Promise.resolve(active) }, fixture.reporter);
         try {
             const button = rendered.container.querySelector("button") as HTMLButtonElement;
-            await act(async () => { button.click(); });
+            await act(async () => {
+                button.click();
+            });
             expect(fixture.queries).toHaveLength(1);
             expect(fixture.opened).toEqual([]);
             expect(rendered.container.querySelector('[role="alert"]')?.textContent).toContain(wording);
             expect(rendered.container.textContent).toContain("Active on github.com");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("keeps a private site's selected URL within its existing private window", async () => {
         const fixture = createReportingFixture({ url: "https://github.com/private/repository?view=issue#private", incognito: true, windowId: 17 });
         const rendered = await renderPopup(active, { sendMessage: () => Promise.resolve(active) }, fixture.reporter);
         try {
-            await act(async () => { rendered.container.querySelector<HTMLButtonElement>("button")?.click(); });
+            await act(async () => {
+                rendered.container.querySelector<HTMLButtonElement>("button")?.click();
+            });
             expect(fixture.opened).toHaveLength(1);
             expect(fixture.opened[0]?.windowId).toBe(17);
             expect(new URL(fixture.opened[0]?.url ?? "").searchParams.get("current_url")).toBe("https://github.com/private/repository?view=issue#private");
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("suppresses same-turn duplicate clicks while the explicit report is opening", async () => {
@@ -404,33 +492,47 @@ describe("PopupApp contract", () => {
         const reporter: SiteReportReporter = {
             openPopupReport: () => {
                 calls += 1;
-                return new Promise((resolve) => { resolveReport = resolve; });
+                return new Promise((resolve) => {
+                    resolveReport = resolve;
+                });
             },
             openOptionsReport: () => Promise.resolve({ ok: false, error: "invalid-context" })
         };
         const rendered = await renderPopup(active, { sendMessage: () => Promise.resolve(active) }, reporter);
         try {
             const button = rendered.container.querySelector("button") as HTMLButtonElement;
-            await act(async () => { button.click(); button.click(); });
+            await act(async () => {
+                button.click(); button.click();
+            });
             expect(calls).toBe(1);
             expect(button.disabled).toBe(true);
-            await act(async () => { resolveReport?.({ ok: true, url: "https://github.com/maximtop/no-more-ago/issues/new" }); });
+            await act(async () => {
+                resolveReport?.({ ok: true, url: "https://github.com/maximtop/no-more-ago/issues/new" });
+            });
             expect(button.disabled).toBe(false);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 
     it("reports a rejected tab opening once without changing popup policy", async () => {
         let attempts = 0;
         const reporter: SiteReportReporter = {
-            openPopupReport: () => { attempts += 1; return Promise.resolve({ ok: false, error: "open-failed" }); },
+            openPopupReport: () => {
+                attempts += 1; return Promise.resolve({ ok: false, error: "open-failed" });
+            },
             openOptionsReport: () => Promise.resolve({ ok: false, error: "invalid-context" })
         };
         const rendered = await renderPopup(active, { sendMessage: () => Promise.resolve(active) }, reporter);
         try {
-            await act(async () => { rendered.container.querySelector<HTMLButtonElement>("button")?.click(); });
+            await act(async () => {
+                rendered.container.querySelector<HTMLButtonElement>("button")?.click();
+            });
             expect(attempts).toBe(1);
             expect(rendered.container.querySelector('[role="alert"]')?.textContent).toBe("Could not open the GitHub report. Try again.");
             expect(rendered.container.querySelector<HTMLInputElement>('input[aria-label="Global enabled"]')?.checked).toBe(true);
-        } finally { await rendered.unmount(); }
+        } finally {
+            await rendered.unmount();
+        }
     });
 });

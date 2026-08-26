@@ -38,7 +38,9 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     return {
         apply(compiler: any): void {
             compiler.hooks.thisCompilation.tap("NoMoreAgoMetadata", (compilation: any) => {
-                for (const file of [packagePath, commonPath, variantPath, popupHtmlPath, optionsHtmlPath, ...iconPaths]) compilation.fileDependencies.add(file);
+                for (const file of [packagePath, commonPath, variantPath, popupHtmlPath, optionsHtmlPath, ...iconPaths]) {
+                    compilation.fileDependencies.add(file);
+                }
                 compilation.hooks.processAssets.tap(
                     { name: "NoMoreAgoMetadata", stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONS },
                     () => {
@@ -65,7 +67,9 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
  * Produces a browser- and mode-specific Rspack configuration after validating requested inputs.
  */
 export function createRspackConfig({ workspaceRoot, browser, mode, outputPath }: { workspaceRoot: string; browser: string; mode: string; outputPath: string }): Record<string, any> {
-    if (!BROWSERS.includes(browser) || !MODES.includes(mode)) throw new Error("Invalid browser or mode");
+    if (!BROWSERS.includes(browser) || !MODES.includes(mode)) {
+        throw new Error("Invalid browser or mode");
+    }
     return {
         context: workspaceRoot,
         target: "web",

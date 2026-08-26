@@ -22,14 +22,20 @@ export const syntheticAdapter: SiteAdapter = {
         (url.protocol === "https:" || url.protocol === "http:") && url.hostname === SYNTHETIC_HOSTNAME,
     discover: (root) => {
         const candidates: Element[] = [];
-        if (root instanceof Element && root.matches(SYNTHETIC_SELECTOR)) candidates.push(root);
+        if (root instanceof Element && root.matches(SYNTHETIC_SELECTOR)) {
+            candidates.push(root);
+        }
         candidates.push(...root.querySelectorAll(SYNTHETIC_SELECTOR));
         return candidates;
     },
     extract: (element) => {
-        if (!element.matches(SYNTHETIC_SELECTOR)) return null;
+        if (!element.matches(SYNTHETIC_SELECTOR)) {
+            return null;
+        }
         const rawDatetime = element.getAttribute("datetime");
-        if (!rawDatetime || rawDatetime.trim() === "") return null;
+        if (!rawDatetime || rawDatetime.trim() === "") {
+            return null;
+        }
         return {
             adapterId: "synthetic",
             source: element,

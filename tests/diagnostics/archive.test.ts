@@ -38,7 +38,9 @@ describe("diagnostic archive", () => {
         const files = unzipSync(archive);
         expect(Object.keys(files)).toEqual(["diagnostics.json"]);
         const json = files["diagnostics.json"];
-        if (!json) throw new Error("diagnostics.json is missing");
+        if (!json) {
+            throw new Error("diagnostics.json is missing");
+        }
         expect(JSON.parse(strFromU8(json))).toEqual(snapshot);
     });
 
@@ -55,7 +57,9 @@ describe("diagnostic archive", () => {
         const archive = createDiagnosticsZip({ entries, environment });
         const files = unzipSync(archive);
         const json = files["diagnostics.json"];
-        if (!json) throw new Error("diagnostics.json is missing");
+        if (!json) {
+            throw new Error("diagnostics.json is missing");
+        }
         const exportedBytes = new TextEncoder().encode(strFromU8(json)).byteLength;
         const exported = JSON.parse(strFromU8(json)) as { entries: unknown[]; environment: unknown };
         expect(journalBytes).toBeLessThanOrEqual(5_000_000);
@@ -86,7 +90,9 @@ describe("diagnostic archive", () => {
         rootWithToJSON.entries = snapshot.entries;
         rootWithToJSON.environment = snapshot.environment;
         let encoderCalls = 0;
-        expectArchiveError(() => createDiagnosticsZip(rootWithToJSON, () => { encoderCalls += 1; return new Uint8Array(); }), "invalid-snapshot");
+        expectArchiveError(() => createDiagnosticsZip(rootWithToJSON, () => {
+            encoderCalls += 1; return new Uint8Array();
+        }), "invalid-snapshot");
         expect(encoderCalls).toBe(0);
 
         const environmentWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
@@ -115,7 +121,9 @@ describe("diagnostic archive", () => {
             adapterVersion: "12345678901234567890123456789012"
         }));
         expectArchiveError(() => createDiagnosticsZip({ entries: oversizedEntries, environment: snapshot.environment }), "invalid-snapshot");
-        expectArchiveError(() => createDiagnosticsZip(snapshot, () => { throw new Error("encoder failed"); }), "compression-failed");
+        expectArchiveError(() => createDiagnosticsZip(snapshot, () => {
+            throw new Error("encoder failed");
+        }), "compression-failed");
     });
 
     it("keeps the object URL alive through the one click and revokes it once", () => {
@@ -126,14 +134,20 @@ describe("diagnostic archive", () => {
         const runtime: DownloadRuntime = {
             Blob,
             createObjectURL: () => "blob:diagnostics",
-            revokeObjectURL: (url) => { revoked.push(url); },
+            revokeObjectURL: (url) => {
+                revoked.push(url);
+            },
             createAnchor: () => ({
                 href: "",
                 download: "",
-                click() { clicked += 1; clickedUrl = this.href; expect(revoked).toEqual([]); expect(this.download).toBe("no-more-ago-diagnostics.zip"); },
+                click() {
+                    clicked += 1; clickedUrl = this.href; expect(revoked).toEqual([]); expect(this.download).toBe("no-more-ago-diagnostics.zip");
+                },
                 remove() { /* local anchor cleanup */ }
             }),
-            scheduleRevoke: (callback) => { scheduled.push(callback); }
+            scheduleRevoke: (callback) => {
+                scheduled.push(callback);
+            }
         };
         downloadDiagnosticsZip(new Uint8Array([1, 2, 3]), runtime);
         expect(clicked).toBe(1);
@@ -141,7 +155,9 @@ describe("diagnostic archive", () => {
         expect(revoked).toEqual([]);
         expect(scheduled).toHaveLength(1);
         const revoke = scheduled[0];
-        if (!revoke) throw new Error("revoke callback is missing");
+        if (!revoke) {
+            throw new Error("revoke callback is missing");
+        }
         revoke();
         revoke();
         expect(revoked).toEqual(["blob:diagnostics"]);
@@ -153,21 +169,35 @@ describe("diagnostic archive", () => {
         const base: DownloadRuntime = {
             Blob,
             createObjectURL: () => "blob:failed",
-            revokeObjectURL: (url) => { revoked.push(url); },
-            createAnchor: () => ({ href: "", download: "", click: () => { throw new Error("blocked"); }, remove: () => { removed += 1; } }),
+            revokeObjectURL: (url) => {
+                revoked.push(url);
+            },
+            createAnchor: () => ({ href: "", download: "", click: () => {
+                throw new Error("blocked");
+            }, remove: () => {
+                removed += 1;
+            } }),
             scheduleRevoke: () => { /* no callback */ }
         };
-        expectArchiveError(() => { downloadDiagnosticsZip(new Uint8Array([1]), base); }, "download-failed");
+        expectArchiveError(() => {
+            downloadDiagnosticsZip(new Uint8Array([1]), base);
+        }, "download-failed");
         expect(revoked).toEqual(["blob:failed"]);
         expect(removed).toBe(1);
 
         revoked.length = 0;
         const schedulingFailure: DownloadRuntime = {
             ...base,
-            createAnchor: () => ({ href: "", download: "", click: () => { /* click succeeded */ }, remove: () => { removed += 1; } }),
-            scheduleRevoke: () => { throw new Error("scheduler failed"); }
+            createAnchor: () => ({ href: "", download: "", click: () => { /* click succeeded */ }, remove: () => {
+                removed += 1;
+            } }),
+            scheduleRevoke: () => {
+                throw new Error("scheduler failed");
+            }
         };
-        expectArchiveError(() => { downloadDiagnosticsZip(new Uint8Array([1]), schedulingFailure); }, "download-failed");
+        expectArchiveError(() => {
+            downloadDiagnosticsZip(new Uint8Array([1]), schedulingFailure);
+        }, "download-failed");
         expect(revoked).toEqual(["blob:failed"]);
         expect(removed).toBe(2);
     });

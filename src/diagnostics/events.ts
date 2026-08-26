@@ -208,7 +208,9 @@ function safeVersion(value: unknown): string | undefined {
  * Redacts and truncates stack text before it reaches persistent diagnostics.
  */
 function scrubStack(value: unknown): readonly string[] | undefined {
-    if (typeof value !== "string") return undefined;
+    if (typeof value !== "string") {
+        return undefined;
+    }
     const frames: string[] = [];
     for (const line of value.split("\n").slice(0, MAX_STACK_FRAMES)) {
     // Keep only a stable frame marker and source coordinates; paths, URLs and
@@ -218,7 +220,9 @@ function scrubStack(value: unknown): readonly string[] | undefined {
         if (lineNumber) {
             const column = match[2];
             frames.push(column ? `frame:${lineNumber}:${column}` : `frame:${lineNumber}`);
-        } else if (line.trim()) frames.push("frame");
+        } else if (line.trim()) {
+            frames.push("frame");
+        }
     }
     return frames.length > 0 ? frames : undefined;
 }
@@ -227,7 +231,11 @@ function scrubStack(value: unknown): readonly string[] | undefined {
  * Maps a page path to a finite category without retaining the original path.
  */
 export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
-    for (const [pattern, category] of PAGE_PATHS) if (pattern.test(pathname)) return category;
+    for (const [pattern, category] of PAGE_PATHS) {
+        if (pattern.test(pathname)) {
+            return category;
+        }
+    }
     return "other";
 }
 
@@ -235,10 +243,18 @@ export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
  * Derive durable context from a trusted WebExtension sender, never page fields.
  */
 export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticContext | null {
-    if (typeof sender.url !== "string") return null;
+    if (typeof sender.url !== "string") {
+        return null;
+    }
     let parsed: URL;
-    try { parsed = new URL(sender.url); } catch { return null; }
-    if ((parsed.protocol !== "https:" && parsed.protocol !== "http:") || !isCanonicalHostname(parsed.hostname)) return null;
+    try {
+        parsed = new URL(sender.url);
+    } catch {
+        return null;
+    }
+    if ((parsed.protocol !== "https:" && parsed.protocol !== "http:") || !isCanonicalHostname(parsed.hostname)) {
+        return null;
+    }
     return {
         hostname: parsed.hostname,
         pageCategory: parsed.hostname === "github.com" ? pageCategoryFromPath(parsed.pathname) : "other",
@@ -250,22 +266,36 @@ export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticCon
  * Validates and redacts event input before it enters the diagnostic journal.
  */
 export function sanitizeDiagnosticEvent(input: unknown, context: DiagnosticContext, now = Date.now()): DiagnosticEvent | null {
-    if (!isRecord(input) || !isRecord(context)) return null;
+    if (!isRecord(input) || !isRecord(context)) {
+        return null;
+    }
     if (Object.keys(context).length !== 3
     || !Object.hasOwn(context, "hostname")
     || !Object.hasOwn(context, "pageCategory")
     || !Object.hasOwn(context, "incognito")
     || !isCanonicalHostname(context.hostname)
     || !["repository", "issue", "pull-request", "actions", "settings", "other"].includes(context.pageCategory)
-    || typeof context.incognito !== "boolean") return null;
-    if (Object.hasOwn(input, "timestamp") || Object.hasOwn(input, "hostname") || Object.hasOwn(input, "pageCategory") || Object.hasOwn(input, "incognito")) return null;
+    || typeof context.incognito !== "boolean") {
+        return null;
+    }
+    if (Object.hasOwn(input, "timestamp") || Object.hasOwn(input, "hostname") || Object.hasOwn(input, "pageCategory") || Object.hasOwn(input, "incognito")) {
+        return null;
+    }
     const allowedKeys = ["category", "count", "durationMs", "reason", "adapterVersion", "extensionVersion", "browserFamily", "stack"];
-    if (Object.keys(input).some((key) => !allowedKeys.includes(key))) return null;
+    if (Object.keys(input).some((key) => !allowedKeys.includes(key))) {
+        return null;
+    }
     // A hostile prototype must not be able to smuggle a value into the durable
     // event. Optional fields are either own properties or are rejected.
-    if (allowedKeys.some((key) => key in input && !Object.hasOwn(input, key))) return null;
-    if (!Object.hasOwn(input, "category") || !["lifecycle", "adapter", "mutation", "timing", "settings", "skip", "error"].includes(String(input.category))) return null;
-    if (!Number.isSafeInteger(now) || now < 0) return null;
+    if (allowedKeys.some((key) => key in input && !Object.hasOwn(input, key))) {
+        return null;
+    }
+    if (!Object.hasOwn(input, "category") || !["lifecycle", "adapter", "mutation", "timing", "settings", "skip", "error"].includes(String(input.category))) {
+        return null;
+    }
+    if (!Number.isSafeInteger(now) || now < 0) {
+        return null;
+    }
     const event: DiagnosticEvent = {
         category: input.category as DiagnosticCategory,
         timestamp: now,
@@ -280,13 +310,27 @@ export function sanitizeDiagnosticEvent(input: unknown, context: DiagnosticConte
     const extensionVersion = safeVersion(input.extensionVersion);
     const browserFamily = input.browserFamily === "chromium" || input.browserFamily === "firefox" || input.browserFamily === "other" ? input.browserFamily : undefined;
     const stack = scrubStack(input.stack);
-    if (count !== undefined) (event as { count?: number }).count = count;
-    if (durationMs !== undefined) (event as { durationMs?: number }).durationMs = durationMs;
-    if (reason !== undefined) (event as { reason?: string }).reason = reason;
-    if (adapterVersion !== undefined) (event as { adapterVersion?: string }).adapterVersion = adapterVersion;
-    if (extensionVersion !== undefined) (event as { extensionVersion?: string }).extensionVersion = extensionVersion;
-    if (browserFamily !== undefined) (event as { browserFamily?: DiagnosticBrowserFamily }).browserFamily = browserFamily;
-    if (stack !== undefined) (event as { stack?: readonly string[] }).stack = stack;
+    if (count !== undefined) {
+        (event as { count?: number }).count = count;
+    }
+    if (durationMs !== undefined) {
+        (event as { durationMs?: number }).durationMs = durationMs;
+    }
+    if (reason !== undefined) {
+        (event as { reason?: string }).reason = reason;
+    }
+    if (adapterVersion !== undefined) {
+        (event as { adapterVersion?: string }).adapterVersion = adapterVersion;
+    }
+    if (extensionVersion !== undefined) {
+        (event as { extensionVersion?: string }).extensionVersion = extensionVersion;
+    }
+    if (browserFamily !== undefined) {
+        (event as { browserFamily?: DiagnosticBrowserFamily }).browserFamily = browserFamily;
+    }
+    if (stack !== undefined) {
+        (event as { stack?: readonly string[] }).stack = stack;
+    }
     return Object.freeze(event);
 }
 

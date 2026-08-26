@@ -48,16 +48,26 @@ export type TimeZoneAvailability = (identifier: string) => boolean;
  * Uses Intl to determine whether an IANA time-zone identifier is available.
  */
 function defaultTimeZoneAvailability(identifier: string): boolean {
-    try { new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions(); return true; } catch { return false; }
+    try {
+        new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions(); return true;
+    } catch {
+        return false;
+    }
 }
 
 /**
  * Compares display choices without relying on object identity.
  */
 function sameDisplay(a: DisplaySettings, b: DisplaySettings): boolean {
-    if (a.formatMode !== b.formatMode) return false;
-    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) return false;
-    if (a.timeZone.mode !== b.timeZone.mode) return false;
+    if (a.formatMode !== b.formatMode) {
+        return false;
+    }
+    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) {
+        return false;
+    }
+    if (a.timeZone.mode !== b.timeZone.mode) {
+        return false;
+    }
     return a.timeZone.mode !== "iana" || b.timeZone.mode !== "iana" || a.timeZone.identifier === b.timeZone.identifier;
 }
 
@@ -145,17 +155,23 @@ export class SettingsService {
     /**
      * Returns the most recently loaded snapshot, if initialization succeeded.
      */
-    public get loadedSnapshot(): SettingsSnapshotV5 | undefined { return this.current; }
+    public get loadedSnapshot(): SettingsSnapshotV5 | undefined {
+        return this.current;
+    }
 
     /**
      * Exposes the last initialization failure for unavailable-state reporting.
      */
-    public get lastLoadError(): "load-failed" | "invalid-settings" | undefined { return this.loadError; }
+    public get lastLoadError(): "load-failed" | "invalid-settings" | undefined {
+        return this.loadError;
+    }
 
     /**
      * Creates the known-good default snapshot used after an unrecoverable read.
      */
-    private fallbackSnapshot(): SettingsSnapshotV5 { return this.current ?? DEFAULT_SETTINGS_SNAPSHOT; }
+    private fallbackSnapshot(): SettingsSnapshotV5 {
+        return this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
+    }
 
     /**
      * Writes current and previous snapshots as one recoverable storage pair.
@@ -171,20 +187,31 @@ export class SettingsService {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
             const loaded = await this.load();
-            if (!loaded.ok) { result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }; return; }
+            if (!loaded.ok) {
+                result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }; return;
+            }
             const candidate = mutator(loaded.snapshot);
-            if (candidate === null) { result = { ok: true, changed: false, snapshot: loaded.snapshot }; return; }
+            if (candidate === null) {
+                result = { ok: true, changed: false, snapshot: loaded.snapshot }; return;
+            }
             const parsedCandidate = parseSettingsSnapshot(candidate);
             if (parsedCandidate === null) {
                 result = { ok: false, error: "invalid-display-settings", snapshot: loaded.snapshot };
                 return;
             }
-            try { await this.storage.set(this.pair(parsedCandidate, loaded.snapshot)); }
-            catch { result = { ok: false, error: "persistence-failed", snapshot: loaded.snapshot }; return; }
+            try {
+                await this.storage.set(this.pair(parsedCandidate, loaded.snapshot));
+            } catch {
+                result = { ok: false, error: "persistence-failed", snapshot: loaded.snapshot }; return;
+            }
             this.current = parsedCandidate; result = { ok: true, changed: true, snapshot: parsedCandidate };
         });
         this.mutationTail = run.then(() => undefined, () => undefined);
-        try { await run; } catch { result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }; }
+        try {
+            await run;
+        } catch {
+            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+        }
         return result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
     }
 
@@ -192,7 +219,9 @@ export class SettingsService {
      * Persists the global activation flag and returns the resulting revision or failure projection.
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
-        if (typeof enabled !== "boolean") return { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+        if (typeof enabled !== "boolean") {
+            return { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+        }
         return this.mutate((current) => current.globalEnabled === enabled ? null : createSettingsSnapshot(current.revision + 1, enabled, current.sitePreferences, current.display, current.debugEnabled));
     }
 
@@ -200,12 +229,20 @@ export class SettingsService {
      * Persists one canonical-host override without changing other site preferences.
      */
     public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
-        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
+        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") {
+            return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
+        }
         return this.mutate((current) => {
-            if (Object.hasOwn(current.sitePreferences, hostname) && current.sitePreferences[hostname] === enabled) return null;
+            if (Object.hasOwn(current.sitePreferences, hostname) && current.sitePreferences[hostname] === enabled) {
+                return null;
+            }
             const entries = Object.entries(current.sitePreferences);
             const index = entries.findIndex(([key]) => key === hostname);
-            if (index >= 0) entries[index] = [hostname, enabled]; else entries.push([hostname, enabled]);
+            if (index >= 0) {
+                entries[index] = [hostname, enabled];
+            } else {
+                entries.push([hostname, enabled]);
+            }
             return createSettingsSnapshot(current.revision + 1, current.globalEnabled, Object.fromEntries(entries), current.display, current.debugEnabled);
         });
     }
@@ -216,11 +253,17 @@ export class SettingsService {
     public async setDisplaySettings(display: unknown): Promise<SettingsWriteResult> {
         if (typeof display === "object" && display !== null && Object.hasOwn(display, "formatMode") && (display as { formatMode?: unknown }).formatMode === "custom") {
             const pattern = (display as { pattern?: unknown }).pattern;
-            if (!validateCustomFormatPattern(pattern).ok) return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
+            if (!validateCustomFormatPattern(pattern).ok) {
+                return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
+            }
         }
         const parsed = parseDisplaySettings(display);
-        if (parsed === null) return { ok: false, error: "invalid-display-settings", snapshot: this.fallbackSnapshot() };
-        if (parsed.timeZone.mode === "iana" && !this.isTimeZoneAvailable(parsed.timeZone.identifier)) return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
+        if (parsed === null) {
+            return { ok: false, error: "invalid-display-settings", snapshot: this.fallbackSnapshot() };
+        }
+        if (parsed.timeZone.mode === "iana" && !this.isTimeZoneAvailable(parsed.timeZone.identifier)) {
+            return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
+        }
         return this.mutate((current) => sameDisplay(current.display, parsed) ? null : createSettingsSnapshot(current.revision + 1, current.globalEnabled, current.sitePreferences, parsed, current.debugEnabled));
     }
 
@@ -254,14 +297,20 @@ export class SettingsService {
             result = { ok: true, changed: true, snapshot: defaults };
         });
         this.mutationTail = run.then(() => undefined, () => undefined);
-        try { await run; } catch { result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }; }
+        try {
+            await run;
+        } catch {
+            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+        }
         return result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
     }
 
     /**
      * Reloads the newest valid stored snapshot after an ambiguous write response.
      */
-    public async readLatest(): Promise<SettingsLoadResult> { return this.load(); }
+    public async readLatest(): Promise<SettingsLoadResult> {
+        return this.load();
+    }
 }
 
 /**

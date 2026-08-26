@@ -14,8 +14,12 @@ function runtime(tab?: SiteReportTab, options: { readonly create?: () => Promise
         queries: 0,
         creates: [] as Array<Record<string, unknown>>,
         tabs: {
-            query: () => { result.queries += 1; return Promise.resolve(tab ? [tab] : []); },
-            create: (properties: Record<string, unknown>) => { result.creates.push(properties); return options.create ? options.create() : Promise.resolve(undefined); }
+            query: () => {
+                result.queries += 1; return Promise.resolve(tab ? [tab] : []);
+            },
+            create: (properties: Record<string, unknown>) => {
+                result.creates.push(properties); return options.create ? options.create() : Promise.resolve(undefined);
+            }
         },
         runtime: { getManifest: () => options.manifest ?? manifest },
         navigator: { userAgent: options.userAgent ?? "Mozilla/5.0 Chrome/139.0.0.0" }
@@ -32,7 +36,9 @@ describe("site report composer", () => {
             extensionVersion: "1.2.3",
             browser: "Chrome"
         });
-        if (!url) throw new Error("report URL was not composed");
+        if (!url) {
+            throw new Error("report URL was not composed");
+        }
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://github.com");
         expect(parsed.pathname).toBe("/maximtop/no-more-ago/issues/new");
@@ -46,7 +52,9 @@ describe("site report composer", () => {
 
     it("keeps generic Options site fields and reason editable and blank", () => {
         const url = composeSiteReportUrl({ extensionVersion: "1.2.3", browser: "Firefox" });
-        if (!url) throw new Error("generic report URL was not composed");
+        if (!url) {
+            throw new Error("generic report URL was not composed");
+        }
         const params = new URL(url).searchParams;
         expect(params.get("template")).toBe("site-report.yml");
         expect(params.has("reason")).toBe(false);
@@ -131,7 +139,9 @@ describe("site report browser boundary", () => {
 
     it("does not retry a failed open or duplicate an in-flight request", async () => {
         let release: (() => void) | undefined;
-        const pending = new Promise<void>((resolve) => { release = resolve; });
+        const pending = new Promise<void>((resolve) => {
+            release = resolve;
+        });
         const browser = runtime({ url: "https://github.com/repo", incognito: false }, { create: () => pending });
         const reporter = createSiteReportReporter(browser);
         const first = reporter.openPopupReport({ hostname: "github.com", hasAdapter: true });

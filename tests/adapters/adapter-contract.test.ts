@@ -41,12 +41,16 @@ describe.each(adapters)("shared adapter contract: $name", ({ adapter, hostname }
     it("discovers an eligible root and descendants without duplicate discovery", () => {
         document.body.innerHTML = sourceMarkup("root");
         const root = document.body.firstElementChild;
-        if (!root) throw new Error("Expected fixture root");
+        if (!root) {
+            throw new Error("Expected fixture root");
+        }
         expect(adapter.discover(root)).toEqual([root]);
 
         document.body.innerHTML = `<section>${sourceMarkup("one")}${sourceMarkup("two")}</section>`;
         const section = document.body.firstElementChild;
-        if (!section) throw new Error("Expected fixture section");
+        if (!section) {
+            throw new Error("Expected fixture section");
+        }
         const discovered = adapter.discover(section);
         expect(discovered).toHaveLength(2);
         expect(new Set(discovered).size).toBe(2);
@@ -55,7 +59,9 @@ describe.each(adapters)("shared adapter contract: $name", ({ adapter, hostname }
     it("returns the approved source identity and explicit datetime rule", () => {
         document.body.innerHTML = sourceMarkup("visible relative text", "2026-08-25T10:15:00Z");
         const element = document.body.firstElementChild;
-        if (!element) throw new Error("Expected source element");
+        if (!element) {
+            throw new Error("Expected source element");
+        }
         const candidate = adapter.extract(element);
         expect(candidate).toMatchObject({
             adapterId: adapter.id,
@@ -88,7 +94,9 @@ describe("synthetic adapter extraction boundary", () => {
     ] as const)("safely handles %s datetime through the shared resolver", (_name, markup, valid) => {
         document.body.innerHTML = markup;
         const element = document.body.firstElementChild;
-        if (!element) throw new Error("Expected source element");
+        if (!element) {
+            throw new Error("Expected source element");
+        }
         const candidate = syntheticAdapter.extract(element);
         const resolved = candidate ? resolveTrustedTimestamp(candidate) : null;
         expect(resolved !== null).toBe(valid);

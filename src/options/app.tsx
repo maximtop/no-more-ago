@@ -70,13 +70,27 @@ type ResetOrigin = "ready" | "unavailable";
  * @returns An error message, or undefined when there is no notice to show.
  */
 function noticeText(notice: Notice): string | undefined {
-    if (notice === "save-failed") return "Could not save this change. Try again.";
-    if (notice === "invalid-hostname") return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
-    if (notice === "interrupted") return "The response was interrupted. Current state was reloaded.";
-    if (notice === "unknown") return "Could not confirm whether the change was saved. Reopen Settings to try again. Current state is unavailable.";
-    if (notice === "debug-save-failed") return "Could not save the Debug logs setting. Try again.";
-    if (notice === "debug-interrupted") return "The Debug logs response was interrupted. Current state was reloaded.";
-    if (notice === "debug-unknown") return "Could not confirm the Debug logs setting. Reopen Settings to try again.";
+    if (notice === "save-failed") {
+        return "Could not save this change. Try again.";
+    }
+    if (notice === "invalid-hostname") {
+        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
+    }
+    if (notice === "interrupted") {
+        return "The response was interrupted. Current state was reloaded.";
+    }
+    if (notice === "unknown") {
+        return "Could not confirm whether the change was saved. Reopen Settings to try again. Current state is unavailable.";
+    }
+    if (notice === "debug-save-failed") {
+        return "Could not save the Debug logs setting. Try again.";
+    }
+    if (notice === "debug-interrupted") {
+        return "The Debug logs response was interrupted. Current state was reloaded.";
+    }
+    if (notice === "debug-unknown") {
+        return "Could not confirm the Debug logs setting. Reopen Settings to try again.";
+    }
     return undefined;
 }
 
@@ -88,10 +102,18 @@ function noticeText(notice: Notice): string | undefined {
  * @returns An error message, or undefined when there is no notice to show.
  */
 function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
-    if (origin === "ready" && notice === "save-failed") return "Could not reset settings. Your current settings remain active. Try again.";
-    if (origin === "ready" && notice === "ambiguous") return "Could not confirm whether settings were reset. Reopen Settings to check their current state.";
-    if (notice === "save-failed") return "Could not reset settings. Processing remains disabled. Try again.";
-    if (notice === "ambiguous") return "The reset response could not be confirmed. Processing remains disabled. Try again.";
+    if (origin === "ready" && notice === "save-failed") {
+        return "Could not reset settings. Your current settings remain active. Try again.";
+    }
+    if (origin === "ready" && notice === "ambiguous") {
+        return "Could not confirm whether settings were reset. Reopen Settings to check their current state.";
+    }
+    if (notice === "save-failed") {
+        return "Could not reset settings. Processing remains disabled. Try again.";
+    }
+    if (notice === "ambiguous") {
+        return "The reset response could not be confirmed. Processing remains disabled. Try again.";
+    }
     return undefined;
 }
 
@@ -207,13 +229,27 @@ function validateIdentifier(identifier: string): string | undefined {
  * @returns An error message, or undefined when there is no notice to show.
  */
 function displayNoticeText(notice: DisplayNotice): string | undefined {
-    if (notice === "invalid-time-zone") return "This time zone is invalid or unavailable. Enter a supported IANA identifier and try again.";
-    if (notice === "invalid-format") return "The date format is invalid. Correct the pattern and try again.";
-    if (notice === "unavailable-time-zone") return "The saved time zone is unavailable in this browser. Choose System or another supported zone, then save.";
-    if (notice === "save-failed") return "Could not save the display settings. Your previous format remains active. Try again.";
-    if (notice === "interrupted") return "The response was interrupted. Display settings were reread.";
-    if (notice === "partial-refresh") return "Display settings were saved, but one or more open pages could not be refreshed. New dates will use the saved setting.";
-    if (notice === "unknown") return "Could not confirm whether the display settings were saved. Reopen Settings to try again.";
+    if (notice === "invalid-time-zone") {
+        return "This time zone is invalid or unavailable. Enter a supported IANA identifier and try again.";
+    }
+    if (notice === "invalid-format") {
+        return "The date format is invalid. Correct the pattern and try again.";
+    }
+    if (notice === "unavailable-time-zone") {
+        return "The saved time zone is unavailable in this browser. Choose System or another supported zone, then save.";
+    }
+    if (notice === "save-failed") {
+        return "Could not save the display settings. Your previous format remains active. Try again.";
+    }
+    if (notice === "interrupted") {
+        return "The response was interrupted. Display settings were reread.";
+    }
+    if (notice === "partial-refresh") {
+        return "Display settings were saved, but one or more open pages could not be refreshed. New dates will use the saved setting.";
+    }
+    if (notice === "unknown") {
+        return "Could not confirm whether the display settings were saved. Reopen Settings to try again.";
+    }
     return undefined;
 }
 
@@ -225,7 +261,9 @@ function displayNoticeText(notice: DisplayNotice): string | undefined {
  */
 function customPatternError(pattern: string): string | undefined {
     const result = validateCustomFormatPattern(pattern);
-    if (result.ok) return undefined;
+    if (result.ok) {
+        return undefined;
+    }
     switch (result.error) {
         case "empty": return "Enter a date format pattern.";
         case "too-long": return "Use a date format pattern of 256 characters or fewer.";
@@ -246,7 +284,9 @@ const PREVIEW_INSTANT = new Date("2026-08-25T12:34:00.000Z");
  * @returns Browser preference locales, or en-US when browser information is unavailable.
  */
 function previewLocales(): readonly string[] {
-    if (typeof navigator === "undefined") return ["en-US"];
+    if (typeof navigator === "undefined") {
+        return ["en-US"];
+    }
     const locales = Array.isArray(navigator.languages) ? navigator.languages.filter((value): value is string => typeof value === "string") : [];
     return locales.length > 0 ? locales : (navigator.language ? [navigator.language] : ["en-US"]);
 }
@@ -270,9 +310,15 @@ function unavailableDisplayText(state: Extract<DisplayState, { availability: "un
  * @returns The error message displayed to the user.
  */
 function siteReportErrorText(error: string): string {
-    if (error === "busy") return "A GitHub report is already being opened.";
-    if (error === "open-failed") return "Could not open the GitHub report. Try again.";
-    if (error === "browser-unavailable") return "Could not open the GitHub report in this browser.";
+    if (error === "busy") {
+        return "A GitHub report is already being opened.";
+    }
+    if (error === "open-failed") {
+        return "Could not open the GitHub report. Try again.";
+    }
+    if (error === "browser-unavailable") {
+        return "Could not open the GitHub report in this browser.";
+    }
     return "Could not open the GitHub report. Check the browser context and try again.";
 }
 
@@ -309,18 +355,26 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     const reportInFlight = useRef(false);
 
     useEffect(() => {
-        if (initialState) return;
+        if (initialState) {
+            return;
+        }
         let mounted = true;
         void client.getState().then((next) => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setState(next);
             setLoading(false);
         }).catch(() => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setState({ availability: "unavailable", revision: null, globalEnabled: null, sites: [], failure: "settings-load" });
             setLoading(false);
         });
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [client, initialState]);
 
     useEffect(() => {
@@ -334,46 +388,68 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
         }
         let mounted = true;
         void client.getDisplayState().then((next) => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setDisplayState(next);
-            if (next.availability === "ready") setDisplayDraft(draftFromDisplay(next.display));
+            if (next.availability === "ready") {
+                setDisplayDraft(draftFromDisplay(next.display));
+            }
             setDisplayLoading(false);
         }).catch(() => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setDisplayState({ availability: "unavailable", revision: null, display: null, failure: "settings-load" });
             setDisplayLoading(false);
         });
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [client, initialDisplayState]);
 
     useEffect(() => {
-        if (initialDebugState) return;
+        if (initialDebugState) {
+            return;
+        }
         let mounted = true;
         void client.getDebugState().then((next) => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setDebugState(next);
             setDebugLoading(false);
         }).catch(() => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setDebugState({ availability: "unavailable", revision: null, enabled: null, failure: "settings-load" });
             setDebugLoading(false);
         });
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [client, initialDebugState]);
 
     const onSiteChange = async (hostname: string, event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!state || state.availability !== "ready" || savingHostname !== undefined) return;
+        if (!state || state.availability !== "ready" || savingHostname !== undefined) {
+            return;
+        }
         setSavingHostname(hostname);
         setNotice(undefined);
         const result = await client.setSiteEnabled(hostname, event.currentTarget.checked);
         if (result.kind === "response") {
             const responseState = result.response.state;
-            if (responseState.availability !== "ready" || responseState.revision >= state.revision) setState(responseState);
+            if (responseState.availability !== "ready" || responseState.revision >= state.revision) {
+                setState(responseState);
+            }
             if (!result.response.ok) {
                 setNotice(result.response.error === "save-failed" ? "save-failed" : result.response.error === "invalid-hostname" ? "invalid-hostname" : "unknown");
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) setState(result.state);
+            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+                setState(result.state);
+            }
             setNotice("interrupted");
         } else {
             setState({ availability: "unavailable", revision: null, globalEnabled: null, sites: [], failure: "settings-load" });
@@ -383,7 +459,9 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const onResetAllSettings = async (): Promise<void> => {
-        if (!state || resetting || resetInFlight.current) return;
+        if (!state || resetting || resetInFlight.current) {
+            return;
+        }
         const origin = state.availability;
         setResetOrigin(origin);
         resetInFlight.current = true;
@@ -404,7 +482,9 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                 try {
                     const nextDisplay = await client.getDisplayState();
                     setDisplayState(nextDisplay);
-                    if (nextDisplay.availability === "ready") setDisplayDraft(draftFromDisplay(nextDisplay.display));
+                    if (nextDisplay.availability === "ready") {
+                        setDisplayDraft(draftFromDisplay(nextDisplay.display));
+                    }
                     setResetNotice(undefined);
                 } catch {
                     setDisplayState({ availability: "unavailable", revision: null, display: null, failure: "settings-load" });
@@ -421,13 +501,17 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                     setDebugLoading(false);
                 }
             } else {
-                if (origin === "unavailable") setState(result.response.state);
+                if (origin === "unavailable") {
+                    setState(result.response.state);
+                }
                 setResetNotice(result.response.error === "save-failed" ? "save-failed" : "ambiguous");
             }
         } else {
             // Do not retry: the reset may already have been committed before the
             // response was lost or rejected by the guard.
-            if (origin === "unavailable") setState({ availability: "unavailable", revision: null, globalEnabled: null, sites: [], failure: "settings-load" });
+            if (origin === "unavailable") {
+                setState({ availability: "unavailable", revision: null, globalEnabled: null, sites: [], failure: "settings-load" });
+            }
             setResetNotice("ambiguous");
         }
         resetInFlight.current = false;
@@ -435,7 +519,9 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const onDisplaySave = async (): Promise<void> => {
-        if (!displayState || displayState.availability !== "ready" || !displayDraft || savingDisplay) return;
+        if (!displayState || displayState.availability !== "ready" || !displayDraft || savingDisplay) {
+            return;
+        }
         if (displayDraft.formatMode === "custom") {
             const patternError = customPatternError(displayDraft.pattern);
             if (patternError) {
@@ -472,7 +558,9 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
         } else if (result.state) {
             if (result.state.availability !== "ready" || result.state.revision >= displayState.revision) {
                 setDisplayState(result.state);
-                if (result.state.availability === "ready") setDisplayDraft(draftFromDisplay(result.state.display));
+                if (result.state.availability === "ready") {
+                    setDisplayDraft(draftFromDisplay(result.state.display));
+                }
             }
             setDisplayNotice("interrupted");
         } else {
@@ -483,17 +571,25 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const onDebugChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!debugState || debugState.availability !== "ready" || savingDebug || debugInFlight.current) return;
+        if (!debugState || debugState.availability !== "ready" || savingDebug || debugInFlight.current) {
+            return;
+        }
         const enabled = event.currentTarget.checked;
         debugInFlight.current = true;
         setSavingDebug(true);
         setNotice(undefined);
         const result = await client.setDebugEnabled(enabled);
         if (result.kind === "response") {
-            if (result.response.state.availability !== "ready" || result.response.state.revision >= debugState.revision) setDebugState(result.response.state);
-            if (!result.response.ok) setNotice("debug-save-failed");
+            if (result.response.state.availability !== "ready" || result.response.state.revision >= debugState.revision) {
+                setDebugState(result.response.state);
+            }
+            if (!result.response.ok) {
+                setNotice("debug-save-failed");
+            }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= debugState.revision) setDebugState(result.state);
+            if (result.state.availability !== "ready" || result.state.revision >= debugState.revision) {
+                setDebugState(result.state);
+            }
             setNotice("debug-interrupted");
         } else {
             setDebugState({ availability: "unavailable", revision: null, enabled: null, failure: "settings-load" });
@@ -504,15 +600,25 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const diagnosticsErrorText = (error: "disabled" | "unavailable" | "empty" | "invalid-journal" | "storage-failed"): string => {
-        if (error === "disabled") return "Debug logs are off. Turn them on to use saved diagnostics.";
-        if (error === "empty") return "There are no diagnostic logs to download yet.";
-        if (error === "invalid-journal") return "Saved diagnostic logs are invalid. Clear logs and try again.";
-        if (error === "storage-failed") return "Saved diagnostic logs could not be read. Try again later.";
+        if (error === "disabled") {
+            return "Debug logs are off. Turn them on to use saved diagnostics.";
+        }
+        if (error === "empty") {
+            return "There are no diagnostic logs to download yet.";
+        }
+        if (error === "invalid-journal") {
+            return "Saved diagnostic logs are invalid. Clear logs and try again.";
+        }
+        if (error === "storage-failed") {
+            return "Saved diagnostic logs could not be read. Try again later.";
+        }
         return "Diagnostic logs are unavailable. Try again later.";
     };
 
     const onDownloadDiagnostics = async (): Promise<void> => {
-        if (!debugState || debugState.availability !== "ready" || !debugState.enabled || diagnosticsInFlight.current) return;
+        if (!debugState || debugState.availability !== "ready" || !debugState.enabled || diagnosticsInFlight.current) {
+            return;
+        }
         diagnosticsInFlight.current = true;
         setDiagnosticsBusy(true);
         setDiagnosticsNotice(undefined);
@@ -535,14 +641,19 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const onClearDiagnostics = async (): Promise<void> => {
-        if (!debugState || debugState.availability !== "ready" || !debugState.enabled || diagnosticsInFlight.current) return;
+        if (!debugState || debugState.availability !== "ready" || !debugState.enabled || diagnosticsInFlight.current) {
+            return;
+        }
         diagnosticsInFlight.current = true;
         setDiagnosticsBusy(true);
         setDiagnosticsNotice(undefined);
         try {
             const result = await client.clearDiagnostics();
-            if (result.kind === "error") setDiagnosticsNotice(diagnosticsErrorText(result.error));
-            else setDiagnosticsNotice("Diagnostic logs cleared.");
+            if (result.kind === "error") {
+                setDiagnosticsNotice(diagnosticsErrorText(result.error));
+            } else {
+                setDiagnosticsNotice("Diagnostic logs cleared.");
+            }
         } finally {
             diagnosticsInFlight.current = false;
             setDiagnosticsBusy(false);
@@ -550,13 +661,17 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
     };
 
     const onOpenGitHubIssue = async (): Promise<void> => {
-        if (reporting || reportInFlight.current) return;
+        if (reporting || reportInFlight.current) {
+            return;
+        }
         reportInFlight.current = true;
         setReporting(true);
         setReportNotice(undefined);
         try {
             const result = await reporter.openOptionsReport();
-            if (!result.ok) setReportNotice(siteReportErrorText(result.error));
+            if (!result.ok) {
+                setReportNotice(siteReportErrorText(result.error));
+            }
         } catch {
             setReportNotice("Could not open the GitHub report. Try again.");
         } finally {
@@ -598,7 +713,9 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                                             label={site.hostname}
                                             checked={site.enabled}
                                             disabled={savingHostname !== undefined}
-                                            onChange={(event) => { void onSiteChange(site.hostname, event); }}
+                                            onChange={(event) => {
+                                                void onSiteChange(site.hostname, event);
+                                            }}
                                             aria-label={`Enabled on ${site.hostname}`}
                                         />
                                     ))}
@@ -621,12 +738,16 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                                             value={displayDraft.formatMode}
                                             onChange={(event) => {
                                                 const value = event.currentTarget.value;
-                                                if (value === "system" || value === "custom") setDisplayDraft((draft) => draft ? { ...draft, formatMode: value } : draft);
+                                                if (value === "system" || value === "custom") {
+                                                    setDisplayDraft((draft) => draft ? { ...draft, formatMode: value } : draft);
+                                                }
                                                 setDisplayNotice(undefined);
                                             }}
                                             onInput={(event) => {
                                                 const value = event.currentTarget.value;
-                                                if (value === "system" || value === "custom") setDisplayDraft((draft) => draft ? { ...draft, formatMode: value } : draft);
+                                                if (value === "system" || value === "custom") {
+                                                    setDisplayDraft((draft) => draft ? { ...draft, formatMode: value } : draft);
+                                                }
                                             }}
                                             disabled={savingDisplay}
                                         >
@@ -661,12 +782,16 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                                             value={displayDraft.timeZoneMode}
                                             onChange={(event) => {
                                                 const value = event.currentTarget.value;
-                                                if (value === "system" || value === "utc" || value === "iana") setDisplayDraft((draft) => draft ? { ...draft, timeZoneMode: value } : draft);
+                                                if (value === "system" || value === "utc" || value === "iana") {
+                                                    setDisplayDraft((draft) => draft ? { ...draft, timeZoneMode: value } : draft);
+                                                }
                                                 setDisplayNotice(undefined);
                                             }}
                                             onInput={(event) => {
                                                 const value = event.currentTarget.value;
-                                                if (value === "system" || value === "utc" || value === "iana") setDisplayDraft((draft) => draft ? { ...draft, timeZoneMode: value } : draft);
+                                                if (value === "system" || value === "utc" || value === "iana") {
+                                                    setDisplayDraft((draft) => draft ? { ...draft, timeZoneMode: value } : draft);
+                                                }
                                             }}
                                             disabled={savingDisplay}
                                         >
@@ -681,20 +806,26 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                                             aria-label="IANA time zone identifier"
                                             placeholder="America/New_York"
                                             value={displayDraft.identifier}
-                                            onChange={(event) => { const value = event.currentTarget.value; setDisplayDraft((draft) => draft ? { ...draft, identifier: value } : draft); setDisplayNotice(undefined); }}
+                                            onChange={(event) => {
+                                                const value = event.currentTarget.value; setDisplayDraft((draft) => draft ? { ...draft, identifier: value } : draft); setDisplayNotice(undefined);
+                                            }}
                                             error={displayNotice === "invalid-time-zone" ? displayNoticeText(displayNotice) : undefined}
                                             disabled={savingDisplay}
                                         />
                                     ) : null}
                                     {displayState.error === "unavailable-time-zone" ? <Alert role="alert" color="yellow">{displayNoticeText("unavailable-time-zone")}</Alert> : null}
                                     {displayNotice && displayNotice !== "invalid-time-zone" && displayState.error !== "unavailable-time-zone" ? <Alert role="alert" color={displayNotice === "partial-refresh" ? "yellow" : "red"}>{displayNoticeText(displayNotice)}</Alert> : null}
-                                    <Button onClick={() => { void onDisplaySave(); }} loading={savingDisplay} disabled={savingDisplay}>Save</Button>
+                                    <Button onClick={() => {
+                                        void onDisplaySave();
+                                    }} loading={savingDisplay} disabled={savingDisplay}>Save</Button>
                                 </Stack>
                             ) : null}
                         </Box>
                         {state.availability === "ready" ? <Box component="section" aria-labelledby="debug-heading">
                             <Text id="debug-heading" size="lg" fw={600}>Diagnostics</Text>
-                            <Button type="button" onClick={() => { void onOpenGitHubIssue(); }} loading={reporting} disabled={reporting}>Open GitHub issue</Button>
+                            <Button type="button" onClick={() => {
+                                void onOpenGitHubIssue();
+                            }} loading={reporting} disabled={reporting}>Open GitHub issue</Button>
                             {reportNotice ? <Alert role="alert" color="red">{reportNotice}</Alert> : null}
                             {debugLoading ? <Text role="status">Loading debug settings…</Text> : null}
                             {!debugLoading && debugState?.availability === "unavailable" ? <Text role="status">Debug logs are unavailable. Processing remains unchanged.</Text> : null}
@@ -705,17 +836,25 @@ export function OptionsApp({ client: suppliedClient, initialState, initialDispla
                                         aria-label="Debug logs"
                                         checked={debugState.enabled}
                                         disabled={savingDebug}
-                                        onChange={(event) => { void onDebugChange(event); }}
+                                        onChange={(event) => {
+                                            void onDebugChange(event);
+                                        }}
                                     />
                                     <Stack gap="xs" style={{ flexDirection: "row" }}>
-                                        <Button type="button" onClick={() => { void onDownloadDiagnostics(); }} loading={diagnosticsBusy} disabled={!debugState.enabled || diagnosticsBusy}>Download logs</Button>
-                                        <Button type="button" variant="default" onClick={() => { void onClearDiagnostics(); }} loading={diagnosticsBusy} disabled={!debugState.enabled || diagnosticsBusy}>Clear logs</Button>
+                                        <Button type="button" onClick={() => {
+                                            void onDownloadDiagnostics();
+                                        }} loading={diagnosticsBusy} disabled={!debugState.enabled || diagnosticsBusy}>Download logs</Button>
+                                        <Button type="button" variant="default" onClick={() => {
+                                            void onClearDiagnostics();
+                                        }} loading={diagnosticsBusy} disabled={!debugState.enabled || diagnosticsBusy}>Clear logs</Button>
                                     </Stack>
                                     {diagnosticsNotice ? <Alert role="status" color={diagnosticsNotice === "Diagnostic logs cleared." ? "green" : "red"}>{diagnosticsNotice}</Alert> : null}
                                 </Stack>
                             ) : null}
                         </Box> : null}
-                        <Button type="button" onClick={() => { void onResetAllSettings(); }} loading={resetting} disabled={resetting}>
+                        <Button type="button" onClick={() => {
+                            void onResetAllSettings();
+                        }} loading={resetting} disabled={resetting}>
                             Reset all settings
                         </Button>
                         {resetNotice ? <Alert role="alert" color="red">{resetNoticeText(resetNotice, resetOrigin)}</Alert> : null}

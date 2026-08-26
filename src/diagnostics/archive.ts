@@ -124,8 +124,12 @@ export function isDiagnosticArchiveSnapshot(value: unknown): value is Diagnostic
     || Object.keys(value.environment).some((key) => !ENVIRONMENT_KEYS.has(key))
     || !Object.hasOwn(value.environment, "browserFamily")
     || ("extensionVersion" in value.environment && !Object.hasOwn(value.environment, "extensionVersion"))
-    || !["chromium", "firefox", "other"].includes(String(value.environment.browserFamily))) return false;
-    if (Object.hasOwn(value.environment, "extensionVersion") && (typeof value.environment.extensionVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.environment.extensionVersion))) return false;
+    || !["chromium", "firefox", "other"].includes(String(value.environment.browserFamily))) {
+        return false;
+    }
+    if (Object.hasOwn(value.environment, "extensionVersion") && (typeof value.environment.extensionVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.environment.extensionVersion))) {
+        return false;
+    }
     return isDiagnosticJournalEntries(value.entries, DIAGNOSTICS_MAX_BYTES);
 }
 
@@ -133,16 +137,24 @@ export function isDiagnosticArchiveSnapshot(value: unknown): value is Diagnostic
  * Serializes the validated snapshot as UTF-8 JSON and returns its compressed ZIP bytes.
  */
 export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zipSync): Uint8Array {
-    if (!isDiagnosticArchiveSnapshot(snapshot)) throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is invalid or unsafe.");
-    if (snapshot.entries.length === 0) throw new DiagnosticArchiveError("empty", "There are no diagnostic entries to download.");
+    if (!isDiagnosticArchiveSnapshot(snapshot)) {
+        throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is invalid or unsafe.");
+    }
+    if (snapshot.entries.length === 0) {
+        throw new DiagnosticArchiveError("empty", "There are no diagnostic entries to download.");
+    }
     try {
         const safeEntries = snapshot.entries.map((entry) => {
             const safeEntry: Record<string, unknown> = { ...entry };
-            if (entry.stack !== undefined) safeEntry.stack = [...entry.stack];
+            if (entry.stack !== undefined) {
+                safeEntry.stack = [...entry.stack];
+            }
             return safeEntry;
         });
         const journalBytes = strToU8(JSON.stringify({ entries: safeEntries }));
-        if (journalBytes.byteLength > DIAGNOSTICS_MAX_BYTES) throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is too large to download.");
+        if (journalBytes.byteLength > DIAGNOSTICS_MAX_BYTES) {
+            throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is too large to download.");
+        }
         const exportSnapshot = {
             entries: safeEntries,
             environment: { ...snapshot.environment }
@@ -153,7 +165,9 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
         // contexts agree that the value is a byte array rather than a directory.
         return encoder({ "diagnostics.json": new Uint8Array(jsonBytes) });
     } catch (cause) {
-        if (cause instanceof DiagnosticArchiveError) throw cause;
+        if (cause instanceof DiagnosticArchiveError) {
+            throw cause;
+        }
         throw new DiagnosticArchiveError("compression-failed", "The diagnostic archive could not be created.", { cause });
     }
 }
@@ -162,17 +176,23 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
  * Adapts the browser downloads API used to publish the diagnostics archive.
  */
 function defaultDownloadRuntime(): DownloadRuntime {
-    if (typeof Blob === "undefined" || typeof URL === "undefined" || typeof document === "undefined") throw new DiagnosticArchiveError("download-failed", "Local downloads are unavailable in this context.");
+    if (typeof Blob === "undefined" || typeof URL === "undefined" || typeof document === "undefined") {
+        throw new DiagnosticArchiveError("download-failed", "Local downloads are unavailable in this context.");
+    }
     return {
         Blob,
         createObjectURL: (blob) => URL.createObjectURL(blob),
-        revokeObjectURL: (url) => { URL.revokeObjectURL(url); },
+        revokeObjectURL: (url) => {
+            URL.revokeObjectURL(url);
+        },
         createAnchor: () => {
             const anchor = document.createElement("a");
             document.body.append(anchor);
             return anchor;
         },
-        scheduleRevoke: (callback) => { setTimeout(callback, 0); }
+        scheduleRevoke: (callback) => {
+            setTimeout(callback, 0);
+        }
     };
 }
 
@@ -185,7 +205,9 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRunt
     let revoked = false;
     let anchor: ReturnType<DownloadRuntime["createAnchor"]> | undefined;
     const revoke = (): void => {
-        if (objectUrl === undefined || revoked) return;
+        if (objectUrl === undefined || revoked) {
+            return;
+        }
         revoked = true;
         browser.revokeObjectURL(objectUrl);
     };

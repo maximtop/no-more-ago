@@ -14,7 +14,9 @@ const DATETIME = "2026-08-23T10:15:00+03:00";
 function createSource(hidden = false): Element {
     document.body.innerHTML = `<div id="host"><relative-time${hidden ? " hidden" : ""}>2 hours ago</relative-time></div>`;
     const source = document.querySelector("relative-time");
-    if (!source) throw new Error("Expected source");
+    if (!source) {
+        throw new Error("Expected source");
+    }
     return source;
 }
 
@@ -24,7 +26,9 @@ describe("renderExactTime", () => {
         const firstOutput = renderExactTime(source, DATETIME, "23 Aug 2026, 10:15");
 
         expect(firstOutput).not.toBeNull();
-        if (!firstOutput) throw new Error("Expected output");
+        if (!firstOutput) {
+            throw new Error("Expected output");
+        }
         expect(firstOutput.localName).toBe("time");
         expect(firstOutput.dateTime).toBe(DATETIME);
         expect(firstOutput.textContent).toBe("23 Aug 2026, 10:15");
@@ -45,7 +49,9 @@ describe("renderExactTime", () => {
     it.each([false, true])("repairs the same output after detachment (source hidden=%s)", (initiallyHidden) => {
         const source = createSource(initiallyHidden);
         const firstOutput = renderExactTime(source, DATETIME, "first");
-        if (!firstOutput) throw new Error("Expected output");
+        if (!firstOutput) {
+            throw new Error("Expected output");
+        }
         const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
         firstOutput.remove();
 
@@ -71,7 +77,9 @@ describe("renderExactTime", () => {
     it.each([false, true])("repairs the same output after reparenting (source hidden=%s)", (initiallyHidden) => {
         const source = createSource(initiallyHidden);
         const firstOutput = renderExactTime(source, DATETIME, "first");
-        if (!firstOutput) throw new Error("Expected output");
+        if (!firstOutput) {
+            throw new Error("Expected output");
+        }
         const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
         const foreign = document.createElement("aside");
         document.body.append(foreign);
@@ -99,18 +107,24 @@ describe("renderExactTime", () => {
       <time id="orphan" data-no-more-ago-output="orphan" datetime="kept">kept text</time>
       <span id="foreign">foreign</span>`;
         const forged = document.querySelector("#forged relative-time");
-        if (!forged) throw new Error("Expected forged source");
+        if (!forged) {
+            throw new Error("Expected forged source");
+        }
         const forgedSnapshot = document.querySelector("#forged")?.innerHTML;
         expect(renderExactTime(forged, DATETIME, "new")).toBeNull();
         expect(document.querySelector("#forged")?.innerHTML).toBe(forgedSnapshot);
 
         for (const id of ["malformed", "unknown", "tokenless"]) {
             const candidate = document.getElementById(id);
-            if (!candidate) throw new Error(`Expected ${id}`);
+            if (!candidate) {
+                throw new Error(`Expected ${id}`);
+            }
             expect(renderExactTime(candidate, DATETIME, "new")).toBeNull();
         }
         const orphan = document.getElementById("orphan");
-        if (!orphan) throw new Error("Expected orphan");
+        if (!orphan) {
+            throw new Error("Expected orphan");
+        }
         const orphanParent = orphan.parentNode;
         restoreExactTimes(document);
         expect(orphan.parentNode).toBe(orphanParent);
@@ -123,7 +137,9 @@ describe("renderExactTime", () => {
     it("restores the valid source when only the output marker is altered", () => {
         const source = createSource();
         const output = renderExactTime(source, DATETIME, "first");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         output.setAttribute(OWNED_OUTPUT_ATTRIBUTE, "other");
         expect(renderExactTime(source, DATETIME, "changed")).toBeNull();
         expect(output.textContent).toBe("first");
@@ -137,7 +153,9 @@ describe("renderExactTime", () => {
     it("removes the valid output when only the source marker is altered", () => {
         const source = createSource();
         const output = renderExactTime(source, DATETIME, "first");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         source.setAttribute(OWNED_SOURCE_ATTRIBUTE, "visible:other");
         expect(renderExactTime(source, DATETIME, "changed")).toBeNull();
         expect(output.textContent).toBe("first");
@@ -151,7 +169,9 @@ describe("renderExactTime", () => {
     it("looks up exact output identity and reports provenance before release", () => {
         const source = createSource();
         const output = renderExactTime(source, DATETIME, "first");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const forged = document.createElement("time");
         forged.setAttribute(OWNED_OUTPUT_ATTRIBUTE, output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) ?? "");
         expect(getOwnedSourceForOutput(output)).toBe(source);
@@ -173,10 +193,14 @@ describe("renderExactTime", () => {
       <relative-time id="second">second</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!first || !second) throw new Error("Expected sources");
+        if (!first || !second) {
+            throw new Error("Expected sources");
+        }
         const firstOutput = renderExactTime(first, DATETIME, "first exact");
         const secondOutput = renderExactTime(second, DATETIME, "second exact");
-        if (!firstOutput || !secondOutput) throw new Error("Expected outputs");
+        if (!firstOutput || !secondOutput) {
+            throw new Error("Expected outputs");
+        }
         firstOutput.remove();
         restoreExactTime(first);
 
@@ -196,10 +220,14 @@ describe("renderExactTime", () => {
         const firstRoot = document.getElementById("first");
         const second = document.querySelector("#second relative-time");
         const first = document.querySelector("#first relative-time");
-        if (!firstRoot || !first || !second) throw new Error("Expected sources");
+        if (!firstRoot || !first || !second) {
+            throw new Error("Expected sources");
+        }
         const firstOutput = renderExactTime(first, DATETIME, "first exact");
         const secondOutput = renderExactTime(second, DATETIME, "second exact");
-        if (!firstOutput || !secondOutput) throw new Error("Expected outputs");
+        if (!firstOutput || !secondOutput) {
+            throw new Error("Expected outputs");
+        }
 
         restoreExactTimes(firstRoot);
 
@@ -214,9 +242,13 @@ describe("renderExactTime", () => {
         document.body.innerHTML = '<section id="scope"><relative-time>source</relative-time></section>';
         const scope = document.getElementById("scope");
         const source = scope?.querySelector("relative-time");
-        if (!scope || !source) throw new Error("Expected source");
+        if (!scope || !source) {
+            throw new Error("Expected source");
+        }
         const output = renderExactTime(source, DATETIME, "exact");
-        if (!output) throw new Error("Expected output");
+        if (!output) {
+            throw new Error("Expected output");
+        }
         const originalMarker = output.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
 
         const detachedSource = document.createElement("div");
@@ -257,10 +289,14 @@ describe("renderExactTime", () => {
         const scope = document.getElementById("scope");
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!scope || !first || !second) throw new Error("Expected sources");
+        if (!scope || !first || !second) {
+            throw new Error("Expected sources");
+        }
         const firstOutput = renderExactTime(first, DATETIME, "first exact");
         const secondOutput = renderExactTime(second, DATETIME, "second exact");
-        if (!firstOutput || !secondOutput) throw new Error("Expected outputs");
+        if (!firstOutput || !secondOutput) {
+            throw new Error("Expected outputs");
+        }
 
         const outputHost = document.createElement("aside");
         document.body.append(outputHost);
@@ -298,13 +334,19 @@ describe("renderExactTime", () => {
         const scope = document.getElementById("scope");
         const first = document.getElementById("first");
         const second = document.getElementById("second");
-        if (!scope || !first || !second) throw new Error("Expected sources");
+        if (!scope || !first || !second) {
+            throw new Error("Expected sources");
+        }
         const firstOutput = renderExactTime(first, DATETIME, "first exact");
         const secondOutput = renderExactTime(second, DATETIME, "second exact");
-        if (!firstOutput || !secondOutput) throw new Error("Expected outputs");
+        if (!firstOutput || !secondOutput) {
+            throw new Error("Expected outputs");
+        }
         const firstToken = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
         const secondToken = secondOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
-        if (!firstToken || !secondToken) throw new Error("Expected output tokens");
+        if (!firstToken || !secondToken) {
+            throw new Error("Expected output tokens");
+        }
 
         const outputHost = document.createElement("aside");
         document.body.append(outputHost);

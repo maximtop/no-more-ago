@@ -82,7 +82,12 @@ export default tseslint.config(
                 tsconfigRootDir: import.meta.dirname
             }
         },
-        rules: { "@stylistic/indent": ["error", 4, { SwitchCase: 1 }] }
+        rules: {
+            "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],
+            "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
+            "@stylistic/no-trailing-spaces": "error",
+            "curly": ["error", "all"]
+        }
     },
     {
         ...jsdocConfig,
@@ -109,7 +114,13 @@ export default tseslint.config(
             }
         },
         settings: jsdocConfig.settings,
-        rules: { ...jsdocConfig.rules, "@stylistic/indent": ["error", 4, { SwitchCase: 1 }] }
+        rules: {
+            ...jsdocConfig.rules,
+            "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],
+            "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
+            "@stylistic/no-trailing-spaces": "error",
+            "curly": ["error", "all"]
+        }
     },
     {
         files: ["tests/**/*.ts", "tests/**/*.tsx"],

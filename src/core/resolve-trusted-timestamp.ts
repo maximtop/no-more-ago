@@ -20,12 +20,16 @@ const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
  * Rejects invalid or ambiguous numeric UTC offsets before ISO parsing.
  */
 function hasKnownNumericZone(zone: string): boolean {
-    if (zone === "Z") return true;
+    if (zone === "Z") {
+        return true;
+    }
     const sign = zone[0];
     const digits = zone.slice(1).replace(":", "");
     const hours = Number(digits.slice(0, 2));
     const minutes = digits.length === 4 ? Number(digits.slice(2)) : 0;
-    if (hours > 23 || minutes > 59) return false;
+    if (hours > 23 || minutes > 59) {
+        return false;
+    }
     return !(sign === "-" && hours === 0 && minutes === 0);
 }
 
@@ -35,7 +39,9 @@ function hasKnownNumericZone(zone: string): boolean {
 function hasControlCharacter(value: string): boolean {
     for (let index = 0; index < value.length; index += 1) {
         const code = value.charCodeAt(index);
-        if ((code >= 0 && code <= 31) || (code >= 127 && code <= 159)) return true;
+        if ((code >= 0 && code <= 31) || (code >= 127 && code <= 159)) {
+            return true;
+        }
     }
     return false;
 }
@@ -69,24 +75,38 @@ export function resolveTrustedTimestamp(
     candidate: TimestampCandidate
 ): ResolvedTimestamp | null {
     const timestampRule: unknown = candidate.timestampRule;
-    if (timestampRule !== EXPLICIT_ZONED_DATETIME_RULE) return null;
+    if (timestampRule !== EXPLICIT_ZONED_DATETIME_RULE) {
+        return null;
+    }
     const rawDatetime = candidate.rawDatetime;
     if (
         rawDatetime.length === 0 ||
     rawDatetime !== rawDatetime.trim() ||
     hasControlCharacter(rawDatetime)
-    ) return null;
+    ) {
+        return null;
+    }
     const zoneMatch = rawDatetime.match(ZONE);
-    if (!zoneMatch) return null;
+    if (!zoneMatch) {
+        return null;
+    }
     const zone = zoneMatch[0];
-    if (!hasKnownNumericZone(zone)) return null;
+    if (!hasKnownNumericZone(zone)) {
+        return null;
+    }
     const dateTime = rawDatetime.slice(0, -zone.length);
-    if (!COMPLETE_DATE_TIME.test(dateTime)) return null;
+    if (!COMPLETE_DATE_TIME.test(dateTime)) {
+        return null;
+    }
     const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
     const time = dateTime.slice(separatorIndex + 1);
-    if (/[Z+-]/.test(time)) return null;
+    if (/[Z+-]/.test(time)) {
+        return null;
+    }
     const instant = parseISO(candidate.rawDatetime);
-    if (!isValid(instant)) return null;
+    if (!isValid(instant)) {
+        return null;
+    }
     return {
         source: candidate.source,
         sourceDatetime: candidate.rawDatetime,

@@ -29,7 +29,9 @@ function appWith(reconcile: (input: { revision: number | null; mode: string; pol
     let previous: unknown;
     const storage = {
         get: vi.fn(async () => stored === undefined && previous === undefined ? {} : { [SETTINGS_STORAGE_KEY]: stored, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous }),
-        set: vi.fn(async (items: Record<string, unknown>) => { stored = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY]; }),
+        set: vi.fn(async (items: Record<string, unknown>) => {
+            stored = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY];
+        }),
         read: () => stored
     };
     const tabs = {
@@ -52,12 +54,16 @@ function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<Backg
     let failDiagnostics = false;
     const storage = {
         get: vi.fn(async (keys?: string | readonly string[] | Record<string, unknown>) => {
-            if (keys === DIAGNOSTICS_STORAGE_KEY) return diagnostics === undefined ? {} : { [DIAGNOSTICS_STORAGE_KEY]: diagnostics };
+            if (keys === DIAGNOSTICS_STORAGE_KEY) {
+                return diagnostics === undefined ? {} : { [DIAGNOSTICS_STORAGE_KEY]: diagnostics };
+            }
             return stored === undefined && previous === undefined ? {} : { [SETTINGS_STORAGE_KEY]: stored, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
         }),
         set: vi.fn(async (items: Record<string, unknown>) => {
             if (Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY)) {
-                if (failDiagnostics) throw new Error("diagnostics unavailable");
+                if (failDiagnostics) {
+                    throw new Error("diagnostics unavailable");
+                }
                 diagnostics = items[DIAGNOSTICS_STORAGE_KEY];
                 return;
             }
@@ -65,7 +71,9 @@ function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<Backg
             previous = items[SETTINGS_PREVIOUS_STORAGE_KEY];
         }),
         remove: vi.fn(async (key: string | readonly string[]) => {
-            if (key === DIAGNOSTICS_STORAGE_KEY || (Array.isArray(key) && key.includes(DIAGNOSTICS_STORAGE_KEY))) diagnostics = undefined;
+            if (key === DIAGNOSTICS_STORAGE_KEY || (Array.isArray(key) && key.includes(DIAGNOSTICS_STORAGE_KEY))) {
+                diagnostics = undefined;
+            }
         })
     };
     const registered = new Map<string, typeof adapter.registration>();
@@ -73,15 +81,33 @@ function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<Backg
     const failTeardown = new Set<number>();
     const scripting = {
         getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => ids.flatMap((id) => registered.has(id) ? [{ ...registered.get(id)! }] : [])),
-        registerContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        updateContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => { for (const id of ids) registered.delete(id); }),
-        executeScript: vi.fn(async ({ target }: { target: { tabId: number; allFrames: false } }) => { phases.set(target.tabId, "active"); })
+        registerContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        updateContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => {
+            for (const id of ids) {
+                registered.delete(id);
+            }
+        }),
+        executeScript: vi.fn(async ({ target }: { target: { tabId: number; allFrames: false } }) => {
+            phases.set(target.tabId, "active");
+        })
     };
     const tabs = {
         query: vi.fn(async (query: { active?: boolean; url?: readonly string[] }) => {
-            if (query.active) return [{ id: 5, url: "https://github.com/one" }];
-            if (query.url?.some((pattern) => pattern.includes("github.com"))) return [{ id: 5, url: "https://github.com/one" }, { id: 6, url: "https://github.com/two" }];
+            if (query.active) {
+                return [{ id: 5, url: "https://github.com/one" }];
+            }
+            if (query.url?.some((pattern) => pattern.includes("github.com"))) {
+                return [{ id: 5, url: "https://github.com/one" }, { id: 6, url: "https://github.com/two" }];
+            }
             return [];
         }),
         sendMessage: vi.fn(async (tabId: number, message: unknown, options?: { readonly frameId: 0 }) => {
@@ -95,7 +121,9 @@ function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<Backg
             if (message && typeof message === "object" && "type" in message && message.type === UPDATE_DEBUG_POLICY_MESSAGE && "revision" in message) {
                 return { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: message.revision };
             }
-            if (failTeardown.has(tabId)) throw new Error("teardown failed");
+            if (failTeardown.has(tabId)) {
+                throw new Error("teardown failed");
+            }
             phases.set(tabId, "stopped");
             return { type: DOCUMENT_STATUS_MESSAGE, phase: "stopped" };
         })
@@ -113,11 +141,21 @@ function realAppWith(initial?: unknown, diagnosticEnvironment: NonNullable<Backg
         failTeardown,
         coordinator,
         runtime,
-        get stored() { return stored; },
-        get previous() { return previous; },
-        get diagnostics() { return diagnostics; },
-        failDiagnostics: (value: boolean) => { failDiagnostics = value; },
-        poisonDiagnostics: (value: unknown) => { diagnostics = value; }
+        get stored() {
+            return stored;
+        },
+        get previous() {
+            return previous;
+        },
+        get diagnostics() {
+            return diagnostics;
+        },
+        failDiagnostics: (value: boolean) => {
+            failDiagnostics = value;
+        },
+        poisonDiagnostics: (value: unknown) => {
+            diagnostics = value;
+        }
     };
 }
 
@@ -156,7 +194,9 @@ describe("BackgroundApplication", () => {
             tab: { incognito: true }
         });
         const result = await fixture.app.getDiagnosticsSnapshot();
-        if (!result.ok) throw new Error(`Expected complete diagnostics, received ${result.error}`);
+        if (!result.ok) {
+            throw new Error(`Expected complete diagnostics, received ${result.error}`);
+        }
         expect(result.snapshot.environment).toEqual({ extensionVersion: "9.8.7", browserFamily: "firefox" });
         expect(result.snapshot.entries.some((entry) => entry.category === "settings" && entry.extensionVersion === "9.8.7" && entry.browserFamily === "firefox")).toBe(true);
         expect(result.snapshot.entries.some((entry) => entry.category === "mutation" && entry.incognito && entry.pageCategory === "issue" && entry.extensionVersion === "9.8.7" && entry.browserFamily === "firefox")).toBe(true);
@@ -412,7 +452,9 @@ describe("BackgroundApplication", () => {
         const { app, tabs } = appWith();
         await app.getPopupState();
         tabs.sendMessage.mockImplementation(async (_tabId: number, message?: unknown) => {
-            if (message && typeof message === "object" && "type" in message && message.type === UPDATE_PRESENTATION_MESSAGE) return { type: "wrong", revision: 1 };
+            if (message && typeof message === "object" && "type" in message && message.type === UPDATE_PRESENTATION_MESSAGE) {
+                return { type: "wrong", revision: 1 };
+            }
             return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
         });
         await expect(app.setDisplaySettings({ formatMode: "system", timeZone: { mode: "utc" } })).resolves.toMatchObject({ ok: true, acceptedRevision: 1, refreshFailures: [{ hostname: "github.com", tabId: 5, reason: "tab-update" }] });
@@ -520,11 +562,15 @@ describe("BackgroundApplication", () => {
 
     it("places response barriers after already-reserved commands", async () => {
         let releaseFirst: (() => void) | undefined;
-        const firstReconcile = new Promise<void>((resolve) => { releaseFirst = resolve; });
+        const firstReconcile = new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+        });
         let calls = 0;
         const { app } = appWith(async (input) => {
             calls += 1;
-            if (input.mode === "settings-change" && calls === 2) await firstReconcile;
+            if (input.mode === "settings-change" && calls === 2) {
+                await firstReconcile;
+            }
             return { ...input, failures: [], registration: {}, tabs: [] };
         });
         const off = app.setGlobalEnabled(false);
@@ -551,21 +597,39 @@ describe("BackgroundApplication", () => {
         let stored: unknown;
         let previous: unknown;
         let releaseRevisionOne: (() => void) | undefined;
-        const revisionOneGate = new Promise<void>((resolve) => { releaseRevisionOne = resolve; });
+        const revisionOneGate = new Promise<void>((resolve) => {
+            releaseRevisionOne = resolve;
+        });
         let revisionOneEntered: (() => void) | undefined;
-        const revisionOneStarted = new Promise<void>((resolve) => { revisionOneEntered = resolve; });
+        const revisionOneStarted = new Promise<void>((resolve) => {
+            revisionOneEntered = resolve;
+        });
         const phases = new Map<number, "active" | "stopped">([[7, "active"], [8, "active"]]);
         let rejectSiblingInjection = true;
         const storage = {
             get: vi.fn(async () => stored === undefined && previous === undefined ? {} : { [SETTINGS_STORAGE_KEY]: stored, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous }),
-            set: vi.fn(async (items: Record<string, unknown>) => { stored = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY]; })
+            set: vi.fn(async (items: Record<string, unknown>) => {
+                stored = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY];
+            })
         };
         const registered = new Map<string, typeof adapter.registration>();
         const scripting = {
             getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => ids.flatMap((id) => registered.has(id) ? [{ ...registered.get(id)! }] : [])),
-            registerContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-            updateContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-            unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => { for (const id of ids) registered.delete(id); }),
+            registerContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => {
+                for (const script of scripts) {
+                    registered.set(script.id, script);
+                }
+            }),
+            updateContentScripts: vi.fn(async (scripts: typeof adapter.registration[]) => {
+                for (const script of scripts) {
+                    registered.set(script.id, script);
+                }
+            }),
+            unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => {
+                for (const id of ids) {
+                    registered.delete(id);
+                }
+            }),
             executeScript: vi.fn(async ({ target }: { target: { tabId: number; allFrames: false } }) => {
                 if (target.tabId === 8 && rejectSiblingInjection) {
                     rejectSiblingInjection = false;
@@ -580,7 +644,9 @@ describe("BackgroundApplication", () => {
                 : [{ id: 7, url: "https://github.com/example" }, { id: 8, url: "https://github.com/other" }, { id: 9, url: "https://gist.github.com/other" }]),
             sendMessage: vi.fn(async (tabId: number, message: unknown, options: { frameId: 0 }) => {
                 expect(options).toEqual({ frameId: 0 });
-                if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) return { type: DOCUMENT_STATUS_MESSAGE, phase: phases.get(tabId) ?? "stopped" };
+                if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) {
+                    return { type: DOCUMENT_STATUS_MESSAGE, phase: phases.get(tabId) ?? "stopped" };
+                }
                 phases.set(tabId, "stopped");
                 return { type: DOCUMENT_STATUS_MESSAGE, phase: "stopped" };
             })
@@ -634,7 +700,9 @@ describe("BackgroundApplication", () => {
 
     it("shares one readiness flight and coalesces lifecycle events before an early read", async () => {
         let releaseLoad: ((value: Record<string, unknown>) => void) | undefined;
-        const load = new Promise<Record<string, unknown>>((resolve) => { releaseLoad = resolve; });
+        const load = new Promise<Record<string, unknown>>((resolve) => {
+            releaseLoad = resolve;
+        });
         const storage = {
             get: vi.fn(() => load),
             set: vi.fn(async () => undefined)
@@ -664,7 +732,9 @@ describe("BackgroundApplication", () => {
         const scripting = {
             getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => ids.flatMap((id) => registered.has(id) ? [{ ...registered.get(id)! }] : [])),
             registerContentScripts: vi.fn(async () => undefined), updateContentScripts: vi.fn(async () => undefined),
-            unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => { ids.forEach((id) => registered.delete(id)); }),
+            unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => {
+                ids.forEach((id) => registered.delete(id));
+            }),
             executeScript: vi.fn(async () => undefined)
         };
         const tabs = { query: vi.fn(async () => [{ id: 5, url: "https://github.com/example" }]), sendMessage: vi.fn(async () => ({ type: DOCUMENT_STATUS_MESSAGE, phase: "active" })) };
@@ -732,7 +802,9 @@ describe("BackgroundApplication", () => {
             if (message && typeof message === "object" && "type" in message && message.type === UPDATE_PRESENTATION_MESSAGE && "revision" in message) {
                 return tabId === 5 ? { type: "no-more-ago:presentation-updated", revision: 0 } : { type: "no-more-ago:presentation-updated", revision: 1 };
             }
-            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) return { type: DOCUMENT_STATUS_MESSAGE, phase: fixture.phases.get(tabId) ?? "stopped" };
+            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) {
+                return { type: DOCUMENT_STATUS_MESSAGE, phase: fixture.phases.get(tabId) ?? "stopped" };
+            }
             return { type: DOCUMENT_STATUS_MESSAGE, phase: "stopped" };
         });
         await expect(fixture.app.setDisplaySettings({ formatMode: "system", timeZone: { mode: "utc" } })).resolves.toMatchObject({ ok: true, acceptedRevision: 1, refreshFailures: [{ hostname: "github.com", tabId: 5, reason: "tab-update" }] });
@@ -755,12 +827,16 @@ describe("BackgroundApplication", () => {
         fixture.tabs.sendMessage.mockImplementation(async (tabId: number, message: unknown) => {
             if (message && typeof message === "object" && "type" in message && message.type === UPDATE_PRESENTATION_MESSAGE && "revision" in message) {
                 if (tabId === 5) {
-                    if (acknowledgement === "reject") throw new Error("document stopped");
+                    if (acknowledgement === "reject") {
+                        throw new Error("document stopped");
+                    }
                     return acknowledgement as never;
                 }
                 return { type: "no-more-ago:presentation-updated", revision: 1 };
             }
-            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) return { type: DOCUMENT_STATUS_MESSAGE, phase: fixture.phases.get(tabId) ?? "stopped" };
+            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) {
+                return { type: DOCUMENT_STATUS_MESSAGE, phase: fixture.phases.get(tabId) ?? "stopped" };
+            }
             return { type: DOCUMENT_STATUS_MESSAGE, phase: "stopped" };
         });
         await expect(fixture.app.setDisplaySettings({ formatMode: "system", timeZone: { mode: "utc" } })).resolves.toMatchObject({
@@ -801,8 +877,12 @@ describe("BackgroundApplication", () => {
         const fixture = realAppWith();
         let releaseGlobal: (() => void) | undefined;
         let globalStarted: (() => void) | undefined;
-        const globalGate = new Promise<void>((resolve) => { releaseGlobal = resolve; });
-        const globalEntered = new Promise<void>((resolve) => { globalStarted = resolve; });
+        const globalGate = new Promise<void>((resolve) => {
+            releaseGlobal = resolve;
+        });
+        const globalEntered = new Promise<void>((resolve) => {
+            globalStarted = resolve;
+        });
         fixture.coordinator.reconcile.mockImplementation(async (input) => {
             if (input.mode === "settings-change" && input.revision === 1) {
                 globalStarted?.();
@@ -866,7 +946,9 @@ describe("BackgroundApplication", () => {
         let previous: unknown = { broken: true };
         const storage = {
             get: vi.fn(async () => ({ [SETTINGS_STORAGE_KEY]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous })),
-            set: vi.fn(async (items: Record<string, unknown>) => { current = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY]; })
+            set: vi.fn(async (items: Record<string, unknown>) => {
+                current = items[SETTINGS_STORAGE_KEY]; previous = items[SETTINGS_PREVIOUS_STORAGE_KEY];
+            })
         };
         const tabs = { query: vi.fn(async () => [{ id: 5, url: "https://github.com/example" }]), sendMessage: vi.fn(async () => ({ type: DOCUMENT_STATUS_MESSAGE, phase: "active" })) };
         const coordinator = { reconcile: vi.fn(async (input: { revision: number | null; mode: string; policy: string }) => ({ ...input, failures: [], registration: {}, tabs: [] })) };
@@ -885,7 +967,9 @@ describe("BackgroundApplication", () => {
         const previous: unknown = { broken: true };
         const storage = {
             get: vi.fn(async () => ({ [SETTINGS_STORAGE_KEY]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous })),
-            set: vi.fn(async () => { throw new Error("write failed"); })
+            set: vi.fn(async () => {
+                throw new Error("write failed");
+            })
         };
         const tabs = { query: vi.fn(async () => [{ id: 5, url: "https://github.com/example" }]), sendMessage: vi.fn(async () => ({ type: DOCUMENT_STATUS_MESSAGE, phase: "active" })) };
         const coordinator = { reconcile: vi.fn(async (input: { revision: number | null; mode: string; policy: string }) => ({ ...input, failures: [], registration: {}, tabs: [] })) };
@@ -922,11 +1006,18 @@ describe("BackgroundApplication", () => {
         ["document-phase", { id: 5, url: "https://github.com/example" }, "runtime-failed", "document-status"]
     ] as const)("applies status precedence for %s", async (kind, tab, expectedStatus, expectedFailure) => {
         const { app, tabs, coordinator } = appWith(async (input) => ({ ...input, failures: expectedFailure === undefined || ["current-tab-query", "document-status"].includes(expectedFailure) ? [] : [{ scope: expectedFailure === "registration" ? "registration" : expectedFailure === "matching-tabs-query" ? "matching-tabs-query" : "tab", ...(expectedFailure === "registration" ? { adapterId: "github", operation: "register" as const } : expectedFailure === "matching-tabs-query" ? { adapterId: "github" } : { adapterId: "github", tabId: 5, action: expectedFailure === "current-tab-inject" ? "inject" as const : "teardown" as const }) }] as never, registration: {}, tabs: [] }));
-        if (kind === "active-tab-query") tabs.query.mockRejectedValue(new Error("query"));
-        else tabs.query.mockResolvedValue([tab ?? { id: 5 }]);
-        if (kind === "document-phase") tabs.sendMessage.mockResolvedValue({ type: DOCUMENT_STATUS_MESSAGE, phase: "failed" });
+        if (kind === "active-tab-query") {
+            tabs.query.mockRejectedValue(new Error("query"));
+        } else {
+            tabs.query.mockResolvedValue([tab ?? { id: 5 }]);
+        }
+        if (kind === "document-phase") {
+            tabs.sendMessage.mockResolvedValue({ type: DOCUMENT_STATUS_MESSAGE, phase: "failed" });
+        }
         await expect(app.getPopupState()).resolves.toMatchObject({ status: expectedStatus, ...(expectedFailure ? { failure: expectedFailure } : {}) });
-        if (kind === "current-tab-inject" || kind === "current-tab-teardown") expect(coordinator.reconcile).toHaveBeenCalled();
+        if (kind === "current-tab-inject" || kind === "current-tab-teardown") {
+            expect(coordinator.reconcile).toHaveBeenCalled();
+        }
     });
 
     it("clears a related current-tab failure after unchanged recovery without persistence", async () => {

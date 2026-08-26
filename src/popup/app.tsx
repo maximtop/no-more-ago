@@ -64,10 +64,18 @@ function statusText(state: PopupState): string {
  * @returns An error message, or undefined when there is no notice to show.
  */
 function noticeText(notice: Notice): string | undefined {
-    if (notice === "save-failed") return "Could not save this change. Try again.";
-    if (notice === "invalid-hostname") return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
-    if (notice === "interrupted") return "The response was interrupted. Current state was reloaded.";
-    if (notice === "unknown") return "Could not confirm whether the change was saved. Reopen the popup to try again. Current state is unavailable.";
+    if (notice === "save-failed") {
+        return "Could not save this change. Try again.";
+    }
+    if (notice === "invalid-hostname") {
+        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
+    }
+    if (notice === "interrupted") {
+        return "The response was interrupted. Current state was reloaded.";
+    }
+    if (notice === "unknown") {
+        return "Could not confirm whether the change was saved. Reopen the popup to try again. Current state is unavailable.";
+    }
     return undefined;
 }
 
@@ -78,13 +86,27 @@ function noticeText(notice: Notice): string | undefined {
  * @returns The error message displayed to the user.
  */
 function siteReportErrorText(error: SiteReportError): string {
-    if (error === "missing-tab") return "Could not find the current site. Reopen the popup and try again.";
-    if (error === "restricted-page") return "This page cannot be reported. Open an HTTP or HTTPS site.";
-    if (error === "hostname-mismatch") return "The current site changed. Reopen the popup and try again.";
-    if (error === "private-window") return "Could not safely open the report in this private window.";
-    if (error === "browser-unavailable") return "Site reporting is unavailable in this browser.";
-    if (error === "invalid-context") return "Could not identify this site or extension. Reopen the popup and try again.";
-    if (error === "busy") return "A site report is already being opened.";
+    if (error === "missing-tab") {
+        return "Could not find the current site. Reopen the popup and try again.";
+    }
+    if (error === "restricted-page") {
+        return "This page cannot be reported. Open an HTTP or HTTPS site.";
+    }
+    if (error === "hostname-mismatch") {
+        return "The current site changed. Reopen the popup and try again.";
+    }
+    if (error === "private-window") {
+        return "Could not safely open the report in this private window.";
+    }
+    if (error === "browser-unavailable") {
+        return "Site reporting is unavailable in this browser.";
+    }
+    if (error === "invalid-context") {
+        return "Could not identify this site or extension. Reopen the popup and try again.";
+    }
+    if (error === "busy") {
+        return "A site report is already being opened.";
+    }
     return "Could not open the GitHub report. Try again.";
 }
 
@@ -107,30 +129,42 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
     const reportInFlight = useRef(false);
 
     useEffect(() => {
-        if (initialState) return;
+        if (initialState) {
+            return;
+        }
         let mounted = true;
         void client.getState().then((next) => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setState(next);
             setLoading(false);
         }).catch(() => {
-            if (!mounted) return;
+            if (!mounted) {
+                return;
+            }
             setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: null, siteEnabled: null, hasAdapter: false, status: "settings-unavailable", failure: "settings-load" });
             setLoading(false);
         });
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [client, initialState]);
 
     useEffect(() => {
         const input = switchRef.current;
-        if (!input) return;
+        if (!input) {
+            return;
+        }
         const unavailable = state?.availability !== "ready";
         input.indeterminate = unavailable;
         input.setAttribute("aria-checked", unavailable ? "mixed" : String(state.globalEnabled));
     }, [state]);
 
     const onChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!state || state.availability !== "ready" || saving || savingSite) return;
+        if (!state || state.availability !== "ready" || saving || savingSite) {
+            return;
+        }
         setSaving(true);
         setNotice(undefined);
         const result = await client.setGlobalEnabled(event.currentTarget.checked);
@@ -139,9 +173,13 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
             if (responseState.availability !== "ready" || responseState.revision >= state.revision) {
                 setState(responseState);
             }
-            if (!result.response.ok) setNotice(result.response.error === "save-failed" ? "save-failed" : "unknown");
+            if (!result.response.ok) {
+                setNotice(result.response.error === "save-failed" ? "save-failed" : "unknown");
+            }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) setState(result.state);
+            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+                setState(result.state);
+            }
             setNotice("interrupted");
         } else {
             setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: state.hostname, siteEnabled: null, hasAdapter: false, status: "runtime-failed", failure: "settings-load" });
@@ -151,18 +189,24 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
     };
 
     const onSiteChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!state || state.availability !== "ready" || state.hostname === null || state.siteEnabled === null || saving || savingSite) return;
+        if (!state || state.availability !== "ready" || state.hostname === null || state.siteEnabled === null || saving || savingSite) {
+            return;
+        }
         setSavingSite(true);
         setNotice(undefined);
         const result = await client.setSiteEnabled(state.hostname, event.currentTarget.checked);
         if (result.kind === "response") {
             const responseState = result.response.state;
-            if (responseState.availability !== "ready" || responseState.revision >= state.revision) setState(responseState);
+            if (responseState.availability !== "ready" || responseState.revision >= state.revision) {
+                setState(responseState);
+            }
             if (!result.response.ok) {
                 setNotice(result.response.error === "save-failed" ? "save-failed" : result.response.error === "invalid-hostname" ? "invalid-hostname" : "unknown");
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) setState(result.state);
+            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+                setState(result.state);
+            }
             setNotice("interrupted");
         } else {
             setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: state.hostname, siteEnabled: null, hasAdapter: false, status: "runtime-failed", failure: "settings-load" });
@@ -172,13 +216,17 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
     };
 
     const onReportSite = async (): Promise<void> => {
-        if (!state || state.availability !== "ready" || state.hostname === null || reporting || reportInFlight.current) return;
+        if (!state || state.availability !== "ready" || state.hostname === null || reporting || reportInFlight.current) {
+            return;
+        }
         reportInFlight.current = true;
         setReporting(true);
         setReportNotice(undefined);
         try {
             const result = await reporter.openPopupReport({ hostname: state.hostname, hasAdapter: state.hasAdapter });
-            if (!result.ok) setReportNotice(siteReportErrorText(result.error));
+            if (!result.ok) {
+                setReportNotice(siteReportErrorText(result.error));
+            }
         } catch {
             setReportNotice("Could not open the GitHub report. Try again.");
         } finally {
@@ -187,7 +235,9 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
         }
     };
 
-    if (loading || !state) return <MantineProvider><main className="popup"><Text role="status">Loading…</Text></main></MantineProvider>;
+    if (loading || !state) {
+        return <MantineProvider><main className="popup"><Text role="status">Loading…</Text></main></MantineProvider>;
+    }
     const checked = state.availability === "ready" && state.globalEnabled;
     const disabled = saving || savingSite || state.availability !== "ready";
     const siteSwitchVisible = state.availability === "ready" && state.hostname !== null && state.siteEnabled !== null;
@@ -207,7 +257,9 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
                             label="Global enabled"
                             checked={checked}
                             disabled={disabled}
-                            onChange={(event) => { void onChange(event); }}
+                            onChange={(event) => {
+                                void onChange(event);
+                            }}
                             aria-label="Global enabled"
                         />
                         {siteSwitchVisible ? (
@@ -215,13 +267,17 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
                                 label={`Enabled on ${state.hostname}`}
                                 checked={state.siteEnabled}
                                 disabled={disabled}
-                                onChange={(event) => { void onSiteChange(event); }}
+                                onChange={(event) => {
+                                    void onSiteChange(event);
+                                }}
                                 aria-label={`Enabled on ${state.hostname}`}
                             />
                         ) : null}
                         <Text role="status">{statusText(state)}</Text>
                         {noticeMessage ? <Alert role="alert" color="red">{noticeMessage}</Alert> : null}
-                        {reportVisible ? <Button type="button" onClick={() => { void onReportSite(); }} loading={reporting} disabled={reporting}>Report this site</Button> : null}
+                        {reportVisible ? <Button type="button" onClick={() => {
+                            void onReportSite();
+                        }} loading={reporting} disabled={reporting}>Report this site</Button> : null}
                         {reportNotice ? <Alert role="alert" color="red">{reportNotice}</Alert> : null}
                         <Anchor href="options.html">Settings</Anchor>
                     </Stack>

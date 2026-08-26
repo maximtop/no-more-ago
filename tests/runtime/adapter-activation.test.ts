@@ -22,9 +22,21 @@ function fakes() {
     const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();
     const scripting = {
         getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => ids.flatMap((id) => registered.has(id) ? [{ ...registered.get(id)! }] : [])),
-        registerContentScripts: vi.fn(async (scripts: typeof github.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        updateContentScripts: vi.fn(async (scripts: typeof github.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => { for (const id of ids) registered.delete(id); }),
+        registerContentScripts: vi.fn(async (scripts: typeof github.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        updateContentScripts: vi.fn(async (scripts: typeof github.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => {
+            for (const id of ids) {
+                registered.delete(id);
+            }
+        }),
         executeScript: vi.fn(async (_input: { target: { tabId: number; allFrames: false }; files: string[] }) => undefined)
     };
     const tabs = {
@@ -39,14 +51,28 @@ function multiFakes() {
     const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();
     const scripting = {
         getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => ids.flatMap((id) => registered.has(id) ? [{ ...registered.get(id)! }] : [])),
-        registerContentScripts: vi.fn(async (scripts: typeof github.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        updateContentScripts: vi.fn(async (scripts: typeof github.registration[]) => { for (const script of scripts) registered.set(script.id, script); }),
-        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => { for (const id of ids) registered.delete(id); }),
+        registerContentScripts: vi.fn(async (scripts: typeof github.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        updateContentScripts: vi.fn(async (scripts: typeof github.registration[]) => {
+            for (const script of scripts) {
+                registered.set(script.id, script);
+            }
+        }),
+        unregisterContentScripts: vi.fn(async ({ ids }: { ids: string[] }) => {
+            for (const id of ids) {
+                registered.delete(id);
+            }
+        }),
         executeScript: vi.fn(async (_input: { target: { tabId: number; allFrames: false }; files: string[] }) => undefined)
     };
     const tabs = {
         query: vi.fn(async (query: { url?: readonly string[] }) => {
-            if (query.url?.some((pattern) => pattern.includes("sibling.test"))) return [{ id: 4, url: "https://sibling.test/document" }];
+            if (query.url?.some((pattern) => pattern.includes("sibling.test"))) {
+                return [{ id: 4, url: "https://sibling.test/document" }];
+            }
             return [{ id: 3, url: "https://synthetic.test/document" }];
         }),
         sendMessage: vi.fn(async (tabId: number, message: unknown) => message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE ? { type: DOCUMENT_STATUS_MESSAGE, phase: phases.get(tabId) ?? "active" } : undefined)
@@ -132,7 +158,9 @@ describe("AdapterActivationCoordinator", () => {
             { id: 6, url: "not-a-url" }
         ]);
         fake.scripting.executeScript.mockImplementationOnce(async (input: { target: { tabId: number; allFrames: false }; files: string[] }) => {
-            if (input.target.tabId === 3) throw new Error("tab failed");
+            if (input.target.tabId === 3) {
+                throw new Error("tab failed");
+            }
         });
         const coordinator = new AdapterActivationCoordinator({ adapters: [github], ...fake });
         const result = await coordinator.reconcile({ revision: 7, mode: "activation-sweep", policy: "enabled" });
@@ -151,8 +179,12 @@ describe("AdapterActivationCoordinator", () => {
 
     it.each(["get", "register", "update", "unregister"] as const)("attributes %s registration failure", async (operation) => {
         const fake = fakes();
-        if (operation === "get") fake.scripting.getRegisteredContentScripts.mockRejectedValueOnce(new Error(operation));
-        if (operation === "register") fake.scripting.registerContentScripts.mockRejectedValueOnce(new Error(operation));
+        if (operation === "get") {
+            fake.scripting.getRegisteredContentScripts.mockRejectedValueOnce(new Error(operation));
+        }
+        if (operation === "register") {
+            fake.scripting.registerContentScripts.mockRejectedValueOnce(new Error(operation));
+        }
         if (operation === "update") {
             fake.registered.set(github.registration.id, { ...github.registration, js: ["old.js"] });
             fake.scripting.updateContentScripts.mockRejectedValueOnce(new Error(operation));
@@ -184,7 +216,9 @@ describe("AdapterActivationCoordinator", () => {
         const teardownFake = fakes();
         teardownFake.registered.set(github.registration.id, { ...github.registration });
         teardownFake.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
-            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
+            if (message && typeof message === "object" && "type" in message && message.type === DOCUMENT_STATUS_MESSAGE) {
+                return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
+            }
             throw new Error("teardown");
         });
         const teardownCoordinator = new AdapterActivationCoordinator({ adapters: [github], ...teardownFake });

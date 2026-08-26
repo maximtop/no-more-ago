@@ -41,7 +41,9 @@ function installApplication(): BackgroundApplication | undefined {
             readonly executeScript?: typeof chrome.scripting.executeScript;
         };
     };
-    if (!candidate.storage?.local || !candidate.tabs?.query || !candidate.tabs.sendMessage || !candidate.scripting?.getRegisteredContentScripts || !candidate.scripting.registerContentScripts || !candidate.scripting.updateContentScripts || !candidate.scripting.unregisterContentScripts || !candidate.scripting.executeScript) return undefined;
+    if (!candidate.storage?.local || !candidate.tabs?.query || !candidate.tabs.sendMessage || !candidate.scripting?.getRegisteredContentScripts || !candidate.scripting.registerContentScripts || !candidate.scripting.updateContentScripts || !candidate.scripting.unregisterContentScripts || !candidate.scripting.executeScript) {
+        return undefined;
+    }
 
     const storage: SettingsStorage & DiagnosticStorage = {
         get: (keys) => candidate.storage?.local?.get(keys) as Promise<Record<string, unknown>>,
@@ -77,7 +79,9 @@ function installApplication(): BackgroundApplication | undefined {
             ? "chromium"
             : "other";
     let extensionVersion: unknown;
-    try { extensionVersion = chrome.runtime?.getManifest?.().version; } catch { /* incomplete browser shims expose no manifest */ }
+    try {
+        extensionVersion = chrome.runtime?.getManifest?.().version;
+    } catch { /* incomplete browser shims expose no manifest */ }
     const diagnosticEnvironment = {
         browserFamily,
         ...(typeof extensionVersion === "string" ? { extensionVersion } : {})
@@ -91,15 +95,21 @@ const application = installApplication();
  * Accepts only messages sent from this extension's options page.
  */
 function isTrustedOptionsSender(sender: unknown): boolean {
-    if (typeof sender !== "object" || sender === null || !Object.hasOwn(sender, "url")) return false;
+    if (typeof sender !== "object" || sender === null || !Object.hasOwn(sender, "url")) {
+        return false;
+    }
     let optionsUrl: unknown;
     let extensionId: unknown;
     try {
         optionsUrl = chrome.runtime?.getURL?.("options.html");
         extensionId = chrome.runtime?.id;
-    } catch { return false; }
+    } catch {
+        return false;
+    }
     const values = sender as Record<string, unknown>;
-    if (typeof optionsUrl !== "string" || values.url !== optionsUrl) return false;
+    if (typeof optionsUrl !== "string" || values.url !== optionsUrl) {
+        return false;
+    }
     return typeof extensionId !== "string" || (Object.hasOwn(values, "id") && values.id === extensionId);
 }
 
@@ -107,17 +117,23 @@ if (application && chrome.runtime?.onMessage?.addListener) {
     chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
         let responseSent = false;
         const sendOnce = (value: unknown): void => {
-            if (responseSent) return;
+            if (responseSent) {
+                return;
+            }
             responseSent = true;
             sendResponse(value);
         };
         if (isGetDiagnosticsSnapshotMessage(message)) {
-            if (!isTrustedOptionsSender(sender)) return false;
+            if (!isTrustedOptionsSender(sender)) {
+                return false;
+            }
             void application.getDiagnosticsSnapshot().then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
             return true;
         }
         if (isClearDiagnosticsMessage(message)) {
-            if (!isTrustedOptionsSender(sender)) return false;
+            if (!isTrustedOptionsSender(sender)) {
+                return false;
+            }
             void application.clearDiagnostics().then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
             return true;
         }
@@ -170,14 +186,22 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         return false;
     });
-    chrome.runtime.onStartup?.addListener(() => { void application.requestLifecycle("startup"); });
-    chrome.runtime.onInstalled?.addListener(() => { void application.requestLifecycle("installed"); });
-    void application.ensureReady("cold-worker").catch((error: unknown) => { console.error("Background initialization failed", error); });
+    chrome.runtime.onStartup?.addListener(() => {
+        void application.requestLifecycle("startup");
+    });
+    chrome.runtime.onInstalled?.addListener(() => {
+        void application.requestLifecycle("installed");
+    });
+    void application.ensureReady("cold-worker").catch((error: unknown) => {
+        console.error("Background initialization failed", error);
+    });
 } else {
     // Incomplete local API shims retain the validated registration smoke path.
     void import("../runtime/register-github").then(({ ensureGitHubRuntime }) => ensureGitHubRuntime({
         getRegisteredContentScripts: (filter) => chrome.scripting.getRegisteredContentScripts(filter),
         registerContentScripts: (scripts) => chrome.scripting.registerContentScripts(scripts),
         updateContentScripts: (scripts) => chrome.scripting.updateContentScripts(scripts)
-    })).catch((error: unknown) => { console.error("Runtime registration failed", error); });
+    })).catch((error: unknown) => {
+        console.error("Runtime registration failed", error);
+    });
 }

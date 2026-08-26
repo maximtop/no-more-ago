@@ -86,7 +86,9 @@ function isSafeRevision(value: unknown): value is number {
  * Recognizes a ready persisted-state response, including its optional time-zone warning.
  */
 function isDisplayState(value: unknown): value is DisplayStateLike {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
     const record = value as Record<string, unknown>;
     const keys = Object.keys(record);
     return (keys.length === 4 || keys.length === 5)
@@ -203,9 +205,12 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
     }
     const report = slot.reportDiagnostic;
     const sink: DocumentDiagnosticSink = (event) => {
-        if (!slot.debugEnabled) return;
-        try { void Promise.resolve(report(event as unknown as Record<string, unknown>)).catch(() => undefined); }
-        catch { /* diagnostics never interfere with page processing */ }
+        if (!slot.debugEnabled) {
+            return;
+        }
+        try {
+            void Promise.resolve(report(event as unknown as Record<string, unknown>)).catch(() => undefined);
+        } catch { /* diagnostics never interfere with page processing */ }
     };
     slot.controller.setDiagnosticSink(sink);
 }
@@ -214,7 +219,9 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
  * Starts the controller once both state hydration and document readiness succeed.
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
-    if (slot.phase !== "waiting" || slot.generation !== generation || !slot.documentReady || slot.presentation === undefined) return;
+    if (slot.phase !== "waiting" || slot.generation !== generation || !slot.documentReady || slot.presentation === undefined) {
+        return;
+    }
     try {
         slot.controller.start();
         slot.phase = "active";
@@ -223,7 +230,11 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
             slot.document.removeEventListener("DOMContentLoaded", slot.pendingStart);
             slot.pendingStart = undefined;
         }
-        try { slot.controller.teardown(); } finally { slot.phase = "failed"; }
+        try {
+            slot.controller.teardown();
+        } finally {
+            slot.phase = "failed";
+        }
         throw error;
     }
 }
@@ -238,8 +249,12 @@ function waitForDocument(slot: RuntimeSlot, generation: number): void {
         return;
     }
     const callback: EventListener = () => {
-        if (slot.pendingStart === callback) slot.pendingStart = undefined;
-        if (slot.phase !== "waiting" || slot.generation !== generation) return;
+        if (slot.pendingStart === callback) {
+            slot.pendingStart = undefined;
+        }
+        if (slot.phase !== "waiting" || slot.generation !== generation) {
+            return;
+        }
         slot.documentReady = true;
         maybeStart(slot, generation);
     };
@@ -258,22 +273,40 @@ function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Pr
         return;
     }
     let request: Promise<unknown>;
-    try { request = loader(); } catch { slot.phase = "failed"; return; }
+    try {
+        request = loader();
+    } catch {
+        slot.phase = "failed"; return;
+    }
     slot.hydration = Promise.resolve(request).then((response) => {
         if (slot.phase !== "waiting" || slot.generation !== generation || !isDisplayState(response)) {
-            if (slot.generation === generation && slot.phase === "waiting") slot.phase = "failed";
+            if (slot.generation === generation && slot.phase === "waiting") {
+                slot.phase = "failed";
+            }
             return;
         }
         const previousRevision = Math.max(slot.presentationRevision ?? -1, slot.debugRevision ?? -1);
-        if (slot.presentationRevision === undefined || response.revision >= slot.presentationRevision) applyPresentation(slot, response.display, response.revision);
-        if (response.revision >= previousRevision) applyDebugPolicy(slot, response.debugEnabled, response.revision);
-        try { waitForDocument(slot, generation); } catch {
-            if (slot.generation === generation) slot.phase = "failed";
+        if (slot.presentationRevision === undefined || response.revision >= slot.presentationRevision) {
+            applyPresentation(slot, response.display, response.revision);
+        }
+        if (response.revision >= previousRevision) {
+            applyDebugPolicy(slot, response.debugEnabled, response.revision);
+        }
+        try {
+            waitForDocument(slot, generation);
+        } catch {
+            if (slot.generation === generation) {
+                slot.phase = "failed";
+            }
         }
     }, () => {
-        if (slot.phase === "waiting" && slot.generation === generation) slot.phase = "failed";
+        if (slot.phase === "waiting" && slot.generation === generation) {
+            slot.phase = "failed";
+        }
     }).finally(() => {
-        if (slot.generation === generation) slot.hydration = undefined;
+        if (slot.generation === generation) {
+            slot.hydration = undefined;
+        }
     });
 }
 
@@ -281,7 +314,9 @@ function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Pr
  * Resets a stopped runtime and begins a new state-hydration generation.
  */
 function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefined): void {
-    if (slot.phase === "waiting" || slot.phase === "active") return;
+    if (slot.phase === "waiting" || slot.phase === "active") {
+        return;
+    }
     slot.generation += 1;
     const generation = slot.generation;
     slot.phase = "waiting";
@@ -345,7 +380,9 @@ export function installContentRuntime(input: {
     const runtimeDocument = input.document as Document & Record<symbol, RuntimeSlot | undefined>;
     const existing = runtimeDocument[DOCUMENT_RUNTIME_SLOT];
     if (existing) {
-        if (input.reportDiagnostic) existing.reportDiagnostic = input.reportDiagnostic;
+        if (input.reportDiagnostic) {
+            existing.reportDiagnostic = input.reportDiagnostic;
+        }
         activate(existing, input.loadDisplayState);
         return existing.handle;
     }
@@ -367,17 +404,25 @@ export function installContentRuntime(input: {
     slot.debugRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.documentReady = false;
-    slot.handle = { teardown: () => { teardown(slot); } };
+    slot.handle = { teardown: () => {
+        teardown(slot);
+    } };
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
-        if (isTeardownDocumentMessage(message)) { teardown(slot); return undefined; }
+        if (isTeardownDocumentMessage(message)) {
+            teardown(slot); return undefined;
+        }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
             sendResponse?.(response);
             return response;
         }
         if (isPresentationUpdateMessage(message)) {
-            if (slot.phase !== "waiting" && slot.phase !== "active") return undefined;
-            if (slot.presentationRevision !== undefined && message.revision < slot.presentationRevision) return undefined;
+            if (slot.phase !== "waiting" && slot.phase !== "active") {
+                return undefined;
+            }
+            if (slot.presentationRevision !== undefined && message.revision < slot.presentationRevision) {
+                return undefined;
+            }
             if (slot.presentationRevision !== undefined && message.revision === slot.presentationRevision) {
                 const response = presentationAcknowledgement(message.revision);
                 sendResponse?.(response);
@@ -392,11 +437,19 @@ export function installContentRuntime(input: {
             return response;
         }
         if (isDebugPolicyUpdateMessage(message)) {
-            if (slot.phase !== "waiting" && slot.phase !== "active") return undefined;
+            if (slot.phase !== "waiting" && slot.phase !== "active") {
+                return undefined;
+            }
             const latestRevision = Math.max(slot.presentationRevision ?? -1, slot.debugRevision ?? -1);
-            if (message.revision < latestRevision) return undefined;
-            if (slot.debugRevision === message.revision && slot.debugEnabled !== message.enabled) return undefined;
-            if (slot.debugRevision !== message.revision) applyDebugPolicy(slot, message.enabled, message.revision);
+            if (message.revision < latestRevision) {
+                return undefined;
+            }
+            if (slot.debugRevision === message.revision && slot.debugEnabled !== message.enabled) {
+                return undefined;
+            }
+            if (slot.debugRevision !== message.revision) {
+                applyDebugPolicy(slot, message.enabled, message.revision);
+            }
             const response = debugAcknowledgement(message.revision);
             sendResponse?.(response);
             return response;

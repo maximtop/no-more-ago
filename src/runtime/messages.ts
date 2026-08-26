@@ -170,7 +170,9 @@ export interface DocumentStatusResponse {
  * Recognizes an object containing only the document-teardown command.
  */
 export function isTeardownDocumentMessage(value: unknown): value is TeardownDocumentMessage {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
     const record = value as Record<string, unknown>;
     return Object.keys(record).length === 1 && record.type === TEARDOWN_DOCUMENT_MESSAGE;
 }
@@ -179,7 +181,9 @@ export function isTeardownDocumentMessage(value: unknown): value is TeardownDocu
  * Recognizes an object containing only the document-status command.
  */
 export function isDocumentStatusMessage(value: unknown): value is DocumentStatusMessage {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
     const record = value as Record<string, unknown>;
     return Object.keys(record).length === 1 && record.type === DOCUMENT_STATUS_MESSAGE;
 }
@@ -188,7 +192,9 @@ export function isDocumentStatusMessage(value: unknown): value is DocumentStatus
  * Recognizes a document-status reply with a supported lifecycle phase.
  */
 export function isDocumentStatusResponse(value: unknown): value is DocumentStatusResponse {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+    }
     const record = value as Record<string, unknown>;
     return Object.keys(record).length === 2
     && record.type === DOCUMENT_STATUS_MESSAGE
@@ -242,7 +248,9 @@ export function isPresentationUpdateAcknowledgement(
     || !Object.hasOwn(value, "type")
     || !Object.hasOwn(value, "revision")
     || value.type !== PRESENTATION_UPDATED_MESSAGE
-    || !isSafeRevision(value.revision)) return false;
+    || !isSafeRevision(value.revision)) {
+        return false;
+    }
     return expectedRevision === undefined || value.revision === expectedRevision;
 }
 
@@ -272,7 +280,9 @@ export function isDebugPolicyUpdateAcknowledgement(
     || !Object.hasOwn(value, "type")
     || !Object.hasOwn(value, "revision")
     || value.type !== DEBUG_POLICY_UPDATED_MESSAGE
-    || !isSafeRevision(value.revision)) return false;
+    || !isSafeRevision(value.revision)) {
+        return false;
+    }
     return expectedRevision === undefined || value.revision === expectedRevision;
 }
 
@@ -285,11 +295,17 @@ export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEve
     || !Object.hasOwn(value, "type")
     || !Object.hasOwn(value, "event")
     || value.type !== DIAGNOSTIC_EVENT_MESSAGE
-    || !isRecord(value.event)) return false;
+    || !isRecord(value.event)) {
+        return false;
+    }
     const event = value.event;
     const allowed = new Set(["category", "count", "durationMs", "reason", "adapterVersion", "extensionVersion", "browserFamily", "stack"]);
-    if (Object.keys(event).some((key) => !allowed.has(key))) return false;
-    if ([...allowed].some((key) => key in event && !Object.hasOwn(event, key))) return false;
+    if (Object.keys(event).some((key) => !allowed.has(key))) {
+        return false;
+    }
+    if ([...allowed].some((key) => key in event && !Object.hasOwn(event, key))) {
+        return false;
+    }
     return Object.keys(event).every((key) => allowed.has(key))
     && Object.hasOwn(event, "category")
     && ["lifecycle", "adapter", "mutation", "timing", "settings", "skip", "error"].includes(String(event.category));

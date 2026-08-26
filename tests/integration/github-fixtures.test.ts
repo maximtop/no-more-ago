@@ -91,7 +91,9 @@ describe("offline GitHub source fixtures", () => {
     it.each(sourceFixtures)("processes $name according to its documented source contract", (sourceCase) => {
         const { name, url } = sourceCase;
         const fixture = fixtures.get(name);
-        if (!fixture) throw new Error(`Missing fixture ${name}`);
+        if (!fixture) {
+            throw new Error(`Missing fixture ${name}`);
+        }
         document.body.innerHTML = fixture;
         const originalMarkup = document.body.innerHTML;
         const originalLink = document.querySelector("a")?.getAttribute("href");
@@ -106,7 +108,9 @@ describe("offline GitHub source fixtures", () => {
             : null;
         if ("sourceSelector" in sourceCase) {
             expect(source).not.toBeNull();
-            if (!source) throw new Error(`Missing source in ${name}`);
+            if (!source) {
+                throw new Error(`Missing source in ${name}`);
+            }
             const adapter = defaultRegistry.select(new URL(url));
             expect(adapter).not.toBeNull();
             expect(adapter?.extract(source)).toMatchObject({

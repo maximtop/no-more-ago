@@ -21,8 +21,12 @@ function storage(initial?: unknown): DiagnosticStorage & { value: unknown; calls
             state.value = undefined;
             return Promise.resolve();
         }),
-        get value() { return state.value; },
-        get calls() { return state.calls; }
+        get value() {
+            return state.value;
+        },
+        get calls() {
+            return state.calls;
+        }
     };
 }
 
@@ -67,8 +71,12 @@ describe("DiagnosticJournal", () => {
     it("serializes appends and cannot resurrect an event across disable/enable", async () => {
         const backend = storage();
         let release!: () => void;
-        const gate = new Promise<void>((resolve) => { release = resolve; });
-        backend.get = vi.fn(async () => { await gate; return {}; });
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        backend.get = vi.fn(async () => {
+            await gate; return {};
+        });
         const journal = new DiagnosticJournal(backend, DIAGNOSTICS_MAX_BYTES);
         await journal.setEnabled(true);
         const pending = journal.append(event(1));
@@ -187,7 +195,9 @@ describe("DiagnosticJournal", () => {
             await journal.setEnabled(true);
             const result = await journal.readSnapshot();
             expect(result.ok).toBe(accepted);
-            if (!result.ok) expect(result.error).toBe("invalid-journal");
+            if (!result.ok) {
+                expect(result.error).toBe("invalid-journal");
+            }
         }
     });
 
@@ -229,11 +239,15 @@ describe("DiagnosticJournal", () => {
     it("invalidates pre-clear writes while retaining a genuinely newer post-clear event", async () => {
         const backend = storage();
         let release!: () => void;
-        const gate = new Promise<void>((resolve) => { release = resolve; });
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
         const originalGet = backend.get.bind(backend);
         let first = true;
         backend.get = vi.fn(async (keys?: string | readonly string[] | Record<string, unknown>) => {
-            if (first) { first = false; await gate; }
+            if (first) {
+                first = false; await gate;
+            }
             return originalGet(keys);
         });
         const journal = new DiagnosticJournal(backend);

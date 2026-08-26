@@ -55,7 +55,9 @@ interface SchedulerInput {
  * Adds an element once while preserving its first-seen order.
  */
 function addUnique(items: Element[], value: Element): void {
-    if (!items.includes(value)) items.push(value);
+    if (!items.includes(value)) {
+        items.push(value);
+    }
 }
 
 /**
@@ -108,14 +110,18 @@ export class DocumentMutationScheduler {
      * Starts observing the document and batches later mutation records.
      */
     start(): void {
-        if (this.phase === "observing") return;
+        if (this.phase === "observing") {
+            return;
+        }
         const generation = ++this.generation;
         const observer = new MutationObserver((records) => {
             if (
                 this.phase !== "observing" ||
         this.observer !== observer ||
         this.generation !== generation
-            ) return;
+            ) {
+                return;
+            }
             this.handle(records);
         });
         try {
@@ -175,10 +181,14 @@ export class DocumentMutationScheduler {
                 continue;
             }
 
-            if (this.input.getOwnedSourceForOutput(record.target)) continue;
+            if (this.input.getOwnedSourceForOutput(record.target)) {
+                continue;
+            }
 
             for (const node of record.addedNodes) {
-                if (node.nodeType !== 1) continue;
+                if (node.nodeType !== 1) {
+                    continue;
+                }
                 const element = node as Element;
                 const source = this.input.getOwnedSourceForOutput(element);
                 if (source) {
@@ -191,7 +201,9 @@ export class DocumentMutationScheduler {
             }
 
             for (const node of record.removedNodes) {
-                if (node.nodeType !== 1) continue;
+                if (node.nodeType !== 1) {
+                    continue;
+                }
                 const element = node as Element;
                 const suppressedGeneration = this.suppressedRemovals.get(element);
                 if (suppressedGeneration === this.generation) {
@@ -227,7 +239,9 @@ export class DocumentMutationScheduler {
       normalizedTargets.length === 0 &&
       normalizedRemoved.length === 0 &&
       normalizedDisplaced.length === 0
-        ) return;
+        ) {
+            return;
+        }
         this.input.onBatch({
             addedRoots: normalizedAdded,
             datetimeTargets: normalizedTargets,

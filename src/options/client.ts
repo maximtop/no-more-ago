@@ -104,7 +104,9 @@ export class SitesClient {
      */
     public async getState(): Promise<SitesState> {
         const response = await this.transport.sendMessage({ type: GET_SITES_STATE_MESSAGE });
-        if (!isSitesState(response)) throw new Error("Invalid Sites state response");
+        if (!isSitesState(response)) {
+            throw new Error("Invalid Sites state response");
+        }
         return response;
     }
 
@@ -159,7 +161,9 @@ export class SitesClient {
      */
     public async getDisplayState(): Promise<DisplayState> {
         const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
-        if (!isDisplayState(response)) throw new Error("Invalid Display state response");
+        if (!isDisplayState(response)) {
+            throw new Error("Invalid Display state response");
+        }
         return response;
     }
 
@@ -170,7 +174,9 @@ export class SitesClient {
      */
     public async getDebugState(): Promise<DebugState> {
         const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
-        if (!isDebugState(response)) throw new Error("Invalid Debug state response");
+        if (!isDebugState(response)) {
+            throw new Error("Invalid Debug state response");
+        }
         return response;
     }
 
@@ -187,7 +193,9 @@ export class SitesClient {
         } catch {
             return this.rereadDebugAfterAmbiguousResponse();
         }
-        if (isSetDebugEnabledResponse(response)) return { kind: "response", response };
+        if (isSetDebugEnabledResponse(response)) {
+            return { kind: "response", response };
+        }
         return this.rereadDebugAfterAmbiguousResponse();
     }
 
@@ -198,9 +206,14 @@ export class SitesClient {
      */
     public async getDiagnosticsSnapshot(): Promise<DiagnosticsSnapshotResult> {
         let response: unknown;
-        try { response = await this.transport.sendMessage({ type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE }); }
-        catch { return { kind: "error", error: "unavailable" }; }
-        if (!isGetDiagnosticsSnapshotResponse(response)) return { kind: "error", error: "unavailable" };
+        try {
+            response = await this.transport.sendMessage({ type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE });
+        } catch {
+            return { kind: "error", error: "unavailable" };
+        }
+        if (!isGetDiagnosticsSnapshotResponse(response)) {
+            return { kind: "error", error: "unavailable" };
+        }
         return response.ok ? { kind: "response", snapshot: response.snapshot } : { kind: "error", error: response.error };
     }
 
@@ -211,9 +224,14 @@ export class SitesClient {
      */
     public async clearDiagnostics(): Promise<DiagnosticsClearResult> {
         let response: unknown;
-        try { response = await this.transport.sendMessage({ type: CLEAR_DIAGNOSTICS_MESSAGE }); }
-        catch { return { kind: "error", error: "unavailable" }; }
-        if (!isClearDiagnosticsResponse(response)) return { kind: "error", error: "unavailable" };
+        try {
+            response = await this.transport.sendMessage({ type: CLEAR_DIAGNOSTICS_MESSAGE });
+        } catch {
+            return { kind: "error", error: "unavailable" };
+        }
+        if (!isClearDiagnosticsResponse(response)) {
+            return { kind: "error", error: "unavailable" };
+        }
         return response.ok ? { kind: "response" } : { kind: "error", error: response.error };
     }
 
@@ -233,7 +251,9 @@ export class SitesClient {
         } catch {
             return this.rereadDisplayAfterAmbiguousResponse();
         }
-        if (isSetDisplaySettingsResponse(response)) return { kind: "response", response };
+        if (isSetDisplaySettingsResponse(response)) {
+            return { kind: "response", response };
+        }
         return this.rereadDisplayAfterAmbiguousResponse();
     }
 
@@ -271,8 +291,11 @@ export class SitesClient {
      * @returns An ambiguous result with current state when the reread succeeds.
      */
     private async rereadDebugAfterAmbiguousResponse(): Promise<DebugSetResult> {
-        try { return { kind: "ambiguous", state: await this.getDebugState() }; }
-        catch { return { kind: "ambiguous" }; }
+        try {
+            return { kind: "ambiguous", state: await this.getDebugState() };
+        } catch {
+            return { kind: "ambiguous" };
+        }
     }
 }
 
@@ -283,7 +306,11 @@ export class SitesClient {
  * @returns A client whose default transport rejects when the extension runtime is unavailable.
  */
 export function createSitesClient(transport?: SitesTransport): SitesClient {
-    if (transport) return new SitesClient(transport);
-    if (typeof chrome !== "undefined") return new SitesClient(chrome.runtime);
+    if (transport) {
+        return new SitesClient(transport);
+    }
+    if (typeof chrome !== "undefined") {
+        return new SitesClient(chrome.runtime);
+    }
     return new SitesClient({ sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")) });
 }

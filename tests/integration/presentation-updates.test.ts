@@ -63,27 +63,37 @@ function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
     const storage = {
         get: vi.fn(async (keys?: string | readonly string[] | Record<string, unknown>) => {
             if (keys === DIAGNOSTICS_STORAGE_KEY) {
-                if (failNextDiagnosticGet) { failNextDiagnosticGet = false; throw new Error("diagnostics unreadable"); }
+                if (failNextDiagnosticGet) {
+                    failNextDiagnosticGet = false; throw new Error("diagnostics unreadable");
+                }
                 return diagnostics === undefined ? {} : { [DIAGNOSTICS_STORAGE_KEY]: diagnostics };
             }
             return { [SETTINGS_STORAGE_KEY]: stored, [SETTINGS_PREVIOUS_STORAGE_KEY]: storedPrevious };
         }),
         set: vi.fn(async (items: Record<string, unknown>) => {
             if (Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY)) {
-                if (failNextDiagnosticSet) { failNextDiagnosticSet = false; throw new Error("diagnostics unavailable"); }
+                if (failNextDiagnosticSet) {
+                    failNextDiagnosticSet = false; throw new Error("diagnostics unavailable");
+                }
                 diagnostics = items[DIAGNOSTICS_STORAGE_KEY];
                 return;
             }
             const candidate = items[SETTINGS_STORAGE_KEY];
             const previous = items[SETTINGS_PREVIOUS_STORAGE_KEY];
-            if (failNextSet) { failNextSet = false; throw new Error("disk full"); }
-            if (!isSettingsSnapshotV5(candidate) || !isSettingsSnapshotV5(previous)) throw new Error("Invalid settings pair");
+            if (failNextSet) {
+                failNextSet = false; throw new Error("disk full");
+            }
+            if (!isSettingsSnapshotV5(candidate) || !isSettingsSnapshotV5(previous)) {
+                throw new Error("Invalid settings pair");
+            }
             stored = candidate;
             storedPrevious = previous;
         }),
         remove: vi.fn(async (keys: string | readonly string[]) => {
             if (keys === DIAGNOSTICS_STORAGE_KEY || (Array.isArray(keys) && keys.includes(DIAGNOSTICS_STORAGE_KEY))) {
-                if (failNextDiagnosticRemove) { failNextDiagnosticRemove = false; throw new Error("diagnostics removal unavailable"); }
+                if (failNextDiagnosticRemove) {
+                    failNextDiagnosticRemove = false; throw new Error("diagnostics removal unavailable");
+                }
                 diagnostics = undefined;
             }
         })
@@ -91,16 +101,24 @@ function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
 
     const tabs = {
         query: vi.fn(async (query: { readonly active?: boolean; readonly url?: readonly string[] }) => {
-            if (query.active) return [{ id: 11, url: "https://github.com/one" }];
-            if (query.url) return [{ id: 11, url: "https://github.com/one" }, { id: 12, url: "https://github.com/two" }];
+            if (query.active) {
+                return [{ id: 11, url: "https://github.com/one" }];
+            }
+            if (query.url) {
+                return [{ id: 11, url: "https://github.com/one" }, { id: 12, url: "https://github.com/two" }];
+            }
             return [];
         }),
         sendMessage: vi.fn(async (tabId: number, message: unknown, options: { readonly frameId: 0 }) => {
             expect(options).toEqual({ frameId: 0 });
             const listener = listenerByTab.get(tabId);
-            if (!listener) throw new Error("Document runtime is not installed");
+            if (!listener) {
+                throw new Error("Document runtime is not installed");
+            }
             let callbackResponse: unknown;
-            const directResponse = listener(message, undefined, (response) => { callbackResponse = response; });
+            const directResponse = listener(message, undefined, (response) => {
+                callbackResponse = response;
+            });
             return callbackResponse ?? directResponse;
         })
     };
@@ -113,18 +131,28 @@ function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
             })
         ),
         registerContentScripts: vi.fn(async (scripts: readonly RegisteredContentScriptSpec[]) => {
-            for (const script of scripts) registrations.set(script.id, script);
+            for (const script of scripts) {
+                registrations.set(script.id, script);
+            }
         }),
         updateContentScripts: vi.fn(async (scripts: readonly RegisteredContentScriptSpec[]) => {
-            for (const script of scripts) registrations.set(script.id, script);
+            for (const script of scripts) {
+                registrations.set(script.id, script);
+            }
         }),
         unregisterContentScripts: vi.fn(async ({ ids }: { readonly ids: readonly string[] }) => {
-            for (const id of ids) registrations.delete(id);
+            for (const id of ids) {
+                registrations.delete(id);
+            }
         }),
         executeScript: vi.fn(async ({ target }: { readonly target: { readonly tabId: number; readonly allFrames: false } }) => {
             const page = documents.get(target.tabId);
-            if (!page) throw new Error("Unknown document");
-            const addListener = additions.get(target.tabId) ?? vi.fn<(listener: Listener) => void>((listener) => { listenerByTab.set(target.tabId, listener); });
+            if (!page) {
+                throw new Error("Unknown document");
+            }
+            const addListener = additions.get(target.tabId) ?? vi.fn<(listener: Listener) => void>((listener) => {
+                listenerByTab.set(target.tabId, listener);
+            });
             additions.set(target.tabId, addListener);
             const load = hydration.get(target.tabId) ?? vi.fn<() => Promise<unknown>>(() => currentApplication.getDisplayState());
             hydration.set(target.tabId, load);
@@ -176,16 +204,36 @@ function integrationFixture(initialDisplay: DisplaySettings = NEW_YORK) {
         hydration,
         settle,
         output,
-        get stored() { return stored; },
-        get storedPrevious() { return storedPrevious; },
-        get diagnostics() { return diagnostics; },
-        failNextSet: () => { failNextSet = true; },
-        failNextDiagnosticSet: () => { failNextDiagnosticSet = true; },
-        failNextDiagnosticGet: () => { failNextDiagnosticGet = true; },
-        failNextDiagnosticRemove: () => { failNextDiagnosticRemove = true; },
-        poisonDiagnostics: (value: unknown) => { diagnostics = value; },
-        corruptCurrent: (value: unknown) => { stored = value as SettingsSnapshotV5; },
-        corruptPrevious: (value: unknown) => { storedPrevious = value as SettingsSnapshotV5; },
+        get stored() {
+            return stored;
+        },
+        get storedPrevious() {
+            return storedPrevious;
+        },
+        get diagnostics() {
+            return diagnostics;
+        },
+        failNextSet: () => {
+            failNextSet = true;
+        },
+        failNextDiagnosticSet: () => {
+            failNextDiagnosticSet = true;
+        },
+        failNextDiagnosticGet: () => {
+            failNextDiagnosticGet = true;
+        },
+        failNextDiagnosticRemove: () => {
+            failNextDiagnosticRemove = true;
+        },
+        poisonDiagnostics: (value: unknown) => {
+            diagnostics = value;
+        },
+        corruptCurrent: (value: unknown) => {
+            stored = value as SettingsSnapshotV5;
+        },
+        corruptPrevious: (value: unknown) => {
+            storedPrevious = value as SettingsSnapshotV5;
+        },
         restart
     };
 }
@@ -216,7 +264,9 @@ describe("presentation updates across real background and two documents", () => 
 
         const candidate = fixture.documents.get(11)?.createElement("relative-time");
         candidate?.setAttribute("datetime", SOURCE_INSTANT);
-        if (candidate) fixture.documents.get(11)?.body.append(candidate);
+        if (candidate) {
+            fixture.documents.get(11)?.body.append(candidate);
+        }
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         expect(fixture.documents.get(11)?.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(2);
     });
@@ -239,9 +289,13 @@ describe("presentation updates across real background and two documents", () => 
             typeof message === "object" && message !== null && "type" in message && message.type === UPDATE_PRESENTATION_MESSAGE
         );
         expect(updates.map(([tabId]) => tabId)).toEqual([11, 12]);
-        for (const [, message] of updates) expect(message).toMatchObject({ revision: 4, display: UTC });
+        for (const [, message] of updates) {
+            expect(message).toMatchObject({ revision: 4, display: UTC });
+        }
         const acknowledgements = await Promise.all(fixture.tabs.sendMessage.mock.calls.flatMap(([, message], index) => {
-            if (typeof message !== "object" || message === null || !("type" in message) || message.type !== UPDATE_PRESENTATION_MESSAGE) return [];
+            if (typeof message !== "object" || message === null || !("type" in message) || message.type !== UPDATE_PRESENTATION_MESSAGE) {
+                return [];
+            }
             const call = fixture.tabs.sendMessage.mock.results[index];
             return call === undefined ? [] : [call.value as Promise<unknown>];
         }));
@@ -286,8 +340,11 @@ describe("presentation updates across real background and two documents", () => 
         await fixture.app.ensureReady();
         await fixture.settle();
 
-        if (policy === "global") await fixture.app.setGlobalEnabled(false);
-        else await fixture.app.setSiteEnabled("github.com", false, "popup");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(false);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", false, "popup");
+        }
         expect(fixture.output(11)).toBeNull();
         expect(fixture.output(12)).toBeNull();
         expect(fixture.documents.get(11)?.querySelector("relative-time")?.textContent).toBe("first relative");
@@ -296,8 +353,11 @@ describe("presentation updates across real background and two documents", () => 
         await fixture.app.setDisplaySettings(UTC);
         expect(fixture.tabs.sendMessage).not.toHaveBeenCalled();
 
-        if (policy === "global") await fixture.app.setGlobalEnabled(true);
-        else await fixture.app.setSiteEnabled("github.com", true, "popup");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(true);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", true, "popup");
+        }
         await fixture.settle();
 
         expect(fixture.output(11)?.textContent).toBe(expected("UTC"));
@@ -312,13 +372,19 @@ describe("presentation updates across real background and two documents", () => 
         const fixture = integrationFixture(CUSTOM_NEW_YORK);
         await fixture.app.ensureReady();
         await fixture.settle();
-        if (policy === "global") await fixture.app.setGlobalEnabled(false);
-        else await fixture.app.setSiteEnabled("github.com", false, "popup");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(false);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", false, "popup");
+        }
         fixture.tabs.sendMessage.mockClear();
         await expect(fixture.app.setDisplaySettings(CUSTOM_UTC)).resolves.toMatchObject({ ok: true, acceptedRevision: 5, refreshFailures: [] });
         expect(fixture.tabs.sendMessage).not.toHaveBeenCalled();
-        if (policy === "global") await fixture.app.setGlobalEnabled(true);
-        else await fixture.app.setSiteEnabled("github.com", true, "popup");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(true);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", true, "popup");
+        }
         await fixture.settle();
         expect(fixture.output(11)?.textContent).toBe("Sunday, 23 August 2026 10:15 UTC");
         expect(fixture.output(12)?.textContent).toBe("Sunday, 23 August 2026 10:15 UTC");
@@ -348,8 +414,11 @@ describe("presentation updates across real background and two documents", () => 
         const fixture = integrationFixture();
         await fixture.app.ensureReady();
         await fixture.settle();
-        if (policy === "global") await fixture.app.setGlobalEnabled(false);
-        else await fixture.app.setSiteEnabled("github.com", false, "popup");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(false);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", false, "popup");
+        }
         await fixture.app.setDisplaySettings(UTC);
         expect(fixture.output(11)).toBeNull();
         expect(fixture.output(12)).toBeNull();
@@ -448,7 +517,9 @@ describe("presentation updates across real background and two documents", () => 
         );
         expect(enableCalls.map(([tabId]) => tabId)).toEqual([11, 12]);
         const acknowledgements = await Promise.all(fixture.tabs.sendMessage.mock.calls.flatMap(([, message], index) => {
-            if (typeof message !== "object" || message === null || !("type" in message) || message.type !== UPDATE_DEBUG_POLICY_MESSAGE) return [];
+            if (typeof message !== "object" || message === null || !("type" in message) || message.type !== UPDATE_DEBUG_POLICY_MESSAGE) {
+                return [];
+            }
             const call = fixture.tabs.sendMessage.mock.results[index];
             return call === undefined ? [] : [call.value as Promise<unknown>];
         }));
@@ -488,7 +559,9 @@ describe("presentation updates across real background and two documents", () => 
         const diagnosticWrites = fixture.storage.set.mock.calls.filter(([items]) => Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY)).length;
         const candidate = fixture.documents.get(11)?.createElement("relative-time");
         candidate?.setAttribute("datetime", SOURCE_INSTANT);
-        if (candidate) fixture.documents.get(11)?.body.append(candidate);
+        if (candidate) {
+            fixture.documents.get(11)?.body.append(candidate);
+        }
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         expect(fixture.storage.set.mock.calls.filter(([items]) => Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY))).toHaveLength(diagnosticWrites);
         expect(fixture.documents.get(11)?.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(3);
@@ -527,7 +600,9 @@ describe("presentation updates across real background and two documents", () => 
         }
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         const result = await fixture.app.getDiagnosticsSnapshot();
-        if (!result.ok) throw new Error(`Expected diagnostics, received ${result.error}`);
+        if (!result.ok) {
+            throw new Error(`Expected diagnostics, received ${result.error}`);
+        }
         expect(result.snapshot.environment).toEqual({ extensionVersion: "0.1.0", browserFamily: "chromium" });
         expect(result.snapshot.entries.some((entry) => entry.hostname === "github.com" && !entry.incognito && entry.extensionVersion === "0.1.0" && entry.browserFamily === "chromium")).toBe(true);
         expect(result.snapshot.entries.some((entry) => entry.hostname === "github.com" && entry.incognito && entry.pageCategory === "issue" && entry.extensionVersion === "0.1.0" && entry.browserFamily === "chromium")).toBe(true);
@@ -544,7 +619,9 @@ describe("presentation updates across real background and two documents", () => 
         }
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
         const afterClear = await fixture.app.getDiagnosticsSnapshot();
-        if (!afterClear.ok) throw new Error(`Expected new diagnostics, received ${afterClear.error}`);
+        if (!afterClear.ok) {
+            throw new Error(`Expected new diagnostics, received ${afterClear.error}`);
+        }
         expect(afterClear.snapshot.entries.some((entry) => entry.category === "mutation")).toBe(true);
         for (const [tabId, page] of fixture.documents) {
             expect(page.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(3);
@@ -656,8 +733,11 @@ describe("presentation updates across real background and two documents", () => 
         await fixture.app.setDebugEnabled(true);
         await fixture.app.recordDocumentEvent({ category: "mutation", count: 1 }, { url: "https://github.com/example/repository", frameId: 0 });
         expect(fixture.diagnostics).toBeDefined();
-        if (policy === "global") await fixture.app.setGlobalEnabled(false);
-        else await fixture.app.setSiteEnabled("github.com", false, "sites");
+        if (policy === "global") {
+            await fixture.app.setGlobalEnabled(false);
+        } else {
+            await fixture.app.setSiteEnabled("github.com", false, "sites");
+        }
         expect(fixture.output(11)).toBeNull();
         expect(fixture.output(12)).toBeNull();
         const reportsBeforeReset = fixture.diagnosticReports.mock.calls.length;

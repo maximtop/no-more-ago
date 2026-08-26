@@ -63,7 +63,9 @@ export class PopupClient {
      */
     public async getState(): Promise<PopupState> {
         const response = await this.transport.sendMessage({ type: GET_POPUP_STATE_MESSAGE });
-        if (!isPopupState(response)) throw new Error("Invalid popup state response");
+        if (!isPopupState(response)) {
+            throw new Error("Invalid popup state response");
+        }
         return response;
     }
 
@@ -80,7 +82,9 @@ export class PopupClient {
         } catch {
             return this.rereadAfterAmbiguousResponse();
         }
-        if (isSetGlobalEnabledResponse(response)) return { kind: "response", response };
+        if (isSetGlobalEnabledResponse(response)) {
+            return { kind: "response", response };
+        }
         return this.rereadAfterAmbiguousResponse();
     }
 
@@ -145,7 +149,11 @@ export class PopupClient {
  * @returns A client whose default transport rejects when the extension runtime is unavailable.
  */
 export function createPopupClient(transport?: PopupTransport): PopupClient {
-    if (transport) return new PopupClient(transport);
-    if (typeof chrome !== "undefined") return new PopupClient(chrome.runtime);
+    if (transport) {
+        return new PopupClient(transport);
+    }
+    if (typeof chrome !== "undefined") {
+        return new PopupClient(chrome.runtime);
+    }
     return new PopupClient({ sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")) });
 }

@@ -10,7 +10,9 @@ function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>)
     let listener: ((message: unknown) => void) | undefined;
     const messages = {
         onMessage: {
-            addListener: vi.fn((next: (message: unknown) => void) => { listener = next; })
+            addListener: vi.fn((next: (message: unknown) => void) => {
+                listener = next;
+            })
         }
     };
     vi.stubGlobal("chrome", { runtime: { ...messages, ...(sendMessage === undefined ? {} : { sendMessage }) } });
@@ -84,8 +86,12 @@ describe("content entrypoint", () => {
         await import("../../src/content/main");
         const callback = addEventListener.mock.calls
             .find(([type]) => type === "DOMContentLoaded")?.[1];
-        if (typeof callback !== "function") throw new Error("Expected readiness callback");
-        expect(() => { callback(new Event("DOMContentLoaded")); }).toThrow(error);
+        if (typeof callback !== "function") {
+            throw new Error("Expected readiness callback");
+        }
+        expect(() => {
+            callback(new Event("DOMContentLoaded"));
+        }).toThrow(error);
         observe.mockRestore();
 
         vi.resetModules();

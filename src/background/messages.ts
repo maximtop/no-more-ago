@@ -367,12 +367,20 @@ export function isClearDiagnosticsMessage(value: unknown): value is ClearDiagnos
  * Recognizes a non-empty diagnostics snapshot with trusted environment metadata.
  */
 export function isDiagnosticsSnapshot(value: unknown): value is DiagnosticsSnapshot {
-    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 2 || !Object.hasOwn(value, "entries") || !Object.hasOwn(value, "environment") || !isDiagnosticJournalEntries(value.entries) || value.entries.length === 0) return false;
+    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 2 || !Object.hasOwn(value, "entries") || !Object.hasOwn(value, "environment") || !isDiagnosticJournalEntries(value.entries) || value.entries.length === 0) {
+        return false;
+    }
     const environment = value.environment;
-    if (!isRecord(environment) || !hasOnlyOwnDiagnosticProperties(environment) || !Object.hasOwn(environment, "browserFamily") || !["chromium", "firefox", "other"].includes(String(environment.browserFamily))) return false;
-    if ("extensionVersion" in environment && !Object.hasOwn(environment, "extensionVersion")) return false;
+    if (!isRecord(environment) || !hasOnlyOwnDiagnosticProperties(environment) || !Object.hasOwn(environment, "browserFamily") || !["chromium", "firefox", "other"].includes(String(environment.browserFamily))) {
+        return false;
+    }
+    if ("extensionVersion" in environment && !Object.hasOwn(environment, "extensionVersion")) {
+        return false;
+    }
     const count = Object.hasOwn(environment, "extensionVersion") ? 2 : 1;
-    if (Object.keys(environment).length !== count) return false;
+    if (Object.keys(environment).length !== count) {
+        return false;
+    }
     return count === 1 || (typeof environment.extensionVersion === "string" && /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(environment.extensionVersion));
 }
 
@@ -380,8 +388,12 @@ export function isDiagnosticsSnapshot(value: unknown): value is DiagnosticsSnaps
  * Recognizes a successful diagnostics snapshot or its documented error response.
  */
 export function isGetDiagnosticsSnapshotResponse(value: unknown): value is GetDiagnosticsSnapshotResponse {
-    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok") || Object.keys(value).length !== 2) return false;
-    if (value.ok === true) return Object.hasOwn(value, "snapshot") && isDiagnosticsSnapshot(value.snapshot);
+    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok") || Object.keys(value).length !== 2) {
+        return false;
+    }
+    if (value.ok === true) {
+        return Object.hasOwn(value, "snapshot") && isDiagnosticsSnapshot(value.snapshot);
+    }
     return value.ok === false && Object.hasOwn(value, "error") && ["disabled", "unavailable", "empty", "invalid-journal", "storage-failed"].includes(String(value.error));
 }
 
@@ -389,8 +401,12 @@ export function isGetDiagnosticsSnapshotResponse(value: unknown): value is GetDi
  * Recognizes a successful diagnostics clear result or its documented error response.
  */
 export function isClearDiagnosticsResponse(value: unknown): value is ClearDiagnosticsResponse {
-    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok")) return false;
-    if (value.ok === true) return Object.keys(value).length === 1;
+    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok")) {
+        return false;
+    }
+    if (value.ok === true) {
+        return Object.keys(value).length === 1;
+    }
     return value.ok === false && Object.keys(value).length === 2 && Object.hasOwn(value, "error") && ["disabled", "unavailable", "storage-failed"].includes(String(value.error));
 }
 
@@ -415,15 +431,21 @@ export function isBackgroundMessage(value: unknown): value is BackgroundMessage 
  * Recognizes ready or unavailable display state, including optional time-zone errors.
  */
 export function isDisplayState(value: unknown): value is DisplayState {
-    if (!isRecord(value)) return false;
-    if (!Object.hasOwn(value, "availability")) return false;
-    if (value.availability === "unavailable") return Object.keys(value).length === 4
+    if (!isRecord(value)) {
+        return false;
+    }
+    if (!Object.hasOwn(value, "availability")) {
+        return false;
+    }
+    if (value.availability === "unavailable") {
+        return Object.keys(value).length === 4
     && Object.hasOwn(value, "revision")
     && Object.hasOwn(value, "display")
     && Object.hasOwn(value, "failure")
     && value.revision === null
     && value.display === null
     && (value.failure === "settings-load" || value.failure === "fail-closed-cleanup");
+    }
     return value.availability === "ready"
     && (Object.keys(value).length === 4 || Object.keys(value).length === 5)
     && Object.keys(value).every((key) => key === "availability" || key === "revision" || key === "display" || key === "debugEnabled" || key === "error")
@@ -442,7 +464,9 @@ export function isDisplayState(value: unknown): value is DisplayState {
  * Recognizes ready or unavailable diagnostic logging state.
  */
 export function isDebugState(value: unknown): value is DebugState {
-    if (!isRecord(value) || !Object.hasOwn(value, "availability")) return false;
+    if (!isRecord(value) || !Object.hasOwn(value, "availability")) {
+        return false;
+    }
     if (value.availability === "unavailable") {
         return Object.keys(value).length === 4
       && Object.hasOwn(value, "revision")
@@ -466,7 +490,9 @@ export function isDebugState(value: unknown): value is DebugState {
  * Recognizes ready or unavailable popup state with its valid status and failure combinations.
  */
 export function isPopupState(value: unknown): value is PopupState {
-    if (!isRecord(value)) return false;
+    if (!isRecord(value)) {
+        return false;
+    }
     if (value.availability === "unavailable") {
         const keys = Object.keys(value);
         return (keys.length === 8)
@@ -495,7 +521,9 @@ export function isPopupState(value: unknown): value is PopupState {
  * Recognizes ready or unavailable site-preferences state.
  */
 export function isSitesState(value: unknown): value is SitesState {
-    if (!isRecord(value)) return false;
+    if (!isRecord(value)) {
+        return false;
+    }
     if (value.availability === "unavailable") {
         return Object.keys(value).length === 5
       && value.revision === null
@@ -510,7 +538,9 @@ export function isSitesState(value: unknown): value is SitesState {
     || !Number.isSafeInteger(value.revision)
     || value.revision < 0
     || typeof value.globalEnabled !== "boolean"
-    || !Array.isArray(value.sites)) return false;
+    || !Array.isArray(value.sites)) {
+        return false;
+    }
     return value.sites.every((site) => isRecord(site)
     && Object.keys(site).length === 3
     && typeof site.hostname === "string"
@@ -522,9 +552,15 @@ export function isSitesState(value: unknown): value is SitesState {
  * Recognizes a global-activation update result and its popup state.
  */
 export function isSetGlobalEnabledResponse(value: unknown): value is SetGlobalEnabledResponse {
-    if (!isRecord(value) || typeof value.ok !== "boolean" || !isPopupState(value.state)) return false;
-    if (value.ok) return Object.keys(value).length === 3 && typeof value.acceptedRevision === "number" && Number.isSafeInteger(value.acceptedRevision) && value.acceptedRevision >= 0;
-    if (Object.keys(value).length !== 3) return false;
+    if (!isRecord(value) || typeof value.ok !== "boolean" || !isPopupState(value.state)) {
+        return false;
+    }
+    if (value.ok) {
+        return Object.keys(value).length === 3 && typeof value.acceptedRevision === "number" && Number.isSafeInteger(value.acceptedRevision) && value.acceptedRevision >= 0;
+    }
+    if (Object.keys(value).length !== 3) {
+        return false;
+    }
     return value.error === "save-failed" || value.error === "settings-unavailable";
 }
 
@@ -532,19 +568,29 @@ export function isSetGlobalEnabledResponse(value: unknown): value is SetGlobalEn
  * Recognizes a site-activation update result and its surface-specific state.
  */
 export function isSetSiteEnabledResponse(value: unknown): value is SetSiteEnabledResponse {
-    if (!isRecord(value) || typeof value.ok !== "boolean") return false;
+    if (!isRecord(value) || typeof value.ok !== "boolean") {
+        return false;
+    }
     if (value.surface === "popup") {
-        if (!isPopupState(value.state)) return false;
+        if (!isPopupState(value.state)) {
+            return false;
+        }
     } else if (value.surface === "sites") {
-        if (!isSitesState(value.state)) return false;
-    } else return false;
+        if (!isSitesState(value.state)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
     if (value.ok) {
         return Object.keys(value).length === 4
       && typeof value.acceptedRevision === "number"
       && Number.isSafeInteger(value.acceptedRevision)
       && value.acceptedRevision >= 0;
     }
-    if (Object.keys(value).length !== 4) return false;
+    if (Object.keys(value).length !== 4) {
+        return false;
+    }
     return value.error === "save-failed" || value.error === "invalid-hostname" || value.error === "settings-unavailable";
 }
 
@@ -552,11 +598,17 @@ export function isSetSiteEnabledResponse(value: unknown): value is SetSiteEnable
  * Recognizes a display-settings update result and any tab refresh failures.
  */
 export function isSetDisplaySettingsResponse(value: unknown): value is SetDisplaySettingsResponse {
-    if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDisplayState(value.state)) return false;
-    if (!value.ok) return Object.keys(value).length === 3
+    if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDisplayState(value.state)) {
+        return false;
+    }
+    if (!value.ok) {
+        return Object.keys(value).length === 3
     && Object.hasOwn(value, "error")
     && (value.error === "invalid-format" || value.error === "invalid-time-zone" || value.error === "invalid-display-settings" || value.error === "save-failed" || value.error === "settings-unavailable");
-    if (Object.keys(value).length !== 4 || !Object.hasOwn(value, "acceptedRevision") || !Object.hasOwn(value, "refreshFailures") || typeof value.acceptedRevision !== "number" || !Number.isSafeInteger(value.acceptedRevision) || value.acceptedRevision < 0 || !Array.isArray(value.refreshFailures)) return false;
+    }
+    if (Object.keys(value).length !== 4 || !Object.hasOwn(value, "acceptedRevision") || !Object.hasOwn(value, "refreshFailures") || typeof value.acceptedRevision !== "number" || !Number.isSafeInteger(value.acceptedRevision) || value.acceptedRevision < 0 || !Array.isArray(value.refreshFailures)) {
+        return false;
+    }
     return value.refreshFailures.every((failure) => isRecord(failure)
     && (Object.keys(failure).length === 2 || Object.keys(failure).length === 3)
     && Object.hasOwn(failure, "hostname")
@@ -572,7 +624,9 @@ export function isSetDisplaySettingsResponse(value: unknown): value is SetDispla
  * Recognizes a reset-all-settings result and its site-preferences state.
  */
 export function isResetAllSettingsResponse(value: unknown): value is ResetAllSettingsResponse {
-    if (!isRecord(value) || !Object.hasOwn(value, "ok") || typeof value.ok !== "boolean" || !Object.hasOwn(value, "state")) return false;
+    if (!isRecord(value) || !Object.hasOwn(value, "ok") || typeof value.ok !== "boolean" || !Object.hasOwn(value, "state")) {
+        return false;
+    }
     if (value.ok) {
         return Object.keys(value).length === 3
       && Object.hasOwn(value, "acceptedRevision")
@@ -592,7 +646,9 @@ export function isResetAllSettingsResponse(value: unknown): value is ResetAllSet
  * Recognizes a diagnostic-logging update result and any tab refresh failures.
  */
 export function isSetDebugEnabledResponse(value: unknown): value is SetDebugEnabledResponse {
-    if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDebugState(value.state)) return false;
+    if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDebugState(value.state)) {
+        return false;
+    }
     if (value.ok) {
         return (Object.keys(value).length === 3 || Object.keys(value).length === 4)
       && Object.keys(value).every((key) => key === "ok" || key === "acceptedRevision" || key === "state" || key === "refreshFailures")
