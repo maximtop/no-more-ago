@@ -10,8 +10,8 @@
     "pnpm": "10.34.5"
   },
   "scripts": {
-    "dev": "node scripts/build.mjs dev",
-    "release": "node scripts/build.mjs release",
+    "dev": "node --experimental-strip-types scripts/build.ts dev",
+    "release": "node --experimental-strip-types scripts/build.ts release",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -28,15 +28,17 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@rspack/core": "2.1.10",
+    "@stylistic/eslint-plugin": "5.10.0",
     "@types/chrome": "0.2.7",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "eslint": "10.9.0",
+    "fflate": "0.8.2",
+    "jiti": "2.7.0",
     "jsdom": "30.0.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
-    "vitest": "4.1.11",
-    "fflate": "0.8.2"
+    "vitest": "4.1.11"
   }
 }
