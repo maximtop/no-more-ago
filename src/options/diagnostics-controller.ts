@@ -8,6 +8,7 @@ import type {
     DiagnosticsClearError,
     DiagnosticsSnapshotError,
 } from "../background/messages";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 import {
     DiagnosticArchiveError,
     createDiagnosticsZip,
@@ -239,7 +240,7 @@ export function useDiagnosticsController(
         setSaving(true);
         onNoticeChange(undefined);
         const result = await client.setDebugEnabled(enabled);
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             if (
                 result.response.state.availability !== "ready" ||
                 result.response.state.revision >= state.revision
@@ -276,7 +277,7 @@ export function useDiagnosticsController(
         setDiagnosticsNotice(undefined);
         try {
             const result = await client.getDiagnosticsSnapshot();
-            if (result.kind === "error") {
+            if (result.kind === CLIENT_RESULT_KIND.ERROR) {
                 setDiagnosticsNotice(diagnosticsErrorText(result.error));
                 return;
             }
@@ -311,7 +312,7 @@ export function useDiagnosticsController(
         try {
             const result = await client.clearDiagnostics();
             setDiagnosticsNotice(
-                result.kind === "error"
+                result.kind === CLIENT_RESULT_KIND.ERROR
                     ? diagnosticsErrorText(result.error)
                     : DIAGNOSTICS_CLEARED_NOTICE,
             );

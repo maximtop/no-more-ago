@@ -17,6 +17,7 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
 } from "../background/application";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 
 /**
  * Sends a popup request to the extension runtime.
@@ -36,7 +37,7 @@ export type PopupSetResult =
         /**
          * Indicates that the background returned a validated command response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated result of changing global activation.
@@ -47,7 +48,7 @@ export type PopupSetResult =
         /**
          * Indicates that command completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
 
         /**
          * Popup state reread after the ambiguous command, when available.
@@ -63,7 +64,7 @@ export type PopupSiteSetResult =
         /**
          * Indicates that the background returned a validated command response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated popup-surface result of the per-site command.
@@ -82,7 +83,7 @@ export type PopupSiteSetResult =
         /**
          * Indicates that command completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
 
         /**
          * Popup state reread after the ambiguous command, when available.
@@ -138,7 +139,7 @@ export class PopupClient {
             return this.rereadAfterAmbiguousResponse();
         }
         if (isSetGlobalEnabledResponse(response)) {
-            return { kind: "response", response };
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousResponse();
     }
@@ -163,7 +164,7 @@ export class PopupClient {
             return this.rereadAfterAmbiguousSiteResponse();
         }
         if (isSetSiteEnabledResponse(response) && response.surface === "popup") {
-            return { kind: "response", response };
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousSiteResponse();
     }
@@ -176,9 +177,9 @@ export class PopupClient {
     private async rereadAfterAmbiguousResponse(): Promise<PopupSetResult> {
         try {
             const state = await this.getState();
-            return { kind: "ambiguous", state };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
     }
 
@@ -190,9 +191,9 @@ export class PopupClient {
     private async rereadAfterAmbiguousSiteResponse(): Promise<PopupSiteSetResult> {
         try {
             const state = await this.getState();
-            return { kind: "ambiguous", state };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
     }
 }

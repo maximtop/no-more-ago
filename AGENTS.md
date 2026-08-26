@@ -8,8 +8,8 @@
   import and reuse that constant in production code and tests.
 - Keep related finite value sets in readonly `as const` collections and derive their TypeScript
   unions and validators from those collections when practical.
-- Keep self-explanatory discriminants inline when they make union narrowing or control flow
-  clearer; the canonical union or finite value set must still own the allowed values.
+- Do not inline discriminants that cross a module boundary. Use the owning contract's named
+  constants in type declarations, result construction, narrowing, production code, and tests.
 - One-off user-facing copy, self-explanatory local test data, and a literal whose serialized value
   is itself under test may remain inline.
 

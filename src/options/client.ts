@@ -39,6 +39,7 @@ import type {
     DiagnosticsSnapshot,
     DiagnosticsSnapshotError,
 } from "../background/messages";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 
 /**
  * Sends an options-page request to the extension runtime.
@@ -58,7 +59,7 @@ export type DisplaySetResult =
         /**
          * Indicates that the background returned a validated command response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated result of the display-settings command.
@@ -69,7 +70,7 @@ export type DisplaySetResult =
         /**
          * Indicates that command completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
 
         /**
          * Display state reread after the ambiguous command, when available.
@@ -85,7 +86,7 @@ export type SitesSetResult =
         /**
          * Indicates that the background returned a validated command response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated sites-surface result of the per-site command.
@@ -104,7 +105,7 @@ export type SitesSetResult =
         /**
          * Indicates that command completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
 
         /**
          * Sites state reread after the ambiguous command, when available.
@@ -120,7 +121,7 @@ export type SitesResetResult =
         /**
          * Indicates that the background returned a validated reset response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated result of resetting all settings.
@@ -131,7 +132,7 @@ export type SitesResetResult =
         /**
          * Indicates that reset completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
     };
 
 /**
@@ -142,7 +143,7 @@ export type DebugSetResult =
         /**
          * Indicates that the background returned a validated command response.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated result of changing diagnostic logging.
@@ -153,7 +154,7 @@ export type DebugSetResult =
         /**
          * Indicates that command completion could not be determined directly.
          */
-        readonly kind: "ambiguous";
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
 
         /**
          * Debug state reread after the ambiguous command, when available.
@@ -169,7 +170,7 @@ export type DiagnosticsSnapshotResult =
         /**
          * Indicates that a validated diagnostic snapshot was returned.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
          * Validated diagnostic snapshot ready for export.
@@ -180,7 +181,7 @@ export type DiagnosticsSnapshotResult =
         /**
          * Indicates that no diagnostic snapshot could be returned.
          */
-        readonly kind: "error";
+        readonly kind: typeof CLIENT_RESULT_KIND.ERROR;
 
         /**
          * Stable reason the snapshot request failed.
@@ -196,13 +197,13 @@ export type DiagnosticsClearResult =
         /**
          * Indicates that diagnostics were cleared successfully.
          */
-        readonly kind: "response";
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
     }
     | {
         /**
          * Indicates that diagnostics could not be cleared.
          */
-        readonly kind: "error";
+        readonly kind: typeof CLIENT_RESULT_KIND.ERROR;
 
         /**
          * Stable reason the clear request failed.
@@ -253,11 +254,11 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({ type: RESET_ALL_SETTINGS_MESSAGE });
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
         return isResetAllSettingsResponse(response)
-            ? { kind: "response", response }
-            : { kind: "ambiguous" };
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, response }
+            : { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
     }
 
     /**
@@ -280,7 +281,7 @@ export class SitesClient {
             return this.rereadAfterAmbiguousResponse();
         }
         if (isSetSiteEnabledResponse(response) && response.surface === "sites") {
-            return { kind: "response", response };
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousResponse();
     }
@@ -328,7 +329,7 @@ export class SitesClient {
             return this.rereadDebugAfterAmbiguousResponse();
         }
         if (isSetDebugEnabledResponse(response)) {
-            return { kind: "response", response };
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadDebugAfterAmbiguousResponse();
     }
@@ -343,14 +344,14 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({ type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE });
         } catch {
-            return { kind: "error", error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
         if (!isGetDiagnosticsSnapshotResponse(response)) {
-            return { kind: "error", error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
         return response.ok
-            ? { kind: "response", snapshot: response.snapshot }
-            : { kind: "error", error: response.error };
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
     }
 
     /**
@@ -363,12 +364,14 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({ type: CLEAR_DIAGNOSTICS_MESSAGE });
         } catch {
-            return { kind: "error", error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
         if (!isClearDiagnosticsResponse(response)) {
-            return { kind: "error", error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
-        return response.ok ? { kind: "response" } : { kind: "error", error: response.error };
+        return response.ok
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE }
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
     }
 
     /**
@@ -388,7 +391,7 @@ export class SitesClient {
             return this.rereadDisplayAfterAmbiguousResponse();
         }
         if (isSetDisplaySettingsResponse(response)) {
-            return { kind: "response", response };
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadDisplayAfterAmbiguousResponse();
     }
@@ -401,9 +404,9 @@ export class SitesClient {
     private async rereadAfterAmbiguousResponse(): Promise<SitesSetResult> {
         try {
             const state = await this.getState();
-            return { kind: "ambiguous", state };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
     }
 
@@ -415,9 +418,9 @@ export class SitesClient {
     private async rereadDisplayAfterAmbiguousResponse(): Promise<DisplaySetResult> {
         try {
             const state = await this.getDisplayState();
-            return { kind: "ambiguous", state };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
     }
 
@@ -428,9 +431,12 @@ export class SitesClient {
      */
     private async rereadDebugAfterAmbiguousResponse(): Promise<DebugSetResult> {
         try {
-            return { kind: "ambiguous", state: await this.getDebugState() };
+            return {
+                kind: CLIENT_RESULT_KIND.AMBIGUOUS,
+                state: await this.getDebugState(),
+            };
         } catch {
-            return { kind: "ambiguous" };
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
     }
 }

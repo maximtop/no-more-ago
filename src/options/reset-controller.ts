@@ -3,6 +3,7 @@
  */
 
 import { useRef, useState } from "react";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 import type { SitesClient } from "./client";
 import type { DiagnosticsController } from "./diagnostics-controller";
 import type { DisplayController } from "./display-controller";
@@ -95,7 +96,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
         setResetting(true);
         setNotice(undefined);
         const result = await client.resetAllSettings();
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             if (result.response.ok) {
                 sites.applyState(result.response.state);
                 sites.clearNotice();

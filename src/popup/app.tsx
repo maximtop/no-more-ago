@@ -23,6 +23,7 @@ import {
     type SiteReportError,
     type SiteReportReporter,
 } from "../reporting/site-report";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 import { createPopupClient, type PopupClient } from "./client";
 import { OPTIONS_PAGE_FILE } from "../extension-files";
 
@@ -215,7 +216,7 @@ export function PopupApp({
         setSaving(true);
         setNotice(undefined);
         const result = await client.setGlobalEnabled(event.currentTarget.checked);
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
                 responseState.availability !== "ready" ||
@@ -261,7 +262,7 @@ export function PopupApp({
         setSavingSite(true);
         setNotice(undefined);
         const result = await client.setSiteEnabled(state.hostname, event.currentTarget.checked);
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
                 responseState.availability !== "ready" ||

@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import type { SitesState } from "../background/application";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
 
@@ -126,7 +127,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         setSavingHostname(hostname);
         onNoticeChange(undefined);
         const result = await client.setSiteEnabled(hostname, enabled);
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
                 responseState.availability !== "ready" ||

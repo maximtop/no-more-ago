@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import type { DisplayState } from "../background/application";
+import { CLIENT_RESULT_KIND } from "../core/client-result";
 import type { SitesClient } from "./client";
 import {
     customPatternError,
@@ -190,7 +191,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         setSaving(true);
         setNotice(undefined);
         const result = await client.setDisplaySettings(displayFromDraft(draft));
-        if (result.kind === "response") {
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
                 responseState.availability !== "ready" ||
