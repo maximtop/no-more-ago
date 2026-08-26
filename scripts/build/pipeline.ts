@@ -29,7 +29,22 @@ const WATCH_CLOSE_TIMEOUT_MS = 5_000;
 /**
  * Normalized command-line request describing the build mode, target browsers, and watch behavior.
  */
-type BuildRequest = { mode: BuildMode; browsers: Browser[]; watch: boolean };
+type BuildRequest = {
+    /**
+     * Validated development or release mode.
+     */
+    mode: BuildMode;
+
+    /**
+     * Browser targets selected for this build.
+     */
+    browsers: Browser[];
+
+    /**
+     * Whether the selected development target remains active and watches for changes.
+     */
+    watch: boolean;
+};
 
 /**
  * Lifecycle notification emitted around compile, package, publish, and watch transitions.
@@ -44,14 +59,35 @@ type EventSink = (event: BuildEvent) => void;
 /**
  * Compiler result surface required to decide success and render an actionable error.
  */
-type CompilerStats = { hasErrors(): boolean; toString(options?: unknown): string };
+type CompilerStats = {
+    /**
+     * Reports whether compilation produced an error.
+     */
+    hasErrors(): boolean;
+
+    /**
+     * Renders compiler diagnostics using optional formatter settings.
+     */
+    toString(options?: unknown): string;
+};
 
 /**
  * Minimal compiler lifecycle surface used to run and always close one compilation.
  */
 export type CompilerLike = {
+    /**
+     * Executes one compilation and reports its result.
+     */
     run(callback: (error: Error | null, stats?: CompilerStats) => void): void;
+
+    /**
+     * Releases compiler resources after a build, when supported.
+     */
     close?(callback: (error?: Error | null) => void): void;
+
+    /**
+     * Starts continuous compilation and reports every completed result.
+     */
     watch(options: unknown, callback: (error: Error | null, stats?: CompilerStats) => void): void;
 };
 
@@ -69,11 +105,34 @@ type ArtifactServices = ReturnType<typeof createArtifactServices>;
  * Optional test hooks run at deterministic points around each build phase.
  */
 type PhaseHooks = {
+    /**
+     * Whether a failed test build preserves its temporary task directory.
+     */
     keepTask?: boolean;
+
+    /**
+     * Runs immediately before compiler execution.
+     */
     beforeCompile?: () => void;
+
+    /**
+     * Runs immediately before artifact packaging.
+     */
     beforePackage?: () => void;
+
+    /**
+     * Runs immediately before artifact publication.
+     */
     beforePublish?: () => void;
+
+    /**
+     * Runs immediately after artifact publication.
+     */
     afterPublish?: () => void;
+
+    /**
+     * Runs after temporary build resources have been cleaned.
+     */
     afterCleanup?: () => void;
 };
 
@@ -81,12 +140,39 @@ type PhaseHooks = {
  * Injectable build dependencies and defaults used by the command-line entry point.
  */
 type BuildOptions = {
+    /**
+     * Project root containing source files and build configuration.
+     */
     workspaceRoot?: string;
+
+    /**
+     * Requested development or release mode before CLI validation.
+     */
     mode: string;
+
+    /**
+     * Browser target and optional watch flag supplied by the CLI.
+     */
     argv?: string[];
+
+    /**
+     * Optional compiler factory used instead of the production Rspack factory.
+     */
     compilerFactory?: CompilerFactory;
+
+    /**
+     * Optional guarded artifact services used instead of production services.
+     */
     artifacts?: ArtifactServices;
+
+    /**
+     * Optional observer receiving structured build lifecycle events.
+     */
     events?: EventSink;
+
+    /**
+     * Optional deterministic phase hooks used by lifecycle tests.
+     */
     phaseHooks?: PhaseHooks;
 };
 
@@ -94,19 +180,51 @@ type BuildOptions = {
  * Fully resolved build dependencies shared by compile, package, and publication steps.
  */
 type BuildContext = {
+    /**
+     * Absolute project root used by every build phase.
+     */
     workspaceRoot: string;
+
+    /**
+     * Validated development or release mode.
+     */
     mode: string;
+
+    /**
+     * Validated browser targets selected for compilation.
+     */
     browsers: string[];
+
+    /**
+     * Guarded temporary directory allocated for the complete build.
+     */
     taskRoot: string;
+
+    /**
+     * Artifact services used for packaging and publication.
+     */
     artifacts: ArtifactServices;
+
+    /**
+     * Compiler factory used for each selected browser.
+     */
     compilerFactory: CompilerFactory;
+
+    /**
+     * Observer receiving structured build lifecycle events.
+     */
     events: EventSink;
 };
 
 /**
  * Error enriched with cleanup state so the caller can preserve diagnostic artifacts when needed.
  */
-type BuildError = Error & { keepTask?: boolean };
+type BuildError = Error & {
+    /**
+     * Whether cleanup must preserve the temporary task directory for diagnosis.
+     */
+    keepTask?: boolean;
+};
 
 const defaultCompilerFactory = rspack as unknown as CompilerFactory;
 

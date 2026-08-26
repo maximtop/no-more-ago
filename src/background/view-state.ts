@@ -31,40 +31,177 @@ export type {
 } from "./view-state-values";
 
 /**
+ * Fields shared by every view state backed by an available settings snapshot.
+ */
+interface ReadyViewState {
+    /**
+     * Indicates that settings were loaded successfully.
+     */
+    readonly availability: "ready";
+
+    /**
+     * Authoritative settings revision represented by the view.
+     */
+    readonly revision: number;
+}
+
+/**
+ * Fields shared by every view state produced while settings are unavailable.
+ */
+interface UnavailableViewState {
+    /**
+     * Indicates that settings could not be loaded safely.
+     */
+    readonly availability: "unavailable";
+
+    /**
+     * Absence of an authoritative settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Stable failure that prevented a ready settings view.
+     */
+    readonly failure: SettingsStateFailure;
+}
+
+/**
+ * Common successful result returned by a settings mutation command.
+ */
+interface SuccessfulSettingsCommand<State> {
+    /**
+     * Indicates that the requested mutation completed successfully.
+     */
+    readonly ok: true;
+
+    /**
+     * Settings revision accepted by the command.
+     */
+    readonly acceptedRevision: number;
+
+    /**
+     * Authoritative view state after the mutation.
+     */
+    readonly state: State;
+}
+
+/**
+ * Common failed result returned by a settings mutation command.
+ */
+interface FailedSettingsCommand<ErrorCode, State> {
+    /**
+     * Indicates that the requested mutation failed safely.
+     */
+    readonly ok: false;
+
+    /**
+     * Stable reason the settings mutation failed.
+     */
+    readonly error: ErrorCode;
+
+    /**
+     * Last authoritative view state retained after the failure.
+     */
+    readonly state: State;
+}
+
+/**
+ * Successful settings mutation projected for one extension UI surface.
+ */
+interface SuccessfulSurfaceCommand<Surface, State> extends SuccessfulSettingsCommand<State> {
+    /**
+     * UI surface whose state shape is returned.
+     */
+    readonly surface: Surface;
+}
+
+/**
+ * Failed settings mutation projected for one extension UI surface.
+ */
+interface FailedSurfaceCommand<Surface, ErrorCode, State>
+    extends FailedSettingsCommand<ErrorCode, State> {
+    /**
+     * UI surface whose fallback state shape is returned.
+     */
+    readonly surface: Surface;
+}
+
+/**
+ * Active-tab popup projection backed by available settings.
+ */
+interface ReadyPopupState extends ReadyViewState {
+    /**
+     * Whether timestamp replacement is globally enabled.
+     */
+    readonly globalEnabled: boolean;
+
+    /**
+     * Canonical active-tab hostname, or null for inaccessible tabs.
+     */
+    readonly hostname: string | null;
+
+    /**
+     * Effective site setting, or null when no hostname is available.
+     */
+    readonly siteEnabled: boolean | null;
+
+    /**
+     * Whether a runtime adapter supports the active hostname.
+     */
+    readonly hasAdapter: boolean;
+
+    /**
+     * Current activation status shown by the popup.
+     */
+    readonly status: ReadyPopupStatus;
+
+    /**
+     * Runtime failure associated with the active tab, when present.
+     */
+    readonly failure?: PopupRuntimeFailure;
+}
+
+/**
+ * Fail-closed popup projection produced without trustworthy settings.
+ */
+interface UnavailablePopupState extends UnavailableViewState {
+    /**
+     * Absence of a trustworthy global setting.
+     */
+    readonly globalEnabled: null;
+
+    /**
+     * Canonical active-tab hostname when it could still be determined.
+     */
+    readonly hostname: string | null;
+
+    /**
+     * Absence of a trustworthy site setting.
+     */
+    readonly siteEnabled: null;
+
+    /**
+     * Adapters are treated as unavailable while settings fail closed.
+     */
+    readonly hasAdapter: false;
+
+    /**
+     * Unavailable status shown by the popup.
+     */
+    readonly status: UnavailablePopupStatus;
+}
+
+/**
  * Popup view of settings and runtime state for the active tab.
  */
-export type PopupState =
-    | {
-        readonly availability: "ready";
-        readonly revision: number;
-        readonly globalEnabled: boolean;
-        readonly hostname: string | null;
-        readonly siteEnabled: boolean | null;
-        readonly hasAdapter: boolean;
-        readonly status: ReadyPopupStatus;
-        readonly failure?: PopupRuntimeFailure;
-    }
-    | {
-        readonly availability: "unavailable";
-        readonly revision: null;
-        readonly globalEnabled: null;
-        readonly hostname: string | null;
-        readonly siteEnabled: null;
-        readonly hasAdapter: false;
-        readonly status: UnavailablePopupStatus;
-        readonly failure: SettingsStateFailure;
-    };
+export type PopupState = ReadyPopupState | UnavailablePopupState;
 
 /**
  * Result of changing the global activation setting, including the updated popup state.
  */
 export type SetGlobalEnabledResponse =
-    | { readonly ok: true; readonly acceptedRevision: number; readonly state: PopupState }
-    | {
-        readonly ok: false;
-        readonly error: SettingsPersistenceError;
-        readonly state: PopupState;
-    };
+    | SuccessfulSettingsCommand<PopupState>
+    | FailedSettingsCommand<SettingsPersistenceError, PopupState>;
 
 /**
  * A hostname shown in the site preferences list.
@@ -87,112 +224,132 @@ export interface SiteListEntry {
 }
 
 /**
+ * Site-preferences projection backed by available settings.
+ */
+interface ReadySitesState extends ReadyViewState {
+    /**
+     * Whether timestamp replacement is globally enabled.
+     */
+    readonly globalEnabled: boolean;
+
+    /**
+     * Known site preferences and adapter availability.
+     */
+    readonly sites: readonly SiteListEntry[];
+}
+
+/**
+ * Fail-closed site-preferences projection.
+ */
+interface UnavailableSitesState extends UnavailableViewState {
+    /**
+     * Absence of a trustworthy global setting.
+     */
+    readonly globalEnabled: null;
+
+    /**
+     * Empty list returned instead of untrusted site preferences.
+     */
+    readonly sites: readonly [];
+}
+
+/**
  * Site-preferences view returned to the extension UI.
  */
-export type SitesState =
-    | {
-        readonly availability: "ready";
-        readonly revision: number;
-        readonly globalEnabled: boolean;
-        readonly sites: readonly SiteListEntry[];
-    }
-    | {
-        readonly availability: "unavailable";
-        readonly revision: null;
-        readonly globalEnabled: null;
-        readonly sites: readonly [];
-        readonly failure: SettingsStateFailure;
-    };
+export type SitesState = ReadySitesState | UnavailableSitesState;
 
 /**
  * Result of changing one site's activation setting and refreshing its source surface.
  */
 export type SetSiteEnabledResponse =
-    | {
-        readonly ok: true;
-        readonly acceptedRevision: number;
-        readonly surface: "popup";
-        readonly state: PopupState;
-    }
-    | {
-        readonly ok: true;
-        readonly acceptedRevision: number;
-        readonly surface: "sites";
-        readonly state: SitesState;
-    }
-    | {
-        readonly ok: false;
-        readonly error: SiteSettingsError;
-        readonly surface: "popup";
-        readonly state: PopupState;
-    }
-    | {
-        readonly ok: false;
-        readonly error: SiteSettingsError;
-        readonly surface: "sites";
-        readonly state: SitesState;
-    };
+    | SuccessfulSurfaceCommand<"popup", PopupState>
+    | SuccessfulSurfaceCommand<"sites", SitesState>
+    | FailedSurfaceCommand<"popup", SiteSettingsError, PopupState>
+    | FailedSurfaceCommand<"sites", SiteSettingsError, SitesState>;
 
 /**
  * Result of restoring all settings to their defaults.
  */
 export type ResetAllSettingsResponse =
-    | {
-        readonly ok: true;
-        readonly acceptedRevision: number;
-        readonly state: Extract<SitesState, { readonly availability: "ready" }>;
-    }
-    | {
-        readonly ok: false;
-        readonly error: SettingsPersistenceError;
-        readonly state: SitesState;
-    };
+    | SuccessfulSettingsCommand<ReadySitesState>
+    | FailedSettingsCommand<SettingsPersistenceError, SitesState>;
+
+/**
+ * Display-settings projection backed by available settings.
+ */
+interface ReadyDisplayState extends ReadyViewState {
+    /**
+     * Active timestamp presentation settings.
+     */
+    readonly display: DisplaySettings;
+
+    /**
+     * Whether diagnostic logging is currently enabled.
+     */
+    readonly debugEnabled: boolean;
+
+    /**
+     * Runtime presentation warning associated with the saved settings.
+     */
+    readonly error?: typeof UNAVAILABLE_TIME_ZONE_ERROR;
+}
+
+/**
+ * Fail-closed display-settings projection.
+ */
+interface UnavailableDisplayState extends UnavailableViewState {
+    /**
+     * Absence of trustworthy display settings.
+     */
+    readonly display: null;
+}
 
 /**
  * Current display configuration and its time-zone availability.
  */
-export type DisplayState =
-    | {
-        readonly availability: "ready";
-        readonly revision: number;
-        readonly display: DisplaySettings;
-        readonly debugEnabled: boolean;
-        readonly error?: typeof UNAVAILABLE_TIME_ZONE_ERROR;
-    }
-    | {
-        readonly availability: "unavailable";
-        readonly revision: null;
-        readonly display: null;
-        readonly failure: SettingsStateFailure;
-    };
+export type DisplayState = ReadyDisplayState | UnavailableDisplayState;
+
+/**
+ * Diagnostic-policy projection backed by available settings.
+ */
+interface ReadyDebugState extends ReadyViewState {
+    /**
+     * Whether bounded diagnostic logging is enabled.
+     */
+    readonly enabled: boolean;
+}
+
+/**
+ * Fail-closed diagnostic-policy projection.
+ */
+interface UnavailableDebugState extends UnavailableViewState {
+    /**
+     * Absence of a trustworthy diagnostic logging setting.
+     */
+    readonly enabled: null;
+}
 
 /**
  * Current diagnostic logging setting.
  */
-export type DebugState =
-    | { readonly availability: "ready"; readonly revision: number; readonly enabled: boolean }
-    | {
-        readonly availability: "unavailable";
-        readonly revision: null;
-        readonly enabled: null;
-        readonly failure: SettingsStateFailure;
-    };
+export type DebugState = ReadyDebugState | UnavailableDebugState;
+
+/**
+ * Successful diagnostic-policy update with optional per-tab refresh failures.
+ */
+interface SuccessfulDebugSettingsCommand extends SuccessfulSettingsCommand<DebugState> {
+    /**
+     * Matching tabs that did not acknowledge the new diagnostic policy.
+     */
+    readonly refreshFailures?: readonly DebugRefreshFailure[];
+}
 
 /**
  * Result of changing diagnostic logging, including tabs that could not be updated.
  */
 export type SetDebugEnabledResponse =
-    | {
-        readonly ok: true;
-        readonly acceptedRevision: number;
-        readonly state: DebugState;
-        readonly refreshFailures?: readonly DebugRefreshFailure[];
-    }
-    | {
-        readonly ok: false;
-        readonly error: SettingsPersistenceError;
-        readonly state: DebugState;
-    };
+    | SuccessfulDebugSettingsCommand
+    | FailedSettingsCommand<SettingsPersistenceError, DebugState>;
 
 /**
  * A tab that did not acknowledge a diagnostic-policy update.
@@ -235,17 +392,18 @@ export interface DisplayRefreshFailure {
 }
 
 /**
+ * Successful display-settings update with required per-tab refresh results.
+ */
+interface SuccessfulDisplaySettingsCommand extends SuccessfulSettingsCommand<DisplayState> {
+    /**
+     * Matching tabs that did not acknowledge the new presentation settings.
+     */
+    readonly refreshFailures: readonly DisplayRefreshFailure[];
+}
+
+/**
  * Result of changing display settings, including tabs that could not be refreshed.
  */
 export type SetDisplaySettingsResponse =
-    | {
-        readonly ok: true;
-        readonly acceptedRevision: number;
-        readonly state: DisplayState;
-        readonly refreshFailures: readonly DisplayRefreshFailure[];
-    }
-    | {
-        readonly ok: false;
-        readonly error: DisplaySettingsError;
-        readonly state: DisplayState;
-    };
+    | SuccessfulDisplaySettingsCommand
+    | FailedSettingsCommand<DisplaySettingsError, DisplayState>;

@@ -34,7 +34,17 @@ type ArtifactManifest = Record<string, any>;
 /**
  * Matching unpacked directory and ZIP bytes produced for one browser target.
  */
-type ArtifactPair = { directory: string; zipBytes: Buffer };
+type ArtifactPair = {
+    /**
+     * Unpacked browser artifact directory.
+     */
+    directory: string;
+
+    /**
+     * ZIP archive containing the same browser artifact.
+     */
+    zipBytes: Buffer;
+};
 
 /**
  * Per-browser artifact results, allowing a requested target to be selected after compilation.
@@ -50,18 +60,59 @@ type ZipImplementation = (entries: any, options?: any) => Uint8Array;
  * Optional filesystem seams used to exercise guarded artifact publication failures.
  */
 type FileSystemOverrides = {
+    /**
+     * Optional replacement for checking whether a path exists.
+     */
     existsSync?: (path: string) => boolean;
+
+    /**
+     * Optional replacement for atomically renaming an artifact path.
+     */
     renameSync?: (from: string, to: string) => void;
-    rmSync?: (path: string, options?: { recursive?: boolean; force?: boolean }) => void;
+
+    /**
+     * Optional replacement for removing an artifact path.
+     */
+    rmSync?: (path: string, options?: FileRemovalOptions) => void;
+};
+
+/**
+ * Filesystem removal behavior exposed to injected build dependencies.
+ */
+type FileRemovalOptions = {
+    /**
+     * Whether directories are removed recursively.
+     */
+    recursive?: boolean;
+
+    /**
+     * Whether a missing path is ignored.
+     */
+    force?: boolean;
 };
 
 /**
  * Dependency overrides for filesystem and archive operations in the build pipeline.
  */
 type ArtifactServicesOptions = {
+    /**
+     * Optional filesystem operation replacements.
+     */
     fs?: FileSystemOverrides;
+
+    /**
+     * Optional ZIP encoder used for final artifact archives.
+     */
     zip?: ZipImplementation;
+
+    /**
+     * Optional ZIP encoder used for deterministic archive validation.
+     */
     zipSync?: ZipImplementation;
+
+    /**
+     * Optional ZIP decoder used to inspect generated archives.
+     */
     unzipSync?: (data: Uint8Array) => Record<string, Uint8Array>;
 };
 

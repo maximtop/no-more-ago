@@ -9,9 +9,26 @@ import { enUS } from "date-fns/locale/en-US";
  * User-pattern validation result; successful patterns have passed all bounded safety checks.
  */
 export type CustomPatternValidation =
-    | { readonly ok: true; readonly pattern: string }
     | {
+        /**
+         * Indicates that every custom-pattern validation check passed.
+         */
+        readonly ok: true;
+
+        /**
+         * Validated pattern safe to pass to date-fns.
+         */
+        readonly pattern: string;
+    }
+    | {
+        /**
+         * Indicates that the custom pattern was rejected.
+         */
         readonly ok: false;
+
+        /**
+         * Stable validation failure shown by the options page.
+         */
         readonly error:
               | "empty"
               | "too-long"

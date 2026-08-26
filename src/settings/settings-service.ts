@@ -38,9 +38,31 @@ export interface SettingsStorage {
  * Persisted mutation outcome, including the revision that callers may safely project.
  */
 export type SettingsWriteResult =
-    | { readonly ok: true; readonly changed: boolean; readonly snapshot: SettingsSnapshotV5 }
     | {
+        /**
+         * Indicates that the requested mutation completed successfully.
+         */
+        readonly ok: true;
+
+        /**
+         * Whether the persisted settings differ from the previous snapshot.
+         */
+        readonly changed: boolean;
+
+        /**
+         * Authoritative settings snapshot after the mutation.
+         */
+        readonly snapshot: SettingsSnapshotV5;
+    }
+    | {
+        /**
+         * Indicates that the requested mutation was rejected or could not be persisted.
+         */
         readonly ok: false;
+
+        /**
+         * Stable reason the settings mutation failed.
+         */
         readonly error:
               | "persistence-failed"
               | "invalid-hostname"
@@ -48,6 +70,10 @@ export type SettingsWriteResult =
               | "invalid-format"
               | "invalid-display-settings"
               | "invalid-debug";
+
+        /**
+         * Last authoritative settings snapshot retained after the failure.
+         */
         readonly snapshot: SettingsSnapshotV5;
     };
 

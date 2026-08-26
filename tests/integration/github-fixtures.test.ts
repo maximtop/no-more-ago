@@ -28,15 +28,45 @@ const githubPages = [
  */
 type SourceFixture =
     | {
+        /**
+         * Fixture filename beneath the GitHub fixture directory.
+         */
         readonly name: string;
+
+        /**
+         * GitHub URL represented by the fixture markup.
+         */
         readonly url: string;
+
+        /**
+         * Selector locating the trusted timestamp source.
+         */
         readonly sourceSelector: string;
+
+        /**
+         * Exact datetime attribute expected on the source.
+         */
         readonly rawDatetime: string;
+
+        /**
+         * Normalized timestamp expected after trusted resolution.
+         */
         readonly instant: string;
     }
     | {
+        /**
+         * Fixture filename beneath the GitHub fixture directory.
+         */
         readonly name: string;
+
+        /**
+         * GitHub URL represented by the fixture markup.
+         */
         readonly url: string;
+
+        /**
+         * Selectors whose elements must remain unchanged.
+         */
         readonly noOpSelectors: readonly string[];
     };
 

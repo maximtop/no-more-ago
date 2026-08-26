@@ -32,18 +32,63 @@ export interface PopupTransport {
  * Result of changing the global enabled setting.
  */
 export type PopupSetResult =
-    | { readonly kind: "response"; readonly response: SetGlobalEnabledResponse }
-    | { readonly kind: "ambiguous"; readonly state?: PopupState };
+    | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
+        readonly kind: "response";
+
+        /**
+         * Validated result of changing global activation.
+         */
+        readonly response: SetGlobalEnabledResponse;
+    }
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+
+        /**
+         * Popup state reread after the ambiguous command, when available.
+         */
+        readonly state?: PopupState;
+    };
 
 /**
  * Result of changing the current site's enabled setting.
  */
 export type PopupSiteSetResult =
     | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
         readonly kind: "response";
-        readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "popup" }>;
+
+        /**
+         * Validated popup-surface result of the per-site command.
+         */
+        readonly response: Extract<
+            SetSiteEnabledResponse,
+            {
+                /**
+                 * Selects responses projected for the popup surface.
+                 */
+                readonly surface: "popup";
+            }
+        >;
     }
-    | { readonly kind: "ambiguous"; readonly state?: PopupState };
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+
+        /**
+         * Popup state reread after the ambiguous command, when available.
+         */
+        readonly state?: PopupState;
+    };
 
 /**
  * Wraps popup messages and validates their background responses.

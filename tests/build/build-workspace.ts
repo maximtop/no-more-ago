@@ -23,9 +23,24 @@ import { createHash } from "node:crypto";
  * Structured progress event emitted by a build subprocess.
  */
 export type BuildEvent = Record<string, unknown> & {
+    /**
+     * Structured event discriminator emitted by the build subprocess.
+     */
     type?: string;
+
+    /**
+     * Reported build outcome, when the event completes a build.
+     */
     status?: string;
+
+    /**
+     * Monotonic watch-build sequence number.
+     */
     sequence?: number;
+
+    /**
+     * Build subprocess identifier reported by ready events.
+     */
     pid?: number;
 };
 

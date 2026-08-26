@@ -73,15 +73,51 @@ export interface RuntimeAdapterDefinition {
  */
 export type ReconcileFailure =
     | {
+        /**
+         * Identifies a registered-content-script operation failure.
+         */
         readonly scope: "registration";
+
+        /**
+         * Adapter whose registration operation failed.
+         */
         readonly adapterId: string;
+
+        /**
+         * Browser registration operation that failed.
+         */
         readonly operation: "get" | "register" | "update" | "unregister";
     }
-    | { readonly scope: "matching-tabs-query"; readonly adapterId: string }
     | {
-        readonly scope: "tab";
+        /**
+         * Identifies a failure to query tabs matching an adapter.
+         */
+        readonly scope: "matching-tabs-query";
+
+        /**
+         * Adapter whose matching tabs could not be queried.
+         */
         readonly adapterId: string;
+    }
+    | {
+        /**
+         * Identifies a failure affecting one matching tab.
+         */
+        readonly scope: "tab";
+
+        /**
+         * Adapter that selected the affected tab.
+         */
+        readonly adapterId: string;
+
+        /**
+         * Browser tab affected by the failure.
+         */
         readonly tabId: number;
+
+        /**
+         * Content-runtime action that failed.
+         */
         readonly action: "inject" | "teardown" | "status";
     };
 

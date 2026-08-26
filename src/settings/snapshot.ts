@@ -13,18 +13,59 @@ export const SETTINGS_SCHEMA_VERSION = 5 as const;
  * The presentation choices persisted alongside the extension policy.
  */
 export type TimeZoneSelection =
-    | { readonly mode: "system" }
-    | { readonly mode: "utc" }
-    | { readonly mode: "iana"; readonly identifier: string };
+    | {
+        /**
+         * Uses the browser's current system time zone.
+         */
+        readonly mode: "system";
+    }
+    | {
+        /**
+         * Uses Coordinated Universal Time.
+         */
+        readonly mode: "utc";
+    }
+    | {
+        /**
+         * Uses an explicitly selected IANA time zone.
+         */
+        readonly mode: "iana";
+
+        /**
+         * Structurally valid IANA time-zone identifier.
+         */
+        readonly identifier: string;
+    };
 
 /**
  * Immutable formatting choices persisted with each settings revision.
  */
 export type DisplaySettings =
-    | { readonly formatMode: "system"; readonly timeZone: TimeZoneSelection }
     | {
+        /**
+         * Uses the browser locale's standard date and time format.
+         */
+        readonly formatMode: "system";
+
+        /**
+         * Time zone applied before the system format renders the timestamp.
+         */
+        readonly timeZone: TimeZoneSelection;
+    }
+    | {
+        /**
+         * Uses a validated user-supplied date-fns pattern.
+         */
         readonly formatMode: "custom";
+
+        /**
+         * Validated date-fns pattern used to render the timestamp.
+         */
         readonly pattern: string;
+
+        /**
+         * Time zone applied before the custom pattern renders the timestamp.
+         */
         readonly timeZone: TimeZoneSelection;
     };
 
@@ -102,11 +143,32 @@ export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV5 = Object.freeze({
  */
 export type SettingsLoadResult =
     | {
+        /**
+         * Indicates that an authoritative settings snapshot is available.
+         */
         readonly ok: true;
+
+        /**
+         * Validated settings snapshot selected by the load operation.
+         */
         readonly snapshot: SettingsSnapshotV5;
+
+        /**
+         * Storage path from which the authoritative snapshot was obtained.
+         */
         readonly source: "default" | "stored" | "recovered";
     }
-    | { readonly ok: false; readonly error: "load-failed" | "invalid-settings" };
+    | {
+        /**
+         * Indicates that no trustworthy settings snapshot could be loaded.
+         */
+        readonly ok: false;
+
+        /**
+         * Stable reason the settings load failed closed.
+         */
+        readonly error: "load-failed" | "invalid-settings";
+    };
 
 /**
  * Accepts plain JSON-like records before schema validation.

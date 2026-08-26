@@ -189,8 +189,28 @@ export type SiteReportError = (typeof SITE_REPORT_ERRORS)[number];
  * Report action outcome, including the composer URL when a tab was opened.
  */
 export type SiteReportResult =
-    | { readonly ok: true; readonly url: string }
-    | { readonly ok: false; readonly error: SiteReportError };
+    | {
+        /**
+         * Indicates that the GitHub report composer was opened.
+         */
+        readonly ok: true;
+
+        /**
+         * Validated composer URL opened for the user.
+         */
+        readonly url: string;
+    }
+    | {
+        /**
+         * Indicates that the report action failed safely.
+         */
+        readonly ok: false;
+
+        /**
+         * Stable reason the report composer was not opened.
+         */
+        readonly error: SiteReportError;
+    };
 
 const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVersion", "browser"]);
 const REASON_SET = new Set<string>(SITE_REPORT_REASONS);

@@ -134,9 +134,26 @@ export interface DiagnosticsSnapshot {
  * Result of requesting persisted diagnostic events.
  */
 export type GetDiagnosticsSnapshotResponse =
-    | { readonly ok: true; readonly snapshot: DiagnosticsSnapshot }
     | {
+        /**
+         * Indicates that a validated diagnostic snapshot is available.
+         */
+        readonly ok: true;
+
+        /**
+         * Validated diagnostic entries and environment metadata.
+         */
+        readonly snapshot: DiagnosticsSnapshot;
+    }
+    | {
+        /**
+         * Indicates that the snapshot request failed safely.
+         */
         readonly ok: false;
+
+        /**
+         * Stable reason the diagnostic snapshot could not be returned.
+         */
         readonly error: DiagnosticsSnapshotError;
     };
 
@@ -144,8 +161,23 @@ export type GetDiagnosticsSnapshotResponse =
  * Result of clearing persisted diagnostic events.
  */
 export type ClearDiagnosticsResponse =
-    | { readonly ok: true }
-    | { readonly ok: false; readonly error: DiagnosticsClearError };
+    | {
+        /**
+         * Indicates that stored diagnostics were cleared successfully.
+         */
+        readonly ok: true;
+    }
+    | {
+        /**
+         * Indicates that stored diagnostics could not be cleared safely.
+         */
+        readonly ok: false;
+
+        /**
+         * Stable reason the clear operation failed.
+         */
+        readonly error: DiagnosticsClearError;
+    };
 
 /**
  * Request for the active-tab popup state.

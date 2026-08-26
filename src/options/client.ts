@@ -54,46 +54,161 @@ export interface SitesTransport {
  * Result of saving display settings, including any state reread after an ambiguous response.
  */
 export type DisplaySetResult =
-    | { readonly kind: "response"; readonly response: SetDisplaySettingsResponse }
-    | { readonly kind: "ambiguous"; readonly state?: DisplayState };
+    | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
+        readonly kind: "response";
+
+        /**
+         * Validated result of the display-settings command.
+         */
+        readonly response: SetDisplaySettingsResponse;
+    }
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+
+        /**
+         * Display state reread after the ambiguous command, when available.
+         */
+        readonly state?: DisplayState;
+    };
 
 /**
  * Result of changing a site's enabled setting.
  */
 export type SitesSetResult =
     | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
         readonly kind: "response";
-        readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "sites" }>;
+
+        /**
+         * Validated sites-surface result of the per-site command.
+         */
+        readonly response: Extract<
+            SetSiteEnabledResponse,
+            {
+                /**
+                 * Selects responses projected for the options-page sites surface.
+                 */
+                readonly surface: "sites";
+            }
+        >;
     }
-    | { readonly kind: "ambiguous"; readonly state?: SitesState };
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+
+        /**
+         * Sites state reread after the ambiguous command, when available.
+         */
+        readonly state?: SitesState;
+    };
 
 /**
  * Result of resetting all persisted settings.
  */
 export type SitesResetResult =
-    | { readonly kind: "response"; readonly response: ResetAllSettingsResponse }
-    | { readonly kind: "ambiguous" };
+    | {
+        /**
+         * Indicates that the background returned a validated reset response.
+         */
+        readonly kind: "response";
+
+        /**
+         * Validated result of resetting all settings.
+         */
+        readonly response: ResetAllSettingsResponse;
+    }
+    | {
+        /**
+         * Indicates that reset completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+    };
 
 /**
  * Result of changing whether diagnostic logging is enabled.
  */
 export type DebugSetResult =
-    | { readonly kind: "response"; readonly response: SetDebugEnabledResponse }
-    | { readonly kind: "ambiguous"; readonly state?: DebugState };
+    | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
+        readonly kind: "response";
+
+        /**
+         * Validated result of changing diagnostic logging.
+         */
+        readonly response: SetDebugEnabledResponse;
+    }
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: "ambiguous";
+
+        /**
+         * Debug state reread after the ambiguous command, when available.
+         */
+        readonly state?: DebugState;
+    };
 
 /**
  * Diagnostics snapshot or the reason it could not be read.
  */
 export type DiagnosticsSnapshotResult =
-    | { readonly kind: "response"; readonly snapshot: DiagnosticsSnapshot }
-    | { readonly kind: "error"; readonly error: DiagnosticsSnapshotError };
+    | {
+        /**
+         * Indicates that a validated diagnostic snapshot was returned.
+         */
+        readonly kind: "response";
+
+        /**
+         * Validated diagnostic snapshot ready for export.
+         */
+        readonly snapshot: DiagnosticsSnapshot;
+    }
+    | {
+        /**
+         * Indicates that no diagnostic snapshot could be returned.
+         */
+        readonly kind: "error";
+
+        /**
+         * Stable reason the snapshot request failed.
+         */
+        readonly error: DiagnosticsSnapshotError;
+    };
 
 /**
  * Result of removing stored diagnostic entries.
  */
 export type DiagnosticsClearResult =
-    | { readonly kind: "response" }
-    | { readonly kind: "error"; readonly error: DiagnosticsClearError };
+    | {
+        /**
+         * Indicates that diagnostics were cleared successfully.
+         */
+        readonly kind: "response";
+    }
+    | {
+        /**
+         * Indicates that diagnostics could not be cleared.
+         */
+        readonly kind: "error";
+
+        /**
+         * Stable reason the clear request failed.
+         */
+        readonly error: DiagnosticsClearError;
+    };
 
 /**
  * Wraps options-page messages and validates their background responses.

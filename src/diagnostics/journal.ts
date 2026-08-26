@@ -64,9 +64,26 @@ interface DiagnosticEnvelope {
  * Read result that exposes a usable snapshot without propagating storage errors.
  */
 export type DiagnosticJournalSnapshotResult =
-    | { readonly ok: true; readonly entries: readonly DiagnosticEvent[] }
     | {
+        /**
+         * Indicates that a valid non-empty journal snapshot is available.
+         */
+        readonly ok: true;
+
+        /**
+         * Validated persisted events in journal order.
+         */
+        readonly entries: readonly DiagnosticEvent[];
+    }
+    | {
+        /**
+         * Indicates that the journal could not provide a usable snapshot.
+         */
         readonly ok: false;
+
+        /**
+         * Stable reason the journal snapshot is unavailable.
+         */
         readonly error: "disabled" | "empty" | "invalid-journal" | "storage-failed";
     };
 
@@ -74,8 +91,23 @@ export type DiagnosticJournalSnapshotResult =
  * Clear result that distinguishes durable removal from a contained storage failure.
  */
 export type DiagnosticJournalClearResult =
-    | { readonly ok: true }
-    | { readonly ok: false; readonly error: "disabled" | "storage-failed" };
+    | {
+        /**
+         * Indicates that journal storage is empty after the operation.
+         */
+        readonly ok: true;
+    }
+    | {
+        /**
+         * Indicates that journal storage could not be cleared.
+         */
+        readonly ok: false;
+
+        /**
+         * Stable reason the clear operation failed.
+         */
+        readonly error: "disabled" | "storage-failed";
+    };
 
 /**
  * Accepts plain objects without inherited fields or accessors.
