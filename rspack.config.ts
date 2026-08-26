@@ -1,14 +1,31 @@
+/**
+ * @file Rspack configuration that assembles browser-specific extension artifacts.
+ */
+
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { sources, Compilation } from "@rspack/core";
 
+/**
+ * Browser targets for which the extension manifest and bundles are emitted.
+ */
 export const BROWSERS = ["chrome", "firefox", "edge"];
+
+/**
+ * Build modes controlling source maps and release-oriented output.
+ */
 export const MODES = ["dev", "release"];
 
+/**
+ * Loads a trusted build-time JSON file and returns its object representation.
+ */
 function readJson(file: string): Record<string, any> {
     return JSON.parse(readFileSync(file, "utf8")) as Record<string, any>;
 }
 
+/**
+ * Adds manifests, HTML entry points, and extension icons to each Rspack compilation.
+ */
 function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; browser: string }) {
     const commonPath = path.join(workspaceRoot, "src/manifest/common.json");
     const variantPath = path.join(workspaceRoot, `src/manifest/${browser}.json`);
@@ -44,6 +61,9 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     };
 }
 
+/**
+ * Produces a browser- and mode-specific Rspack configuration after validating requested inputs.
+ */
 export function createRspackConfig({ workspaceRoot, browser, mode, outputPath }: { workspaceRoot: string; browser: string; mode: string; outputPath: string }): Record<string, any> {
     if (!BROWSERS.includes(browser) || !MODES.includes(mode)) throw new Error("Invalid browser or mode");
     return {

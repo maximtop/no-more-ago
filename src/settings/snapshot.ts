@@ -1,38 +1,90 @@
+/**
+ * @file Canonical settings schema, validation, migration, and default values.
+ */
+
 import { validateCustomFormatPattern } from "./custom-format";
 
-/** The presentation choices persisted alongside the extension policy. */
+/**
+ * The presentation choices persisted alongside the extension policy.
+ */
 export type TimeZoneSelection =
   | { readonly mode: "system" }
   | { readonly mode: "utc" }
   | { readonly mode: "iana"; readonly identifier: string };
 
+/**
+ * Immutable formatting choices persisted with each settings revision.
+ */
 export type DisplaySettings =
   | { readonly formatMode: "system"; readonly timeZone: TimeZoneSelection }
   | { readonly formatMode: "custom"; readonly pattern: string; readonly timeZone: TimeZoneSelection };
 
-/** V5 is intentionally an unpublished schema; older documents are rejected. */
+/**
+ * V5 is intentionally an unpublished schema; older documents are rejected.
+ */
 export interface SettingsSnapshotV5 {
+
+    /**
+     * Exact schema revision required before a snapshot is accepted.
+     */
     readonly schemaVersion: 5;
+
+    /**
+     * Monotonic revision used to order persisted settings writes.
+     */
     readonly revision: number;
+
+    /**
+     * Whether timestamp replacement is enabled for every eligible site.
+     */
     readonly globalEnabled: boolean;
+
+    /**
+     * Per-host overrides keyed by canonical URL.hostname values.
+     */
     readonly sitePreferences: Readonly<Record<string, boolean>>;
+
+    /**
+     * Persisted presentation choices applied to rendered timestamps.
+     */
     readonly display: DisplaySettings;
+
+    /**
+     * Whether bounded diagnostic events are retained locally.
+     */
     readonly debugEnabled: boolean;
 }
 
+/**
+ * Current schema version accepted by the settings parser.
+ */
 export const SETTINGS_SCHEMA_VERSION = 5 as const;
+
+/**
+ * Storage key for the active settings snapshot.
+ */
 export const SETTINGS_STORAGE_KEY = "settings" as const;
+
+/**
+ * Storage key reserved for the previous settings snapshot during a write.
+ */
 export const SETTINGS_PREVIOUS_STORAGE_KEY = "settings.previous" as const;
 
 const EMPTY_SITE_PREFERENCES: Readonly<Record<string, boolean>> = Object.freeze(
     Object.create(null) as Record<string, boolean>
 );
 
+/**
+ * Immutable system-format fallback used when no valid saved display choice exists.
+ */
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = Object.freeze({
     formatMode: "system",
     timeZone: Object.freeze({ mode: "system" })
 });
 
+/**
+ * Known-good initial snapshot used for first run and failed-closed recovery.
+ */
 export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV5 = Object.freeze({
     schemaVersion: SETTINGS_SCHEMA_VERSION,
     revision: 0,
@@ -42,15 +94,23 @@ export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV5 = Object.freeze({
     debugEnabled: false
 });
 
+/**
+ * Result of loading storage, distinguishing a usable snapshot from a recoverable failure.
+ */
 export type SettingsLoadResult =
   | { readonly ok: true; readonly snapshot: SettingsSnapshotV5; readonly source: "default" | "stored" | "recovered" }
   | { readonly ok: false; readonly error: "load-failed" | "invalid-settings" };
 
+/**
+ * Accepts plain JSON-like records before schema validation.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** A site key is the canonical URL.hostname, never a URL or URL.host. */
+/**
+ * A site key is the canonical URL.hostname, never a URL or URL.host.
+ */
 export function isCanonicalHostname(hostname: string): boolean {
     if (typeof hostname !== "string" || hostname.length === 0 || hostname.trim() !== hostname) return false;
     if (hostname.endsWith("..") || hostname.includes("*")) return false;
@@ -69,6 +129,10 @@ export function isCanonicalHostname(hostname: string): boolean {
     }
 }
 
+/**
+ * Rejects non-records and invalid host overrides, then freezes a copied preference map so callers
+ * cannot mutate a validated settings snapshot through its input object.
+ */
 function copySitePreferences(value: unknown): Readonly<Record<string, boolean>> | null {
     if (!isRecord(value)) return null;
     const entries: [string, boolean][] = [];
@@ -81,6 +145,9 @@ function copySitePreferences(value: unknown): Readonly<Record<string, boolean>> 
 
 const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
 
+/**
+ * Rejects whitespace, control characters, traversal segments, and invalid IANA name components.
+ */
 export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): identifier is string {
     if (typeof identifier !== "string" || identifier.length === 0 || identifier.trim() !== identifier) return false;
     if (identifier.includes("\\") || /\s/u.test(identifier)) return false;
@@ -94,6 +161,9 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): iden
     );
 }
 
+/**
+ * Accepts only complete system, UTC, or structurally valid named-zone selections.
+ */
 export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection {
     if (!isRecord(value) || !Object.hasOwn(value, "mode")) return false;
     if (value.mode === "system" || value.mode === "utc") return Object.keys(value).length === 1;
@@ -103,6 +173,9 @@ export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection 
     && isStructurallyValidTimeZoneIdentifier(value.identifier);
 }
 
+/**
+ * Returns an immutable time-zone selection or null without coercing untrusted input.
+ */
 export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null {
     if (!isTimeZoneSelection(value)) return null;
     return value.mode === "iana"
@@ -110,6 +183,9 @@ export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null
         : Object.freeze({ mode: value.mode });
 }
 
+/**
+ * Verifies the exact key set and validates custom patterns before accepting display choices.
+ */
 export function isDisplaySettings(value: unknown): value is DisplaySettings {
     if (!isRecord(value) || !Object.hasOwn(value, "formatMode") || !Object.hasOwn(value, "timeZone")) return false;
     const timeZone = parseTimeZoneSelection(value.timeZone);
@@ -122,6 +198,9 @@ export function isDisplaySettings(value: unknown): value is DisplaySettings {
     && validateCustomFormatPattern(value.pattern).ok;
 }
 
+/**
+ * Copies validated display choices into an immutable representation, or returns null.
+ */
 export function parseDisplaySettings(value: unknown): DisplaySettings | null {
     if (!isDisplaySettings(value)) return null;
     const timeZone = parseTimeZoneSelection(value.timeZone);
@@ -132,6 +211,9 @@ export function parseDisplaySettings(value: unknown): DisplaySettings | null {
     return Object.freeze({ formatMode: "custom", pattern: checked.pattern, timeZone });
 }
 
+/**
+ * Enforces the exact V5 schema and validates every nested settings value.
+ */
 export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV5 {
     if (!isRecord(value)) return false;
     const keys = Object.keys(value);
@@ -152,6 +234,9 @@ export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV
     && typeof value.debugEnabled === "boolean";
 }
 
+/**
+ * Produces an immutable V5 snapshot only from a fully validated storage record.
+ */
 export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null {
     if (!isSettingsSnapshotV5(value)) return null;
     const sitePreferences = copySitePreferences(value.sitePreferences);
@@ -167,6 +252,9 @@ export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null
     });
 }
 
+/**
+ * Validates caller-supplied settings and freezes the canonical V5 storage shape.
+ */
 export function createSettingsSnapshot(
     revision: number,
     globalEnabled: boolean,
@@ -185,6 +273,9 @@ export function createSettingsSnapshot(
     return Object.freeze({ schemaVersion: SETTINGS_SCHEMA_VERSION, revision, globalEnabled, sitePreferences: copied, display: parsedDisplay, debugEnabled });
 }
 
+/**
+ * Treats an absent per-site override as enabled and only disables explicit false entries.
+ */
 export function isSiteEnabled(sitePreferences: Readonly<Record<string, boolean>>, hostname: string): boolean {
     return !Object.hasOwn(sitePreferences, hostname) || sitePreferences[hostname] !== false;
 }

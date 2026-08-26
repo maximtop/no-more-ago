@@ -1,3 +1,7 @@
+/**
+ * @file Validates adapter candidates and resolves only explicitly trusted timestamp values.
+ */
+
 import { isValid, parseISO } from "date-fns";
 
 import {
@@ -12,6 +16,9 @@ const FRACTION = "(?:[.,]\\d+)";
 const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
 const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
 
+/**
+ * Rejects invalid or ambiguous numeric UTC offsets before ISO parsing.
+ */
 function hasKnownNumericZone(zone: string): boolean {
     if (zone === "Z") return true;
     const sign = zone[0];
@@ -22,6 +29,9 @@ function hasKnownNumericZone(zone: string): boolean {
     return !(sign === "-" && hours === 0 && minutes === 0);
 }
 
+/**
+ * Detects ASCII and C1 controls that must never appear in an adapter datetime attribute.
+ */
 function hasControlCharacter(value: string): boolean {
     for (let index = 0; index < value.length; index += 1) {
         const code = value.charCodeAt(index);
@@ -30,12 +40,31 @@ function hasControlCharacter(value: string): boolean {
     return false;
 }
 
+/**
+ * Adapter candidate after its explicit-zone datetime has been validated and parsed into an instant.
+ */
 export interface ResolvedTimestamp {
+
+    /**
+     * DOM element whose timestamp is being transformed.
+     */
     readonly source: Element;
+
+    /**
+     * Original explicit-zone datetime retained for rendering and restoration markers.
+     */
     readonly sourceDatetime: string;
+
+    /**
+     * Parsed absolute instant produced only after strict timestamp validation.
+     */
     readonly instant: Date;
 }
 
+/**
+ * Accepts only adapter candidates carrying the explicit-zone rule and a complete valid ISO
+ * datetime; returns null for malformed, ambiguous, or unsupported page data.
+ */
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate
 ): ResolvedTimestamp | null {

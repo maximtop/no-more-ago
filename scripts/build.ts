@@ -1,3 +1,7 @@
+/**
+ * @file Command-line entry point for development and release artifact builds.
+ */
+
 import { runBuildCommand, UsageError } from "./build/pipeline.ts";
 
 const mode = process.argv[2] ?? "";

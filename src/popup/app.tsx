@@ -1,17 +1,46 @@
+/**
+ * Renders the popup's status, controls, and site-report action.
+ *
+ * @file React popup UI for extension status, site controls, and support reporting.
+ */
+
 import { Alert, Anchor, Box, Button, MantineProvider, Paper, Stack, Switch, Text, Title } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import type { PopupState } from "../background/application";
 import { createDefaultSiteReportReporter, type SiteReportError, type SiteReportReporter } from "../reporting/site-report";
 import { createPopupClient, type PopupClient } from "./client";
 
+/**
+ * Optional dependencies and initial state for the popup UI.
+ */
 export interface PopupAppProps {
+    /**
+     * Client used to load and change popup settings.
+     */
     readonly client?: PopupClient;
+
+    /**
+     * State to render without an initial background request.
+     */
     readonly initialState?: PopupState;
+
+    /**
+     * Service used to open a GitHub report for the current site.
+     */
     readonly reporter?: SiteReportReporter;
 }
 
+/**
+ * User-visible outcome of a settings mutation.
+ */
 type Notice = "save-failed" | "invalid-hostname" | "interrupted" | "unknown" | undefined;
 
+/**
+ * Maps popup state to the status text shown below the controls.
+ *
+ * @param state Current popup state.
+ * @returns A concise description of the extension's state on the current page.
+ */
 function statusText(state: PopupState): string {
     if (state.availability === "unavailable") {
         return state.failure === "fail-closed-cleanup"
@@ -28,6 +57,12 @@ function statusText(state: PopupState): string {
     }
 }
 
+/**
+ * Maps a settings-mutation outcome to its user-visible error message.
+ *
+ * @param notice Outcome reported after a settings mutation.
+ * @returns An error message, or undefined when there is no notice to show.
+ */
 function noticeText(notice: Notice): string | undefined {
     if (notice === "save-failed") return "Could not save this change. Try again.";
     if (notice === "invalid-hostname") return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
@@ -36,6 +71,12 @@ function noticeText(notice: Notice): string | undefined {
     return undefined;
 }
 
+/**
+ * Maps a site-report failure to guidance shown in the popup.
+ *
+ * @param error Failure returned by the site-report service.
+ * @returns The error message displayed to the user.
+ */
 function siteReportErrorText(error: SiteReportError): string {
     if (error === "missing-tab") return "Could not find the current site. Reopen the popup and try again.";
     if (error === "restricted-page") return "This page cannot be reported. Open an HTTP or HTTPS site.";
@@ -47,6 +88,11 @@ function siteReportErrorText(error: SiteReportError): string {
     return "Could not open the GitHub report. Try again.";
 }
 
+/**
+ * Renders and coordinates the popup settings controls.
+ *
+ * @returns The popup React view.
+ */
 export function PopupApp({ client: suppliedClient, initialState, reporter: suppliedReporter }: PopupAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createPopupClient(), [suppliedClient]);
     const reporter = useMemo(() => suppliedReporter ?? createDefaultSiteReportReporter(), [suppliedReporter]);

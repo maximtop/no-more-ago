@@ -1,6 +1,13 @@
+/**
+ * @file Validates bounded user-supplied date-fns custom format patterns.
+ */
+
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale/en-US";
 
+/**
+ * User-pattern validation result; successful patterns have passed all bounded safety checks.
+ */
 export type CustomPatternValidation =
   | { readonly ok: true; readonly pattern: string }
   | {
@@ -16,18 +23,30 @@ export type CustomPatternValidation =
         | "empty-output";
   };
 
+/**
+ * Fallback date-fns pattern used when users enable custom formatting without a saved pattern.
+ */
 export const DEFAULT_CUSTOM_FORMAT_PATTERN = "yyyy-MM-dd HH:mm" as const;
+
+/**
+ * Maximum accepted pattern length, limiting storage and formatter work from user input.
+ */
 export const CUSTOM_FORMAT_MAX_LENGTH = 256 as const;
 
 // Unicode date-fns field symbols. Keeping this list finite means malformed
 // alphabetic input is rejected before it reaches the formatter.
 const FORMAT_SYMBOLS = new Set("GyYuURQqMLwIdDEeciahHKkmsSXxXOzPpotTbB");
 
+/**
+ * Detects Unicode control characters that are unsafe in a saved pattern.
+ */
 function isControl(character: string): boolean {
     return /\p{Cc}/u.test(character);
 }
 
-/** Validate one user pattern without constructing a user-controlled RegExp. */
+/**
+ * Validate one user pattern without constructing a user-controlled RegExp.
+ */
 export function validateCustomFormatPattern(pattern: unknown): CustomPatternValidation {
     if (typeof pattern !== "string" || pattern.trim().length === 0) return { ok: false, error: "empty" };
     if (pattern.length > CUSTOM_FORMAT_MAX_LENGTH) return { ok: false, error: "too-long" };

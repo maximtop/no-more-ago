@@ -1,3 +1,8 @@
+/**
+ * @file Starts the page-local runtime with the current document, URL, and Chrome messaging API.
+ */
+
+
 import { installContentRuntime } from "./runtime";
 import { DIAGNOSTIC_EVENT_MESSAGE } from "../runtime/messages";
 

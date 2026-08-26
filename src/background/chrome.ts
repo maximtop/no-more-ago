@@ -1,3 +1,7 @@
+/**
+ * @file Chrome API wiring for the background application and runtime messages.
+ */
+
 /* eslint-disable @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-confusing-void-expression */
 import { BackgroundApplication } from "./application";
 import {
@@ -22,6 +26,9 @@ import { isDiagnosticEventMessage } from "../runtime/messages";
 import type { ScriptingRuntime } from "../runtime/scripting";
 import type { TabsRuntime } from "../runtime/tabs";
 
+/**
+ * Constructs the background application from available Chrome APIs, or returns undefined for incomplete shims.
+ */
 function installApplication(): BackgroundApplication | undefined {
     const candidate = chrome as unknown as {
         readonly storage?: { readonly local?: SettingsStorage & { readonly remove?: (keys: string | readonly string[]) => Promise<void> } };
@@ -80,6 +87,9 @@ function installApplication(): BackgroundApplication | undefined {
 
 const application = installApplication();
 
+/**
+ * Accepts only messages sent from this extension's options page.
+ */
 function isTrustedOptionsSender(sender: unknown): boolean {
     if (typeof sender !== "object" || sender === null || !Object.hasOwn(sender, "url")) return false;
     let optionsUrl: unknown;

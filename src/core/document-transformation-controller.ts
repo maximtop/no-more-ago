@@ -1,3 +1,7 @@
+/**
+ * @file Coordinates adapter processing and mutation scheduling across a document's lifecycle.
+ */
+
 import { DocumentMutationScheduler, type AffectedMutationBatch } from "./document-mutation-scheduler";
 import {
     reconcileDocumentRegion,
@@ -7,24 +11,55 @@ import {
 } from "./process-document";
 import { getOwnedSourceEntries, getOwnedSourceForOutput, restoreExactTimes } from "./render-exact-time";
 
+/**
+ * Confirms that an element still belongs to the controller's document before it is reformatted.
+ */
 function isConnectedToDocument(element: Element, document: Document): boolean {
     return element.ownerDocument === document && element.isConnected;
 }
 
+/**
+ * Suppresses a duplicate root when a broader root already covers the same candidate element.
+ */
 function coveredBy(roots: readonly Element[], element: Element): boolean {
     return roots.some((root) => root.contains(element));
 }
 
+/**
+ * Owns the active document pass, mutation scheduler, and restoration lifecycle for one page.
+ *
+ */
 export class DocumentTransformationController {
+    /**
+     * Distinguishes an inactive controller from one that currently owns document transformations.
+     */
     private phase: "idle" | "active" = "idle";
+
+    /**
+     * Generated time nodes from the latest full pass, retained for targeted reconciliation.
+     */
     private outputs: readonly HTMLTimeElement[] = [];
+
+    /**
+     * Mutation observer coordinator created on start and disposed during teardown.
+     */
     private scheduler: DocumentMutationScheduler | undefined;
+
+    /**
+     * Current bounded diagnostic reporter, which callers may replace without restarting the controller.
+     */
     private diagnosticSink: DocumentDiagnosticSink | undefined;
 
+    /**
+     * Captures document-processing dependencies and seeds the current diagnostic sink before activation.
+     */
     constructor(private readonly input: ProcessInput) {
         this.diagnosticSink = input.diagnosticSink;
     }
 
+    /**
+     * Replaces the optional diagnostic sink used by later processing and reconciliation passes.
+     */
     setDiagnosticSink(sink: DocumentDiagnosticSink | undefined): void {
         this.diagnosticSink = sink;
         const mutableInput = this.input as { diagnosticSink?: DocumentDiagnosticSink };
@@ -32,6 +67,9 @@ export class DocumentTransformationController {
         else Reflect.deleteProperty(mutableInput, "diagnosticSink");
     }
 
+    /**
+     * Starts mutation scheduling and performs the initial document pass.
+     */
     start(): readonly HTMLTimeElement[] {
         if (this.phase === "active") return this.outputs;
 
@@ -64,6 +102,9 @@ export class DocumentTransformationController {
         }
     }
 
+    /**
+     * Stops observation and restores the document to its pre-rendered state.
+     */
     teardown(): void {
         this.scheduler?.stop();
         this.scheduler = undefined;
@@ -72,7 +113,11 @@ export class DocumentTransformationController {
         this.phase = "idle";
     }
 
-    /** Reformat only already owned, connected sources after a presentation save. */
+    /**
+     * Reformat only already owned, connected sources after a presentation save.
+     *
+     * @returns The time elements updated during the reformat operation.
+     */
     reformatOwned(): readonly HTMLTimeElement[] {
         if (this.phase !== "active") return this.outputs;
         const scheduler = this.scheduler;
@@ -86,6 +131,9 @@ export class DocumentTransformationController {
         return outputs;
     }
 
+    /**
+     * Applies a settings change only to affected connected source elements.
+     */
     private reconcile(batch: AffectedMutationBatch, scheduler: DocumentMutationScheduler): void {
         for (const root of batch.removedRoots) {
             if (!isConnectedToDocument(root, this.input.root)) {

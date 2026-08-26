@@ -1,3 +1,10 @@
+/**
+ * Reconciles adapter registrations and content-script lifecycle across tabs.
+ *
+ * @file Chrome scripting and tab reconciliation for runtime adapters.
+ */
+
+
 import type { RuntimeTab, TabsRuntime, DocumentPhase } from "./tabs";
 import type { RegisteredContentScriptReference, RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
 import {
@@ -8,46 +15,165 @@ import {
 } from "./messages";
 import { isSiteEnabled } from "../settings/snapshot";
 
+/**
+ * Trigger that determines whether registrations are refreshed, swept, or failed closed.
+ */
 export type ActivationMode = "cold-worker" | "activation-sweep" | "settings-change" | "failed-closed";
+
+/**
+ * Resolved global policy used to enable, disable, or conservatively stop adapters.
+ */
 export type ActivationPolicy = "enabled" | "disabled" | "unknown";
 
+/**
+ * Adapter metadata used to register, match, and reconcile one supported site.
+ */
 export interface RuntimeAdapterDefinition {
+    /**
+     * Stable identifier shared with the registered content script.
+     */
     readonly id: string;
+
+    /**
+     * Canonical hostname whose preference controls this adapter.
+     */
     readonly hostname: string;
+
+    /**
+     * Chrome content-script registration expected for the adapter.
+     */
     readonly registration: RegisteredContentScriptSpec;
+
+    /**
+     * Applies adapter-specific URL matching after Chrome's pattern query.
+     */
     readonly matches: (url: URL) => boolean;
 }
 
+/**
+ * Structured registration, tab-query, and per-tab operation failures.
+ */
 export type ReconcileFailure =
   | { readonly scope: "registration"; readonly adapterId: string; readonly operation: "get" | "register" | "update" | "unregister" }
   | { readonly scope: "matching-tabs-query"; readonly adapterId: string }
   | { readonly scope: "tab"; readonly adapterId: string; readonly tabId: number; readonly action: "inject" | "teardown" | "status" };
 
+/**
+ * Complete reconciliation outcome for the requested revision, policy, and adapters.
+ */
 export interface ActivationReconcileResult {
+    /**
+     * Caller revision echoed so consumers can discard stale reconciliation results.
+     */
     readonly revision: number | null;
+
+    /**
+     * Trigger mode that selected this reconciliation behavior.
+     */
     readonly mode: ActivationMode;
+
+    /**
+     * Resolved policy applied while reconciling adapters.
+     */
     readonly policy: ActivationPolicy;
+
+    /**
+     * All observed API failures, retained alongside partial successes.
+     */
     readonly failures: readonly ReconcileFailure[];
+
+    /**
+     * Final registration outcome for each processed adapter.
+     */
     readonly registration: Readonly<Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed">>;
-    readonly tabs: { readonly adapterId: string; readonly tabId: number; readonly action: "inject" | "teardown" | "status"; readonly phase?: DocumentPhase; readonly ok: boolean }[];
+
+    /**
+     * Injection, teardown, and status outcomes recorded for matching tabs.
+     */
+    readonly tabs: {
+        /**
+         * Adapter that selected the tab.
+         */
+        readonly adapterId: string;
+
+        /**
+         * Chrome tab ID targeted by the operation.
+         */
+        readonly tabId: number;
+
+        /**
+         * Lifecycle action attempted for the tab.
+         */
+        readonly action: "inject" | "teardown" | "status";
+
+        /**
+         * Reported document phase when a status probe succeeds.
+         */
+        readonly phase?: DocumentPhase;
+
+        /**
+         * Whether the attempted tab action completed successfully.
+         */
+        readonly ok: boolean
+    }[];
 }
 
+/**
+ * Dependencies and state supplied to a top-level activation reconciliation.
+ */
 export interface ReconcileInput {
+    /**
+     * Caller revision echoed in the result for stale-result handling.
+     */
     readonly revision: number | null;
+
+    /**
+     * Event mode driving registration and tab actions.
+     */
     readonly mode: ActivationMode;
+
+    /**
+     * Resolved global activation policy.
+     */
     readonly policy: ActivationPolicy;
+
+    /**
+     * Adapter definitions to process; defaults to the coordinator's definitions.
+     */
     readonly adapters?: readonly RuntimeAdapterDefinition[];
+
+    /**
+     * Per-host enabled flags used when global policy is enabled.
+     */
     readonly sitePreferences?: Readonly<Record<string, boolean>>;
+
+    /**
+     * Optional hostname subset for a targeted settings update.
+     */
     readonly affectedHostnames?: readonly string[];
+
+    /**
+     * Chrome Scripting API implementation for registered scripts and injection.
+     */
     readonly scripting: ScriptingRuntime;
+
+    /**
+     * Chrome Tabs API implementation for matching and messaging tabs.
+     */
     readonly tabs: TabsRuntime;
 }
 
+/**
+ * Compares optional script fields with the exact order Chrome returned or expects.
+ */
 function sameArray(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
     if (left === undefined || right === undefined) return left === right;
     return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+/**
+ * Checks whether Chrome's existing registration exactly matches the desired spec.
+ */
 export function registrationMatches(
     existing: RegisteredContentScriptReference,
     expected: RegisteredContentScriptSpec
@@ -60,15 +186,24 @@ export function registrationMatches(
     && existing.persistAcrossSessions === expected.persistAcrossSessions;
 }
 
+/**
+ * Parses a tab URL, excluding absent or malformed values from adapter matching.
+ */
 function getUrl(tab: RuntimeTab): URL | null {
     if (!tab.url) return null;
     try { return new URL(tab.url); } catch { return null; }
 }
 
+/**
+ * Identifies a document runtime that has already completed teardown.
+ */
 function isStopped(value: DocumentStatusResponse): boolean {
     return value.phase === "stopped";
 }
 
+/**
+ * Queries Chrome by registration patterns, then filters results with the adapter matcher.
+ */
 async function queryMatchingTabs(
     definition: RuntimeAdapterDefinition,
     tabs: TabsRuntime,
@@ -87,6 +222,9 @@ async function queryMatchingTabs(
     });
 }
 
+/**
+ * Reconciles one Chrome content-script registration and records partial failures.
+ */
 async function registrationState(
     definition: RuntimeAdapterDefinition,
     scripting: ScriptingRuntime,
@@ -150,6 +288,9 @@ async function registrationState(
     }
 }
 
+/**
+ * Stops a matching top-frame runtime, optionally skipping teardown when already stopped.
+ */
 async function teardownTab(
     definition: RuntimeAdapterDefinition,
     tab: RuntimeTab,
@@ -181,17 +322,37 @@ async function teardownTab(
     }
 }
 
+/**
+ * Stateful coordinator sharing adapter definitions and Chrome API dependencies.
+ */
 export class AdapterActivationCoordinator {
+    /**
+     * Adapter definitions reconciled by this coordinator.
+     */
     private readonly adapters: readonly RuntimeAdapterDefinition[];
+
+    /**
+     * Chrome Scripting API used to manage registrations and inject adapters.
+     */
     private readonly scripting: ScriptingRuntime;
+
+    /**
+     * Chrome Tabs API used to find matching documents and request teardown.
+     */
     private readonly tabs: TabsRuntime;
 
+    /**
+     * Stores default adapter definitions and the Chrome Scripting and Tabs APIs.
+     */
     public constructor(input: { readonly adapters?: readonly RuntimeAdapterDefinition[]; readonly scripting: ScriptingRuntime; readonly tabs: TabsRuntime }) {
         this.adapters = input.adapters ?? [];
         this.scripting = input.scripting;
         this.tabs = input.tabs;
     }
 
+    /**
+     * Reconciles registrations, injections, and teardown for the supplied activation state.
+     */
     public async reconcile(input: {
         readonly revision: number | null;
         readonly mode: ActivationMode;
@@ -236,6 +397,9 @@ export class AdapterActivationCoordinator {
     }
 }
 
+/**
+ * Reconciles activation once using a coordinator constructed from the input dependencies.
+ */
 export async function reconcileActivation(input: ReconcileInput): Promise<ActivationReconcileResult> {
     return new AdapterActivationCoordinator(input).reconcile(input);
 }

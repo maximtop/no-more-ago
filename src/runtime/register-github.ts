@@ -1,6 +1,14 @@
+/**
+ * @file Registers the content script required to process GitHub documents.
+ */
+
+
 import type { RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
 import type { RuntimeAdapterDefinition } from "./adapter-activation";
 
+/**
+ * Persistent document-start registration for top-level GitHub pages.
+ */
 export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
     id: "no-more-ago-github",
     matches: ["http://github.com/*", "https://github.com/*"],
@@ -10,6 +18,9 @@ export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
     persistAcrossSessions: true
 };
 
+/**
+ * Registers the GitHub script when absent or updates it when its specification changed.
+ */
 export async function ensureGitHubRuntime(runtime: ScriptingRuntime): Promise<void> {
     const existing = await runtime.getRegisteredContentScripts({
         ids: [GITHUB_REGISTRATION.id]
@@ -32,6 +43,9 @@ export async function ensureGitHubRuntime(runtime: ScriptingRuntime): Promise<vo
     }
 }
 
+/**
+ * GitHub adapter activation definition and its matching content-script registration.
+ */
 export const githubRuntimeDefinition: RuntimeAdapterDefinition = {
     id: "github",
     hostname: "github.com",

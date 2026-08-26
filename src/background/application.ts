@@ -1,3 +1,7 @@
+/**
+ * @file Background lifecycle, runtime reconciliation, and UI state management.
+ */
+
 import type { SettingsService } from "../settings/settings-service";
 import { isCanonicalHostname, isSiteEnabled, type DisplaySettings, type SettingsSnapshotV5 } from "../settings/snapshot";
 export type { DisplaySettings } from "../settings/snapshot";
@@ -13,6 +17,9 @@ import {
 import { UPDATE_DEBUG_POLICY_MESSAGE, UPDATE_PRESENTATION_MESSAGE, isDebugPolicyUpdateAcknowledgement, isPresentationUpdateAcknowledgement } from "../runtime/messages";
 import { isRuntimeTab } from "../runtime/tabs";
 
+/**
+ * Availability and activation status presented for the active tab.
+ */
 export type PopupStatus =
   | "active"
   | "global-disabled"
@@ -22,6 +29,9 @@ export type PopupStatus =
   | "no-rules"
   | "settings-unavailable";
 
+/**
+ * Failure that prevents the popup from reporting normal active-tab status.
+ */
 export type PopupFailure =
   | "current-tab-query"
   | "registration"
@@ -32,6 +42,9 @@ export type PopupFailure =
   | "settings-load"
   | "fail-closed-cleanup";
 
+/**
+ * Popup view of settings and runtime state for the active tab.
+ */
 export type PopupState =
   | {
       readonly availability: "ready";
@@ -54,16 +67,36 @@ export type PopupState =
       readonly failure: "settings-load" | "fail-closed-cleanup";
   };
 
+/**
+ * Result of changing the global activation setting, including the updated popup state.
+ */
 export type SetGlobalEnabledResponse =
   | { readonly ok: true; readonly acceptedRevision: number; readonly state: PopupState }
   | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: PopupState };
 
+/**
+ * A hostname shown in the site preferences list.
+ */
 export interface SiteListEntry {
+    /**
+     * Hostname whose preference is shown.
+     */
     readonly hostname: string;
+
+    /**
+     * Whether timestamp rendering is enabled for this hostname.
+     */
     readonly enabled: boolean;
+
+    /**
+     * Whether a runtime adapter supports this hostname.
+     */
     readonly hasAdapter: boolean;
 }
 
+/**
+ * Site-preferences view returned to the extension UI.
+ */
 export type SitesState =
   | {
       readonly availability: "ready";
@@ -79,66 +112,183 @@ export type SitesState =
       readonly failure: "settings-load" | "fail-closed-cleanup";
   };
 
+/**
+ * Result of changing one site's activation setting and refreshing its source surface.
+ */
 export type SetSiteEnabledResponse =
   | { readonly ok: true; readonly acceptedRevision: number; readonly surface: "popup"; readonly state: PopupState }
   | { readonly ok: true; readonly acceptedRevision: number; readonly surface: "sites"; readonly state: SitesState }
   | { readonly ok: false; readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable"; readonly surface: "popup"; readonly state: PopupState }
   | { readonly ok: false; readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable"; readonly surface: "sites"; readonly state: SitesState };
 
+/**
+ * Result of restoring all settings to their defaults.
+ */
 export type ResetAllSettingsResponse =
   | { readonly ok: true; readonly acceptedRevision: number; readonly state: Extract<SitesState, { readonly availability: "ready" }> }
   | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: SitesState };
 
+/**
+ * Current display configuration and its time-zone availability.
+ */
 export type DisplayState =
   | { readonly availability: "ready"; readonly revision: number; readonly display: DisplaySettings; readonly debugEnabled: boolean; readonly error?: "unavailable-time-zone" }
   | { readonly availability: "unavailable"; readonly revision: null; readonly display: null; readonly failure: "settings-load" | "fail-closed-cleanup" };
 
+/**
+ * Current diagnostic logging setting.
+ */
 export type DebugState =
   | { readonly availability: "ready"; readonly revision: number; readonly enabled: boolean }
   | { readonly availability: "unavailable"; readonly revision: null; readonly enabled: null; readonly failure: "settings-load" | "fail-closed-cleanup" };
 
+/**
+ * Result of changing diagnostic logging, including tabs that could not be updated.
+ */
 export type SetDebugEnabledResponse =
   | { readonly ok: true; readonly acceptedRevision: number; readonly state: DebugState; readonly refreshFailures?: readonly DebugRefreshFailure[] }
   | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: DebugState };
 
+/**
+ * A tab that did not acknowledge a diagnostic-policy update.
+ */
 export interface DebugRefreshFailure {
+    /**
+     * Adapter hostname whose matching tab could not be updated.
+     */
     readonly hostname: string;
+
+    /**
+     * Identifier of the tab that failed, when tab discovery succeeded.
+     */
     readonly tabId?: number;
+
+    /**
+     * Whether tab discovery or the per-tab message failed.
+     */
     readonly reason: "matching-tabs-query" | "tab-update";
 }
 
-export interface DisplayRefreshFailure { readonly hostname: string; readonly tabId?: number; readonly reason: "matching-tabs-query" | "tab-update"; }
+/**
+ * A tab that did not acknowledge a display-settings update.
+ */
+export interface DisplayRefreshFailure {
+    /**
+     * Adapter hostname whose matching tab could not be updated.
+     */
+    readonly hostname: string;
 
+    /**
+     * Identifier of the tab that failed, when tab discovery succeeded.
+     */
+    readonly tabId?: number;
+
+    /**
+     * Whether tab discovery or the per-tab message failed.
+     */
+    readonly reason: "matching-tabs-query" | "tab-update";
+}
+
+/**
+ * Result of changing display settings, including tabs that could not be refreshed.
+ */
 export type SetDisplaySettingsResponse =
   | { readonly ok: true; readonly acceptedRevision: number; readonly state: DisplayState; readonly refreshFailures: readonly DisplayRefreshFailure[] }
   | { readonly ok: false; readonly error: "invalid-format" | "invalid-time-zone" | "invalid-display-settings" | "save-failed" | "settings-unavailable"; readonly state: DisplayState };
 
+/**
+ * Lifecycle state of the background application.
+ */
 export type ApplicationPhase = "cold" | "initializing" | "ready" | "failed-closed";
 
+/**
+ * Reconciles registered scripts and matching tabs with the current settings.
+ */
 export interface ActivationCoordinator {
+    /**
+     * Applies an activation policy and reports registration and tab failures.
+     */
     reconcile(input: {
+        /**
+         * Settings revision associated with this reconciliation, or null while failing closed.
+         */
         readonly revision: number | null;
+
+        /**
+         * Reason for the reconciliation run.
+         */
         readonly mode: ActivationMode;
+
+        /**
+         * Global activation policy to apply.
+         */
         readonly policy: "enabled" | "disabled" | "unknown";
+
+        /**
+         * Per-host activation overrides used by adapters.
+         */
         readonly sitePreferences?: Readonly<Record<string, boolean>>;
+
+        /**
+         * Limits reconciliation to adapters for these hostnames when provided.
+         */
         readonly affectedHostnames?: readonly string[];
     }): Promise<ActivationReconcileResult>;
 }
 
+/**
+ * Dependencies used by the background application.
+ */
 export interface BackgroundApplicationOptions {
+    /**
+     * Service that loads and persists extension settings.
+     */
     readonly settings: SettingsService;
+
+    /**
+     * Runtime registration and tab-reconciliation implementation.
+     */
     readonly coordinator: ActivationCoordinator;
+
+    /**
+     * Browser tab query and messaging API.
+     */
     readonly tabs: TabsRuntime;
+
+    /**
+     * Runtime adapters that define supported sites and scripts.
+     */
     readonly adapters: readonly RuntimeAdapterDefinition[];
+
+    /**
+     * Optional persistent diagnostic-event journal.
+     */
     readonly journal?: DiagnosticJournal;
+
+    /**
+     * Optional browser and extension metadata added to diagnostic events.
+     */
     readonly diagnosticEnvironment?: {
+        /**
+         * Extension version recorded with trusted diagnostic events.
+         */
         readonly extensionVersion?: string;
+
+        /**
+         * Browser family recorded with trusted diagnostic events.
+         */
         readonly browserFamily: DiagnosticBrowserFamily;
     };
 }
 
+/**
+ * Event that triggered background initialization or reconciliation.
+ */
 export type LifecycleReason = "startup" | "installed" | "updated" | "cold-worker";
 
+/**
+ * Maps a reconcile failure for an adapter and tab to the corresponding popup failure.
+ */
 function matchingTabFailure(
     failures: readonly ReconcileFailure[],
     adapterId: string,
@@ -156,11 +306,17 @@ function matchingTabFailure(
     return undefined;
 }
 
+/**
+ * Parses a tab URL, returning null when it is absent or invalid.
+ */
 function urlFromTab(tab: RuntimeTab | undefined): URL | null {
     if (!tab?.url) return null;
     try { return new URL(tab.url); } catch { return null; }
 }
 
+/**
+ * Checks whether an adapter is registered for a hostname.
+ */
 function adapterHostnameMatches(
     adapter: RuntimeAdapterDefinition,
     hostname: string
@@ -168,28 +324,100 @@ function adapterHostnameMatches(
     return adapter.hostname === hostname;
 }
 
+/**
+ * Checks whether a reconcile failure belongs to an adapter.
+ */
 function failureBelongsToAdapter(failure: ReconcileFailure, adapterId: string): boolean {
     return failure.adapterId === adapterId;
 }
 
+/**
+ * Coordinates settings, runtime activation, and background-facing UI state.
+ */
 export class BackgroundApplication {
+    /**
+     * Persistence boundary retained for the application's lifetime.
+     */
     private readonly settings: SettingsService;
+
+    /**
+     * Runtime reconciler owned by this application instance.
+     */
     private readonly coordinator: ActivationCoordinator;
+
+    /**
+     * Browser tab boundary used to project and refresh active-tab state.
+     */
     private readonly tabs: TabsRuntime;
+
+    /**
+     * Immutable supported-site catalog used throughout reconciliation.
+     */
     private readonly adapters: readonly RuntimeAdapterDefinition[];
+
+    /**
+     * Optional durable sink for diagnostic events emitted by this instance.
+     */
     private readonly journal: DiagnosticJournal | undefined;
+
+    /**
+     * Immutable metadata attached when serializing trusted diagnostic events.
+     */
     private readonly diagnosticEnvironment: BackgroundApplicationOptions["diagnosticEnvironment"];
+
+    /**
+     * Lifecycle phase published to callers as initialization progresses.
+     */
     private phaseValue: ApplicationPhase = "cold";
+
+    /**
+     * Last successfully loaded settings, held as the authority for runtime decisions.
+     */
     private snapshot: SettingsSnapshotV5 | undefined;
+
+    /**
+     * Failure retained while the application remains in its fail-closed lifecycle.
+     */
     private failure: "settings-load" | "fail-closed-cleanup" | undefined;
+
+    /**
+     * Most recent reconciliation, retained to merge scoped results and report failures.
+     */
     private lastReconcile: ActivationReconcileResult | undefined;
+
+    /**
+     * Lazily seeded popup projection reused until settings or reconciliation change it.
+     */
     private popupStateCache: PopupState | undefined;
+
+    /**
+     * Tab identity paired with the cached popup projection for failure matching.
+     */
     private popupTabId: number | undefined;
+
+    /**
+     * Shared initialization or recovery promise that coalesces concurrent readiness requests.
+     */
     private readinessFlight: Promise<void> | undefined;
+
+    /**
+     * Promise chain that serializes all state-changing background operations.
+     */
     private transactionTail: Promise<void> = Promise.resolve();
+
+    /**
+     * Lifecycle triggers accumulated until one activation sweep consumes them.
+     */
     private readonly lifecycleReasons = new Set<LifecycleReason>();
+
+    /**
+     * Shared drain promise that prevents duplicate lifecycle sweeps.
+     */
     private lifecycleFlight: Promise<void> | undefined;
 
+    /**
+     * Creates an application with its runtime and settings dependencies.
+     */
     public constructor(options: BackgroundApplicationOptions) {
         this.settings = options.settings;
         this.coordinator = options.coordinator;
@@ -199,16 +427,33 @@ export class BackgroundApplication {
         this.diagnosticEnvironment = options.diagnosticEnvironment;
     }
 
+    /**
+     * Current lifecycle phase.
+     */
     public get phase(): ApplicationPhase { return this.phaseValue; }
+
+    /**
+     * Most recently loaded settings snapshot, if settings are available.
+     */
     public get currentSnapshot(): SettingsSnapshotV5 | undefined { return this.snapshot; }
+
+    /**
+     * Most recent adapter reconciliation result, if one has completed.
+     */
     public get reconcileResult(): ActivationReconcileResult | undefined { return this.lastReconcile; }
 
+    /**
+     * Serializes a state-changing operation after earlier background work.
+     */
     private enqueue<T>(operation: () => Promise<T>): Promise<T> {
         const run = this.transactionTail.then(operation);
         this.transactionTail = run.then(() => undefined, () => undefined);
         return run;
     }
 
+    /**
+     * Reconciles runtime adapters and caches the newest non-stale result.
+     */
     private async performReconcile(
         mode: ActivationMode,
         policy: "enabled" | "disabled" | "unknown",
@@ -257,11 +502,17 @@ export class BackgroundApplication {
         return result;
     }
 
+    /**
+     * Updates the cached reconciliation revision after a no-op settings write.
+     */
     private advanceReconcileRevision(revision: number): void {
         if (!this.lastReconcile) return;
         this.lastReconcile = { ...this.lastReconcile, revision };
     }
 
+    /**
+     * Loads settings and reconciles adapters; enters failed-closed mode when loading fails.
+     */
     private async initialize(): Promise<void> {
         this.phaseValue = "initializing";
         const loaded = await this.settings.load();
@@ -306,6 +557,9 @@ export class BackgroundApplication {
         }
     }
 
+    /**
+     * Ensures settings are loaded and runtime activation is reconciled for a lifecycle reason.
+     */
     public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
         if (reason !== "cold-worker") this.lifecycleReasons.add(reason);
         if (this.phaseValue === "ready") return this.requestLifecycleDrain();
@@ -338,6 +592,9 @@ export class BackgroundApplication {
         return this.readinessFlight;
     }
 
+    /**
+     * Drains queued lifecycle events through one activation-sweep reconciliation.
+     */
     private requestLifecycleDrain(): Promise<void> {
         if (this.lifecycleReasons.size === 0) return Promise.resolve();
         if (this.lifecycleFlight) return this.lifecycleFlight;
@@ -352,11 +609,17 @@ export class BackgroundApplication {
         return this.lifecycleFlight;
     }
 
+    /**
+     * Queues a browser lifecycle event and ensures it is reconciled.
+     */
     public requestLifecycle(reason: Exclude<LifecycleReason, "cold-worker">): Promise<void> {
         this.lifecycleReasons.add(reason);
         return this.ensureReady(reason);
     }
 
+    /**
+     * Queries the active tab and distinguishes lookup failures from an empty result.
+     */
     private async activeTab(): Promise<{ readonly tab: RuntimeTab | undefined; readonly error: boolean }> {
         try {
             const tabs = await this.tabs.query({ active: true, currentWindow: true });
@@ -368,16 +631,17 @@ export class BackgroundApplication {
     }
 
     /**
-   * Seed one truthful popup projection during normal readiness. Site/Sites
-   * writes can then refresh its snapshot-derived fields without querying tabs
-   * or probing a document merely to reject an invalid intent.
-   */
+     * Initializes the popup-state cache once the application is ready.
+     */
     private async seedPopupProjection(): Promise<void> {
         if (this.popupStateCache || this.phaseValue !== "ready" || !this.snapshot) return;
         const state = await this.derivePopupState();
         this.popupStateCache = state;
     }
 
+    /**
+     * Refreshes cached popup state from settings and the latest reconciliation failures.
+     */
     private refreshCachedPopupProjection(): void {
         const cached = this.popupStateCache;
         if (!cached || cached.availability !== "ready" || !this.snapshot) return;
@@ -431,6 +695,9 @@ export class BackgroundApplication {
         this.popupStateCache = next;
     }
 
+    /**
+     * Builds the popup state returned while settings cannot be used.
+     */
     private unavailableState(): PopupState {
         return {
             availability: "unavailable",
@@ -444,6 +711,9 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Builds the site-list state returned while settings cannot be used.
+     */
     private unavailableSitesState(): SitesState {
         return {
             availability: "unavailable",
@@ -454,14 +724,23 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Finds the adapter that accepts a page URL.
+     */
     private adapterForUrl(url: URL): RuntimeAdapterDefinition | undefined {
         return this.adapters.find((candidate) => candidate.matches(url));
     }
 
+    /**
+     * Returns the effective activation preference for a hostname.
+     */
     private siteEnabled(hostname: string): boolean {
         return isSiteEnabled(this.snapshot?.sitePreferences ?? {}, hostname);
     }
 
+    /**
+     * Derives popup state from the active tab, settings, and document runtime status.
+     */
     private async derivePopupState(): Promise<PopupState> {
         if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableState();
         const current = await this.activeTab();
@@ -506,6 +785,9 @@ export class BackgroundApplication {
         return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: true, status: "active" };
     }
 
+    /**
+     * Builds the sorted site list from adapters and explicit preferences.
+     */
     private deriveSitesState(): SitesState {
         if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableSitesState();
         const adapterHostnames = this.adapters.map((adapter) => adapter.hostname);
@@ -523,6 +805,9 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Returns and caches popup state after initialization and lifecycle reconciliation.
+     */
     public async getPopupState(): Promise<PopupState> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -533,12 +818,18 @@ export class BackgroundApplication {
         });
     }
 
+    /**
+     * Returns the current site-preferences state after lifecycle reconciliation.
+     */
     public async getSitesState(): Promise<SitesState> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         return this.enqueue(() => Promise.resolve(this.deriveSitesState()));
     }
 
+    /**
+     * Builds diagnostic logging state from the current settings snapshot.
+     */
     private debugState(): DebugState {
         if (this.phaseValue !== "ready" || !this.snapshot) {
             return {
@@ -551,12 +842,18 @@ export class BackgroundApplication {
         return { availability: "ready", revision: this.snapshot.revision, enabled: this.snapshot.debugEnabled };
     }
 
+    /**
+     * Returns current diagnostic logging state after lifecycle reconciliation.
+     */
     public async getDebugState(): Promise<DebugState> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         return this.enqueue(() => Promise.resolve(this.debugState()));
     }
 
+    /**
+     * Reads persisted diagnostics when diagnostic logging and its journal are available.
+     */
     public async getDiagnosticsSnapshot(): Promise<GetDiagnosticsSnapshotResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -576,6 +873,9 @@ export class BackgroundApplication {
         });
     }
 
+    /**
+     * Clears persisted diagnostics when diagnostic logging and its journal are available.
+     */
     public async clearDiagnostics(): Promise<ClearDiagnosticsResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -586,6 +886,9 @@ export class BackgroundApplication {
         });
     }
 
+    /**
+     * Replaces document-supplied environment metadata with trusted background values.
+     */
     private trustedDiagnosticEvent(event: DiagnosticEvent): DiagnosticEvent {
         const trusted = { ...event };
         delete trusted.adapterVersion;
@@ -598,6 +901,9 @@ export class BackgroundApplication {
         return Object.freeze(trusted);
     }
 
+    /**
+     * Appends a sanitized background diagnostic event without blocking background work.
+     */
     private logBackgroundEvent(input: DiagnosticEventInput): void {
         if (!this.snapshot?.debugEnabled || !this.journal) return;
         const hostname = this.adapters[0]?.hostname;
@@ -607,6 +913,9 @@ export class BackgroundApplication {
         void this.journal.append(this.trustedDiagnosticEvent(event)).catch(() => undefined);
     }
 
+    /**
+     * Validates and records a top-frame document diagnostic event for an enabled adapter.
+     */
     public async recordDocumentEvent(
         input: unknown,
         sender: DiagnosticSender & { readonly frameId?: unknown }
@@ -620,6 +929,9 @@ export class BackgroundApplication {
         return true;
     }
 
+    /**
+     * Builds display state and flags an unavailable configured IANA time zone.
+     */
     private displayState(): DisplayState {
         if (this.phaseValue !== "ready" || !this.snapshot) return this.unavailableDisplayState();
         const display = this.snapshot.display;
@@ -633,6 +945,9 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Builds display state returned while settings cannot be used.
+     */
     private unavailableDisplayState(): DisplayState {
         return {
             availability: "unavailable",
@@ -642,6 +957,9 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Checks whether the runtime supports an IANA time-zone identifier.
+     */
     private isZoneAvailable(identifier: string): boolean {
         try {
             new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions();
@@ -649,12 +967,18 @@ export class BackgroundApplication {
         } catch { return false; }
     }
 
+    /**
+     * Returns current display settings after lifecycle reconciliation.
+     */
     public async getDisplayState(): Promise<DisplayState> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         return this.enqueue(() => Promise.resolve(this.displayState()));
     }
 
+    /**
+     * Notifies matching enabled-site tabs of a diagnostic-policy revision and collects failures.
+     */
     private async refreshDebugPolicyTabs(enabled: boolean, revision: number): Promise<readonly DebugRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) return [];
         const failures: DebugRefreshFailure[] = [];
@@ -677,6 +1001,9 @@ export class BackgroundApplication {
         return failures;
     }
 
+    /**
+     * Persists the diagnostic logging setting and notifies matching enabled-site tabs.
+     */
     public async setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -716,6 +1043,9 @@ export class BackgroundApplication {
         return { ok: true, acceptedRevision, state, ...(refreshFailures.length === 0 ? {} : { refreshFailures }) };
     }
 
+    /**
+     * Sends a display-settings revision to matching enabled-site tabs and collects failures.
+     */
     private async refreshDisplayTabs(display: DisplaySettings, revision: number): Promise<readonly DisplayRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) return [];
         const failures: DisplayRefreshFailure[] = [];
@@ -751,6 +1081,9 @@ export class BackgroundApplication {
         return failures;
     }
 
+    /**
+     * Validates and persists display settings, then refreshes matching enabled-site tabs.
+     */
     public async setDisplaySettings(display: unknown): Promise<SetDisplaySettingsResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -786,10 +1119,8 @@ export class BackgroundApplication {
     }
 
     /**
-   * Recovery is serialized with every other settings intent.  A successful
-   * durable reset is the only path that leaves failed-closed mode; a failed
-   * write cleans up runtime ownership and keeps the unavailable projection.
-   */
+     * Restores defaults, clears diagnostics, and reconciles runtime activation.
+     */
     public async resetAllSettings(): Promise<ResetAllSettingsResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -839,6 +1170,9 @@ export class BackgroundApplication {
         };
     }
 
+    /**
+     * Persists global activation and reconciles every runtime adapter.
+     */
     public async setGlobalEnabled(enabled: boolean): Promise<SetGlobalEnabledResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
@@ -876,10 +1210,16 @@ export class BackgroundApplication {
         return { ok: false, error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable", state };
     }
 
+    /**
+     * Reports whether the last reconciliation contains a failure for an adapter.
+     */
     private hasFailureForAdapter(adapterId: string): boolean {
         return (this.lastReconcile?.failures ?? []).some((failure) => failureBelongsToAdapter(failure, adapterId));
     }
 
+    /**
+     * Persists the requested change and updates affected documents.
+     */
     public async setSiteEnabled(
         hostname: string,
         enabled: boolean,

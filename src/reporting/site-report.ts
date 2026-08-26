@@ -1,39 +1,160 @@
+/**
+ * Builds and opens prefilled GitHub issue forms for site-support reports.
+ *
+ * @file Site-report URL validation and Chrome tab integration.
+ */
+
+
 import { isCanonicalHostname } from "../settings/snapshot";
 
+/**
+ * GitHub issue composer used for site-report submissions.
+ */
 export const SITE_REPORT_DESTINATION = "https://github.com/maximtop/no-more-ago/issues/new" as const;
+
+/**
+ * Issue-form template selected in the GitHub composer.
+ */
 export const SITE_REPORT_TEMPLATE = "site-report.yml" as const;
 
+/**
+ * User-visible reason prefilled in the report form.
+ */
 export type SiteReportReason = "Add support for this site" | "Dates are not working correctly";
+
+/**
+ * Browser family inferred from the user agent for the report form.
+ */
 export type SiteReportBrowser = "Chrome" | "Edge" | "Firefox" | "Other";
 
+/**
+ * Validated fields serialized into the issue-form query string.
+ */
 export interface SiteReportContext {
+    /**
+     * Reason selected in the report form.
+     */
     readonly reason?: SiteReportReason;
+
+    /**
+     * Canonical site hostname reported to GitHub.
+     */
     readonly hostname?: string;
+
+    /**
+     * HTTP(S) page URL, restricted to the reported hostname and no credentials.
+     */
     readonly currentUrl?: string;
+
+    /**
+     * Manifest version, limited to the extension's accepted version format.
+     */
     readonly extensionVersion?: string;
+
+    /**
+     * Browser family included with the report.
+     */
     readonly browser?: SiteReportBrowser;
 }
 
+/**
+ * Popup state needed to classify a report for the active site.
+ */
 export interface SiteReportPopupState {
+    /**
+     * Canonical hostname shown by the popup.
+     */
     readonly hostname: string;
+
+    /**
+     * Whether an adapter already handles the hostname.
+     */
     readonly hasAdapter: boolean;
 }
 
+/**
+ * Minimal untrusted subset of a Chrome tab result.
+ */
 export interface SiteReportTab {
+    /**
+     * Active tab URL; validated before it is included in a report.
+     */
     readonly url?: unknown;
+
+    /**
+     * Whether Chrome reports the tab as belonging to an incognito window.
+     */
     readonly incognito?: unknown;
+
+    /**
+     * Window identifier used to keep an incognito composer in its source window.
+     */
     readonly windowId?: unknown;
 }
 
+/**
+ * Chrome APIs needed to inspect the active tab and open the issue composer.
+ */
 export interface SiteReportBrowserRuntime {
+    /**
+     * Subset of the Chrome Tabs API used by reporting actions.
+     */
     readonly tabs?: {
-        query(query: { readonly active: true; readonly currentWindow: true }): Promise<readonly SiteReportTab[]>;
-        create(properties: { readonly url: string; readonly windowId?: number }): Promise<unknown>;
+        /**
+         * Returns tabs matching Chrome's active-tab query.
+         */
+        query(query: {
+            /**
+             * Limits the query to the active tab.
+             */
+            readonly active: true;
+
+            /**
+             * Limits the query to the current window.
+             */
+            readonly currentWindow: true
+        }): Promise<readonly SiteReportTab[]>;
+
+        /**
+         * Opens the composer URL in Chrome, optionally in a specific window.
+         */
+        create(properties: {
+            /**
+             * URL to open in the new tab.
+             */
+            readonly url: string;
+
+            /**
+             * Target window ID when preserving an incognito context.
+             */
+            readonly windowId?: number
+        }): Promise<unknown>;
     };
-    readonly runtime?: { getManifest(): unknown };
-    readonly navigator?: { readonly userAgent?: unknown };
+
+    /**
+     * Subset of the Chrome Runtime API used to read the manifest version.
+     */
+    readonly runtime?: {
+        /**
+         * Returns the extension manifest containing the version field.
+         */
+        getManifest(): unknown
+    };
+
+    /**
+     * Browser user-agent source used for browser-family detection.
+     */
+    readonly navigator?: {
+        /**
+         * Raw user-agent string, treated as untrusted input.
+         */
+        readonly userAgent?: unknown
+    };
 }
 
+/**
+ * Stable failure reasons returned instead of throwing from report actions.
+ */
 export type SiteReportError =
   | "busy"
   | "invalid-context"
@@ -44,6 +165,9 @@ export type SiteReportError =
   | "private-window"
   | "open-failed";
 
+/**
+ * Report action outcome, including the composer URL when a tab was opened.
+ */
 export type SiteReportResult =
   | { readonly ok: true; readonly url: string }
   | { readonly ok: false; readonly error: SiteReportError };
@@ -51,10 +175,16 @@ export type SiteReportResult =
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u;
 const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVersion", "browser"]);
 
+/**
+ * Narrows a non-array object so its own data properties can be inspected safely.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Rejects inherited, accessor, and unexpected keys from untrusted form context.
+ */
 function hasOnlyOwnKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
     for (const key in value) if (!Object.hasOwn(value, key)) return false;
     return Object.keys(value).every((key) => {
@@ -63,15 +193,24 @@ function hasOnlyOwnKeys(value: Record<string, unknown>, allowed: ReadonlySet<str
     });
 }
 
+/**
+ * Reads an own string property without invoking inherited lookup.
+ */
 function ownString(value: Record<string, unknown>, key: string): string | undefined {
     if (!Object.hasOwn(value, key)) return undefined;
     return typeof value[key] === "string" ? value[key] : undefined;
 }
 
+/**
+ * Accepts the bounded manifest-version format allowed in report URLs.
+ */
 function validVersion(value: string): boolean {
     return VERSION.test(value);
 }
 
+/**
+ * Accepts a credential-free HTTP(S) URL whose canonical hostname matches exactly.
+ */
 function validSiteUrl(value: string, hostname: string): boolean {
     try {
         const parsed = new URL(value);
@@ -85,7 +224,9 @@ function validSiteUrl(value: string, hostname: string): boolean {
     }
 }
 
-/** Builds the editable public composer URL without performing navigation. */
+/**
+ * Validates untrusted report fields and returns a prefilled GitHub issue URL.
+ */
 export function composeSiteReportUrl(context: unknown): string | null {
     if (!isRecord(context) || !hasOnlyOwnKeys(context, CONTEXT_KEYS)) return null;
     const reason = Object.hasOwn(context, "reason") ? context.reason : undefined;
@@ -109,6 +250,9 @@ export function composeSiteReportUrl(context: unknown): string | null {
     return url.toString();
 }
 
+/**
+ * Maps a raw user agent to the browser label expected by the report form.
+ */
 export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrowser {
     if (typeof userAgent !== "string") return "Other";
     if (/Firefox\//u.test(userAgent)) return "Firefox";
@@ -117,6 +261,9 @@ export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrows
     return "Other";
 }
 
+/**
+ * Reads and validates the manifest version, returning null when unavailable or malformed.
+ */
 function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
     if (!runtime.runtime) return null;
     try {
@@ -128,11 +275,17 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
     }
 }
 
+/**
+ * Collects validated manifest and browser details for a report form.
+ */
 function environment(runtime: SiteReportBrowserRuntime): Pick<SiteReportContext, "extensionVersion" | "browser"> | null {
     const version = extensionVersion(runtime);
     return version === null ? null : { extensionVersion: version, browser: browserContextFromUserAgent(runtime.navigator?.userAgent) };
 }
 
+/**
+ * Narrows popup state to a canonical hostname and adapter-presence flag.
+ */
 function validPopupState(value: unknown): value is SiteReportPopupState {
     return isRecord(value)
     && Object.hasOwn(value, "hostname")
@@ -142,6 +295,9 @@ function validPopupState(value: unknown): value is SiteReportPopupState {
     && typeof value.hasAdapter === "boolean";
 }
 
+/**
+ * Narrows a tab response to own URL and incognito data properties before use.
+ */
 function validTab(value: unknown): value is SiteReportTab {
     if (!isRecord(value)) return false;
     for (const key in value) if (!Object.hasOwn(value, key)) return false;
@@ -152,11 +308,24 @@ function validTab(value: unknown): value is SiteReportTab {
     return typeof value.url === "string" && typeof value.incognito === "boolean";
 }
 
+/**
+ * Actions exposed to the popup and options surfaces for opening report forms.
+ */
 export interface SiteReportReporter {
+    /**
+     * Opens a report for the active popup site, preserving incognito window scope.
+     */
     openPopupReport(state: SiteReportPopupState): Promise<SiteReportResult>;
+
+    /**
+     * Opens a generic report form containing extension and browser details.
+     */
     openOptionsReport(): Promise<SiteReportResult>;
 }
 
+/**
+ * Creates serialized report actions over injected Chrome API dependencies.
+ */
 export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): SiteReportReporter {
     let inFlight = false;
     const open = async (url: string, windowId?: number): Promise<SiteReportResult> => {
@@ -214,9 +383,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
 }
 
 /**
- * Creates the extension's default reporter without touching browser state.
- * Browser APIs are wrapped here and are only called by an explicit report
- * action inside createSiteReportReporter.
+ * Creates the default reporter lazily, so Chrome APIs run only after a report action.
  */
 export function createDefaultSiteReportReporter(): SiteReportReporter {
     const browser = typeof chrome === "undefined" ? undefined : chrome;

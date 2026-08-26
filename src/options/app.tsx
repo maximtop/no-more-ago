@@ -1,3 +1,9 @@
+/**
+ * Renders settings for site processing, date display, diagnostics, and reporting.
+ *
+ * @file React settings UI for global, per-site, display, diagnostics, and reporting controls.
+ */
+
 import { Alert, Box, Button, MantineProvider, Paper, Stack, Switch, Text, TextInput, Title } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import type { DebugState, DisplaySettings, DisplayState, SitesState } from "../background/application";
@@ -7,20 +13,62 @@ import { DiagnosticArchiveError, createDiagnosticsZip, downloadDiagnosticsZip, t
 import { createDefaultSiteReportReporter, type SiteReportReporter } from "../reporting/site-report";
 import { createSitesClient, type SitesClient } from "./client";
 
+/**
+ * Optional dependencies and preloaded state for the options UI.
+ */
 export interface SitesAppProps {
+    /**
+     * Client used to load and change persisted settings.
+     */
     readonly client?: SitesClient;
+
+    /**
+     * Preloaded site settings that avoid the initial request.
+     */
     readonly initialState?: SitesState;
+
+    /**
+     * Preloaded display settings that avoid the initial request.
+     */
     readonly initialDisplayState?: DisplayState;
+
+    /**
+     * Preloaded diagnostic-logging state that avoids the initial request.
+     */
     readonly initialDebugState?: DebugState;
+
+    /**
+     * Runtime used to create and download a diagnostics archive.
+     */
     readonly archiveRuntime?: DownloadRuntime;
+
+    /**
+     * Service used to open a GitHub report for a site.
+     */
     readonly reporter?: SiteReportReporter;
 }
 
+/**
+ * User-visible outcome of a site or debug-settings mutation.
+ */
 type Notice = "save-failed" | "invalid-hostname" | "interrupted" | "unknown" | "debug-save-failed" | "debug-interrupted" | "debug-unknown" | undefined;
 
+/**
+ * User-visible outcome of resetting all settings.
+ */
 type ResetNotice = "save-failed" | "ambiguous" | undefined;
+
+/**
+ * Availability state from which a reset was initiated.
+ */
 type ResetOrigin = "ready" | "unavailable";
 
+/**
+ * Maps a site or debug-settings outcome to its user-visible error message.
+ *
+ * @param notice Outcome reported after a settings mutation.
+ * @returns An error message, or undefined when there is no notice to show.
+ */
 function noticeText(notice: Notice): string | undefined {
     if (notice === "save-failed") return "Could not save this change. Try again.";
     if (notice === "invalid-hostname") return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
@@ -32,6 +80,13 @@ function noticeText(notice: Notice): string | undefined {
     return undefined;
 }
 
+/**
+ * Maps a reset outcome and its starting availability to an error message.
+ *
+ * @param notice Outcome reported after resetting settings.
+ * @param origin Availability state before the reset was requested.
+ * @returns An error message, or undefined when there is no notice to show.
+ */
 function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
     if (origin === "ready" && notice === "save-failed") return "Could not reset settings. Your current settings remain active. Try again.";
     if (origin === "ready" && notice === "ambiguous") return "Could not confirm whether settings were reset. Reopen Settings to check their current state.";
@@ -40,12 +95,21 @@ function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | und
     return undefined;
 }
 
+/**
+ * Explains why site settings cannot currently be changed.
+ *
+ * @param state Unavailable sites state returned by the background service.
+ * @returns The message displayed instead of the site controls.
+ */
 function unavailableText(state: Extract<SitesState, { availability: "unavailable" }>): string {
     return state.failure === "fail-closed-cleanup"
         ? "Current processing state is unknown. Site controls are unavailable."
         : "Sites settings are unavailable. Processing is disabled.";
 }
 
+/**
+ * User-visible outcome of saving display settings.
+ */
 type DisplayNotice =
   | "invalid-time-zone"
   | "invalid-format"
@@ -56,13 +120,37 @@ type DisplayNotice =
   | "unknown"
   | undefined;
 
+/**
+ * Editable representation of the display settings form.
+ */
 interface DisplayDraft {
+    /**
+     * Whether dates use the browser format or a custom pattern.
+     */
     readonly formatMode: "system" | "custom";
+
+    /**
+     * Custom date format pattern, retained while system formatting is selected.
+     */
     readonly pattern: string;
+
+    /**
+     * Whether dates use the system zone, UTC, or a named IANA zone.
+     */
     readonly timeZoneMode: "system" | "utc" | "iana";
+
+    /**
+     * IANA zone identifier when the named-zone mode is selected.
+     */
     readonly identifier: string;
 }
 
+/**
+ * Converts saved display settings into fields for the editable form.
+ *
+ * @param display Persisted display settings.
+ * @returns The corresponding form draft, with a default custom pattern when needed.
+ */
 function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     return {
         formatMode: display.formatMode,
@@ -72,6 +160,12 @@ function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     };
 }
 
+/**
+ * Converts the display form fields into settings for persistence.
+ *
+ * @param draft Current form draft.
+ * @returns Display settings represented by the draft.
+ */
 function displayFromDraft(draft: DisplayDraft): DisplaySettings {
     const timeZone = draft.timeZoneMode === "iana"
         ? { mode: "iana" as const, identifier: draft.identifier }
@@ -81,6 +175,12 @@ function displayFromDraft(draft: DisplayDraft): DisplaySettings {
         : { formatMode: "system", timeZone };
 }
 
+/**
+ * Validates an IANA time-zone identifier before settings are saved.
+ *
+ * @param identifier Candidate IANA time-zone identifier.
+ * @returns A user-visible validation error, or undefined when the identifier is usable.
+ */
 function validateIdentifier(identifier: string): string | undefined {
     if (identifier.length === 0 || identifier.trim() !== identifier) {
         return "Enter an IANA time zone identifier, for example America/New_York.";
@@ -100,6 +200,12 @@ function validateIdentifier(identifier: string): string | undefined {
     return undefined;
 }
 
+/**
+ * Maps a display-settings outcome to its user-visible error message.
+ *
+ * @param notice Outcome reported after saving display settings.
+ * @returns An error message, or undefined when there is no notice to show.
+ */
 function displayNoticeText(notice: DisplayNotice): string | undefined {
     if (notice === "invalid-time-zone") return "This time zone is invalid or unavailable. Enter a supported IANA identifier and try again.";
     if (notice === "invalid-format") return "The date format is invalid. Correct the pattern and try again.";
@@ -111,6 +217,12 @@ function displayNoticeText(notice: DisplayNotice): string | undefined {
     return undefined;
 }
 
+/**
+ * Maps custom date-format validation failures to form errors.
+ *
+ * @param pattern Candidate custom date-format pattern.
+ * @returns A validation error, or undefined when the pattern is valid.
+ */
 function customPatternError(pattern: string): string | undefined {
     const result = validateCustomFormatPattern(pattern);
     if (result.ok) return undefined;
@@ -128,18 +240,35 @@ function customPatternError(pattern: string): string | undefined {
 
 const PREVIEW_INSTANT = new Date("2026-08-25T12:34:00.000Z");
 
+/**
+ * Selects browser locales for the display-format preview.
+ *
+ * @returns Browser preference locales, or en-US when browser information is unavailable.
+ */
 function previewLocales(): readonly string[] {
     if (typeof navigator === "undefined") return ["en-US"];
     const locales = Array.isArray(navigator.languages) ? navigator.languages.filter((value): value is string => typeof value === "string") : [];
     return locales.length > 0 ? locales : (navigator.language ? [navigator.language] : ["en-US"]);
 }
 
+/**
+ * Explains why display settings cannot currently be changed.
+ *
+ * @param state Unavailable display state returned by the background service.
+ * @returns The message displayed instead of the display controls.
+ */
 function unavailableDisplayText(state: Extract<DisplayState, { availability: "unavailable" }>): string {
     return state.failure === "fail-closed-cleanup"
         ? "Current display settings are unavailable while processing state is being recovered."
         : "Display settings are unavailable. Processing is disabled.";
 }
 
+/**
+ * Maps a site-report failure to guidance shown in settings.
+ *
+ * @param error Failure returned by the site-report service.
+ * @returns The error message displayed to the user.
+ */
 function siteReportErrorText(error: string): string {
     if (error === "busy") return "A GitHub report is already being opened.";
     if (error === "open-failed") return "Could not open the GitHub report. Try again.";
@@ -147,6 +276,11 @@ function siteReportErrorText(error: string): string {
     return "Could not open the GitHub report. Check the browser context and try again.";
 }
 
+/**
+ * Renders and coordinates the options settings controls.
+ *
+ * @returns The options React view.
+ */
 export function OptionsApp({ client: suppliedClient, initialState, initialDisplayState, initialDebugState, archiveRuntime, reporter: suppliedReporter }: SitesAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createSitesClient(), [suppliedClient]);
     const reporter = useMemo(() => suppliedReporter ?? createDefaultSiteReportReporter(), [suppliedReporter]);

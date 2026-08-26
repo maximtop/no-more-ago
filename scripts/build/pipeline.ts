@@ -1,3 +1,7 @@
+/**
+ * @file Build request parsing, compilation, publication, and watch-mode lifecycle orchestration.
+ */
+
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { setImmediate } from "node:timers";
 import path from "node:path";
@@ -5,19 +9,53 @@ import rspack from "@rspack/core";
 import { BROWSERS, MODES, createRspackConfig } from "../../rspack.config.ts";
 import { assertSafe, createArtifactServices } from "./artifacts.ts";
 
+/**
+ * Command-line usage text for the build entry point.
+ */
 export const USAGE = "Usage: pnpm dev|release [chrome|firefox|edge] [--watch]";
 
+/**
+ * Normalized command-line request describing the build mode, target browsers, and watch behavior.
+ */
 type BuildRequest = { mode: string; browsers: string[]; watch: boolean };
+
+/**
+ * Lifecycle notification emitted around compile, package, publish, and watch transitions.
+ */
 type BuildEvent = Record<string, unknown>;
+
+/**
+ * Optional observer of build progress; it never controls or mutates the pipeline.
+ */
 type EventSink = (event: BuildEvent) => void;
+
+/**
+ * Compiler result surface required to decide success and render an actionable error.
+ */
 type CompilerStats = { hasErrors(): boolean; toString(options?: unknown): string };
+
+/**
+ * Minimal compiler lifecycle surface used to run and always close one compilation.
+ */
 export type CompilerLike = {
     run(callback: (error: Error | null, stats?: CompilerStats) => void): void;
     close?(callback: (error?: Error | null) => void): void;
     watch(options: unknown, callback: (error: Error | null, stats?: CompilerStats) => void): void;
 };
+
+/**
+ * Factory seam that creates a compiler from the generated Rspack configuration.
+ */
 export type CompilerFactory = (...args: any[]) => CompilerLike;
+
+/**
+ * Guarded artifact operations required to snapshot, verify, package, and publish browser builds.
+ */
 type ArtifactServices = ReturnType<typeof createArtifactServices>;
+
+/**
+ * Optional test hooks run at deterministic points around each build phase.
+ */
 type PhaseHooks = {
     keepTask?: boolean;
     beforeCompile?: () => void;
@@ -26,6 +64,10 @@ type PhaseHooks = {
     afterPublish?: () => void;
     afterCleanup?: () => void;
 };
+
+/**
+ * Injectable build dependencies and defaults used by the command-line entry point.
+ */
 type BuildOptions = {
     workspaceRoot?: string;
     mode: string;
@@ -35,6 +77,10 @@ type BuildOptions = {
     events?: EventSink;
     phaseHooks?: PhaseHooks;
 };
+
+/**
+ * Fully resolved build dependencies shared by compile, package, and publication steps.
+ */
 type BuildContext = {
     workspaceRoot: string;
     mode: string;
@@ -44,10 +90,17 @@ type BuildContext = {
     compilerFactory: CompilerFactory;
     events: EventSink;
 };
+
+/**
+ * Error enriched with cleanup state so the caller can preserve diagnostic artifacts when needed.
+ */
 type BuildError = Error & { keepTask?: boolean };
 
 const defaultCompilerFactory = rspack as unknown as CompilerFactory;
 
+/**
+ * Rejects invalid CLI arguments and returns the normalized mode, browser list, and watch flag.
+ */
 export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
     if (!MODES.includes(mode)) throw new UsageError(`Unknown mode: ${mode}`);
     const args = [...argv]; const watch = args.includes("--watch");
@@ -61,13 +114,27 @@ export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
     return { mode, browsers, watch };
 }
 
-export class UsageError extends Error { constructor(message: string) { super(`${message}\n${USAGE}`); this.name = "UsageError"; } }
+/**
+ * Reports invalid command-line usage together with the supported invocation syntax.
+ */
+export class UsageError extends Error {
+    /**
+     * Creates an actionable CLI error whose message includes the supported build invocation.
+     */
+    constructor(message: string) { super(`${message}\n${USAGE}`); this.name = "UsageError"; }
+}
 
+/**
+ * Removes an incomplete candidate artifact left after a recoverable build failure.
+ */
 function removeRecoverableCandidate(artifacts: ArtifactServices, candidate: string, error: BuildError): void {
     try { artifacts.cleanupCandidate(candidate); }
     catch (cleanupError) { error.keepTask = true; error.message = `${error.message}; candidate cleanup failed at ${candidate}: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`; }
 }
 
+/**
+ * Runs one compiler instance and resolves only after its resources are closed.
+ */
 function compileOnce(config: unknown, compilerFactory: CompilerFactory = defaultCompilerFactory): Promise<CompilerStats | undefined> {
     return new Promise((resolve, reject) => {
         let compiler;
@@ -83,6 +150,9 @@ function compileOnce(config: unknown, compilerFactory: CompilerFactory = default
     });
 }
 
+/**
+ * Extracts matching directory and ZIP artifacts from compiler output.
+ */
 function pairFromCompilation({ outputPath, taskRoot, artifacts }: { outputPath: string; taskRoot: string; artifacts: ArtifactServices }): { directory: string; zipBytes: Buffer } {
     const generation = mkdtempSync(path.join(taskRoot, ".generation-"));
     try {
@@ -93,6 +163,9 @@ function pairFromCompilation({ outputPath, taskRoot, artifacts }: { outputPath: 
     } catch (error) { rmSync(generation, { recursive: true, force: true }); throw error; }
 }
 
+/**
+ * Compiles and packages every requested browser variant before publishing a complete mode root.
+ */
 async function buildAll({ workspaceRoot, mode, browsers, taskRoot, artifacts, compilerFactory, events }: BuildContext): Promise<Record<string, { directory: string; zipBytes: Buffer }>> {
     const pairs: Record<string, { directory: string; zipBytes: Buffer }> = {};
     for (const browser of browsers) {
@@ -112,6 +185,9 @@ async function buildAll({ workspaceRoot, mode, browsers, taskRoot, artifacts, co
     return pairs;
 }
 
+/**
+ * Runs the requested build or watch workflow from validated command-line options.
+ */
 export async function runBuildCommand({ workspaceRoot = process.cwd(), mode, argv = [], compilerFactory = defaultCompilerFactory, artifacts = createArtifactServices(), events = () => undefined, phaseHooks = {} }: BuildOptions): Promise<Promise<void> | void> {
     const request = parseBuildRequest(mode, argv);
     const root = path.resolve(workspaceRoot); const dist = path.join(root, "dist");
@@ -128,6 +204,10 @@ export async function runBuildCommand({ workspaceRoot = process.cwd(), mode, arg
     finally { if (!keepTask) { try { artifacts.cleanupTask(taskRoot); } catch { /* preserve actionable publication backups */ } } }
 }
 
+/**
+ * Starts one compiler watch per requested browser, publishes only complete artifact pairs, and
+ * resolves after the first successful publication or rejects after a compiler failure.
+ */
 function startWatch({ workspaceRoot, request, taskRoot, compilerFactory, artifacts, events, phaseHooks }: { workspaceRoot: string; request: BuildRequest; taskRoot: string; compilerFactory: CompilerFactory; artifacts: ArtifactServices; events: EventSink; phaseHooks: PhaseHooks }): Promise<void> {
     const browser = request.browsers[0];
     if (!browser) throw new Error("Watch requires one browser");

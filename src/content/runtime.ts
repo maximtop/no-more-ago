@@ -1,3 +1,8 @@
+/**
+ * @file Coordinates the document controller with persisted settings and runtime messages.
+ */
+
+
 import type { AdapterRegistry } from "../adapters/registry";
 import { DocumentTransformationController } from "../core/document-transformation-controller";
 import type { DocumentDiagnosticSink, ProcessInput } from "../core/process-document";
@@ -18,22 +23,68 @@ import type { DisplaySettings } from "../settings/snapshot";
 
 const DOCUMENT_RUNTIME_SLOT = Symbol.for("no-more-ago.document-runtime");
 
+/**
+ * Subset of the extension runtime API used to receive content-script commands.
+ */
 export interface ContentMessageRuntime {
+    /**
+     * Event source for messages sent from extension contexts.
+     */
     readonly onMessage: {
+        /**
+         * Registers a handler that may synchronously return a response.
+         */
         addListener(listener: (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown): void;
     };
 }
 
-export interface ContentRuntimeHandle { teardown(): void; }
+/**
+ * Handle for stopping an installed content runtime.
+ */
+export interface ContentRuntimeHandle {
+    /**
+     * Stops processing, cancels pending startup, and clears diagnostic forwarding.
+     */
+    teardown(): void;
+}
 
 const DEFAULT_DISPLAY: DisplaySettings = Object.freeze({ formatMode: "system", timeZone: Object.freeze({ mode: "system" }) });
 
-interface DisplayStateLike { readonly availability: "ready"; readonly revision: number; readonly display: DisplaySettings; readonly debugEnabled: boolean; }
+/**
+ * Validated persisted display state returned during content-runtime startup.
+ */
+interface DisplayStateLike {
+    /**
+     * Marks a response whose display state can be applied.
+     */
+    readonly availability: "ready";
 
+    /**
+     * Monotonic state revision used to ignore older updates.
+     */
+    readonly revision: number;
+
+    /**
+     * Settings passed to the document transformation controller.
+     */
+    readonly display: DisplaySettings;
+
+    /**
+     * Whether controller diagnostics are sent to the background context.
+     */
+    readonly debugEnabled: boolean;
+}
+
+/**
+ * Recognizes non-negative safe-integer message revisions.
+ */
 function isSafeRevision(value: unknown): value is number {
     return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+/**
+ * Recognizes a ready persisted-state response, including its optional time-zone warning.
+ */
 function isDisplayState(value: unknown): value is DisplayStateLike {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
     const record = value as Record<string, unknown>;
@@ -51,30 +102,98 @@ function isDisplayState(value: unknown): value is DisplayStateLike {
     && (!Object.hasOwn(record, "error") || record.error === "unavailable-time-zone");
 }
 
+/**
+ * Per-document singleton retained on the Document while its content runtime exists.
+ */
 interface RuntimeSlot {
+    /**
+     * Document transformation controller.
+     */
     controller: DocumentTransformationController;
+
+    /**
+     * Stable public handle returned by every installation for this document.
+     */
     handle: ContentRuntimeHandle;
+
+    /**
+     * Document whose lifecycle gates controller startup.
+     */
     document: Document;
+
+    /**
+     * Runtime event source used to receive teardown and update commands.
+     */
     messages: ContentMessageRuntime;
+
+    /**
+     * Current startup, active, stopped, or failed state reported to callers.
+     */
     phase: DocumentPhase;
+
+    /**
+     * Incremented on each activation or teardown to invalidate prior async callbacks.
+     */
     generation: number;
+
+    /**
+     * DOMContentLoaded listener retained only while startup waits for the document.
+     */
     pendingStart: EventListener | undefined;
+
+    /**
+     * Persisted-state request retained until it settles or the runtime is stopped.
+     */
     hydration: Promise<void> | undefined;
+
+    /**
+     * Most recent settings accepted for controller startup or reformatting.
+     */
     presentation: DisplaySettings | undefined;
+
+    /**
+     * Revision of the settings currently stored in presentation.
+     */
     presentationRevision: number | undefined;
+
+    /**
+     * Current diagnostic-forwarding policy.
+     */
     debugEnabled: boolean;
+
+    /**
+     * Revision of the diagnostic-forwarding policy.
+     */
     debugRevision: number | undefined;
+
+    /**
+     * Background reporter used only while diagnostic forwarding is enabled.
+     */
     reportDiagnostic: ((event: Record<string, unknown>) => Promise<unknown>) | undefined;
+
+    /**
+     * Set after DOMContentLoaded or immediately for an already parsed document.
+     */
     documentReady: boolean;
+
+    /**
+     * Controller input whose display field is populated after state hydration.
+     */
     processInput: ProcessInput & Record<string, unknown>;
 }
 
+/**
+ * Stores an accepted presentation revision and exposes its display settings to the controller.
+ */
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
     slot.presentation = display;
     slot.presentationRevision = revision;
     (slot.processInput as unknown as Record<string, unknown>).display = display;
 }
 
+/**
+ * Updates diagnostic forwarding and installs or removes the controller's sink.
+ */
 function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number): void {
     slot.debugEnabled = enabled;
     slot.debugRevision = revision;
@@ -91,6 +210,9 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
     slot.controller.setDiagnosticSink(sink);
 }
 
+/**
+ * Starts the controller once both state hydration and document readiness succeed.
+ */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (slot.phase !== "waiting" || slot.generation !== generation || !slot.documentReady || slot.presentation === undefined) return;
     try {
@@ -106,6 +228,9 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
     }
 }
 
+/**
+ * Waits for DOMContentLoaded when necessary before allowing controller startup.
+ */
 function waitForDocument(slot: RuntimeSlot, generation: number): void {
     if (slot.document.readyState !== "loading") {
         slot.documentReady = true;
@@ -122,6 +247,9 @@ function waitForDocument(slot: RuntimeSlot, generation: number): void {
     slot.document.addEventListener("DOMContentLoaded", callback, { once: true });
 }
 
+/**
+ * Loads persisted state, applies its revisions, then advances document startup.
+ */
 function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Promise<unknown>) | undefined): void {
     if (!loader) {
         applyPresentation(slot, DEFAULT_DISPLAY, 0);
@@ -149,6 +277,9 @@ function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Pr
     });
 }
 
+/**
+ * Resets a stopped runtime and begins a new state-hydration generation.
+ */
 function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefined): void {
     if (slot.phase === "waiting" || slot.phase === "active") return;
     slot.generation += 1;
@@ -164,6 +295,9 @@ function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefine
     beginHydration(slot, generation, loader);
 }
 
+/**
+ * Stops the controller and clears state retained by the current runtime generation.
+ */
 function teardown(slot: RuntimeSlot): void {
     slot.generation += 1;
     if (slot.pendingStart) {
@@ -181,14 +315,23 @@ function teardown(slot: RuntimeSlot): void {
     slot.hydration = undefined;
 }
 
+/**
+ * Creates the acknowledgement for an applied presentation revision.
+ */
 function presentationAcknowledgement(revision: number): PresentationUpdateAcknowledgement {
     return { type: PRESENTATION_UPDATED_MESSAGE, revision };
 }
 
+/**
+ * Creates the acknowledgement for an applied diagnostic-policy revision.
+ */
 function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgement {
     return { type: DEBUG_POLICY_UPDATED_MESSAGE, revision };
 }
 
+/**
+ * Installs or reactivates the document's singleton content runtime.
+ */
 export function installContentRuntime(input: {
     readonly document: Document;
     readonly url: URL;
