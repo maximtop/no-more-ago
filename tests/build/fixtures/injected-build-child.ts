@@ -3,7 +3,8 @@
  */
 
 import rspack from "@rspack/core";
-import { parseBuildRequest } from "../../../scripts/build/cli.ts";
+import { createBuildRequest } from "../../../scripts/build/cli.ts";
+import { BROWSER, BUILD_MODE } from "../../../scripts/build/contracts.ts";
 import { runBuildCommand } from "../../../scripts/build/pipeline.ts";
 
 const phase = process.env.NO_MORE_AGO_INJECT_PHASE;
@@ -21,7 +22,7 @@ const events = (event: Record<string, unknown>): void => {
 };
 await runBuildCommand({
     workspaceRoot: process.cwd(),
-    request: parseBuildRequest("dev", ["chrome", "--watch"]),
+    request: createBuildRequest(BUILD_MODE.DEV, BROWSER.CHROME, true),
     compilerFactory: (config: Parameters<typeof rspack>[0]) => {
         events({ type: "build-pid", pid: process.pid });
         if (phase === "compile") {

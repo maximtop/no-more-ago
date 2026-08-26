@@ -11,7 +11,7 @@ import {
     OPTIONS_PAGE_FILE,
     POPUP_PAGE_FILE,
 } from "./src/extension-files.ts";
-import { isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
+import { BUILD_MODE, isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
 
 /**
  * Loads a trusted build-time JSON file and returns its object representation.
@@ -127,7 +127,7 @@ export function createRspackConfig({
             options: "./src/options/main.tsx",
         },
         output: { path: outputPath, filename: "[name].js", clean: true },
-        devtool: mode === "dev" ? "source-map" : false,
+        devtool: mode === BUILD_MODE.DEV ? "source-map" : false,
         resolve: { extensions: [".tsx", ".ts", ".js", ".mjs", ".json"] },
         module: {
             rules: [

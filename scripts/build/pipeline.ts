@@ -9,6 +9,7 @@ import rspack from "@rspack/core";
 import { createRspackConfig } from "../../rspack.config.ts";
 import { assertSafe, createArtifactServices } from "./artifacts.ts";
 import type { BuildRequest } from "./cli.ts";
+import { BUILD_MODE } from "./contracts.ts";
 
 /**
  * Maximum time allowed for the watch compiler to close after an interrupted build.
@@ -516,10 +517,16 @@ function startWatch({
         process.off("SIGINT", onSignal);
         process.off("SIGTERM", onSignal);
     });
-    events({ type: "ready", pid: process.pid, browser, mode: "dev", session: taskRoot });
+    events({
+        type: "ready",
+        pid: process.pid,
+        browser,
+        mode: BUILD_MODE.DEV,
+        session: taskRoot,
+    });
     phaseHooks.beforeCompile?.();
     compiler = compilerFactory(
-        createRspackConfig({ workspaceRoot, browser, mode: "dev", outputPath }),
+        createRspackConfig({ workspaceRoot, browser, mode: BUILD_MODE.DEV, outputPath }),
     );
     compiler.watch({}, (error, stats) => {
         if (closing) {
@@ -546,7 +553,7 @@ function startWatch({
             const pairs = { [browser]: pair };
             const built = artifacts.buildCandidateModeRoot({
                 workspaceRoot,
-                mode: "dev",
+                mode: BUILD_MODE.DEV,
                 pairs,
                 selected: browser,
             });
@@ -575,7 +582,7 @@ function startWatch({
                 sequence: ++sequence,
                 status: "success",
                 browser,
-                mode: "dev",
+                mode: BUILD_MODE.DEV,
             });
         } catch (error) {
             const buildError = error as BuildError;

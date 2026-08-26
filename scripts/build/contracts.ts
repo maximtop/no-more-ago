@@ -3,9 +3,18 @@
  */
 
 /**
+ * Named browser artifact targets used by build producers and consumers.
+ */
+export const BROWSER = {
+    CHROME: "chrome",
+    FIREFOX: "firefox",
+    EDGE: "edge",
+} as const;
+
+/**
  * Browser artifacts emitted by development and release builds.
  */
-export const BROWSERS = ["chrome", "firefox", "edge"] as const;
+export const BROWSERS = [BROWSER.CHROME, BROWSER.FIREFOX, BROWSER.EDGE] as const;
 
 /**
  * Browser artifact target accepted by the build pipeline.
@@ -13,9 +22,17 @@ export const BROWSERS = ["chrome", "firefox", "edge"] as const;
 export type Browser = (typeof BROWSERS)[number];
 
 /**
+ * Named build modes used by CLI commands and the artifact pipeline.
+ */
+export const BUILD_MODE = {
+    DEV: "dev",
+    RELEASE: "release",
+} as const;
+
+/**
  * Supported build modes.
  */
-export const BUILD_MODES = ["dev", "release"] as const;
+export const BUILD_MODES = [BUILD_MODE.DEV, BUILD_MODE.RELEASE] as const;
 
 /**
  * Build mode accepted by the pipeline.

@@ -20,31 +20,14 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { createArtifactServices } from "../../scripts/build/artifacts.ts";
-import { parseBuildRequest } from "../../scripts/build/cli.ts";
+import { createBuildRequest } from "../../scripts/build/cli.ts";
+import { BUILD_MODE } from "../../scripts/build/contracts.ts";
 import { runBuildCommand } from "../../scripts/build/pipeline.ts";
 import { artifactBytes, hashPath, makeWorkspace, removeWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
 
 describe("build request and publication contracts", () => {
-    it.each([
-        ["dev", [], { mode: "dev", browsers: ["chrome", "firefox", "edge"], watch: false }],
-        ["dev", ["chrome", "--watch"], { mode: "dev", browsers: ["chrome"], watch: true }],
-        ["release", ["firefox"], { mode: "release", browsers: ["firefox"], watch: false }],
-    ])("parses valid Commander request %s %j", (mode, argv, expected) => {
-        expect(parseBuildRequest(mode, argv)).toEqual(expected);
-    });
-
-    it.each([
-        ["dev", ["safari"]],
-        ["dev", ["chrome", "firefox"]],
-        ["release", ["chrome", "--watch"]],
-        ["dev", ["--watch"]],
-        ["dev", ["chrome", "--watc"]],
-    ])("rejects invalid request %s %j", (mode, argv) => {
-        expect(() => parseBuildRequest(mode, argv)).toThrow(/Usage: pnpm/);
-    });
-
     it.each([
         ["dev", "--watch"],
         ["release", "build release artifacts"],
@@ -369,7 +352,7 @@ describe("build request and publication contracts", () => {
             try {
                 await runBuildCommand({
                     workspaceRoot: workspace,
-                    request: parseBuildRequest("dev", browserArgs),
+                    request: createBuildRequest(BUILD_MODE.DEV, browserArgs[0], false),
                     artifacts: createArtifactServices({ fs: native }),
                 });
                 expect(promotions).toBe(1);

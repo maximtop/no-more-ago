@@ -6,7 +6,7 @@ import { parseBuildCli, UsageError } from "./build/cli.ts";
 import { runBuildCommand } from "./build/pipeline.ts";
 
 try {
-    const request = parseBuildCli(process.argv);
+    const request = parseBuildCli();
     if (request !== null) {
         await runBuildCommand({
             request,

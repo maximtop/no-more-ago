@@ -3,12 +3,19 @@
  */
 
 import { Argument, Command, CommanderError } from "commander";
-import { BROWSERS, isBrowser, type Browser, type BuildMode } from "./contracts.ts";
+import {
+    BROWSERS,
+    BUILD_MODE,
+    isBrowser,
+    type Browser,
+    type BuildMode,
+} from "./contracts.ts";
 
 /**
  * Compact usage text appended to build command errors.
  */
-export const USAGE = "Usage: pnpm dev|release [chrome|firefox|edge] [--watch]";
+export const USAGE = `Usage: pnpm ${BUILD_MODE.DEV}|${BUILD_MODE.RELEASE} `
+    + `[${BROWSERS.join("|")}] [--watch]`;
 
 /**
  * Validated build request passed from the command-line adapter to the build pipeline.
@@ -64,14 +71,14 @@ function browserArgument(): Argument {
 }
 
 /**
- * Builds a typed request after Commander has validated the browser choice.
+ * Builds a typed request from a supported mode and optional browser choice.
  *
  * @param mode - Command-selected development or release mode.
  * @param browser - Optional browser selected by the command.
  * @param watch - Whether continuous development compilation was requested.
  * @returns - Complete request consumed by the build pipeline.
  */
-function buildRequest(
+export function createBuildRequest(
     mode: BuildMode,
     browser: string | undefined,
     watch: boolean,
@@ -97,16 +104,11 @@ function commanderMessage(error: CommanderError): string {
 }
 
 /**
- * Parses a complete Node process argument vector into one validated build request.
+ * Parses the current process arguments into one validated build request.
  *
- * @param argv - Node-style argument vector beginning with executable and script paths.
- * @param outputHelp - Destination for explicit Commander help output.
  * @returns - Validated request, or null after displaying requested help.
  */
-export function parseBuildCli(
-    argv: readonly string[],
-    outputHelp: (value: string) => void = writeHelp,
-): BuildRequest | null {
+export function parseBuildCli(): BuildRequest | null {
     let request: BuildRequest | undefined;
     const program = new Command()
         .name("pnpm")
@@ -114,12 +116,12 @@ export function parseBuildCli(
         .showSuggestionAfterError()
         .exitOverride()
         .configureOutput({
-            writeOut: outputHelp,
+            writeOut: writeHelp,
             writeErr: () => undefined,
         });
 
     program
-        .command("dev")
+        .command(BUILD_MODE.DEV)
         .description("build development artifacts")
         .addArgument(browserArgument())
         .option("--watch", "watch one browser target for changes")
@@ -128,19 +130,19 @@ export function parseBuildCli(
             if (watch && browser === undefined) {
                 throw new UsageError("Watch requires one browser");
             }
-            request = buildRequest("dev", browser, watch);
+            request = createBuildRequest(BUILD_MODE.DEV, browser, watch);
         });
 
     program
-        .command("release")
+        .command(BUILD_MODE.RELEASE)
         .description("build release artifacts")
         .addArgument(browserArgument())
         .action((browser: string | undefined) => {
-            request = buildRequest("release", browser, false);
+            request = createBuildRequest(BUILD_MODE.RELEASE, browser, false);
         });
 
     try {
-        program.parse([...argv], { from: "node" });
+        program.parse();
     } catch (error) {
         if (error instanceof UsageError) {
             throw error;
@@ -155,24 +157,6 @@ export function parseBuildCli(
     }
     if (request === undefined) {
         throw new UsageError("Choose dev or release");
-    }
-    return request;
-}
-
-/**
- * Parses a mode and trailing arguments through the same Commander program used by the CLI.
- *
- * @param mode - Requested build subcommand.
- * @param argv - Browser and option arguments following the subcommand.
- * @returns - Validated build request.
- */
-export function parseBuildRequest(mode: string, argv: readonly string[]): BuildRequest {
-    const request = parseBuildCli(
-        ["node", "scripts/build.ts", mode, ...argv],
-        () => undefined,
-    );
-    if (request === null) {
-        throw new UsageError("Help does not describe a build request");
     }
     return request;
 }
