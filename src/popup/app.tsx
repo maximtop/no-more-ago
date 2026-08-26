@@ -18,6 +18,7 @@ import {
 } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import type { PopupState } from "../background/application";
+import { POPUP_STATUS } from "../background/view-state-values";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
@@ -65,17 +66,17 @@ function statusText(state: PopupState): string {
             : "Settings are unavailable. Processing is disabled.";
     }
     switch (state.status) {
-        case "active":
+        case POPUP_STATUS.ACTIVE:
             return `Active on ${state.hostname ?? "this page"}`;
-        case "global-disabled":
+        case POPUP_STATUS.GLOBAL_DISABLED:
             return "Extension is off";
-        case "site-disabled":
+        case POPUP_STATUS.SITE_DISABLED:
             return `Disabled on ${state.hostname ?? "this hostname"}`;
-        case "inaccessible":
+        case POPUP_STATUS.INACCESSIBLE:
             return "Cannot run on this page";
-        case "runtime-failed":
+        case POPUP_STATUS.RUNTIME_FAILED:
             return "Could not process this page";
-        case "no-rules":
+        case POPUP_STATUS.NO_RULES:
             return `Rules are not available for ${state.hostname ?? "this hostname"} yet`;
     }
 }
@@ -189,7 +190,7 @@ export function PopupApp({
                     hostname: null,
                     siteEnabled: null,
                     hasAdapter: false,
-                    status: "settings-unavailable",
+                    status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                     failure: "settings-load",
                 });
                 setLoading(false);
@@ -240,7 +241,7 @@ export function PopupApp({
                 hostname: state.hostname,
                 siteEnabled: null,
                 hasAdapter: false,
-                status: "runtime-failed",
+                status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "settings-load",
             });
             setNotice("unknown");
@@ -292,7 +293,7 @@ export function PopupApp({
                 hostname: state.hostname,
                 siteEnabled: null,
                 hasAdapter: false,
-                status: "runtime-failed",
+                status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "settings-load",
             });
             setNotice("unknown");

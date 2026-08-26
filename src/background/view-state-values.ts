@@ -3,21 +3,37 @@
  */
 
 /**
+ * Named popup statuses shared by state producers, validators, and UI consumers.
+ */
+export const POPUP_STATUS = {
+    ACTIVE: "active",
+    GLOBAL_DISABLED: "global-disabled",
+    SITE_DISABLED: "site-disabled",
+    INACCESSIBLE: "inaccessible",
+    RUNTIME_FAILED: "runtime-failed",
+    NO_RULES: "no-rules",
+    SETTINGS_UNAVAILABLE: "settings-unavailable",
+} as const;
+
+/**
  * Popup statuses available when settings loaded successfully.
  */
 export const POPUP_READY_STATUSES = [
-    "active",
-    "global-disabled",
-    "site-disabled",
-    "inaccessible",
-    "runtime-failed",
-    "no-rules",
+    POPUP_STATUS.ACTIVE,
+    POPUP_STATUS.GLOBAL_DISABLED,
+    POPUP_STATUS.SITE_DISABLED,
+    POPUP_STATUS.INACCESSIBLE,
+    POPUP_STATUS.RUNTIME_FAILED,
+    POPUP_STATUS.NO_RULES,
 ] as const;
 
 /**
  * Popup statuses available when settings could not be loaded safely.
  */
-export const POPUP_UNAVAILABLE_STATUSES = ["settings-unavailable", "runtime-failed"] as const;
+export const POPUP_UNAVAILABLE_STATUSES = [
+    POPUP_STATUS.SETTINGS_UNAVAILABLE,
+    POPUP_STATUS.RUNTIME_FAILED,
+] as const;
 
 /**
  * Runtime failures that may accompany a ready popup projection.

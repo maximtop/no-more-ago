@@ -8,6 +8,7 @@ import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
 import type { DisplaySettings } from "../background/application";
 import {
     CUSTOM_FORMAT_MAX_LENGTH,
+    CUSTOM_FORMAT_ERROR,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../settings/custom-format";
@@ -156,22 +157,22 @@ export function customPatternError(pattern: string): string | undefined {
         return undefined;
     }
     switch (result.error) {
-        case "empty":
+        case CUSTOM_FORMAT_ERROR.EMPTY:
             return "Enter a date format pattern.";
-        case "too-long":
+        case CUSTOM_FORMAT_ERROR.TOO_LONG:
             return `Use a date format pattern of ${String(CUSTOM_FORMAT_MAX_LENGTH)} `
                 + "characters or fewer.";
-        case "control-character":
+        case CUSTOM_FORMAT_ERROR.CONTROL_CHARACTER:
             return "Remove control characters from the date format pattern.";
-        case "unclosed-quote":
+        case CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE:
             return "Close the quoted text in the date format pattern.";
-        case "missing-date-token":
+        case CUSTOM_FORMAT_ERROR.MISSING_DATE_TOKEN:
             return "Include at least one date or time token, such as yyyy or HH:mm.";
-        case "legacy-token":
+        case CUSTOM_FORMAT_ERROR.LEGACY_TOKEN:
             return "Use Unicode date tokens, such as yyyy instead of YYYY or DD.";
-        case "invalid-token":
+        case CUSTOM_FORMAT_ERROR.INVALID_TOKEN:
             return "Use supported Unicode date and time tokens in the pattern.";
-        case "empty-output":
+        case CUSTOM_FORMAT_ERROR.EMPTY_OUTPUT:
             return "The date format must produce visible text.";
     }
 }

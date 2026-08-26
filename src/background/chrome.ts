@@ -28,6 +28,7 @@ import { isDiagnosticEventMessage } from "../runtime/messages";
 import type { ScriptingRuntime } from "../runtime/scripting";
 import type { TabsRuntime } from "../runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../extension-files";
+import { POPUP_STATUS } from "./view-state-values";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -213,7 +214,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         hostname: null,
                         siteEnabled: null,
                         hasAdapter: false,
-                        status: "settings-unavailable",
+                        status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                         failure: "settings-load",
                     }),
                 );
@@ -300,7 +301,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             hostname: null,
                             siteEnabled: null,
                             hasAdapter: false,
-                            status: "settings-unavailable",
+                            status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                             failure: "settings-load",
                         },
                     }),
@@ -356,7 +357,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                                     hostname: null,
                                     siteEnabled: null,
                                     hasAdapter: false,
-                                    status: "settings-unavailable",
+                                    status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                                     failure: "settings-load",
                                 }
                                 : {

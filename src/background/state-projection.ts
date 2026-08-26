@@ -8,9 +8,10 @@ import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs
 import { isSiteEnabled } from "../settings/snapshot";
 import type { ActivationManager } from "./activation-manager";
 import type { ApplicationStateView } from "./application-state";
-import type {
-    PopupRuntimeFailure,
-    ReadyPopupStatus,
+import {
+    POPUP_STATUS,
+    type PopupRuntimeFailure,
+    type ReadyPopupStatus,
 } from "./view-state-values";
 import type { PopupState, SitesState } from "./view-state";
 
@@ -186,23 +187,23 @@ export class StateProjection {
         let status: ReadyPopupStatus = cached.status;
         let failure: PopupRuntimeFailure | undefined = cached.failure;
         if (relevantFailure) {
-            status = "runtime-failed";
+            status = POPUP_STATUS.RUNTIME_FAILED;
             failure = relevantFailure;
         } else if (!snapshot.globalEnabled) {
-            status = "global-disabled";
+            status = POPUP_STATUS.GLOBAL_DISABLED;
             failure = undefined;
         } else if (!siteEnabled) {
-            status = "site-disabled";
+            status = POPUP_STATUS.SITE_DISABLED;
             failure = undefined;
         } else if (!adapter) {
-            status = "no-rules";
+            status = POPUP_STATUS.NO_RULES;
             failure = undefined;
         } else if (
-            status === "global-disabled"
-            || status === "site-disabled"
-            || status === "no-rules"
+            status === POPUP_STATUS.GLOBAL_DISABLED
+            || status === POPUP_STATUS.SITE_DISABLED
+            || status === POPUP_STATUS.NO_RULES
         ) {
-            status = "active";
+            status = POPUP_STATUS.ACTIVE;
             failure = undefined;
         }
         this.popupCache = {
@@ -238,7 +239,7 @@ export class StateProjection {
                 hostname: null,
                 siteEnabled: null,
                 hasAdapter: false,
-                status: "runtime-failed",
+                status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "current-tab-query",
             };
         }
@@ -251,7 +252,7 @@ export class StateProjection {
                 hostname: null,
                 siteEnabled: null,
                 hasAdapter: false,
-                status: "inaccessible",
+                status: POPUP_STATUS.INACCESSIBLE,
             };
         }
         const hostname = url.hostname;
@@ -270,29 +271,29 @@ export class StateProjection {
                     hostname,
                     siteEnabled,
                     hasAdapter: true,
-                    status: "runtime-failed",
+                    status: POPUP_STATUS.RUNTIME_FAILED,
                     failure,
                 };
             }
         }
         if (!snapshot.globalEnabled) {
             return this.readyPopup(snapshot.revision, false, hostname, siteEnabled, adapter, {
-                status: "global-disabled",
+                status: POPUP_STATUS.GLOBAL_DISABLED,
             });
         }
         if (!siteEnabled) {
             return this.readyPopup(snapshot.revision, true, hostname, false, adapter, {
-                status: "site-disabled",
+                status: POPUP_STATUS.SITE_DISABLED,
             });
         }
         if (!adapter) {
             return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
-                status: "no-rules",
+                status: POPUP_STATUS.NO_RULES,
             });
         }
         if (tabId === undefined) {
             return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
-                status: "runtime-failed",
+                status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "current-tab-query",
             });
         }
@@ -312,7 +313,7 @@ export class StateProjection {
             return this.documentStatusFailure(snapshot.revision, hostname);
         }
         return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
-            status: "active",
+            status: POPUP_STATUS.ACTIVE,
         });
     }
 
@@ -359,8 +360,8 @@ export class StateProjection {
             siteEnabled: null,
             hasAdapter: false,
             status: state.failure === "fail-closed-cleanup"
-                ? "runtime-failed"
-                : "settings-unavailable",
+                ? POPUP_STATUS.RUNTIME_FAILED
+                : POPUP_STATUS.SETTINGS_UNAVAILABLE,
             failure: state.failure ?? "settings-load",
         };
     }
@@ -449,7 +450,7 @@ export class StateProjection {
             hostname,
             siteEnabled: true,
             hasAdapter: true,
-            status: "runtime-failed",
+            status: POPUP_STATUS.RUNTIME_FAILED,
             failure: "document-status",
         };
     }
