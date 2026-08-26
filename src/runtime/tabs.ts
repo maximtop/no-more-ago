@@ -61,6 +61,9 @@ export type DocumentPhase = "waiting" | "active" | "stopped" | "failed";
 
 /**
  * Recognizes browser tab records with a safe numeric ID and optional string URL.
+ *
+ * @param value - Untrusted browser tab value.
+ * @returns - Whether the value is a usable runtime tab record.
  */
 export function isRuntimeTab(value: unknown): value is RuntimeTab {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {

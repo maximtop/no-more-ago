@@ -46,6 +46,9 @@ export type TimeZoneAvailability = (identifier: string) => boolean;
 
 /**
  * Uses Intl to determine whether an IANA time-zone identifier is available.
+ *
+ * @param identifier - Structurally valid IANA time-zone identifier.
+ * @returns - Whether the current runtime can resolve the identifier.
  */
 function defaultTimeZoneAvailability(identifier: string): boolean {
     try {
@@ -57,6 +60,10 @@ function defaultTimeZoneAvailability(identifier: string): boolean {
 
 /**
  * Compares display choices without relying on object identity.
+ *
+ * @param a - First display-settings value.
+ * @param b - Second display-settings value.
+ * @returns - Whether both values contain the same presentation choices.
  */
 function sameDisplay(a: DisplaySettings, b: DisplaySettings): boolean {
     if (a.formatMode !== b.formatMode) {
@@ -93,6 +100,10 @@ export class SettingsService {
 
     /**
      * Initializes the storage boundary, active key, and injectable time-zone capability check.
+     *
+     * @param storage - Durable storage boundary for settings snapshots.
+     * @param key - Storage key for the current snapshot.
+     * @param isTimeZoneAvailable - Runtime capability check for named zones.
      */
     public constructor(
         private readonly storage: SettingsStorage,
@@ -102,6 +113,8 @@ export class SettingsService {
 
     /**
      * Loads a valid current or recovery snapshot and records the unavailable reason on failure.
+     *
+     * @returns - Loaded settings snapshot or a contained load failure.
      */
     public async load(): Promise<SettingsLoadResult> {
         let values: Record<string, unknown>;
@@ -154,6 +167,8 @@ export class SettingsService {
 
     /**
      * Returns the most recently loaded snapshot, if initialization succeeded.
+     *
+     * @returns - Most recently loaded valid snapshot, if available.
      */
     public get loadedSnapshot(): SettingsSnapshotV5 | undefined {
         return this.current;
@@ -161,6 +176,8 @@ export class SettingsService {
 
     /**
      * Exposes the last initialization failure for unavailable-state reporting.
+     *
+     * @returns - Most recent settings initialization failure, if any.
      */
     public get lastLoadError(): "load-failed" | "invalid-settings" | undefined {
         return this.loadError;
@@ -168,6 +185,8 @@ export class SettingsService {
 
     /**
      * Creates the known-good default snapshot used after an unrecoverable read.
+     *
+     * @returns - Current snapshot or immutable default snapshot.
      */
     private fallbackSnapshot(): SettingsSnapshotV5 {
         return this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
@@ -175,6 +194,10 @@ export class SettingsService {
 
     /**
      * Writes current and previous snapshots as one recoverable storage pair.
+     *
+     * @param current - Snapshot to store as the active value.
+     * @param previous - Known-good recovery snapshot.
+     * @returns - Atomic storage payload containing both snapshots.
      */
     private pair(current: SettingsSnapshotV5, previous: SettingsSnapshotV5): Record<string, unknown> {
         return { [this.key]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
@@ -182,6 +205,9 @@ export class SettingsService {
 
     /**
      * Applies a serialized mutation and persists its incremented snapshot revision.
+     *
+     * @param mutator - Pure snapshot transformation, or null for an invalid request.
+     * @returns - Persisted write result with the effective snapshot.
      */
     private async mutate(mutator: (current: SettingsSnapshotV5) => SettingsSnapshotV5 | null): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
@@ -217,6 +243,9 @@ export class SettingsService {
 
     /**
      * Persists the global activation flag and returns the resulting revision or failure projection.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Persisted write result with the effective snapshot.
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         if (typeof enabled !== "boolean") {
@@ -227,6 +256,10 @@ export class SettingsService {
 
     /**
      * Persists one canonical-host override without changing other site preferences.
+     *
+     * @param hostname - Canonical hostname to override.
+     * @param enabled - Requested activation state for the hostname.
+     * @returns - Persisted write result with the effective snapshot.
      */
     public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
         if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") {
@@ -249,6 +282,9 @@ export class SettingsService {
 
     /**
      * Persists validated presentation choices and refreshes the derived display projection.
+     *
+     * @param display - Untrusted display settings to validate and persist.
+     * @returns - Persisted write result with the effective snapshot.
      */
     public async setDisplaySettings(display: unknown): Promise<SettingsWriteResult> {
         if (typeof display === "object" && display !== null && Object.hasOwn(display, "formatMode") && (display as { formatMode?: unknown }).formatMode === "custom") {
@@ -269,6 +305,9 @@ export class SettingsService {
 
     /**
      * Persists diagnostic journaling policy before background tabs are refreshed.
+     *
+     * @param enabled - Requested diagnostic journaling state.
+     * @returns - Persisted write result with the effective snapshot.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         if (typeof enabled !== "boolean") {
@@ -281,6 +320,8 @@ export class SettingsService {
 
     /**
      * Replace an unrecoverable pair with a known-good default pair.
+     *
+     * @returns - Persisted reset result with the default snapshot.
      */
     public async resetAll(): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
@@ -307,6 +348,8 @@ export class SettingsService {
 
     /**
      * Reloads the newest valid stored snapshot after an ambiguous write response.
+     *
+     * @returns - Latest valid snapshot or a contained load failure.
      */
     public async readLatest(): Promise<SettingsLoadResult> {
         return this.load();
@@ -315,6 +358,9 @@ export class SettingsService {
 
 /**
  * Detects a newer schema marker so it is never overwritten by an older extension build.
+ *
+ * @param value - Untrusted stored settings value.
+ * @returns - Whether the value declares a schema newer than this build supports.
  */
 function isUnknownFutureSnapshot(value: unknown): boolean {
     return typeof value === "object"

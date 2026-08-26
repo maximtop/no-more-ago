@@ -165,6 +165,10 @@ export interface ReconcileInput {
 
 /**
  * Compares optional script fields with the exact order Chrome returned or expects.
+ *
+ * @param left - Existing optional script field.
+ * @param right - Desired optional script field.
+ * @returns - Whether both arrays are absent or contain the same ordered values.
  */
 function sameArray(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
     if (left === undefined || right === undefined) {
@@ -175,6 +179,10 @@ function sameArray(left: readonly string[] | undefined, right: readonly string[]
 
 /**
  * Checks whether Chrome's existing registration exactly matches the desired spec.
+ *
+ * @param existing - Registration returned by Chrome.
+ * @param expected - Canonical registration required by the adapter.
+ * @returns - Whether every relevant registration field matches exactly.
  */
 export function registrationMatches(
     existing: RegisteredContentScriptReference,
@@ -190,6 +198,9 @@ export function registrationMatches(
 
 /**
  * Parses a tab URL, excluding absent or malformed values from adapter matching.
+ *
+ * @param tab - Browser tab whose URL should be parsed.
+ * @returns - Parsed tab URL, or null when absent or malformed.
  */
 function getUrl(tab: RuntimeTab): URL | null {
     if (!tab.url) {
@@ -204,6 +215,9 @@ function getUrl(tab: RuntimeTab): URL | null {
 
 /**
  * Identifies a document runtime that has already completed teardown.
+ *
+ * @param value - Valid document-status response.
+ * @returns - Whether the document runtime reports the stopped phase.
  */
 function isStopped(value: DocumentStatusResponse): boolean {
     return value.phase === "stopped";
@@ -211,6 +225,11 @@ function isStopped(value: DocumentStatusResponse): boolean {
 
 /**
  * Queries Chrome by registration patterns, then filters results with the adapter matcher.
+ *
+ * @param definition - Adapter whose matching tabs are requested.
+ * @param tabs - Browser tabs API boundary.
+ * @param failures - Mutable reconciliation failure collector.
+ * @returns - Usable tabs whose parsed URLs match the adapter.
  */
 async function queryMatchingTabs(
     definition: RuntimeAdapterDefinition,
@@ -232,6 +251,14 @@ async function queryMatchingTabs(
 
 /**
  * Reconciles one Chrome content-script registration and records partial failures.
+ *
+ * @param definition - Adapter registration definition to reconcile.
+ * @param scripting - Chrome scripting API boundary.
+ * @param mode - Reconciliation mode controlling failure handling.
+ * @param desiredEnabled - Whether the adapter should be registered.
+ * @param failures - Mutable reconciliation failure collector.
+ * @param registration - Mutable per-adapter registration result map.
+ * @returns - Whether registration was present or created and whether it changed.
  */
 async function registrationState(
     definition: RuntimeAdapterDefinition,
@@ -302,6 +329,13 @@ async function registrationState(
 
 /**
  * Stops a matching top-frame runtime, optionally skipping teardown when already stopped.
+ *
+ * @param definition - Adapter being removed from the document.
+ * @param tab - Matching browser tab to tear down.
+ * @param tabs - Browser tabs API boundary.
+ * @param failures - Mutable reconciliation failure collector.
+ * @param records - Mutable per-tab reconciliation result map.
+ * @param checkStatus - Whether to query runtime status before teardown.
  */
 async function teardownTab(
     definition: RuntimeAdapterDefinition,
@@ -355,6 +389,11 @@ export class AdapterActivationCoordinator {
 
     /**
      * Stores default adapter definitions and the Chrome Scripting and Tabs APIs.
+     *
+     * @param input - Adapter definitions and Chrome runtime dependencies.
+     * @param input.adapters - Trusted adapter definitions in reconciliation order.
+     * @param input.scripting - Chrome scripting API boundary.
+     * @param input.tabs - Chrome tabs API boundary.
      */
     public constructor(input: { readonly adapters?: readonly RuntimeAdapterDefinition[]; readonly scripting: ScriptingRuntime; readonly tabs: TabsRuntime }) {
         this.adapters = input.adapters ?? [];
@@ -364,6 +403,14 @@ export class AdapterActivationCoordinator {
 
     /**
      * Reconciles registrations, injections, and teardown for the supplied activation state.
+     *
+     * @param input - Desired revision, policy, site preferences, and reconcile mode.
+     * @param input.revision - Settings revision associated with the request.
+     * @param input.mode - Reconciliation mode controlling failure handling.
+     * @param input.policy - Effective global activation policy.
+     * @param input.sitePreferences - Canonical-host activation overrides.
+     * @param input.affectedHostnames - Optional hostnames to limit document updates.
+     * @returns - Complete registration and tab reconciliation result.
      */
     public async reconcile(input: {
         readonly revision: number | null;
@@ -417,6 +464,9 @@ export class AdapterActivationCoordinator {
 
 /**
  * Reconciles activation once using a coordinator constructed from the input dependencies.
+ *
+ * @param input - Desired activation state and Chrome runtime dependencies.
+ * @returns - Complete registration and tab reconciliation result.
  */
 export async function reconcileActivation(input: ReconcileInput): Promise<ActivationReconcileResult> {
     return new AdapterActivationCoordinator(input).reconcile(input);

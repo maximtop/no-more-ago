@@ -53,6 +53,9 @@ interface SchedulerInput {
 
 /**
  * Adds an element once while preserving its first-seen order.
+ *
+ * @param items - Ordered element collection to update.
+ * @param value - Element to append when it is not already present.
  */
 function addUnique(items: Element[], value: Element): void {
     if (!items.includes(value)) {
@@ -62,6 +65,9 @@ function addUnique(items: Element[], value: Element): void {
 
 /**
  * Collapses overlapping mutation roots to avoid processing descendants twice.
+ *
+ * @param roots - Candidate mutation roots in discovery order.
+ * @returns - Minimal ordered roots with covered descendants removed.
  */
 function collapseRoots(roots: readonly Element[]): Element[] {
     return roots.filter((root, index) =>
@@ -71,6 +77,10 @@ function collapseRoots(roots: readonly Element[]): Element[] {
 
 /**
  * Avoids redundant work when an element already lies inside a scheduled mutation root.
+ *
+ * @param roots - Mutation roots already scheduled for processing.
+ * @param element - Candidate element to test for coverage.
+ * @returns - Whether an existing root already contains the element.
  */
 function coveredBy(roots: readonly Element[], element: Element): boolean {
     return roots.some((root) => root.contains(element));
@@ -103,6 +113,8 @@ export class DocumentMutationScheduler {
 
     /**
      * Initializes mutation bookkeeping without observing the document until start() is called.
+     *
+     * @param input - Document, observer, callbacks, and scheduling dependencies.
      */
     constructor(private readonly input: SchedulerInput) {}
 
@@ -152,6 +164,8 @@ export class DocumentMutationScheduler {
 
     /**
      * Records source restoration work before an extension-owned output is removed.
+     *
+     * @param output - Extension-owned output about to be removed.
      */
     beforeOwnedOutputRemoval(output: HTMLTimeElement): void {
         if (
@@ -166,6 +180,8 @@ export class DocumentMutationScheduler {
 
     /**
      * Collects affected roots from observer records and schedules one flush.
+     *
+     * @param records - Mutation records delivered by the observer.
      */
     private handle(records: readonly MutationRecord[]): void {
         const addedRoots: Element[] = [];

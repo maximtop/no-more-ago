@@ -39,6 +39,9 @@ const FORMAT_SYMBOLS = new Set("GyYuURQqMLwIdDEeciahHKkmsSXxXOzPpotTbB");
 
 /**
  * Detects Unicode control characters that are unsafe in a saved pattern.
+ *
+ * @param character - Unicode code point from the candidate pattern.
+ * @returns - Whether the character belongs to the Unicode control category.
  */
 function isControl(character: string): boolean {
     return /\p{Cc}/u.test(character);
@@ -46,6 +49,9 @@ function isControl(character: string): boolean {
 
 /**
  * Validate one user pattern without constructing a user-controlled RegExp.
+ *
+ * @param pattern - Untrusted custom date-format pattern.
+ * @returns - Successful normalized pattern or a specific validation error.
  */
 export function validateCustomFormatPattern(pattern: unknown): CustomPatternValidation {
     if (typeof pattern !== "string" || pattern.trim().length === 0) {

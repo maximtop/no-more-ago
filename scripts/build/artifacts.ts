@@ -54,6 +54,10 @@ type ArtifactServicesOptions = {
 
 /**
  * Compares normalized paths to prevent a build artifact from escaping its approved root.
+ *
+ * @param root - Approved root directory.
+ * @param candidate - Path to compare with the approved root.
+ * @returns - Whether the candidate is the root or one of its descendants.
  */
 function inside(root: string, candidate: string): boolean {
     const rel = path.relative(root, candidate);
@@ -62,6 +66,12 @@ function inside(root: string, candidate: string): boolean {
 
 /**
  * Rejects missing, symlinked, or escaping paths before filesystem access.
+ *
+ * @param root - Approved root directory.
+ * @param candidate - Path to validate before accessing it.
+ * @param options - Path validation options.
+ * @param options.allowMissing - Whether the final path may be absent.
+ * @returns - Resolved candidate path after all safety checks pass.
  */
 function assertSafe(root: string, candidate: string, { allowMissing = false }: { allowMissing?: boolean } = {}): string {
     const absoluteRoot = path.resolve(root);
@@ -100,6 +110,8 @@ function assertSafe(root: string, candidate: string, { allowMissing = false }: {
 
 /**
  * Creates a guarded output directory and verifies its final path.
+ *
+ * @param dir - Output directory to create and validate.
  */
 function ensureDir(dir: string): void {
     assertSafe(path.dirname(dir), dir, { allowMissing: true });
@@ -111,6 +123,11 @@ import { readdirSync } from "node:fs";
 
 /**
  * Lists regular files beneath an artifact root using portable paths.
+ *
+ * @param root - Approved artifact root.
+ * @param current - Directory currently being traversed.
+ * @param output - Accumulator for portable relative file paths.
+ * @returns - Sorted regular-file paths relative to the artifact root.
  */
 function listFiles(root: string, current = root, output: string[] = []): string[] {
     assertSafe(root, current);
@@ -131,6 +148,9 @@ function listFiles(root: string, current = root, output: string[] = []): string[
 
 /**
  * Recursively copies only regular files, rejecting symlinks and special entries along the way.
+ *
+ * @param source - Validated source directory to copy.
+ * @param destination - Guarded destination directory to populate.
  */
 function copyTree(source: string, destination: string): void {
     assertSafe(path.dirname(source), source);
@@ -154,6 +174,9 @@ function copyTree(source: string, destination: string): void {
 
 /**
  * Calculates the CRC-32 checksum stored in a PNG chunk.
+ *
+ * @param buffer - PNG chunk type and data bytes covered by the checksum.
+ * @returns - Unsigned CRC-32 checksum.
  */
 function pngCrc32(buffer: Uint8Array): number {
     let crc = ~0;
@@ -167,6 +190,9 @@ function pngCrc32(buffer: Uint8Array): number {
 
 /**
  * Verifies PNG signature, chunk order, CRCs, RGBA dimensions, decompression, and filter bytes.
+ *
+ * @param file - PNG file to validate.
+ * @param expectedSize - Required width and height in pixels.
  */
 function validatePng(file: string, expectedSize: number): void {
     const bytes = readFileSync(file);
@@ -226,6 +252,11 @@ function validatePng(file: string, expectedSize: number): void {
 
 /**
  * Verifies directory and ZIP contents agree, manifest references resolve, and emitted scripts parse.
+ *
+ * @param directory - Unpacked artifact directory to validate.
+ * @param zipBytes - ZIP archive expected to contain the same artifact files.
+ * @param decoder - ZIP decoder used to inspect archive entries.
+ * @returns - Validated file list, manifest, and original ZIP bytes.
  */
 function validatePair(directory: string, zipBytes: Buffer, decoder: (data: Uint8Array) => Record<string, Uint8Array> = fflateUnzipSync): { files: string[]; manifest: ArtifactManifest; zipBytes: Buffer } {
     const files = listFiles(directory);
@@ -307,6 +338,9 @@ function validatePair(directory: string, zipBytes: Buffer, decoder: (data: Uint8
 
 /**
  * Produces deterministic ZIP entries from a validated artifact directory.
+ *
+ * @param root - Validated artifact directory.
+ * @returns - Portable file names mapped to their byte contents.
  */
 function zipEntries(root: string): Record<string, Uint8Array> {
     const entries: Record<string, Uint8Array> = {};
@@ -318,6 +352,13 @@ function zipEntries(root: string): Record<string, Uint8Array> {
 
 /**
  * Returns guarded snapshot, archive, validation, and atomic publication operations for build tasks.
+ *
+ * @param options - Injectable filesystem and ZIP dependencies.
+ * @param options.fs - Reserved filesystem dependency boundary.
+ * @param options.zip - Reserved ZIP dependency boundary.
+ * @param options.zipSync - ZIP encoder override.
+ * @param options.unzipSync - ZIP decoder override.
+ * @returns - Guarded services used by the build pipeline.
  */
 export function createArtifactServices({ fs, zip, zipSync: injectedZipSync, unzipSync }: ArtifactServicesOptions = {}) {
     // The public boundary is intentionally injectable; production uses pinned fflate.

@@ -18,6 +18,10 @@ export type DiagnosticArchiveErrorCode = "empty" | "invalid-snapshot" | "compres
 export class DiagnosticArchiveError extends Error {
     /**
      * Constructs a typed archive error with a stable UI code, message, and optional native cause.
+     *
+     * @param code - Stable failure code presented by the options UI.
+     * @param message - Human-readable archive failure description.
+     * @param options - Optional native error cause.
      */
     public constructor(public readonly code: DiagnosticArchiveErrorCode, message: string, options?: ErrorOptions) {
         super(message, options);
@@ -111,6 +115,9 @@ const ENVIRONMENT_KEYS = new Set(["browserFamily", "extensionVersion"]);
 
 /**
  * Accepts a plain object for defensive archive payload parsing.
+ *
+ * @param value - Untrusted archive payload value.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -118,6 +125,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Verifies the exact exported snapshot shape before compression to prevent unsafe archive contents.
+ *
+ * @param value - Untrusted diagnostics snapshot value.
+ * @returns - Whether the value has the exact safe export shape.
  */
 export function isDiagnosticArchiveSnapshot(value: unknown): value is DiagnosticArchiveSnapshot {
     if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 2 || !Object.hasOwn(value, "entries") || !Object.hasOwn(value, "environment") || !Array.isArray(value.entries) || !isRecord(value.environment) || !hasOnlyOwnDiagnosticProperties(value.environment)
@@ -135,6 +145,10 @@ export function isDiagnosticArchiveSnapshot(value: unknown): value is Diagnostic
 
 /**
  * Serializes the validated snapshot as UTF-8 JSON and returns its compressed ZIP bytes.
+ *
+ * @param snapshot - Validated redacted diagnostics snapshot.
+ * @param encoder - ZIP encoder used to create the archive.
+ * @returns - Compressed ZIP archive bytes.
  */
 export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zipSync): Uint8Array {
     if (!isDiagnosticArchiveSnapshot(snapshot)) {
@@ -174,6 +188,8 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
 
 /**
  * Adapts the browser downloads API used to publish the diagnostics archive.
+ *
+ * @returns - Browser download runtime backed by the Chrome downloads API.
  */
 function defaultDownloadRuntime(): DownloadRuntime {
     if (typeof Blob === "undefined" || typeof URL === "undefined" || typeof document === "undefined") {
@@ -198,6 +214,9 @@ function defaultDownloadRuntime(): DownloadRuntime {
 
 /**
  * Builds and downloads a ZIP archive containing the redacted diagnostic snapshot.
+ *
+ * @param bytes - ZIP archive bytes to publish.
+ * @param runtime - Browser download and object-URL dependencies.
  */
 export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRuntime): void {
     const browser = runtime ?? defaultDownloadRuntime();

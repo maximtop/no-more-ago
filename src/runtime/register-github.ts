@@ -20,6 +20,8 @@ export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
 
 /**
  * Registers the GitHub script when absent or updates it when its specification changed.
+ *
+ * @param runtime - Chrome scripting API boundary used to reconcile registration.
  */
 export async function ensureGitHubRuntime(runtime: ScriptingRuntime): Promise<void> {
     const existing = await runtime.getRegisteredContentScripts({

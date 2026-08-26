@@ -18,6 +18,9 @@ const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
 
 /**
  * Rejects invalid or ambiguous numeric UTC offsets before ISO parsing.
+ *
+ * @param zone - Numeric UTC offset suffix from an ISO datetime.
+ * @returns - Whether the offset uses a valid hour and minute range.
  */
 function hasKnownNumericZone(zone: string): boolean {
     if (zone === "Z") {
@@ -35,6 +38,9 @@ function hasKnownNumericZone(zone: string): boolean {
 
 /**
  * Detects ASCII and C1 controls that must never appear in an adapter datetime attribute.
+ *
+ * @param value - Candidate datetime attribute value.
+ * @returns - Whether the value contains an ASCII or C1 control character.
  */
 function hasControlCharacter(value: string): boolean {
     for (let index = 0; index < value.length; index += 1) {
@@ -70,6 +76,9 @@ export interface ResolvedTimestamp {
 /**
  * Accepts only adapter candidates carrying the explicit-zone rule and a complete valid ISO
  * datetime; returns null for malformed, ambiguous, or unsupported page data.
+ *
+ * @param candidate - Timestamp candidate extracted by a trusted adapter.
+ * @returns - Valid resolved instant and source metadata, or null when rejected.
  */
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate

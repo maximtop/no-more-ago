@@ -18,6 +18,9 @@ export const MODES = ["dev", "release"];
 
 /**
  * Loads a trusted build-time JSON file and returns its object representation.
+ *
+ * @param file - Path to the trusted JSON file.
+ * @returns - Parsed JSON object.
  */
 function readJson(file: string): Record<string, any> {
     return JSON.parse(readFileSync(file, "utf8")) as Record<string, any>;
@@ -25,6 +28,11 @@ function readJson(file: string): Record<string, any> {
 
 /**
  * Adds manifests, HTML entry points, and extension icons to each Rspack compilation.
+ *
+ * @param options - Metadata plugin inputs.
+ * @param options.workspaceRoot - Absolute project workspace path.
+ * @param options.browser - Browser whose manifest variant is being built.
+ * @returns - Rspack plugin that emits the extension metadata assets.
  */
 function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; browser: string }) {
     const commonPath = path.join(workspaceRoot, "src/manifest/common.json");
@@ -65,6 +73,13 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
 
 /**
  * Produces a browser- and mode-specific Rspack configuration after validating requested inputs.
+ *
+ * @param options - Validated build configuration inputs.
+ * @param options.workspaceRoot - Absolute project workspace path.
+ * @param options.browser - Browser target to build.
+ * @param options.mode - Development or release build mode.
+ * @param options.outputPath - Directory where Rspack emits the build.
+ * @returns - Rspack configuration for the requested browser and mode.
  */
 export function createRspackConfig({ workspaceRoot, browser, mode, outputPath }: { workspaceRoot: string; browser: string; mode: string; outputPath: string }): Record<string, any> {
     if (!BROWSERS.includes(browser) || !MODES.includes(mode)) {

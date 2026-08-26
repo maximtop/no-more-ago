@@ -44,6 +44,9 @@ const AVAILABLE: readonly DateLocale[] = [
 
 /**
  * Normalizes a candidate language tag without accepting malformed locale input.
+ *
+ * @param tag - Candidate BCP 47 language tag.
+ * @returns - Canonical language tag, or null when malformed.
  */
 function normalized(tag: string): Intl.Locale | undefined {
     try {
@@ -56,6 +59,9 @@ function normalized(tag: string): Intl.Locale | undefined {
 /**
  * Normalizes preferred BCP 47 tags, returns the first tag supported by date-fns, and falls back
  * to en-US when no caller preference is usable.
+ *
+ * @param preferred - Language tags in caller preference order.
+ * @returns - First date-fns locale supported by a preferred tag, or en-US.
  */
 export function resolveDateLocale(preferred: readonly string[]): DateLocale {
     for (const raw of preferred) {
@@ -88,6 +94,9 @@ export function resolveDateLocale(preferred: readonly string[]): DateLocale {
 
 /**
  * Returns the first supported preferred locale, falling back to the browser default when needed.
+ *
+ * @param preferred - Language tags in caller preference order.
+ * @returns - First supported locale, falling back to the browser default.
  */
 export function getDateLocale(preferred: readonly string[]): Locale {
     return resolveDateLocale(preferred).locale;

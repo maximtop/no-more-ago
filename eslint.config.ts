@@ -11,6 +11,7 @@ import tseslint from "typescript-eslint";
 const jsdocRules = {
     "jsdoc/multiline-blocks": ["error", { noSingleLineBlocks: true }],
     "jsdoc/check-alignment": "error",
+    "jsdoc/check-param-names": "error",
     "jsdoc/lines-before-block": "error",
     "jsdoc/tag-lines": ["error", "any", { startLines: 1 }],
     "jsdoc/require-file-overview": "error",
@@ -55,6 +56,9 @@ const jsdocRules = {
             ]
         }
     ],
+    "jsdoc/require-param": ["error", { checkDestructured: false }],
+    "jsdoc/require-returns": "error",
+    "jsdoc/require-returns-check": "error",
     "jsdoc/require-param-description": "error",
     "jsdoc/require-returns-description": "error",
     "jsdoc/require-param-type": "off",

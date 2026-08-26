@@ -12,11 +12,16 @@ import type { SiteAdapter } from "./types";
 export class AdapterRegistry {
     /**
      * Retains the ordered trusted adapters; selection later stops at the first URL match.
+     *
+     * @param adapters - Trusted adapters in selection priority order.
      */
     constructor(private readonly adapters: readonly SiteAdapter[]) {}
 
     /**
      * Selects the first adapter whose URL matcher accepts the current page.
+     *
+     * @param url - Page URL to match against registered adapters.
+     * @returns - First matching adapter, or null when none accepts the URL.
      */
     select(url: URL): SiteAdapter | null {
         return this.adapters.find((adapter) => adapter.matches(url)) ?? null;

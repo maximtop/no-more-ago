@@ -103,6 +103,9 @@ export type SettingsLoadResult =
 
 /**
  * Accepts plain JSON-like records before schema validation.
+ *
+ * @param value - Untrusted value to inspect.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -110,6 +113,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * A site key is the canonical URL.hostname, never a URL or URL.host.
+ *
+ * @param hostname - Candidate hostname to use as a site-preference key.
+ * @returns - Whether the string is an exact canonical hostname.
  */
 export function isCanonicalHostname(hostname: string): boolean {
     if (typeof hostname !== "string" || hostname.length === 0 || hostname.trim() !== hostname) {
@@ -136,6 +142,9 @@ export function isCanonicalHostname(hostname: string): boolean {
 /**
  * Rejects non-records and invalid host overrides, then freezes a copied preference map so callers
  * cannot mutate a validated settings snapshot through its input object.
+ *
+ * @param value - Untrusted site-preferences value.
+ * @returns - Frozen validated preference map, or null when invalid.
  */
 function copySitePreferences(value: unknown): Readonly<Record<string, boolean>> | null {
     if (!isRecord(value)) {
@@ -155,6 +164,9 @@ const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
 
 /**
  * Rejects whitespace, control characters, traversal segments, and invalid IANA name components.
+ *
+ * @param identifier - Untrusted IANA time-zone identifier.
+ * @returns - Whether the value has a safe, structurally valid identifier shape.
  */
 export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): identifier is string {
     if (typeof identifier !== "string" || identifier.length === 0 || identifier.trim() !== identifier) {
@@ -177,6 +189,9 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): iden
 
 /**
  * Accepts only complete system, UTC, or structurally valid named-zone selections.
+ *
+ * @param value - Untrusted time-zone selection.
+ * @returns - Whether the value is a complete supported selection.
  */
 export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection {
     if (!isRecord(value) || !Object.hasOwn(value, "mode")) {
@@ -193,6 +208,9 @@ export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection 
 
 /**
  * Returns an immutable time-zone selection or null without coercing untrusted input.
+ *
+ * @param value - Untrusted time-zone selection.
+ * @returns - Immutable validated selection, or null when invalid.
  */
 export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null {
     if (!isTimeZoneSelection(value)) {
@@ -205,6 +223,9 @@ export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null
 
 /**
  * Verifies the exact key set and validates custom patterns before accepting display choices.
+ *
+ * @param value - Untrusted display-settings value.
+ * @returns - Whether the value has the exact valid display-settings shape.
  */
 export function isDisplaySettings(value: unknown): value is DisplaySettings {
     if (!isRecord(value) || !Object.hasOwn(value, "formatMode") || !Object.hasOwn(value, "timeZone")) {
@@ -226,6 +247,9 @@ export function isDisplaySettings(value: unknown): value is DisplaySettings {
 
 /**
  * Copies validated display choices into an immutable representation, or returns null.
+ *
+ * @param value - Untrusted display-settings value.
+ * @returns - Immutable validated display settings, or null when invalid.
  */
 export function parseDisplaySettings(value: unknown): DisplaySettings | null {
     if (!isDisplaySettings(value)) {
@@ -247,6 +271,9 @@ export function parseDisplaySettings(value: unknown): DisplaySettings | null {
 
 /**
  * Enforces the exact V5 schema and validates every nested settings value.
+ *
+ * @param value - Untrusted persisted settings value.
+ * @returns - Whether the value satisfies the complete V5 schema.
  */
 export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV5 {
     if (!isRecord(value)) {
@@ -274,6 +301,9 @@ export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV
 
 /**
  * Produces an immutable V5 snapshot only from a fully validated storage record.
+ *
+ * @param value - Untrusted persisted settings value.
+ * @returns - Immutable V5 snapshot, or null when validation fails.
  */
 export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null {
     if (!isSettingsSnapshotV5(value)) {
@@ -296,6 +326,13 @@ export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null
 
 /**
  * Validates caller-supplied settings and freezes the canonical V5 storage shape.
+ *
+ * @param revision - Non-negative storage revision.
+ * @param globalEnabled - Whether timestamp replacement is globally active.
+ * @param sitePreferences - Canonical-host activation overrides.
+ * @param display - Validated date presentation choices.
+ * @param debugEnabled - Whether diagnostic journaling is enabled.
+ * @returns - Frozen canonical V5 settings snapshot.
  */
 export function createSettingsSnapshot(
     revision: number,
@@ -323,6 +360,10 @@ export function createSettingsSnapshot(
 
 /**
  * Treats an absent per-site override as enabled and only disables explicit false entries.
+ *
+ * @param sitePreferences - Canonical-host activation overrides.
+ * @param hostname - Canonical hostname whose effective state is requested.
+ * @returns - Whether processing is enabled for the hostname.
  */
 export function isSiteEnabled(sitePreferences: Readonly<Record<string, boolean>>, hostname: string): boolean {
     return !Object.hasOwn(sitePreferences, hostname) || sitePreferences[hostname] !== false;

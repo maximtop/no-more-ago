@@ -177,6 +177,9 @@ const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVers
 
 /**
  * Narrows a non-array object so its own data properties can be inspected safely.
+ *
+ * @param value - Untrusted form context value.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -184,6 +187,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Rejects inherited, accessor, and unexpected keys from untrusted form context.
+ *
+ * @param value - Untrusted record whose properties are inspected.
+ * @param allowed - Complete set of accepted own property names.
+ * @returns - Whether the record contains only allowed own data properties.
  */
 function hasOnlyOwnKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
     for (const key in value) {
@@ -199,6 +206,10 @@ function hasOnlyOwnKeys(value: Record<string, unknown>, allowed: ReadonlySet<str
 
 /**
  * Reads an own string property without invoking inherited lookup.
+ *
+ * @param value - Record containing untrusted form fields.
+ * @param key - Own property name to read.
+ * @returns - String property value, or undefined when absent or non-string.
  */
 function ownString(value: Record<string, unknown>, key: string): string | undefined {
     if (!Object.hasOwn(value, key)) {
@@ -209,6 +220,9 @@ function ownString(value: Record<string, unknown>, key: string): string | undefi
 
 /**
  * Accepts the bounded manifest-version format allowed in report URLs.
+ *
+ * @param value - Candidate extension version.
+ * @returns - Whether the version is safe and bounded for a report URL.
  */
 function validVersion(value: string): boolean {
     return VERSION.test(value);
@@ -216,6 +230,10 @@ function validVersion(value: string): boolean {
 
 /**
  * Accepts a credential-free HTTP(S) URL whose canonical hostname matches exactly.
+ *
+ * @param value - Candidate page URL.
+ * @param hostname - Canonical hostname the URL must match.
+ * @returns - Whether the URL is safe, credential-free HTTP(S) for that host.
  */
 function validSiteUrl(value: string, hostname: string): boolean {
     try {
@@ -232,6 +250,9 @@ function validSiteUrl(value: string, hostname: string): boolean {
 
 /**
  * Validates untrusted report fields and returns a prefilled GitHub issue URL.
+ *
+ * @param context - Untrusted site-report context.
+ * @returns - Prefilled GitHub issue URL, or null when validation fails.
  */
 export function composeSiteReportUrl(context: unknown): string | null {
     if (!isRecord(context) || !hasOnlyOwnKeys(context, CONTEXT_KEYS)) {
@@ -280,6 +301,9 @@ export function composeSiteReportUrl(context: unknown): string | null {
 
 /**
  * Maps a raw user agent to the browser label expected by the report form.
+ *
+ * @param userAgent - Untrusted browser user-agent value.
+ * @returns - Supported browser label for the report form.
  */
 export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrowser {
     if (typeof userAgent !== "string") {
@@ -299,6 +323,9 @@ export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrows
 
 /**
  * Reads and validates the manifest version, returning null when unavailable or malformed.
+ *
+ * @param runtime - Browser runtime dependency exposing manifest metadata.
+ * @returns - Valid extension version, or null when unavailable or malformed.
  */
 function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
     if (!runtime.runtime) {
@@ -317,6 +344,9 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
 
 /**
  * Collects validated manifest and browser details for a report form.
+ *
+ * @param runtime - Browser runtime and navigator dependencies.
+ * @returns - Validated extension version and browser label, or null.
  */
 function environment(runtime: SiteReportBrowserRuntime): Pick<SiteReportContext, "extensionVersion" | "browser"> | null {
     const version = extensionVersion(runtime);
@@ -325,6 +355,9 @@ function environment(runtime: SiteReportBrowserRuntime): Pick<SiteReportContext,
 
 /**
  * Narrows popup state to a canonical hostname and adapter-presence flag.
+ *
+ * @param value - Untrusted popup state.
+ * @returns - Whether it contains a canonical hostname and adapter flag.
  */
 function validPopupState(value: unknown): value is SiteReportPopupState {
     return isRecord(value)
@@ -337,6 +370,9 @@ function validPopupState(value: unknown): value is SiteReportPopupState {
 
 /**
  * Narrows a tab response to own URL and incognito data properties before use.
+ *
+ * @param value - Untrusted browser tab response.
+ * @returns - Whether it contains safe own URL and incognito properties.
  */
 function validTab(value: unknown): value is SiteReportTab {
     if (!isRecord(value)) {
@@ -373,6 +409,9 @@ export interface SiteReportReporter {
 
 /**
  * Creates serialized report actions over injected Chrome API dependencies.
+ *
+ * @param runtime - Browser APIs and environment dependencies for report creation.
+ * @returns - Serialized site-report action.
  */
 export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): SiteReportReporter {
     let inFlight = false;
@@ -473,6 +512,8 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
 
 /**
  * Creates the default reporter lazily, so Chrome APIs run only after a report action.
+ *
+ * @returns - Lazily initialized reporter backed by available Chrome APIs.
  */
 export function createDefaultSiteReportReporter(): SiteReportReporter {
     const browser = typeof chrome === "undefined" ? undefined : chrome;

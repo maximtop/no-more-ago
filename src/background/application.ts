@@ -288,6 +288,11 @@ export type LifecycleReason = "startup" | "installed" | "updated" | "cold-worker
 
 /**
  * Maps a reconcile failure for an adapter and tab to the corresponding popup failure.
+ *
+ * @param failures - Reconciliation failures to inspect.
+ * @param adapterId - Adapter whose tab failure is requested.
+ * @param tabId - Browser tab whose failure is requested.
+ * @returns - Matching popup failure code, or undefined when none exists.
  */
 function matchingTabFailure(
     failures: readonly ReconcileFailure[],
@@ -316,6 +321,9 @@ function matchingTabFailure(
 
 /**
  * Parses a tab URL, returning null when it is absent or invalid.
+ *
+ * @param tab - Active browser tab, when one was returned.
+ * @returns - Parsed tab URL, or null when absent or malformed.
  */
 function urlFromTab(tab: RuntimeTab | undefined): URL | null {
     if (!tab?.url) {
@@ -330,6 +338,10 @@ function urlFromTab(tab: RuntimeTab | undefined): URL | null {
 
 /**
  * Checks whether an adapter is registered for a hostname.
+ *
+ * @param adapter - Runtime adapter definition to inspect.
+ * @param hostname - Canonical hostname to compare.
+ * @returns - Whether the adapter is registered for that hostname.
  */
 function adapterHostnameMatches(
     adapter: RuntimeAdapterDefinition,
@@ -340,6 +352,10 @@ function adapterHostnameMatches(
 
 /**
  * Checks whether a reconcile failure belongs to an adapter.
+ *
+ * @param failure - Reconciliation failure to inspect.
+ * @param adapterId - Adapter identifier to compare.
+ * @returns - Whether the failure belongs to the adapter.
  */
 function failureBelongsToAdapter(failure: ReconcileFailure, adapterId: string): boolean {
     return failure.adapterId === adapterId;
@@ -431,6 +447,8 @@ export class BackgroundApplication {
 
     /**
      * Creates an application with its runtime and settings dependencies.
+     *
+     * @param options - Settings, activation, tab, diagnostics, and adapter dependencies.
      */
     public constructor(options: BackgroundApplicationOptions) {
         this.settings = options.settings;
@@ -443,6 +461,8 @@ export class BackgroundApplication {
 
     /**
      * Current lifecycle phase.
+     *
+     * @returns - Current background application lifecycle phase.
      */
     public get phase(): ApplicationPhase {
         return this.phaseValue;
@@ -450,6 +470,8 @@ export class BackgroundApplication {
 
     /**
      * Most recently loaded settings snapshot, if settings are available.
+     *
+     * @returns - Most recently loaded snapshot, if settings are available.
      */
     public get currentSnapshot(): SettingsSnapshotV5 | undefined {
         return this.snapshot;
@@ -457,6 +479,8 @@ export class BackgroundApplication {
 
     /**
      * Most recent adapter reconciliation result, if one has completed.
+     *
+     * @returns - Most recent activation reconciliation result, if available.
      */
     public get reconcileResult(): ActivationReconcileResult | undefined {
         return this.lastReconcile;
@@ -464,6 +488,9 @@ export class BackgroundApplication {
 
     /**
      * Serializes a state-changing operation after earlier background work.
+     *
+     * @param operation - Asynchronous state-changing operation to serialize.
+     * @returns - Promise carrying the operation result after earlier work settles.
      */
     private enqueue<T>(operation: () => Promise<T>): Promise<T> {
         const run = this.transactionTail.then(operation);
@@ -473,6 +500,13 @@ export class BackgroundApplication {
 
     /**
      * Reconciles runtime adapters and caches the newest non-stale result.
+     *
+     * @param mode - Activation reconciliation mode.
+     * @param policy - Effective global settings policy.
+     * @param revision - Settings revision associated with the request.
+     * @param sitePreferences - Canonical-host activation overrides.
+     * @param affectedHostnames - Optional hostnames to limit document updates.
+     * @returns - Latest non-stale activation reconciliation result.
      */
     private async performReconcile(
         mode: ActivationMode,
@@ -530,6 +564,8 @@ export class BackgroundApplication {
 
     /**
      * Updates the cached reconciliation revision after a no-op settings write.
+     *
+     * @param revision - New settings revision for the cached result.
      */
     private advanceReconcileRevision(revision: number): void {
         if (!this.lastReconcile) {
@@ -591,6 +627,9 @@ export class BackgroundApplication {
 
     /**
      * Ensures settings are loaded and runtime activation is reconciled for a lifecycle reason.
+     *
+     * @param reason - Lifecycle event requiring initialized state.
+     * @returns - Promise settled when settings and activation are ready.
      */
     public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
         if (reason !== "cold-worker") {
@@ -642,6 +681,8 @@ export class BackgroundApplication {
 
     /**
      * Drains queued lifecycle events through one activation-sweep reconciliation.
+     *
+     * @returns - Promise settled after queued lifecycle reasons are reconciled.
      */
     private requestLifecycleDrain(): Promise<void> {
         if (this.lifecycleReasons.size === 0) {
@@ -667,6 +708,9 @@ export class BackgroundApplication {
 
     /**
      * Queues a browser lifecycle event and ensures it is reconciled.
+     *
+     * @param reason - Browser lifecycle event to reconcile.
+     * @returns - Promise settled when the event has been processed.
      */
     public requestLifecycle(reason: Exclude<LifecycleReason, "cold-worker">): Promise<void> {
         this.lifecycleReasons.add(reason);
@@ -675,6 +719,8 @@ export class BackgroundApplication {
 
     /**
      * Queries the active tab and distinguishes lookup failures from an empty result.
+     *
+     * @returns - Active tab result plus a flag distinguishing query failure.
      */
     private async activeTab(): Promise<{ readonly tab: RuntimeTab | undefined; readonly error: boolean }> {
         try {
@@ -757,6 +803,8 @@ export class BackgroundApplication {
 
     /**
      * Builds the popup state returned while settings cannot be used.
+     *
+     * @returns - Fail-closed popup state for unavailable settings.
      */
     private unavailableState(): PopupState {
         return {
@@ -773,6 +821,8 @@ export class BackgroundApplication {
 
     /**
      * Builds the site-list state returned while settings cannot be used.
+     *
+     * @returns - Fail-closed sites state for unavailable settings.
      */
     private unavailableSitesState(): SitesState {
         return {
@@ -786,6 +836,9 @@ export class BackgroundApplication {
 
     /**
      * Finds the adapter that accepts a page URL.
+     *
+     * @param url - Page URL to match against runtime adapters.
+     * @returns - First matching adapter, or undefined when none accepts the URL.
      */
     private adapterForUrl(url: URL): RuntimeAdapterDefinition | undefined {
         return this.adapters.find((candidate) => candidate.matches(url));
@@ -793,6 +846,9 @@ export class BackgroundApplication {
 
     /**
      * Returns the effective activation preference for a hostname.
+     *
+     * @param hostname - Canonical hostname whose effective state is requested.
+     * @returns - Whether processing is enabled for the hostname.
      */
     private siteEnabled(hostname: string): boolean {
         return isSiteEnabled(this.snapshot?.sitePreferences ?? {}, hostname);
@@ -800,6 +856,8 @@ export class BackgroundApplication {
 
     /**
      * Derives popup state from the active tab, settings, and document runtime status.
+     *
+     * @returns - Popup state derived from current tab and background state.
      */
     private async derivePopupState(): Promise<PopupState> {
         if (this.phaseValue !== "ready" || !this.snapshot) {
@@ -849,6 +907,8 @@ export class BackgroundApplication {
 
     /**
      * Builds the sorted site list from adapters and explicit preferences.
+     *
+     * @returns - Sorted effective site-preferences state.
      */
     private deriveSitesState(): SitesState {
         if (this.phaseValue !== "ready" || !this.snapshot) {
@@ -871,6 +931,8 @@ export class BackgroundApplication {
 
     /**
      * Returns and caches popup state after initialization and lifecycle reconciliation.
+     *
+     * @returns - Current popup state after background initialization.
      */
     public async getPopupState(): Promise<PopupState> {
         await this.ensureReady("cold-worker");
@@ -884,6 +946,8 @@ export class BackgroundApplication {
 
     /**
      * Returns the current site-preferences state after lifecycle reconciliation.
+     *
+     * @returns - Current sites state after background initialization.
      */
     public async getSitesState(): Promise<SitesState> {
         await this.ensureReady("cold-worker");
@@ -893,6 +957,8 @@ export class BackgroundApplication {
 
     /**
      * Builds diagnostic logging state from the current settings snapshot.
+     *
+     * @returns - Diagnostic logging state derived from the current snapshot.
      */
     private debugState(): DebugState {
         if (this.phaseValue !== "ready" || !this.snapshot) {
@@ -908,6 +974,8 @@ export class BackgroundApplication {
 
     /**
      * Returns current diagnostic logging state after lifecycle reconciliation.
+     *
+     * @returns - Current diagnostic logging state after initialization.
      */
     public async getDebugState(): Promise<DebugState> {
         await this.ensureReady("cold-worker");
@@ -917,6 +985,8 @@ export class BackgroundApplication {
 
     /**
      * Reads persisted diagnostics when diagnostic logging and its journal are available.
+     *
+     * @returns - Persisted diagnostics snapshot or a contained availability error.
      */
     public async getDiagnosticsSnapshot(): Promise<GetDiagnosticsSnapshotResponse> {
         await this.ensureReady("cold-worker");
@@ -945,6 +1015,8 @@ export class BackgroundApplication {
 
     /**
      * Clears persisted diagnostics when diagnostic logging and its journal are available.
+     *
+     * @returns - Diagnostics clear result or a contained availability error.
      */
     public async clearDiagnostics(): Promise<ClearDiagnosticsResponse> {
         await this.ensureReady("cold-worker");
@@ -962,6 +1034,9 @@ export class BackgroundApplication {
 
     /**
      * Replaces document-supplied environment metadata with trusted background values.
+     *
+     * @param event - Sanitized document diagnostic event.
+     * @returns - Event with adapter and extension metadata replaced by trusted values.
      */
     private trustedDiagnosticEvent(event: DiagnosticEvent): DiagnosticEvent {
         const trusted = { ...event };
@@ -981,6 +1056,8 @@ export class BackgroundApplication {
 
     /**
      * Appends a sanitized background diagnostic event without blocking background work.
+     *
+     * @param input - Background diagnostic event to sanitize and append.
      */
     private logBackgroundEvent(input: DiagnosticEventInput): void {
         if (!this.snapshot?.debugEnabled || !this.journal) {
@@ -999,6 +1076,10 @@ export class BackgroundApplication {
 
     /**
      * Validates and records a top-frame document diagnostic event for an enabled adapter.
+     *
+     * @param input - Untrusted document diagnostic event payload.
+     * @param sender - WebExtension sender metadata for the document.
+     * @returns - Whether a valid enabled top-frame event was accepted.
      */
     public async recordDocumentEvent(
         input: unknown,
@@ -1025,6 +1106,8 @@ export class BackgroundApplication {
 
     /**
      * Builds display state and flags an unavailable configured IANA time zone.
+     *
+     * @returns - Display state derived from the current settings snapshot.
      */
     private displayState(): DisplayState {
         if (this.phaseValue !== "ready" || !this.snapshot) {
@@ -1043,6 +1126,8 @@ export class BackgroundApplication {
 
     /**
      * Builds display state returned while settings cannot be used.
+     *
+     * @returns - Fail-closed display state for unavailable settings.
      */
     private unavailableDisplayState(): DisplayState {
         return {
@@ -1055,6 +1140,9 @@ export class BackgroundApplication {
 
     /**
      * Checks whether the runtime supports an IANA time-zone identifier.
+     *
+     * @param identifier - Structurally valid IANA time-zone identifier.
+     * @returns - Whether the current runtime can resolve the identifier.
      */
     private isZoneAvailable(identifier: string): boolean {
         try {
@@ -1067,6 +1155,8 @@ export class BackgroundApplication {
 
     /**
      * Returns current display settings after lifecycle reconciliation.
+     *
+     * @returns - Current display state after background initialization.
      */
     public async getDisplayState(): Promise<DisplayState> {
         await this.ensureReady("cold-worker");
@@ -1076,6 +1166,10 @@ export class BackgroundApplication {
 
     /**
      * Notifies matching enabled-site tabs of a diagnostic-policy revision and collects failures.
+     *
+     * @param enabled - New diagnostic forwarding policy.
+     * @param revision - Settings revision associated with the policy.
+     * @returns - Per-tab diagnostic-policy refresh failures.
      */
     private async refreshDebugPolicyTabs(enabled: boolean, revision: number): Promise<readonly DebugRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) {
@@ -1114,6 +1208,9 @@ export class BackgroundApplication {
 
     /**
      * Persists the diagnostic logging setting and notifies matching enabled-site tabs.
+     *
+     * @param enabled - Requested diagnostic logging state.
+     * @returns - Persisted state and any document refresh failures.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
         await this.ensureReady("cold-worker");
@@ -1168,6 +1265,10 @@ export class BackgroundApplication {
 
     /**
      * Sends a display-settings revision to matching enabled-site tabs and collects failures.
+     *
+     * @param display - Validated display settings to send to documents.
+     * @param revision - Settings revision associated with the display settings.
+     * @returns - Per-tab display refresh failures.
      */
     private async refreshDisplayTabs(display: DisplaySettings, revision: number): Promise<readonly DisplayRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) {
@@ -1214,6 +1315,9 @@ export class BackgroundApplication {
 
     /**
      * Validates and persists display settings, then refreshes matching enabled-site tabs.
+     *
+     * @param display - Untrusted display settings to validate and persist.
+     * @returns - Persisted display state and any document refresh failures.
      */
     public async setDisplaySettings(display: unknown): Promise<SetDisplaySettingsResponse> {
         await this.ensureReady("cold-worker");
@@ -1257,6 +1361,8 @@ export class BackgroundApplication {
 
     /**
      * Restores defaults, clears diagnostics, and reconciles runtime activation.
+     *
+     * @returns - Reset result and fully reconciled default settings state.
      */
     public async resetAllSettings(): Promise<ResetAllSettingsResponse> {
         await this.ensureReady("cold-worker");
@@ -1317,6 +1423,9 @@ export class BackgroundApplication {
 
     /**
      * Persists global activation and reconciles every runtime adapter.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Persisted global state and fully reconciled popup state.
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SetGlobalEnabledResponse> {
         await this.ensureReady("cold-worker");
@@ -1361,6 +1470,9 @@ export class BackgroundApplication {
 
     /**
      * Reports whether the last reconciliation contains a failure for an adapter.
+     *
+     * @param adapterId - Adapter identifier to inspect.
+     * @returns - Whether the latest reconciliation records its failure.
      */
     private hasFailureForAdapter(adapterId: string): boolean {
         return (this.lastReconcile?.failures ?? []).some((failure) => failureBelongsToAdapter(failure, adapterId));
@@ -1368,6 +1480,11 @@ export class BackgroundApplication {
 
     /**
      * Persists the requested change and updates affected documents.
+     *
+     * @param hostname - Canonical hostname whose override is changing.
+     * @param enabled - Requested site activation state.
+     * @param surface - Response projection requested by the caller.
+     * @returns - Persisted update and reconciled popup or sites state.
      */
     public async setSiteEnabled(
         hostname: string,

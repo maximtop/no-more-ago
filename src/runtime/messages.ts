@@ -168,6 +168,9 @@ export interface DocumentStatusResponse {
 
 /**
  * Recognizes an object containing only the document-teardown command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is an exact teardown command.
  */
 export function isTeardownDocumentMessage(value: unknown): value is TeardownDocumentMessage {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -179,6 +182,9 @@ export function isTeardownDocumentMessage(value: unknown): value is TeardownDocu
 
 /**
  * Recognizes an object containing only the document-status command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is an exact status command.
  */
 export function isDocumentStatusMessage(value: unknown): value is DocumentStatusMessage {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -190,6 +196,9 @@ export function isDocumentStatusMessage(value: unknown): value is DocumentStatus
 
 /**
  * Recognizes a document-status reply with a supported lifecycle phase.
+ *
+ * @param value - Untrusted runtime response.
+ * @returns - Whether the value is a valid document status response.
  */
 export function isDocumentStatusResponse(value: unknown): value is DocumentStatusResponse {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -203,6 +212,9 @@ export function isDocumentStatusResponse(value: unknown): value is DocumentStatu
 
 /**
  * Recognizes non-array object values used as message records.
+ *
+ * @param value - Untrusted value to inspect.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -210,6 +222,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Recognizes non-negative safe-integer message revisions.
+ *
+ * @param value - Untrusted revision value.
+ * @returns - Whether the value is a non-negative safe integer.
  */
 function isSafeRevision(value: unknown): value is number {
     return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -217,6 +232,9 @@ function isSafeRevision(value: unknown): value is number {
 
 /**
  * Recognizes display settings accepted by the settings snapshot validator.
+ *
+ * @param value - Untrusted display-settings value.
+ * @returns - Whether the value is a valid presentation display.
  */
 export function isPresentationDisplay(value: unknown): value is DisplaySettings {
     return isDisplaySettings(value);
@@ -224,6 +242,9 @@ export function isPresentationDisplay(value: unknown): value is DisplaySettings 
 
 /**
  * Recognizes a complete presentation-update command with valid settings and revision.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is a valid presentation update command.
  */
 export function isPresentationUpdateMessage(value: unknown): value is PresentationUpdateMessage {
     return isRecord(value)
@@ -238,6 +259,10 @@ export function isPresentationUpdateMessage(value: unknown): value is Presentati
 
 /**
  * Recognizes a presentation acknowledgement, optionally for one expected revision.
+ *
+ * @param value - Untrusted runtime response.
+ * @param expectedRevision - Revision the acknowledgement must match, when supplied.
+ * @returns - Whether the value is a valid presentation acknowledgement.
  */
 export function isPresentationUpdateAcknowledgement(
     value: unknown,
@@ -256,6 +281,9 @@ export function isPresentationUpdateAcknowledgement(
 
 /**
  * Recognizes a complete diagnostic-policy update command with a boolean enabled flag.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is a valid diagnostic-policy update command.
  */
 export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicyUpdateMessage {
     return isRecord(value)
@@ -270,6 +298,10 @@ export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicy
 
 /**
  * Recognizes a diagnostic-policy acknowledgement, optionally for one expected revision.
+ *
+ * @param value - Untrusted runtime response.
+ * @param expectedRevision - Revision the acknowledgement must match, when supplied.
+ * @returns - Whether the value is a valid diagnostic-policy acknowledgement.
  */
 export function isDebugPolicyUpdateAcknowledgement(
     value: unknown,
@@ -288,6 +320,9 @@ export function isDebugPolicyUpdateAcknowledgement(
 
 /**
  * Recognizes a diagnostic event with an allowed category and telemetry-field names.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is a valid bounded diagnostic event message.
  */
 export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEventMessage {
     if (!isRecord(value)

@@ -32,6 +32,10 @@ const SYSTEM_DISPLAY: DisplaySettings = Object.freeze({ formatMode: "system", ti
 
 /**
  * Formats an instant with the browser's locale and system time zone.
+ *
+ * @param instant - Valid timestamp to format.
+ * @param locales - Preferred locale tags in display order.
+ * @returns - Localized date and time in the system time zone.
  */
 function systemFormat(instant: Date, locales: readonly string[]): string {
     const options = { dateStyle: "medium", timeStyle: "short" } as const;
@@ -40,6 +44,9 @@ function systemFormat(instant: Date, locales: readonly string[]): string {
 
 /**
  * Uses Intl.DateTimeFormat construction to confirm a named zone is supported at runtime.
+ *
+ * @param identifier - Structurally valid IANA time-zone identifier.
+ * @returns - Whether the current runtime can format in that zone.
  */
 export function isTimeZoneAvailable(identifier: string): boolean {
     try {
@@ -52,6 +59,10 @@ export function isTimeZoneAvailable(identifier: string): boolean {
 /**
  * Formats an instant through the system locale and time zone; it is the safe fallback for an
  * unavailable named zone or an invalid custom presentation.
+ *
+ * @param instant - Valid timestamp to format.
+ * @param locales - Preferred locale tags in display order.
+ * @returns - Safely formatted date and time using system presentation.
  */
 export function formatDefaultDate(instant: Date, locales: readonly string[]): string {
     return systemFormat(instant, locales);
@@ -60,6 +71,12 @@ export function formatDefaultDate(instant: Date, locales: readonly string[]): st
 /**
  * Applies validated display choices and reports an empty result with an error code when a custom
  * pattern fails or a requested named zone is unavailable.
+ *
+ * @param instant - Valid timestamp to format.
+ * @param locales - Preferred locale tags in display order.
+ * @param display - Validated format and time-zone choices.
+ * @param available - Capability check for named time zones.
+ * @returns - Formatted text and effective zone, or an explicit presentation error.
  */
 export function formatDateWithPresentation(
     instant: Date,

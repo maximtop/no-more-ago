@@ -77,6 +77,9 @@ interface DisplayStateLike {
 
 /**
  * Recognizes non-negative safe-integer message revisions.
+ *
+ * @param value - Untrusted persisted-state revision.
+ * @returns - Whether the value is a non-negative safe integer.
  */
 function isSafeRevision(value: unknown): value is number {
     return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -84,6 +87,9 @@ function isSafeRevision(value: unknown): value is number {
 
 /**
  * Recognizes a ready persisted-state response, including its optional time-zone warning.
+ *
+ * @param value - Untrusted persisted-state response.
+ * @returns - Whether the value contains valid ready display state.
  */
 function isDisplayState(value: unknown): value is DisplayStateLike {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -186,6 +192,10 @@ interface RuntimeSlot {
 
 /**
  * Stores an accepted presentation revision and exposes its display settings to the controller.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param display - Validated presentation settings to expose.
+ * @param revision - Accepted settings revision.
  */
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
     slot.presentation = display;
@@ -195,6 +205,10 @@ function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision
 
 /**
  * Updates diagnostic forwarding and installs or removes the controller's sink.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param enabled - Whether document diagnostics should be forwarded.
+ * @param revision - Accepted diagnostic-policy revision.
  */
 function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number): void {
     slot.debugEnabled = enabled;
@@ -217,6 +231,9 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
 
 /**
  * Starts the controller once both state hydration and document readiness succeed.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param generation - Activation generation allowed to start the controller.
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (slot.phase !== "waiting" || slot.generation !== generation || !slot.documentReady || slot.presentation === undefined) {
@@ -241,6 +258,9 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
 
 /**
  * Waits for DOMContentLoaded when necessary before allowing controller startup.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param generation - Activation generation waiting for document readiness.
  */
 function waitForDocument(slot: RuntimeSlot, generation: number): void {
     if (slot.document.readyState !== "loading") {
@@ -264,6 +284,10 @@ function waitForDocument(slot: RuntimeSlot, generation: number): void {
 
 /**
  * Loads persisted state, applies its revisions, then advances document startup.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param generation - Activation generation being hydrated.
+ * @param loader - Optional persisted-state loader.
  */
 function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Promise<unknown>) | undefined): void {
     if (!loader) {
@@ -312,6 +336,9 @@ function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Pr
 
 /**
  * Resets a stopped runtime and begins a new state-hydration generation.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param loader - Optional persisted-state loader.
  */
 function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefined): void {
     if (slot.phase === "waiting" || slot.phase === "active") {
@@ -332,6 +359,8 @@ function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefine
 
 /**
  * Stops the controller and clears state retained by the current runtime generation.
+ *
+ * @param slot - Singleton runtime state to stop and clear.
  */
 function teardown(slot: RuntimeSlot): void {
     slot.generation += 1;
@@ -352,6 +381,9 @@ function teardown(slot: RuntimeSlot): void {
 
 /**
  * Creates the acknowledgement for an applied presentation revision.
+ *
+ * @param revision - Presentation revision successfully applied.
+ * @returns - Runtime acknowledgement for that presentation revision.
  */
 function presentationAcknowledgement(revision: number): PresentationUpdateAcknowledgement {
     return { type: PRESENTATION_UPDATED_MESSAGE, revision };
@@ -359,6 +391,9 @@ function presentationAcknowledgement(revision: number): PresentationUpdateAcknow
 
 /**
  * Creates the acknowledgement for an applied diagnostic-policy revision.
+ *
+ * @param revision - Diagnostic-policy revision successfully applied.
+ * @returns - Runtime acknowledgement for that diagnostic-policy revision.
  */
 function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgement {
     return { type: DEBUG_POLICY_UPDATED_MESSAGE, revision };
@@ -366,6 +401,17 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
 
 /**
  * Installs or reactivates the document's singleton content runtime.
+ *
+ * @param input - Document, adapter, presentation, and messaging dependencies.
+ * @param input.document - Page document owned by this runtime.
+ * @param input.url - Current page URL used for adapter selection.
+ * @param input.locales - Static preferred locale tags.
+ * @param input.localesProvider - Dynamic source of preferred locale tags.
+ * @param input.registry - Trusted adapter registry override.
+ * @param input.loadDisplayState - Background display-state loader.
+ * @param input.reportDiagnostic - Background diagnostic event reporter.
+ * @param input.messages - Runtime message event source.
+ * @returns - Installed singleton runtime handle.
  */
 export function installContentRuntime(input: {
     readonly document: Document;

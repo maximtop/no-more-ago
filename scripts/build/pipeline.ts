@@ -100,6 +100,10 @@ const defaultCompilerFactory = rspack as unknown as CompilerFactory;
 
 /**
  * Rejects invalid CLI arguments and returns the normalized mode, browser list, and watch flag.
+ *
+ * @param mode - Requested build mode.
+ * @param argv - Browser and watch arguments supplied after the mode.
+ * @returns - Normalized build request.
  */
 export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
     if (!MODES.includes(mode)) {
@@ -134,6 +138,8 @@ export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
 export class UsageError extends Error {
     /**
      * Creates an actionable CLI error whose message includes the supported build invocation.
+     *
+     * @param message - Specific command-line usage error.
      */
     constructor(message: string) {
         super(`${message}\n${USAGE}`); this.name = "UsageError";
@@ -142,6 +148,10 @@ export class UsageError extends Error {
 
 /**
  * Removes an incomplete candidate artifact left after a recoverable build failure.
+ *
+ * @param artifacts - Guarded artifact services used for cleanup.
+ * @param candidate - Incomplete candidate directory to remove.
+ * @param error - Build error to enrich if cleanup also fails.
  */
 function removeRecoverableCandidate(artifacts: ArtifactServices, candidate: string, error: BuildError): void {
     try {
@@ -153,6 +163,10 @@ function removeRecoverableCandidate(artifacts: ArtifactServices, candidate: stri
 
 /**
  * Runs one compiler instance and resolves only after its resources are closed.
+ *
+ * @param config - Rspack configuration passed to the compiler factory.
+ * @param compilerFactory - Factory used to construct the compiler.
+ * @returns - Compiler statistics after a successful closed run.
  */
 function compileOnce(config: unknown, compilerFactory: CompilerFactory = defaultCompilerFactory): Promise<CompilerStats | undefined> {
     return new Promise((resolve, reject) => {
@@ -192,6 +206,12 @@ function compileOnce(config: unknown, compilerFactory: CompilerFactory = default
 
 /**
  * Extracts matching directory and ZIP artifacts from compiler output.
+ *
+ * @param input - Compilation output and artifact dependencies.
+ * @param input.outputPath - Directory emitted by the compiler.
+ * @param input.taskRoot - Temporary root for this build task.
+ * @param input.artifacts - Guarded artifact services.
+ * @returns - Validated unpacked directory and matching ZIP bytes.
  */
 function pairFromCompilation({ outputPath, taskRoot, artifacts }: { outputPath: string; taskRoot: string; artifacts: ArtifactServices }): { directory: string; zipBytes: Buffer } {
     const generation = mkdtempSync(path.join(taskRoot, ".generation-"));
@@ -207,6 +227,16 @@ function pairFromCompilation({ outputPath, taskRoot, artifacts }: { outputPath: 
 
 /**
  * Compiles and packages every requested browser variant before publishing a complete mode root.
+ *
+ * @param context - Fully resolved build dependencies and targets.
+ * @param context.workspaceRoot - Absolute project workspace path.
+ * @param context.mode - Validated build mode.
+ * @param context.browsers - Browser targets to compile.
+ * @param context.taskRoot - Temporary root for this build task.
+ * @param context.artifacts - Guarded artifact services.
+ * @param context.compilerFactory - Factory used to construct compilers.
+ * @param context.events - Build progress event sink.
+ * @returns - Validated artifact pair for each requested browser.
  */
 async function buildAll({ workspaceRoot, mode, browsers, taskRoot, artifacts, compilerFactory, events }: BuildContext): Promise<Record<string, { directory: string; zipBytes: Buffer }>> {
     const pairs: Record<string, { directory: string; zipBytes: Buffer }> = {};
@@ -234,6 +264,16 @@ async function buildAll({ workspaceRoot, mode, browsers, taskRoot, artifacts, co
 
 /**
  * Runs the requested build or watch workflow from validated command-line options.
+ *
+ * @param options - Command inputs and injectable build dependencies.
+ * @param options.workspaceRoot - Project workspace path.
+ * @param options.mode - Requested build mode.
+ * @param options.argv - Browser and watch arguments.
+ * @param options.compilerFactory - Factory used to construct compilers.
+ * @param options.artifacts - Guarded artifact services.
+ * @param options.events - Build progress event sink.
+ * @param options.phaseHooks - Testable lifecycle hooks for task cleanup.
+ * @returns - Watch completion promise, or no value after a one-off build.
  */
 export async function runBuildCommand({ workspaceRoot = process.cwd(), mode, argv = [], compilerFactory = defaultCompilerFactory, artifacts = createArtifactServices(), events = () => undefined, phaseHooks = {} }: BuildOptions): Promise<Promise<void> | void> {
     const request = parseBuildRequest(mode, argv);
@@ -270,6 +310,16 @@ export async function runBuildCommand({ workspaceRoot = process.cwd(), mode, arg
 /**
  * Starts one compiler watch per requested browser, publishes only complete artifact pairs, and
  * resolves after the first successful publication or rejects after a compiler failure.
+ *
+ * @param input - Resolved watch workflow dependencies.
+ * @param input.workspaceRoot - Absolute project workspace path.
+ * @param input.request - Validated single-browser watch request.
+ * @param input.taskRoot - Temporary root retained for watch generations.
+ * @param input.compilerFactory - Factory used to construct the compiler.
+ * @param input.artifacts - Guarded artifact services.
+ * @param input.events - Build progress event sink.
+ * @param input.phaseHooks - Testable lifecycle hooks for cleanup.
+ * @returns - Promise settled after the watcher closes and cleanup completes.
  */
 function startWatch({ workspaceRoot, request, taskRoot, compilerFactory, artifacts, events, phaseHooks }: { workspaceRoot: string; request: BuildRequest; taskRoot: string; compilerFactory: CompilerFactory; artifacts: ArtifactServices; events: EventSink; phaseHooks: PhaseHooks }): Promise<void> {
     const browser = request.browsers[0];

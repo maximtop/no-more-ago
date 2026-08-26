@@ -28,6 +28,8 @@ import type { TabsRuntime } from "../runtime/tabs";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for incomplete shims.
+ *
+ * @returns - Configured application, or undefined when required Chrome APIs are unavailable.
  */
 function installApplication(): BackgroundApplication | undefined {
     const candidate = chrome as unknown as {
@@ -93,6 +95,9 @@ const application = installApplication();
 
 /**
  * Accepts only messages sent from this extension's options page.
+ *
+ * @param sender - Untrusted runtime message sender metadata.
+ * @returns - Whether the sender is this extension's options page.
  */
 function isTrustedOptionsSender(sender: unknown): boolean {
     if (typeof sender !== "object" || sender === null || !Object.hasOwn(sender, "url")) {

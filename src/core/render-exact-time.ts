@@ -69,6 +69,9 @@ const SOURCE_MARKER = /^(visible|hidden):(.+)$/;
 
 /**
  * Decodes a source marker only when it carries the extension's expected ownership prefix and token.
+ *
+ * @param value - Candidate ownership marker value.
+ * @returns - Decoded ownership token, or null when the marker is foreign or malformed.
  */
 function parseSourceMarker(value: string | null): { state: "visible" | "hidden"; token: string } | null {
     const match = value?.match(SOURCE_MARKER);
@@ -85,6 +88,9 @@ function parseSourceMarker(value: string | null): { state: "visible" | "hidden";
 
 /**
  * Retrieves the ownership records associated with a document.
+ *
+ * @param document - Document whose ownership registry is requested.
+ * @returns - Mutable ownership records retained for the document.
  */
 function getRecords(document: Document): Map<Element, OwnedPairRecord> {
     const existing = recordsByDocument.get(document);
@@ -98,6 +104,9 @@ function getRecords(document: Document): Map<Element, OwnedPairRecord> {
 
 /**
  * Generates an opaque token that prevents unrelated page nodes from claiming extension ownership.
+ *
+ * @param document - Document whose crypto source generates the token.
+ * @returns - New opaque ownership token.
  */
 function createToken(document: Document): string | null {
     const crypto = document.defaultView?.crypto;
@@ -109,6 +118,9 @@ function createToken(document: Document): string | null {
 
 /**
  * Builds the marker that lets restoration verify an unchanged source element.
+ *
+ * @param record - Ownership record for the source-output pair.
+ * @returns - Exact marker expected on the source element.
  */
 function expectedSourceMarker(record: OwnedPairRecord): string {
     return `${record.sourceWasHidden ? "hidden" : "visible"}:${record.token}`;
@@ -116,6 +128,9 @@ function expectedSourceMarker(record: OwnedPairRecord): string {
 
 /**
  * Builds the marker that lets restoration verify an extension-owned output node.
+ *
+ * @param record - Ownership record for the source-output pair.
+ * @returns - Exact marker expected on the generated output.
  */
 function expectedOutputMarker(record: OwnedPairRecord): string {
     return record.token;
@@ -123,6 +138,10 @@ function expectedOutputMarker(record: OwnedPairRecord): string {
 
 /**
  * Updates a generated time element while retaining the source-to-output link.
+ *
+ * @param output - Verified extension-owned time element to update.
+ * @param datetime - Trusted source datetime preserved on the output.
+ * @param text - Newly formatted exact date text.
  */
 function updateOutput(output: HTMLTimeElement, datetime: string, text: string): void {
     output.dateTime = datetime;
@@ -131,6 +150,9 @@ function updateOutput(output: HTMLTimeElement, datetime: string, text: string): 
 
 /**
  * Resolves a generated output node back to its source only after marker verification succeeds.
+ *
+ * @param node - Candidate generated output node.
+ * @returns - Verified connected source element, or null when ownership fails.
  */
 export function getOwnedSourceForOutput(node: Node): Element | null {
     const document = node.ownerDocument;
@@ -155,6 +177,9 @@ export function getOwnedSourceForOutput(node: Node): Element | null {
 /**
  * Returns only connected, marker-verified sources already owned by this
  * document. It never scans the DOM and never discovers new candidates.
+ *
+ * @param document - Document whose owned sources are requested.
+ * @returns - Connected and marker-verified source entries.
  */
 export function getOwnedSourceEntries(document: Document): readonly OwnedSourceEntry[] {
     const records = recordsByDocument.get(document);
@@ -180,6 +205,11 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
 /**
  * Reuses or creates an extension-owned time node, hides its source when required, and returns
  * null rather than adopting markup whose ownership marker cannot be verified.
+ *
+ * @param source - Page-owned time element selected by a trusted adapter.
+ * @param datetime - Trusted source datetime to preserve on the generated node.
+ * @param text - Exact formatted date text to display.
+ * @returns - Verified generated time element, or null on an ownership conflict.
  */
 export function renderExactTime(
     source: Element,
@@ -237,6 +267,9 @@ export function renderExactTime(
 /**
  * Removes a marker-verified generated node, restores the source visibility captured at render
  * time, and notifies the optional mutation sink before page-visible state changes.
+ *
+ * @param record - Marker-verified source-output ownership record.
+ * @param mutations - Optional sink notified before owned output removal.
  */
 function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationSink): void {
     const { source, output } = record;
@@ -257,6 +290,9 @@ function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationS
 /**
  * Removes a marker-verified generated output, restores source visibility, and records the
  * removal for callers that need to reverse the mutation later.
+ *
+ * @param source - Page-owned source element to restore.
+ * @param mutations - Optional sink notified before owned output removal.
  */
 export function restoreExactTime(source: Element, mutations?: OwnedOutputMutationSink): void {
     const records = recordsByDocument.get(source.ownerDocument);
@@ -271,6 +307,9 @@ export function restoreExactTime(source: Element, mutations?: OwnedOutputMutatio
 /**
  * Restores every marker-verified owned pair below a root, then removes its ownership records so
  * later processing can discover the source again.
+ *
+ * @param root - Document or element subtree whose owned pairs are restored.
+ * @param mutations - Optional sink notified before each owned output removal.
  */
 export function restoreExactTimes(root: ParentNode, mutations?: OwnedOutputMutationSink): void {
     const rootNode = root as Node;

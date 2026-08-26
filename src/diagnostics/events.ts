@@ -185,6 +185,9 @@ const MAX_STACK_FRAMES = 16;
 
 /**
  * Accepts a plain object before reading untrusted event fields.
+ *
+ * @param value - Untrusted event value to inspect.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -192,6 +195,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Bounds an untrusted numeric field to a finite non-negative value.
+ *
+ * @param value - Untrusted numeric field.
+ * @param maximum - Largest accepted finite value.
+ * @returns - Bounded non-negative number, or undefined when invalid.
  */
 function safeNumber(value: unknown, maximum: number): number | undefined {
     return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= maximum ? value : undefined;
@@ -199,6 +206,9 @@ function safeNumber(value: unknown, maximum: number): number | undefined {
 
 /**
  * Accepts a short printable extension version for diagnostic output.
+ *
+ * @param value - Untrusted extension-version field.
+ * @returns - Safe printable version, or undefined when invalid.
  */
 function safeVersion(value: unknown): string | undefined {
     return typeof value === "string" && VERSION.test(value) ? value : undefined;
@@ -206,6 +216,9 @@ function safeVersion(value: unknown): string | undefined {
 
 /**
  * Redacts and truncates stack text before it reaches persistent diagnostics.
+ *
+ * @param value - Untrusted error stack field.
+ * @returns - Redacted bounded stack lines, or undefined when unavailable.
  */
 function scrubStack(value: unknown): readonly string[] | undefined {
     if (typeof value !== "string") {
@@ -229,6 +242,9 @@ function scrubStack(value: unknown): readonly string[] | undefined {
 
 /**
  * Maps a page path to a finite category without retaining the original path.
+ *
+ * @param pathname - Page URL pathname that is never persisted verbatim.
+ * @returns - Finite diagnostic page category.
  */
 export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
     for (const [pattern, category] of PAGE_PATHS) {
@@ -241,6 +257,9 @@ export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
 
 /**
  * Derive durable context from a trusted WebExtension sender, never page fields.
+ *
+ * @param sender - Trusted WebExtension message sender metadata.
+ * @returns - Durable diagnostic context, or null for an invalid sender.
  */
 export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticContext | null {
     if (typeof sender.url !== "string") {
@@ -264,6 +283,11 @@ export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticCon
 
 /**
  * Validates and redacts event input before it enters the diagnostic journal.
+ *
+ * @param input - Untrusted diagnostic event payload.
+ * @param context - Trusted sender-derived environment metadata.
+ * @param now - Trusted event timestamp in milliseconds.
+ * @returns - Sanitized bounded event, or null when validation fails.
  */
 export function sanitizeDiagnosticEvent(input: unknown, context: DiagnosticContext, now = Date.now()): DiagnosticEvent | null {
     if (!isRecord(input) || !isRecord(context)) {
@@ -336,6 +360,11 @@ export function sanitizeDiagnosticEvent(input: unknown, context: DiagnosticConte
 
 /**
  * Derives trusted sender context and returns a sanitized event, or null for an invalid sender or payload.
+ *
+ * @param input - Untrusted diagnostic event payload.
+ * @param sender - Trusted WebExtension message sender metadata.
+ * @param now - Trusted event timestamp in milliseconds.
+ * @returns - Sanitized bounded event, or null when sender or payload is invalid.
  */
 export function createDiagnosticEvent(input: unknown, sender: DiagnosticSender, now = Date.now()): DiagnosticEvent | null {
     const context = deriveDiagnosticContext(sender);

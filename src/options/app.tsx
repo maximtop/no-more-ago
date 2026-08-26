@@ -325,6 +325,13 @@ function siteReportErrorText(error: string): string {
 /**
  * Renders and coordinates the options settings controls.
  *
+ * @param props - Optional dependencies and preloaded options state.
+ * @param props.client - Settings client override.
+ * @param props.initialState - Preloaded site settings state.
+ * @param props.initialDisplayState - Preloaded display settings state.
+ * @param props.initialDebugState - Preloaded diagnostic logging state.
+ * @param props.archiveRuntime - Diagnostics archive download runtime.
+ * @param props.reporter - Site-report service override.
  * @returns The options React view.
  */
 export function OptionsApp({ client: suppliedClient, initialState, initialDisplayState, initialDebugState, archiveRuntime, reporter: suppliedReporter }: SitesAppProps): ReactElement {

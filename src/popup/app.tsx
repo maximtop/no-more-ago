@@ -113,6 +113,10 @@ function siteReportErrorText(error: SiteReportError): string {
 /**
  * Renders and coordinates the popup settings controls.
  *
+ * @param props - Optional dependencies and preloaded popup state.
+ * @param props.client - Popup settings client override.
+ * @param props.initialState - Preloaded popup state.
+ * @param props.reporter - Site-report service override.
  * @returns The popup React view.
  */
 export function PopupApp({ client: suppliedClient, initialState, reporter: suppliedReporter }: PopupAppProps): ReactElement {

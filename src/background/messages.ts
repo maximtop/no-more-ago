@@ -258,6 +258,9 @@ export type BackgroundResponse = PopupState | SitesState | DisplayState | DebugS
 
 /**
  * Recognizes a non-array object suitable for message-shape validation.
+ *
+ * @param value - Untrusted background message value.
+ * @returns - Whether the value is a non-array object record.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -265,6 +268,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Recognizes the exact get-popup-state request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact popup-state request.
  */
 export function isGetPopupStateMessage(value: unknown): value is GetPopupStateMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === GET_POPUP_STATE_MESSAGE;
@@ -272,6 +278,9 @@ export function isGetPopupStateMessage(value: unknown): value is GetPopupStateMe
 
 /**
  * Recognizes a set-global-enabled request with a boolean enabled flag.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is a valid global-activation update request.
  */
 export function isSetGlobalEnabledMessage(value: unknown): value is SetGlobalEnabledMessage {
     return isRecord(value)
@@ -284,6 +293,9 @@ export function isSetGlobalEnabledMessage(value: unknown): value is SetGlobalEna
 
 /**
  * Recognizes the exact get-sites-state request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact sites-state request.
  */
 export function isGetSitesStateMessage(value: unknown): value is GetSitesStateMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === GET_SITES_STATE_MESSAGE;
@@ -291,6 +303,9 @@ export function isGetSitesStateMessage(value: unknown): value is GetSitesStateMe
 
 /**
  * Recognizes a set-site-enabled request with hostname, boolean flag, and response surface.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is a valid site-activation update request.
  */
 export function isSetSiteEnabledMessage(value: unknown): value is SetSiteEnabledMessage {
     return isRecord(value)
@@ -307,6 +322,9 @@ export function isSetSiteEnabledMessage(value: unknown): value is SetSiteEnabled
 
 /**
  * Recognizes the exact get-display-state request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact display-state request.
  */
 export function isGetDisplayStateMessage(value: unknown): value is GetDisplayStateMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === GET_DISPLAY_STATE_MESSAGE;
@@ -314,6 +332,9 @@ export function isGetDisplayStateMessage(value: unknown): value is GetDisplaySta
 
 /**
  * Recognizes a set-display-settings request with an arbitrary display payload.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is a valid display-settings update request.
  */
 export function isSetDisplaySettingsMessage(value: unknown): value is SetDisplaySettingsMessage {
     return isRecord(value)
@@ -325,6 +346,9 @@ export function isSetDisplaySettingsMessage(value: unknown): value is SetDisplay
 
 /**
  * Recognizes the exact reset-all-settings request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact reset-all-settings request.
  */
 export function isResetAllSettingsMessage(value: unknown): value is ResetAllSettingsMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === RESET_ALL_SETTINGS_MESSAGE;
@@ -332,6 +356,9 @@ export function isResetAllSettingsMessage(value: unknown): value is ResetAllSett
 
 /**
  * Recognizes the exact get-debug-state request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact diagnostic-state request.
  */
 export function isGetDebugStateMessage(value: unknown): value is GetDebugStateMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === GET_DEBUG_STATE_MESSAGE;
@@ -339,6 +366,9 @@ export function isGetDebugStateMessage(value: unknown): value is GetDebugStateMe
 
 /**
  * Recognizes a set-debug-enabled request with a boolean enabled flag.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is a valid diagnostic-policy update request.
  */
 export function isSetDebugEnabledMessage(value: unknown): value is SetDebugEnabledMessage {
     return isRecord(value)
@@ -351,6 +381,9 @@ export function isSetDebugEnabledMessage(value: unknown): value is SetDebugEnabl
 
 /**
  * Recognizes the exact get-diagnostics-snapshot request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact diagnostics-snapshot request.
  */
 export function isGetDiagnosticsSnapshotMessage(value: unknown): value is GetDiagnosticsSnapshotMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE;
@@ -358,6 +391,9 @@ export function isGetDiagnosticsSnapshotMessage(value: unknown): value is GetDia
 
 /**
  * Recognizes the exact clear-diagnostics request shape.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value is an exact clear-diagnostics request.
  */
 export function isClearDiagnosticsMessage(value: unknown): value is ClearDiagnosticsMessage {
     return isRecord(value) && Object.keys(value).length === 1 && Object.hasOwn(value, "type") && value.type === CLEAR_DIAGNOSTICS_MESSAGE;
@@ -365,6 +401,9 @@ export function isClearDiagnosticsMessage(value: unknown): value is ClearDiagnos
 
 /**
  * Recognizes a non-empty diagnostics snapshot with trusted environment metadata.
+ *
+ * @param value - Untrusted diagnostics snapshot.
+ * @returns - Whether the value is a non-empty snapshot with trusted metadata.
  */
 export function isDiagnosticsSnapshot(value: unknown): value is DiagnosticsSnapshot {
     if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 2 || !Object.hasOwn(value, "entries") || !Object.hasOwn(value, "environment") || !isDiagnosticJournalEntries(value.entries) || value.entries.length === 0) {
@@ -386,6 +425,9 @@ export function isDiagnosticsSnapshot(value: unknown): value is DiagnosticsSnaps
 
 /**
  * Recognizes a successful diagnostics snapshot or its documented error response.
+ *
+ * @param value - Untrusted diagnostics-snapshot response.
+ * @returns - Whether the value is a documented success or error response.
  */
 export function isGetDiagnosticsSnapshotResponse(value: unknown): value is GetDiagnosticsSnapshotResponse {
     if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok") || Object.keys(value).length !== 2) {
@@ -399,6 +441,9 @@ export function isGetDiagnosticsSnapshotResponse(value: unknown): value is GetDi
 
 /**
  * Recognizes a successful diagnostics clear result or its documented error response.
+ *
+ * @param value - Untrusted clear-diagnostics response.
+ * @returns - Whether the value is a documented success or error response.
  */
 export function isClearDiagnosticsResponse(value: unknown): value is ClearDiagnosticsResponse {
     if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || !Object.hasOwn(value, "ok")) {
@@ -412,6 +457,9 @@ export function isClearDiagnosticsResponse(value: unknown): value is ClearDiagno
 
 /**
  * Recognizes any request accepted by the background message listener.
+ *
+ * @param value - Untrusted background request.
+ * @returns - Whether the value matches any accepted background request.
  */
 export function isBackgroundMessage(value: unknown): value is BackgroundMessage {
     return isGetPopupStateMessage(value)
@@ -429,6 +477,9 @@ export function isBackgroundMessage(value: unknown): value is BackgroundMessage 
 
 /**
  * Recognizes ready or unavailable display state, including optional time-zone errors.
+ *
+ * @param value - Untrusted display-state response.
+ * @returns - Whether the value is a complete ready or unavailable display state.
  */
 export function isDisplayState(value: unknown): value is DisplayState {
     if (!isRecord(value)) {
@@ -462,6 +513,9 @@ export function isDisplayState(value: unknown): value is DisplayState {
 
 /**
  * Recognizes ready or unavailable diagnostic logging state.
+ *
+ * @param value - Untrusted diagnostic-state response.
+ * @returns - Whether the value is a complete ready or unavailable diagnostic state.
  */
 export function isDebugState(value: unknown): value is DebugState {
     if (!isRecord(value) || !Object.hasOwn(value, "availability")) {
@@ -488,6 +542,9 @@ export function isDebugState(value: unknown): value is DebugState {
 
 /**
  * Recognizes ready or unavailable popup state with its valid status and failure combinations.
+ *
+ * @param value - Untrusted popup-state response.
+ * @returns - Whether the value is a complete valid popup state.
  */
 export function isPopupState(value: unknown): value is PopupState {
     if (!isRecord(value)) {
@@ -519,6 +576,9 @@ export function isPopupState(value: unknown): value is PopupState {
 
 /**
  * Recognizes ready or unavailable site-preferences state.
+ *
+ * @param value - Untrusted sites-state response.
+ * @returns - Whether the value is a complete valid sites state.
  */
 export function isSitesState(value: unknown): value is SitesState {
     if (!isRecord(value)) {
@@ -550,6 +610,9 @@ export function isSitesState(value: unknown): value is SitesState {
 
 /**
  * Recognizes a global-activation update result and its popup state.
+ *
+ * @param value - Untrusted global-activation response.
+ * @returns - Whether the value contains a valid update result and popup state.
  */
 export function isSetGlobalEnabledResponse(value: unknown): value is SetGlobalEnabledResponse {
     if (!isRecord(value) || typeof value.ok !== "boolean" || !isPopupState(value.state)) {
@@ -566,6 +629,9 @@ export function isSetGlobalEnabledResponse(value: unknown): value is SetGlobalEn
 
 /**
  * Recognizes a site-activation update result and its surface-specific state.
+ *
+ * @param value - Untrusted site-activation response.
+ * @returns - Whether the value contains a valid surface-specific update result.
  */
 export function isSetSiteEnabledResponse(value: unknown): value is SetSiteEnabledResponse {
     if (!isRecord(value) || typeof value.ok !== "boolean") {
@@ -596,6 +662,9 @@ export function isSetSiteEnabledResponse(value: unknown): value is SetSiteEnable
 
 /**
  * Recognizes a display-settings update result and any tab refresh failures.
+ *
+ * @param value - Untrusted display-settings response.
+ * @returns - Whether the value contains a valid update result and refresh failures.
  */
 export function isSetDisplaySettingsResponse(value: unknown): value is SetDisplaySettingsResponse {
     if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDisplayState(value.state)) {
@@ -622,6 +691,9 @@ export function isSetDisplaySettingsResponse(value: unknown): value is SetDispla
 
 /**
  * Recognizes a reset-all-settings result and its site-preferences state.
+ *
+ * @param value - Untrusted reset-all-settings response.
+ * @returns - Whether the value contains a valid reset result and sites state.
  */
 export function isResetAllSettingsResponse(value: unknown): value is ResetAllSettingsResponse {
     if (!isRecord(value) || !Object.hasOwn(value, "ok") || typeof value.ok !== "boolean" || !Object.hasOwn(value, "state")) {
@@ -644,6 +716,9 @@ export function isResetAllSettingsResponse(value: unknown): value is ResetAllSet
 
 /**
  * Recognizes a diagnostic-logging update result and any tab refresh failures.
+ *
+ * @param value - Untrusted diagnostic-policy response.
+ * @returns - Whether the value contains a valid update result and refresh failures.
  */
 export function isSetDebugEnabledResponse(value: unknown): value is SetDebugEnabledResponse {
     if (!isRecord(value) || !Object.hasOwn(value, "ok") || !Object.hasOwn(value, "state") || typeof value.ok !== "boolean" || !isDebugState(value.state)) {
