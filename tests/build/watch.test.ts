@@ -176,7 +176,10 @@ describe("selected browser watch lifecycle", () => {
                 const originalPopupApp = readFileSync(`${workspace}/src/popup/app.tsx`, "utf8");
                 const originalPopupCss = readFileSync(`${workspace}/src/popup/styles.css`, "utf8");
                 const originalPopupHtml = readFileSync(`${workspace}/src/popup/popup.html`, "utf8");
-                const originalOptionsApp = readFileSync(`${workspace}/src/options/app.tsx`, "utf8");
+                const originalOptionsEntry = readFileSync(
+                    `${workspace}/src/options/main.tsx`,
+                    "utf8",
+                );
                 const originalOptionsCss = readFileSync(
                     `${workspace}/src/options/styles.css`,
                     "utf8",
@@ -300,11 +303,10 @@ describe("selected browser watch lifecycle", () => {
                 );
                 assertPopupArtifact("popup.html", "popup-html-watch-marker");
                 await change(
-                    `${workspace}/src/options/app.tsx`,
-                    originalOptionsApp.replace(
-                        "<Title order={2}>Settings</Title>",
-                        "<Title order={2}>Settings options-tsx-watch-marker</Title>",
-                    ),
+                    `${workspace}/src/options/main.tsx`,
+                    `${originalOptionsEntry}\n`
+                        + "document.documentElement.dataset.optionsWatchMarker = "
+                        + '"options-tsx-watch-marker";\n',
                 );
                 assertOptionsArtifact("options.js", "options-tsx-watch-marker");
                 await change(

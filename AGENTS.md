@@ -12,3 +12,12 @@
   clearer; the canonical union or finite value set must still own the allowed values.
 - One-off user-facing copy, self-explanatory local test data, and a literal whose serialized value
   is itself under test may remain inline.
+
+## Module boundaries
+
+- Keep source modules focused on one responsibility. Do not place an entire application surface
+  in one file.
+- Extract independently renderable UI sections, feature-specific state coordination, and domain
+  transformations into focused modules as they grow.
+- Prefer cohesive feature boundaries over moving a large implementation unchanged into a generic
+  helper or controller file.
