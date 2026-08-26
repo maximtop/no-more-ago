@@ -2,16 +2,13 @@
  * @file GitHub adapter that discovers and extracts trusted timestamp candidates.
  */
 
-import {
-    EXPLICIT_ZONED_DATETIME_RULE,
-    type SiteAdapter,
-    type TimestampSourceKind
-} from "./types";
+import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter, type TimestampSourceKind } from "./types";
 
 const APPROVED_KINDS = new Set<TimestampSourceKind>(["relative-time", "time-ago", "time-until"]);
 
 /**
- * GitHub-specific adapter that accepts only explicit-zone datetime attributes on supported time widgets.
+ * GitHub-specific adapter that accepts only explicit-zone datetime attributes on supported time
+ * widgets.
  */
 export const githubAdapter: SiteAdapter = {
     id: "github",
@@ -44,8 +41,8 @@ export const githubAdapter: SiteAdapter = {
                 source: element,
                 sourceKind,
                 rawDatetime,
-                timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+                timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
             }
             : null;
-    }
+    },
 };

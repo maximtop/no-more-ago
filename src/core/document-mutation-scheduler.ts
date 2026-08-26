@@ -8,7 +8,6 @@ import { OWNED_OUTPUT_ATTRIBUTE } from "./render-exact-time";
  * Coalesced observer changes that can be processed once without revisiting overlapping DOM roots.
  */
 export interface AffectedMutationBatch {
-
     /**
      * Added subtrees that may contain newly eligible timestamp sources.
      */
@@ -34,7 +33,6 @@ export interface AffectedMutationBatch {
  * Callbacks and ownership lookup used to turn browser mutation records into safe document work.
  */
 interface SchedulerInput {
-
     /**
      * Owning document used to scope DOM ownership metadata.
      */
@@ -70,8 +68,9 @@ function addUnique(items: Element[], value: Element): void {
  * @returns - Minimal ordered roots with covered descendants removed.
  */
 function collapseRoots(roots: readonly Element[]): Element[] {
-    return roots.filter((root, index) =>
-        !roots.some((other, otherIndex) => otherIndex !== index && other.contains(root))
+    return roots.filter(
+        (root, index) =>
+            !roots.some((other, otherIndex) => otherIndex !== index && other.contains(root)),
     );
 }
 
@@ -129,8 +128,8 @@ export class DocumentMutationScheduler {
         const observer = new MutationObserver((records) => {
             if (
                 this.phase !== "observing" ||
-        this.observer !== observer ||
-        this.generation !== generation
+                this.observer !== observer ||
+                this.generation !== generation
             ) {
                 return;
             }
@@ -141,7 +140,7 @@ export class DocumentMutationScheduler {
                 childList: true,
                 subtree: true,
                 attributes: true,
-                attributeFilter: ["datetime"]
+                attributeFilter: ["datetime"],
             });
         } catch (error) {
             observer.disconnect();
@@ -170,9 +169,9 @@ export class DocumentMutationScheduler {
     beforeOwnedOutputRemoval(output: HTMLTimeElement): void {
         if (
             this.phase === "observing" &&
-      output.ownerDocument === this.input.document &&
-      output.isConnected &&
-      output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
+            output.ownerDocument === this.input.document &&
+            output.isConnected &&
+            output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
         ) {
             this.suppressedRemovals.set(output, this.generation);
         }
@@ -191,7 +190,10 @@ export class DocumentMutationScheduler {
 
         for (const record of records) {
             if (record.type === "attributes") {
-                if (record.target.nodeType === 1 && !this.input.getOwnedSourceForOutput(record.target)) {
+                if (
+                    record.target.nodeType === 1 &&
+                    !this.input.getOwnedSourceForOutput(record.target)
+                ) {
                     addUnique(datetimeTargets, record.target as Element);
                 }
                 continue;
@@ -208,7 +210,10 @@ export class DocumentMutationScheduler {
                 const element = node as Element;
                 const source = this.input.getOwnedSourceForOutput(element);
                 if (source) {
-                    if (source.parentNode !== element.parentNode || source.nextElementSibling !== element) {
+                    if (
+                        source.parentNode !== element.parentNode ||
+                        source.nextElementSibling !== element
+                    ) {
                         addUnique(displacedOutputSources, source);
                     }
                 } else {
@@ -228,7 +233,10 @@ export class DocumentMutationScheduler {
                 }
                 const source = this.input.getOwnedSourceForOutput(element);
                 if (source) {
-                    if (source.parentNode !== element.parentNode || source.nextElementSibling !== element) {
+                    if (
+                        source.parentNode !== element.parentNode ||
+                        source.nextElementSibling !== element
+                    ) {
                         addUnique(displacedOutputSources, source);
                     }
                 } else {
@@ -240,21 +248,23 @@ export class DocumentMutationScheduler {
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
         const normalizedTargets = datetimeTargets.filter(
-            (target, index) => !datetimeTargets.slice(0, index).includes(target) && !coveredBy(normalizedAdded, target)
+            (target, index) =>
+                !datetimeTargets.slice(0, index).includes(target) &&
+                !coveredBy(normalizedAdded, target),
         );
         const normalizedDisplaced = displacedOutputSources.filter(
             (source, index) =>
                 !displacedOutputSources.slice(0, index).includes(source) &&
-        !coveredBy(normalizedAdded, source) &&
-        !normalizedTargets.includes(source)
+                !coveredBy(normalizedAdded, source) &&
+                !normalizedTargets.includes(source),
         );
 
         this.suppressedRemovals.clear();
         if (
             normalizedAdded.length === 0 &&
-      normalizedTargets.length === 0 &&
-      normalizedRemoved.length === 0 &&
-      normalizedDisplaced.length === 0
+            normalizedTargets.length === 0 &&
+            normalizedRemoved.length === 0 &&
+            normalizedDisplaced.length === 0
         ) {
             return;
         }
@@ -262,7 +272,7 @@ export class DocumentMutationScheduler {
             addedRoots: normalizedAdded,
             datetimeTargets: normalizedTargets,
             removedRoots: normalizedRemoved,
-            displacedOutputSources: normalizedDisplaced
+            displacedOutputSources: normalizedDisplaced,
         });
     }
 }

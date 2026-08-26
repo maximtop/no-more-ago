@@ -4,10 +4,25 @@
  * @file React popup UI for extension status, site controls, and support reporting.
  */
 
-import { Alert, Anchor, Box, Button, MantineProvider, Paper, Stack, Switch, Text, Title } from "@mantine/core";
+import {
+    Alert,
+    Anchor,
+    Box,
+    Button,
+    MantineProvider,
+    Paper,
+    Stack,
+    Switch,
+    Text,
+    Title,
+} from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import type { PopupState } from "../background/application";
-import { createDefaultSiteReportReporter, type SiteReportError, type SiteReportReporter } from "../reporting/site-report";
+import {
+    createDefaultSiteReportReporter,
+    type SiteReportError,
+    type SiteReportReporter,
+} from "../reporting/site-report";
 import { createPopupClient, type PopupClient } from "./client";
 
 /**
@@ -48,12 +63,18 @@ function statusText(state: PopupState): string {
             : "Settings are unavailable. Processing is disabled.";
     }
     switch (state.status) {
-        case "active": return `Active on ${state.hostname ?? "this page"}`;
-        case "global-disabled": return "Extension is off";
-        case "site-disabled": return `Disabled on ${state.hostname ?? "this hostname"}`;
-        case "inaccessible": return "Cannot run on this page";
-        case "runtime-failed": return "Could not process this page";
-        case "no-rules": return `Rules are not available for ${state.hostname ?? "this hostname"} yet`;
+        case "active":
+            return `Active on ${state.hostname ?? "this page"}`;
+        case "global-disabled":
+            return "Extension is off";
+        case "site-disabled":
+            return `Disabled on ${state.hostname ?? "this hostname"}`;
+        case "inaccessible":
+            return "Cannot run on this page";
+        case "runtime-failed":
+            return "Could not process this page";
+        case "no-rules":
+            return `Rules are not available for ${state.hostname ?? "this hostname"} yet`;
     }
 }
 
@@ -68,13 +89,15 @@ function noticeText(notice: Notice): string | undefined {
         return "Could not save this change. Try again.";
     }
     if (notice === "invalid-hostname") {
-        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.";
+        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, "
+            + "or wildcard.";
     }
     if (notice === "interrupted") {
         return "The response was interrupted. Current state was reloaded.";
     }
     if (notice === "unknown") {
-        return "Could not confirm whether the change was saved. Reopen the popup to try again. Current state is unavailable.";
+        return "Could not confirm whether the change was saved. Reopen the popup to try again. "
+            + "Current state is unavailable.";
     }
     return undefined;
 }
@@ -119,9 +142,16 @@ function siteReportErrorText(error: SiteReportError): string {
  * @param props.reporter - Site-report service override.
  * @returns The popup React view.
  */
-export function PopupApp({ client: suppliedClient, initialState, reporter: suppliedReporter }: PopupAppProps): ReactElement {
+export function PopupApp({
+    client: suppliedClient,
+    initialState,
+    reporter: suppliedReporter,
+}: PopupAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createPopupClient(), [suppliedClient]);
-    const reporter = useMemo(() => suppliedReporter ?? createDefaultSiteReportReporter(), [suppliedReporter]);
+    const reporter = useMemo(
+        () => suppliedReporter ?? createDefaultSiteReportReporter(),
+        [suppliedReporter],
+    );
     const [state, setState] = useState<PopupState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);
     const [saving, setSaving] = useState(false);
@@ -137,19 +167,31 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
             return;
         }
         let mounted = true;
-        void client.getState().then((next) => {
-            if (!mounted) {
-                return;
-            }
-            setState(next);
-            setLoading(false);
-        }).catch(() => {
-            if (!mounted) {
-                return;
-            }
-            setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: null, siteEnabled: null, hasAdapter: false, status: "settings-unavailable", failure: "settings-load" });
-            setLoading(false);
-        });
+        void client
+            .getState()
+            .then((next) => {
+                if (!mounted) {
+                    return;
+                }
+                setState(next);
+                setLoading(false);
+            })
+            .catch(() => {
+                if (!mounted) {
+                    return;
+                }
+                setState({
+                    availability: "unavailable",
+                    revision: null,
+                    globalEnabled: null,
+                    hostname: null,
+                    siteEnabled: null,
+                    hasAdapter: false,
+                    status: "settings-unavailable",
+                    failure: "settings-load",
+                });
+                setLoading(false);
+            });
         return () => {
             mounted = false;
         };
@@ -174,7 +216,10 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
         const result = await client.setGlobalEnabled(event.currentTarget.checked);
         if (result.kind === "response") {
             const responseState = result.response.state;
-            if (responseState.availability !== "ready" || responseState.revision >= state.revision) {
+            if (
+                responseState.availability !== "ready" ||
+                responseState.revision >= state.revision
+            ) {
                 setState(responseState);
             }
             if (!result.response.ok) {
@@ -186,14 +231,30 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
             }
             setNotice("interrupted");
         } else {
-            setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: state.hostname, siteEnabled: null, hasAdapter: false, status: "runtime-failed", failure: "settings-load" });
+            setState({
+                availability: "unavailable",
+                revision: null,
+                globalEnabled: null,
+                hostname: state.hostname,
+                siteEnabled: null,
+                hasAdapter: false,
+                status: "runtime-failed",
+                failure: "settings-load",
+            });
             setNotice("unknown");
         }
         setSaving(false);
     };
 
     const onSiteChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!state || state.availability !== "ready" || state.hostname === null || state.siteEnabled === null || saving || savingSite) {
+        if (
+            !state ||
+            state.availability !== "ready" ||
+            state.hostname === null ||
+            state.siteEnabled === null ||
+            saving ||
+            savingSite
+        ) {
             return;
         }
         setSavingSite(true);
@@ -201,11 +262,20 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
         const result = await client.setSiteEnabled(state.hostname, event.currentTarget.checked);
         if (result.kind === "response") {
             const responseState = result.response.state;
-            if (responseState.availability !== "ready" || responseState.revision >= state.revision) {
+            if (
+                responseState.availability !== "ready" ||
+                responseState.revision >= state.revision
+            ) {
                 setState(responseState);
             }
             if (!result.response.ok) {
-                setNotice(result.response.error === "save-failed" ? "save-failed" : result.response.error === "invalid-hostname" ? "invalid-hostname" : "unknown");
+                setNotice(
+                    result.response.error === "save-failed"
+                        ? "save-failed"
+                        : result.response.error === "invalid-hostname"
+                            ? "invalid-hostname"
+                            : "unknown",
+                );
             }
         } else if (result.state) {
             if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
@@ -213,21 +283,39 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
             }
             setNotice("interrupted");
         } else {
-            setState({ availability: "unavailable", revision: null, globalEnabled: null, hostname: state.hostname, siteEnabled: null, hasAdapter: false, status: "runtime-failed", failure: "settings-load" });
+            setState({
+                availability: "unavailable",
+                revision: null,
+                globalEnabled: null,
+                hostname: state.hostname,
+                siteEnabled: null,
+                hasAdapter: false,
+                status: "runtime-failed",
+                failure: "settings-load",
+            });
             setNotice("unknown");
         }
         setSavingSite(false);
     };
 
     const onReportSite = async (): Promise<void> => {
-        if (!state || state.availability !== "ready" || state.hostname === null || reporting || reportInFlight.current) {
+        if (
+            !state ||
+            state.availability !== "ready" ||
+            state.hostname === null ||
+            reporting ||
+            reportInFlight.current
+        ) {
             return;
         }
         reportInFlight.current = true;
         setReporting(true);
         setReportNotice(undefined);
         try {
-            const result = await reporter.openPopupReport({ hostname: state.hostname, hasAdapter: state.hasAdapter });
+            const result = await reporter.openPopupReport({
+                hostname: state.hostname,
+                hasAdapter: state.hasAdapter,
+            });
             if (!result.ok) {
                 setReportNotice(siteReportErrorText(result.error));
             }
@@ -240,11 +328,18 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
     };
 
     if (loading || !state) {
-        return <MantineProvider><main className="popup"><Text role="status">Loading…</Text></main></MantineProvider>;
+        return (
+            <MantineProvider>
+                <main className="popup">
+                    <Text role="status">Loading…</Text>
+                </main>
+            </MantineProvider>
+        );
     }
     const checked = state.availability === "ready" && state.globalEnabled;
     const disabled = saving || savingSite || state.availability !== "ready";
-    const siteSwitchVisible = state.availability === "ready" && state.hostname !== null && state.siteEnabled !== null;
+    const siteSwitchVisible =
+        state.availability === "ready" && state.hostname !== null && state.siteEnabled !== null;
     const reportVisible = state.availability === "ready" && state.hostname !== null;
     const noticeMessage = noticeText(notice);
     return (
@@ -254,7 +349,9 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
                     <Stack gap="md">
                         <Box>
                             <Title order={3}>No More Ago</Title>
-                            <Text size="sm" c="dimmed">{state.hostname ?? "Current page"}</Text>
+                            <Text size="sm" c="dimmed">
+                                {state.hostname ?? "Current page"}
+                            </Text>
                         </Box>
                         <Switch
                             ref={switchRef}
@@ -278,11 +375,28 @@ export function PopupApp({ client: suppliedClient, initialState, reporter: suppl
                             />
                         ) : null}
                         <Text role="status">{statusText(state)}</Text>
-                        {noticeMessage ? <Alert role="alert" color="red">{noticeMessage}</Alert> : null}
-                        {reportVisible ? <Button type="button" onClick={() => {
-                            void onReportSite();
-                        }} loading={reporting} disabled={reporting}>Report this site</Button> : null}
-                        {reportNotice ? <Alert role="alert" color="red">{reportNotice}</Alert> : null}
+                        {noticeMessage ? (
+                            <Alert role="alert" color="red">
+                                {noticeMessage}
+                            </Alert>
+                        ) : null}
+                        {reportVisible ? (
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    void onReportSite();
+                                }}
+                                loading={reporting}
+                                disabled={reporting}
+                            >
+                                Report this site
+                            </Button>
+                        ) : null}
+                        {reportNotice ? (
+                            <Alert role="alert" color="red">
+                                {reportNotice}
+                            </Alert>
+                        ) : null}
                         <Anchor href="options.html">Settings</Anchor>
                     </Stack>
                 </Paper>

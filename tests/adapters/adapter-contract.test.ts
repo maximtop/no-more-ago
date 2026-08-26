@@ -14,14 +14,14 @@ import {
     SYNTHETIC_HOSTNAME,
     SYNTHETIC_SELECTOR,
     createSyntheticRegistry,
-    syntheticAdapter
+    syntheticAdapter,
 } from "../fixtures/synthetic/adapter";
 
 const fixture = readFileSync("tests/fixtures/synthetic/site.html", "utf8");
 
 const adapters = [
     { name: "github", adapter: githubAdapter, hostname: "github.com" },
-    { name: "synthetic", adapter: syntheticAdapter, hostname: SYNTHETIC_HOSTNAME }
+    { name: "synthetic", adapter: syntheticAdapter, hostname: SYNTHETIC_HOSTNAME },
 ] as const;
 
 describe.each(adapters)("shared adapter contract: $name", ({ adapter, hostname }) => {
@@ -71,9 +71,11 @@ describe.each(adapters)("shared adapter contract: $name", ({ adapter, hostname }
             adapterId: adapter.id,
             sourceKind: adapter === syntheticAdapter ? "time-ago" : "relative-time",
             rawDatetime: "2026-08-25T10:15:00Z",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
         });
-        expect(candidate && resolveTrustedTimestamp(candidate)?.instant.toISOString()).toBe("2026-08-25T10:15:00.000Z");
+        expect(candidate && resolveTrustedTimestamp(candidate)?.instant.toISOString()).toBe(
+            "2026-08-25T10:15:00.000Z",
+        );
     });
 });
 
@@ -84,32 +86,55 @@ describe("synthetic adapter extraction boundary", () => {
         expect(discovered).toHaveLength(5);
         expect(discovered.every((element) => element.matches(SYNTHETIC_SELECTOR))).toBe(true);
         const generic = document.querySelector("span[data-datetime]");
-        const unmarked = document.querySelector('time-ago:not([class])');
+        const unmarked = document.querySelector("time-ago:not([class])");
         expect(generic ? syntheticAdapter.extract(generic) : null).toBeNull();
         expect(unmarked ? syntheticAdapter.extract(unmarked) : null).toBeNull();
     });
 
     it.each([
         ["missing", '<time-ago class="synthetic-event">relative</time-ago>', false],
-        ["relative", '<time-ago class="synthetic-event" datetime="yesterday">relative</time-ago>', false],
-        ["zone-less", '<time-ago class="synthetic-event" datetime="2026-08-25T10:15:00">today</time-ago>', false],
-        ["ambiguous", '<time-ago class="synthetic-event" datetime="2026-13-99T99:99:99Z">invalid</time-ago>', false],
-        ["valid", '<time-ago class="synthetic-event" datetime="2026-08-25T10:15:00+02:00">valid</time-ago>', true]
-    ] as const)("safely handles %s datetime through the shared resolver", (_name, markup, valid) => {
-        document.body.innerHTML = markup;
-        const element = document.body.firstElementChild;
-        if (!element) {
-            throw new Error("Expected source element");
-        }
-        const candidate = syntheticAdapter.extract(element);
-        const resolved = candidate ? resolveTrustedTimestamp(candidate) : null;
-        expect(resolved !== null).toBe(valid);
-    });
+        [
+            "relative",
+            '<time-ago class="synthetic-event" datetime="yesterday">relative</time-ago>',
+            false,
+        ],
+        [
+            "zone-less",
+            '<time-ago class="synthetic-event" datetime="2026-08-25T10:15:00">today</time-ago>',
+            false,
+        ],
+        [
+            "ambiguous",
+            '<time-ago class="synthetic-event" datetime="2026-13-99T99:99:99Z">invalid</time-ago>',
+            false,
+        ],
+        [
+            "valid",
+            '<time-ago class="synthetic-event" datetime="2026-08-25T10:15:00+02:00">'
+                + "valid</time-ago>",
+            true,
+        ],
+    ] as const)(
+        "safely handles %s datetime through the shared resolver",
+        (_name, markup, valid) => {
+            document.body.innerHTML = markup;
+            const element = document.body.firstElementChild;
+            if (!element) {
+                throw new Error("Expected source element");
+            }
+            const candidate = syntheticAdapter.extract(element);
+            const resolved = candidate ? resolveTrustedTimestamp(candidate) : null;
+            expect(resolved !== null).toBe(valid);
+        },
+    );
 
     it("ignores title, aria-label, data attributes, visible text, and non-candidates", () => {
         document.body.innerHTML = `
-      <time-ago title="2026-08-25T10:15:00Z" aria-label="2026-08-25T10:15:00Z" data-datetime="2026-08-25T10:15:00Z">relative</time-ago>
-      <time-ago class="synthetic-event" title="2026-08-25T10:15:00Z" aria-label="2026-08-25T10:15:00Z" data-datetime="2026-08-25T10:15:00Z">relative</time-ago>
+      <time-ago title="2026-08-25T10:15:00Z" aria-label="2026-08-25T10:15:00Z"
+        data-datetime="2026-08-25T10:15:00Z">relative</time-ago>
+      <time-ago class="synthetic-event" title="2026-08-25T10:15:00Z"
+        aria-label="2026-08-25T10:15:00Z"
+        data-datetime="2026-08-25T10:15:00Z">relative</time-ago>
       <div data-datetime="2026-08-25T10:15:00Z">relative</div>`;
         const [generic, explicit, div] = [...document.body.children];
         expect(generic && syntheticAdapter.extract(generic)).toBeNull();
@@ -119,9 +144,16 @@ describe("synthetic adapter extraction boundary", () => {
 });
 
 describe("test-only synthetic registry boundary", () => {
-    it("keeps production discovery GitHub-only while an injected registry selects synthetic.test", () => {
-        expect(defaultRegistry.select(new URL("https://synthetic.test/example"))).toBeNull();
-        expect(createSyntheticRegistry().select(new URL("https://synthetic.test/example"))?.id).toBe("synthetic");
-        expect(createSyntheticRegistry().select(new URL("https://github.com/example"))?.id).toBe("github");
-    });
+    it(
+        "keeps production discovery GitHub-only while an injected registry selects synthetic.test",
+        () => {
+            expect(defaultRegistry.select(new URL("https://synthetic.test/example"))).toBeNull();
+            expect(
+                createSyntheticRegistry().select(new URL("https://synthetic.test/example"))?.id,
+            ).toBe("synthetic");
+            expect(
+                createSyntheticRegistry().select(new URL("https://github.com/example"))?.id,
+            ).toBe("github");
+        },
+    );
 });

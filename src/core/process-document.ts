@@ -1,10 +1,14 @@
 /**
- * @file Transforms eligible timestamp elements while preserving ownership and diagnostics boundaries.
+ * @file Transforms eligible timestamps while preserving ownership and diagnostics boundaries.
  */
 
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
 import { formatDateWithPresentation } from "./format-default-date";
-import { renderExactTime, restoreExactTime, type OwnedOutputMutationSink } from "./render-exact-time";
+import {
+    renderExactTime,
+    restoreExactTime,
+    type OwnedOutputMutationSink,
+} from "./render-exact-time";
 import { resolveTrustedTimestamp } from "./resolve-trusted-timestamp";
 import type { DisplaySettings } from "../settings/snapshot";
 import type { DiagnosticEventInput } from "../diagnostics/events";
@@ -15,10 +19,10 @@ import type { DiagnosticEventInput } from "../diagnostics/events";
 export type DocumentDiagnosticSink = (event: DiagnosticEventInput) => void;
 
 /**
- * Dependencies for a full document pass, including snapshots that may be refreshed through providers.
+ * Dependencies for a full document pass, including snapshots that may be refreshed through
+ * providers.
  */
 export interface ProcessInput {
-
     /**
      * Trusted sender URL used to derive diagnostic context.
      */
@@ -64,7 +68,6 @@ export interface ProcessInput {
  * Dependencies for a targeted reformat pass after settings or DOM changes.
  */
 export interface ReconcileInput {
-
     /**
      * Trusted sender URL used to derive diagnostic context.
      */
@@ -112,7 +115,8 @@ export interface ReconcileInput {
 }
 
 /**
- * Replaces eligible relative timestamps in one root while recording every reversible ownership change.
+ * Replaces eligible relative timestamps in one root while recording every reversible ownership
+ * change.
  *
  * @param input - Document region, page URL, presentation, and adapter dependencies.
  * @returns - Extension-owned time elements generated in the region.
@@ -121,9 +125,8 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const { url, root, registry = defaultRegistry } = input;
     const locales = input.localesProvider?.() ?? input.locales ?? [];
     const display = input.displayProvider?.() ?? input.display;
-    const ownedOutputMutations = "ownedOutputMutations" in input
-        ? input.ownedOutputMutations
-        : undefined;
+    const ownedOutputMutations =
+        "ownedOutputMutations" in input ? input.ownedOutputMutations : undefined;
     const diagnosticSink = input.diagnosticSink;
     const adapter = registry.select(url);
     if (!adapter) {
@@ -148,11 +151,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             continue;
         }
-        const presentation = formatDateWithPresentation(
-            resolved.instant,
-            locales,
-            display
-        );
+        const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
             restoreExactTime(element, ownedOutputMutations);
             if (diagnosticSink && presentation.error === "invalid-format") {
@@ -170,17 +169,17 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             continue;
         }
-        const output = renderExactTime(
-            resolved.source,
-            resolved.sourceDatetime,
-            presentation.text
-        );
+        const output = renderExactTime(resolved.source, resolved.sourceDatetime, presentation.text);
         if (output) {
             outputs.push(output);
         }
     }
     if (diagnosticSink && started !== undefined) {
-        diagnosticSink({ category: "timing", count: outputs.length, durationMs: Math.max(0, performance.now() - started) });
+        diagnosticSink({
+            category: "timing",
+            count: outputs.length,
+            durationMs: Math.max(0, performance.now() - started),
+        });
     }
     return outputs;
 }
@@ -208,7 +207,7 @@ export function processDocument({
     display,
     displayProvider,
     diagnosticSink,
-    registry = defaultRegistry
+    registry = defaultRegistry,
 }: ProcessInput): readonly HTMLTimeElement[] {
     return processRegion({
         url,
@@ -218,7 +217,7 @@ export function processDocument({
         ...(localesProvider === undefined ? {} : { localesProvider }),
         ...(display === undefined ? {} : { display }),
         ...(displayProvider === undefined ? {} : { displayProvider }),
-        ...(diagnosticSink === undefined ? {} : { diagnosticSink })
+        ...(diagnosticSink === undefined ? {} : { diagnosticSink }),
     });
 }
 

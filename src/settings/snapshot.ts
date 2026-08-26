@@ -8,22 +8,25 @@ import { validateCustomFormatPattern } from "./custom-format";
  * The presentation choices persisted alongside the extension policy.
  */
 export type TimeZoneSelection =
-  | { readonly mode: "system" }
-  | { readonly mode: "utc" }
-  | { readonly mode: "iana"; readonly identifier: string };
+    | { readonly mode: "system" }
+    | { readonly mode: "utc" }
+    | { readonly mode: "iana"; readonly identifier: string };
 
 /**
  * Immutable formatting choices persisted with each settings revision.
  */
 export type DisplaySettings =
-  | { readonly formatMode: "system"; readonly timeZone: TimeZoneSelection }
-  | { readonly formatMode: "custom"; readonly pattern: string; readonly timeZone: TimeZoneSelection };
+    | { readonly formatMode: "system"; readonly timeZone: TimeZoneSelection }
+    | {
+        readonly formatMode: "custom";
+        readonly pattern: string;
+        readonly timeZone: TimeZoneSelection;
+    };
 
 /**
  * V5 is intentionally an unpublished schema; older documents are rejected.
  */
 export interface SettingsSnapshotV5 {
-
     /**
      * Exact schema revision required before a snapshot is accepted.
      */
@@ -71,7 +74,7 @@ export const SETTINGS_STORAGE_KEY = "settings" as const;
 export const SETTINGS_PREVIOUS_STORAGE_KEY = "settings.previous" as const;
 
 const EMPTY_SITE_PREFERENCES: Readonly<Record<string, boolean>> = Object.freeze(
-    Object.create(null) as Record<string, boolean>
+    Object.create(null) as Record<string, boolean>,
 );
 
 /**
@@ -79,7 +82,7 @@ const EMPTY_SITE_PREFERENCES: Readonly<Record<string, boolean>> = Object.freeze(
  */
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = Object.freeze({
     formatMode: "system",
-    timeZone: Object.freeze({ mode: "system" })
+    timeZone: Object.freeze({ mode: "system" }),
 });
 
 /**
@@ -91,15 +94,19 @@ export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV5 = Object.freeze({
     globalEnabled: true,
     sitePreferences: EMPTY_SITE_PREFERENCES,
     display: DEFAULT_DISPLAY_SETTINGS,
-    debugEnabled: false
+    debugEnabled: false,
 });
 
 /**
  * Result of loading storage, distinguishing a usable snapshot from a recoverable failure.
  */
 export type SettingsLoadResult =
-  | { readonly ok: true; readonly snapshot: SettingsSnapshotV5; readonly source: "default" | "stored" | "recovered" }
-  | { readonly ok: false; readonly error: "load-failed" | "invalid-settings" };
+    | {
+        readonly ok: true;
+        readonly snapshot: SettingsSnapshotV5;
+        readonly source: "default" | "stored" | "recovered";
+    }
+    | { readonly ok: false; readonly error: "load-failed" | "invalid-settings" };
 
 /**
  * Accepts plain JSON-like records before schema validation.
@@ -126,14 +133,16 @@ export function isCanonicalHostname(hostname: string): boolean {
     }
     try {
         const parsed = new URL(`https://${hostname}`);
-        return parsed.protocol === "https:"
-      && parsed.hostname === hostname
-      && parsed.username === ""
-      && parsed.password === ""
-      && parsed.port === ""
-      && parsed.pathname === "/"
-      && parsed.search === ""
-      && parsed.hash === "";
+        return (
+            parsed.protocol === "https:" &&
+            parsed.hostname === hostname &&
+            parsed.username === "" &&
+            parsed.password === "" &&
+            parsed.port === "" &&
+            parsed.pathname === "/" &&
+            parsed.search === "" &&
+            parsed.hash === ""
+        );
     } catch {
         return false;
     }
@@ -169,7 +178,11 @@ const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
  * @returns - Whether the value has a safe, structurally valid identifier shape.
  */
 export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): identifier is string {
-    if (typeof identifier !== "string" || identifier.length === 0 || identifier.trim() !== identifier) {
+    if (
+        typeof identifier !== "string" ||
+        identifier.length === 0 ||
+        identifier.trim() !== identifier
+    ) {
         return false;
     }
     if (identifier.includes("\\") || /\s/u.test(identifier)) {
@@ -182,8 +195,12 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): iden
         }
     }
     const components = identifier.split("/");
-    return components.length > 0 && components.every((component) =>
-        component !== "." && component !== ".." && IANA_COMPONENT.test(component)
+    return (
+        components.length > 0 &&
+        components.every(
+            (component) =>
+                component !== "." && component !== ".." && IANA_COMPONENT.test(component),
+        )
     );
 }
 
@@ -200,10 +217,12 @@ export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection 
     if (value.mode === "system" || value.mode === "utc") {
         return Object.keys(value).length === 1;
     }
-    return value.mode === "iana"
-    && Object.keys(value).length === 2
-    && Object.hasOwn(value, "identifier")
-    && isStructurallyValidTimeZoneIdentifier(value.identifier);
+    return (
+        value.mode === "iana" &&
+        Object.keys(value).length === 2 &&
+        Object.hasOwn(value, "identifier") &&
+        isStructurallyValidTimeZoneIdentifier(value.identifier)
+    );
 }
 
 /**
@@ -228,7 +247,11 @@ export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null
  * @returns - Whether the value has the exact valid display-settings shape.
  */
 export function isDisplaySettings(value: unknown): value is DisplaySettings {
-    if (!isRecord(value) || !Object.hasOwn(value, "formatMode") || !Object.hasOwn(value, "timeZone")) {
+    if (
+        !isRecord(value) ||
+        !Object.hasOwn(value, "formatMode") ||
+        !Object.hasOwn(value, "timeZone")
+    ) {
         return false;
     }
     const timeZone = parseTimeZoneSelection(value.timeZone);
@@ -238,11 +261,13 @@ export function isDisplaySettings(value: unknown): value is DisplaySettings {
     if (value.formatMode === "system") {
         return Object.keys(value).length === 2;
     }
-    return value.formatMode === "custom"
-    && Object.keys(value).length === 3
-    && Object.hasOwn(value, "pattern")
-    && typeof value.pattern === "string"
-    && validateCustomFormatPattern(value.pattern).ok;
+    return (
+        value.formatMode === "custom" &&
+        Object.keys(value).length === 3 &&
+        Object.hasOwn(value, "pattern") &&
+        typeof value.pattern === "string" &&
+        validateCustomFormatPattern(value.pattern).ok
+    );
 }
 
 /**
@@ -280,23 +305,27 @@ export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV
         return false;
     }
     const keys = Object.keys(value);
-    if (keys.length !== 6
-    || !Object.hasOwn(value, "schemaVersion")
-    || !Object.hasOwn(value, "revision")
-    || !Object.hasOwn(value, "globalEnabled")
-    || !Object.hasOwn(value, "sitePreferences")
-    || !Object.hasOwn(value, "display")
-    || !Object.hasOwn(value, "debugEnabled")) {
+    if (
+        keys.length !== 6 ||
+        !Object.hasOwn(value, "schemaVersion") ||
+        !Object.hasOwn(value, "revision") ||
+        !Object.hasOwn(value, "globalEnabled") ||
+        !Object.hasOwn(value, "sitePreferences") ||
+        !Object.hasOwn(value, "display") ||
+        !Object.hasOwn(value, "debugEnabled")
+    ) {
         return false;
     }
-    return value.schemaVersion === SETTINGS_SCHEMA_VERSION
-    && typeof value.revision === "number"
-    && Number.isSafeInteger(value.revision)
-    && value.revision >= 0
-    && typeof value.globalEnabled === "boolean"
-    && copySitePreferences(value.sitePreferences) !== null
-    && isDisplaySettings(value.display)
-    && typeof value.debugEnabled === "boolean";
+    return (
+        value.schemaVersion === SETTINGS_SCHEMA_VERSION &&
+        typeof value.revision === "number" &&
+        Number.isSafeInteger(value.revision) &&
+        value.revision >= 0 &&
+        typeof value.globalEnabled === "boolean" &&
+        copySitePreferences(value.sitePreferences) !== null &&
+        isDisplaySettings(value.display) &&
+        typeof value.debugEnabled === "boolean"
+    );
 }
 
 /**
@@ -320,7 +349,7 @@ export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null
         globalEnabled: value.globalEnabled,
         sitePreferences,
         display,
-        debugEnabled: value.debugEnabled
+        debugEnabled: value.debugEnabled,
     });
 }
 
@@ -339,7 +368,7 @@ export function createSettingsSnapshot(
     globalEnabled: boolean,
     sitePreferences: Readonly<Record<string, boolean>> = EMPTY_SITE_PREFERENCES,
     display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
-    debugEnabled = false
+    debugEnabled = false,
 ): SettingsSnapshotV5 {
     if (!Number.isSafeInteger(revision) || revision < 0 || typeof globalEnabled !== "boolean") {
         throw new TypeError("Invalid V5 settings snapshot");
@@ -355,7 +384,14 @@ export function createSettingsSnapshot(
     if (typeof debugEnabled !== "boolean") {
         throw new TypeError("Invalid V5 debug setting");
     }
-    return Object.freeze({ schemaVersion: SETTINGS_SCHEMA_VERSION, revision, globalEnabled, sitePreferences: copied, display: parsedDisplay, debugEnabled });
+    return Object.freeze({
+        schemaVersion: SETTINGS_SCHEMA_VERSION,
+        revision,
+        globalEnabled,
+        sitePreferences: copied,
+        display: parsedDisplay,
+        debugEnabled,
+    });
 }
 
 /**
@@ -365,6 +401,9 @@ export function createSettingsSnapshot(
  * @param hostname - Canonical hostname whose effective state is requested.
  * @returns - Whether processing is enabled for the hostname.
  */
-export function isSiteEnabled(sitePreferences: Readonly<Record<string, boolean>>, hostname: string): boolean {
+export function isSiteEnabled(
+    sitePreferences: Readonly<Record<string, boolean>>,
+    hostname: string,
+): boolean {
     return !Object.hasOwn(sitePreferences, hostname) || sitePreferences[hostname] !== false;
 }

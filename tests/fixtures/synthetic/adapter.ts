@@ -27,7 +27,7 @@ export const SYNTHETIC_REGISTRATION: RegisteredContentScriptSpec = {
     js: ["content.js"],
     runAt: "document_start",
     allFrames: false,
-    persistAcrossSessions: true
+    persistAcrossSessions: true,
 };
 
 /**
@@ -36,7 +36,8 @@ export const SYNTHETIC_REGISTRATION: RegisteredContentScriptSpec = {
 export const syntheticAdapter: SiteAdapter = {
     id: "synthetic",
     matches: (url) =>
-        (url.protocol === "https:" || url.protocol === "http:") && url.hostname === SYNTHETIC_HOSTNAME,
+        (url.protocol === "https:" || url.protocol === "http:") &&
+        url.hostname === SYNTHETIC_HOSTNAME,
     discover: (root) => {
         const candidates: Element[] = [];
         if (root instanceof Element && root.matches(SYNTHETIC_SELECTOR)) {
@@ -58,9 +59,9 @@ export const syntheticAdapter: SiteAdapter = {
             source: element,
             sourceKind: "time-ago",
             rawDatetime,
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
         };
-    }
+    },
 };
 
 /**
@@ -70,7 +71,7 @@ export const syntheticRuntimeDefinition: RuntimeAdapterDefinition = {
     id: "synthetic",
     hostname: SYNTHETIC_HOSTNAME,
     registration: SYNTHETIC_REGISTRATION,
-    matches: (url) => syntheticAdapter.matches(url)
+    matches: (url) => syntheticAdapter.matches(url),
 };
 
 /**

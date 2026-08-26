@@ -4,13 +4,13 @@
  * @file Site-report URL validation and Chrome tab integration.
  */
 
-
 import { isCanonicalHostname } from "../settings/snapshot";
 
 /**
  * GitHub issue composer used for site-report submissions.
  */
-export const SITE_REPORT_DESTINATION = "https://github.com/maximtop/no-more-ago/issues/new" as const;
+export const SITE_REPORT_DESTINATION =
+    "https://github.com/maximtop/no-more-ago/issues/new" as const;
 
 /**
  * Issue-form template selected in the GitHub composer.
@@ -112,7 +112,7 @@ export interface SiteReportBrowserRuntime {
             /**
              * Limits the query to the current window.
              */
-            readonly currentWindow: true
+            readonly currentWindow: true;
         }): Promise<readonly SiteReportTab[]>;
 
         /**
@@ -127,7 +127,7 @@ export interface SiteReportBrowserRuntime {
             /**
              * Target window ID when preserving an incognito context.
              */
-            readonly windowId?: number
+            readonly windowId?: number;
         }): Promise<unknown>;
     };
 
@@ -138,7 +138,7 @@ export interface SiteReportBrowserRuntime {
         /**
          * Returns the extension manifest containing the version field.
          */
-        getManifest(): unknown
+        getManifest(): unknown;
     };
 
     /**
@@ -148,7 +148,7 @@ export interface SiteReportBrowserRuntime {
         /**
          * Raw user-agent string, treated as untrusted input.
          */
-        readonly userAgent?: unknown
+        readonly userAgent?: unknown;
     };
 }
 
@@ -156,21 +156,21 @@ export interface SiteReportBrowserRuntime {
  * Stable failure reasons returned instead of throwing from report actions.
  */
 export type SiteReportError =
-  | "busy"
-  | "invalid-context"
-  | "browser-unavailable"
-  | "missing-tab"
-  | "restricted-page"
-  | "hostname-mismatch"
-  | "private-window"
-  | "open-failed";
+    | "busy"
+    | "invalid-context"
+    | "browser-unavailable"
+    | "missing-tab"
+    | "restricted-page"
+    | "hostname-mismatch"
+    | "private-window"
+    | "open-failed";
 
 /**
  * Report action outcome, including the composer URL when a tab was opened.
  */
 export type SiteReportResult =
-  | { readonly ok: true; readonly url: string }
-  | { readonly ok: false; readonly error: SiteReportError };
+    | { readonly ok: true; readonly url: string }
+    | { readonly ok: false; readonly error: SiteReportError };
 
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u;
 const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVersion", "browser"]);
@@ -238,11 +238,13 @@ function validVersion(value: string): boolean {
 function validSiteUrl(value: string, hostname: string): boolean {
     try {
         const parsed = new URL(value);
-        return (parsed.protocol === "http:" || parsed.protocol === "https:")
-      && parsed.username === ""
-      && parsed.password === ""
-      && isCanonicalHostname(parsed.hostname)
-      && parsed.hostname === hostname;
+        return (
+            (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+            parsed.username === "" &&
+            parsed.password === "" &&
+            isCanonicalHostname(parsed.hostname) &&
+            parsed.hostname === hostname
+        );
     } catch {
         return false;
     }
@@ -263,19 +265,38 @@ export function composeSiteReportUrl(context: unknown): string | null {
     const currentUrl = ownString(context, "currentUrl");
     const extensionVersion = ownString(context, "extensionVersion");
     const browser = ownString(context, "browser");
-    if (reason !== undefined && reason !== "Add support for this site" && reason !== "Dates are not working correctly") {
+    if (
+        reason !== undefined &&
+        reason !== "Add support for this site" &&
+        reason !== "Dates are not working correctly"
+    ) {
         return null;
     }
-    if (Object.hasOwn(context, "hostname") && (hostname === undefined || !isCanonicalHostname(hostname))) {
+    if (
+        Object.hasOwn(context, "hostname") &&
+        (hostname === undefined || !isCanonicalHostname(hostname))
+    ) {
         return null;
     }
-    if (Object.hasOwn(context, "currentUrl") && (currentUrl === undefined || hostname === undefined || !validSiteUrl(currentUrl, hostname))) {
+    if (
+        Object.hasOwn(context, "currentUrl") &&
+        (currentUrl === undefined || hostname === undefined || !validSiteUrl(currentUrl, hostname))
+    ) {
         return null;
     }
-    if (Object.hasOwn(context, "extensionVersion") && (extensionVersion === undefined || !validVersion(extensionVersion))) {
+    if (
+        Object.hasOwn(context, "extensionVersion") &&
+        (extensionVersion === undefined || !validVersion(extensionVersion))
+    ) {
         return null;
     }
-    if (Object.hasOwn(context, "browser") && (browser !== "Chrome" && browser !== "Edge" && browser !== "Firefox" && browser !== "Other")) {
+    if (
+        Object.hasOwn(context, "browser") &&
+        browser !== "Chrome" &&
+        browser !== "Edge" &&
+        browser !== "Firefox" &&
+        browser !== "Other"
+    ) {
         return null;
     }
 
@@ -333,7 +354,12 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
     }
     try {
         const manifest = runtime.runtime.getManifest();
-        if (!isRecord(manifest) || !Object.hasOwn(manifest, "version") || typeof manifest.version !== "string" || !validVersion(manifest.version)) {
+        if (
+            !isRecord(manifest) ||
+            !Object.hasOwn(manifest, "version") ||
+            typeof manifest.version !== "string" ||
+            !validVersion(manifest.version)
+        ) {
             return null;
         }
         return manifest.version;
@@ -348,9 +374,16 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
  * @param runtime - Browser runtime and navigator dependencies.
  * @returns - Validated extension version and browser label, or null.
  */
-function environment(runtime: SiteReportBrowserRuntime): Pick<SiteReportContext, "extensionVersion" | "browser"> | null {
+function environment(
+    runtime: SiteReportBrowserRuntime,
+): Pick<SiteReportContext, "extensionVersion" | "browser"> | null {
     const version = extensionVersion(runtime);
-    return version === null ? null : { extensionVersion: version, browser: browserContextFromUserAgent(runtime.navigator?.userAgent) };
+    return version === null
+        ? null
+        : {
+            extensionVersion: version,
+            browser: browserContextFromUserAgent(runtime.navigator?.userAgent),
+        };
 }
 
 /**
@@ -360,12 +393,14 @@ function environment(runtime: SiteReportBrowserRuntime): Pick<SiteReportContext,
  * @returns - Whether it contains a canonical hostname and adapter flag.
  */
 function validPopupState(value: unknown): value is SiteReportPopupState {
-    return isRecord(value)
-    && Object.hasOwn(value, "hostname")
-    && Object.hasOwn(value, "hasAdapter")
-    && typeof value.hostname === "string"
-    && isCanonicalHostname(value.hostname)
-    && typeof value.hasAdapter === "boolean";
+    return (
+        isRecord(value) &&
+        Object.hasOwn(value, "hostname") &&
+        Object.hasOwn(value, "hasAdapter") &&
+        typeof value.hostname === "string" &&
+        isCanonicalHostname(value.hostname) &&
+        typeof value.hasAdapter === "boolean"
+    );
 }
 
 /**
@@ -457,7 +492,11 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 } catch {
                     return { ok: false, error: "restricted-page" };
                 }
-                if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || parsed.username !== "" || parsed.password !== "") {
+                if (
+                    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
+                    parsed.username !== "" ||
+                    parsed.password !== ""
+                ) {
                     return { ok: false, error: "restricted-page" };
                 }
                 if (!isCanonicalHostname(parsed.hostname)) {
@@ -470,12 +509,24 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 if (env === null) {
                     return { ok: false, error: "invalid-context" };
                 }
-                const url = composeSiteReportUrl({ ...env, reason: state.hasAdapter ? "Dates are not working correctly" : "Add support for this site", hostname: state.hostname, currentUrl: tab.url });
+                const url = composeSiteReportUrl({
+                    ...env,
+                    reason: state.hasAdapter
+                        ? "Dates are not working correctly"
+                        : "Add support for this site",
+                    hostname: state.hostname,
+                    currentUrl: tab.url,
+                });
                 if (url === null) {
                     return { ok: false, error: "invalid-context" };
                 }
                 if (tab.incognito === true) {
-                    if (!Object.hasOwn(tab, "windowId") || typeof tab.windowId !== "number" || !Number.isSafeInteger(tab.windowId) || tab.windowId < 0) {
+                    if (
+                        !Object.hasOwn(tab, "windowId") ||
+                        typeof tab.windowId !== "number" ||
+                        !Number.isSafeInteger(tab.windowId) ||
+                        tab.windowId < 0
+                    ) {
                         return { ok: false, error: "private-window" };
                     }
                     return await open(url, tab.windowId);
@@ -506,7 +557,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
             } finally {
                 inFlight = false;
             }
-        }
+        },
     };
 }
 
@@ -518,14 +569,26 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
 export function createDefaultSiteReportReporter(): SiteReportReporter {
     const browser = typeof chrome === "undefined" ? undefined : chrome;
     const runtime: SiteReportBrowserRuntime = {
-        ...(browser?.tabs ? { tabs: {
-            query: (query) => browser.tabs.query(query),
-            create: (properties) => browser.tabs.create(properties)
-        } } : {}),
-        ...(browser?.runtime ? { runtime: { getManifest: () => browser.runtime.getManifest() } } : {}),
-        ...(typeof navigator === "undefined" ? {} : { navigator: { get userAgent() {
-            return navigator.userAgent;
-        } } })
+        ...(browser?.tabs
+            ? {
+                tabs: {
+                    query: (query) => browser.tabs.query(query),
+                    create: (properties) => browser.tabs.create(properties),
+                },
+            }
+            : {}),
+        ...(browser?.runtime
+            ? { runtime: { getManifest: () => browser.runtime.getManifest() } }
+            : {}),
+        ...(typeof navigator === "undefined"
+            ? {}
+            : {
+                navigator: {
+                    get userAgent() {
+                        return navigator.userAgent;
+                    },
+                },
+            }),
     };
     return createSiteReportReporter(runtime);
 }

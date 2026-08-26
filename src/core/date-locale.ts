@@ -33,13 +33,22 @@ export interface DateLocale {
     /**
      * Locale object selected for date-fns formatting after tag normalization.
      */
-    readonly locale: Locale; }
+    readonly locale: Locale;
+}
 
 const AVAILABLE: readonly DateLocale[] = [
-    { tag: "en-US", code: "en-US", locale: enUS }, { tag: "en-GB", code: "en-GB", locale: enGB }, { tag: "de", code: "de", locale: de },
-    { tag: "fr", code: "fr", locale: fr }, { tag: "es", code: "es", locale: es }, { tag: "it", code: "it", locale: it },
-    { tag: "pt", code: "pt", locale: pt }, { tag: "pt-BR", code: "pt-BR", locale: ptBR }, { tag: "ru", code: "ru", locale: ru },
-    { tag: "ja", code: "ja", locale: ja }, { tag: "zh-CN", code: "zh-CN", locale: zhCN }, { tag: "zh-TW", code: "zh-TW", locale: zhTW }
+    { tag: "en-US", code: "en-US", locale: enUS },
+    { tag: "en-GB", code: "en-GB", locale: enGB },
+    { tag: "de", code: "de", locale: de },
+    { tag: "fr", code: "fr", locale: fr },
+    { tag: "es", code: "es", locale: es },
+    { tag: "it", code: "it", locale: it },
+    { tag: "pt", code: "pt", locale: pt },
+    { tag: "pt-BR", code: "pt-BR", locale: ptBR },
+    { tag: "ru", code: "ru", locale: ru },
+    { tag: "ja", code: "ja", locale: ja },
+    { tag: "zh-CN", code: "zh-CN", locale: zhCN },
+    { tag: "zh-TW", code: "zh-TW", locale: zhTW },
 ];
 
 /**
@@ -73,7 +82,9 @@ export function resolveDateLocale(preferred: readonly string[]): DateLocale {
             continue;
         }
         const base = locale.baseName;
-        const exact = AVAILABLE.find((candidate) => candidate.tag.toLowerCase() === base.toLowerCase());
+        const exact = AVAILABLE.find(
+            (candidate) => candidate.tag.toLowerCase() === base.toLowerCase(),
+        );
         if (exact) {
             return exact;
         }
@@ -84,7 +95,9 @@ export function resolveDateLocale(preferred: readonly string[]): DateLocale {
             return { tag: "zh-CN", code: "zh-CN", locale: zhCN };
         }
         const language = locale.language.toLowerCase();
-        const languageMatch = AVAILABLE.find((candidate) => candidate.tag.toLowerCase() === language);
+        const languageMatch = AVAILABLE.find(
+            (candidate) => candidate.tag.toLowerCase() === language,
+        );
         if (languageMatch) {
             return languageMatch;
         }

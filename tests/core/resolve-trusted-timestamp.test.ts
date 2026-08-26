@@ -4,10 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-    EXPLICIT_ZONED_DATETIME_RULE,
-    type TimestampCandidate
-} from "../../src/adapters/types";
+import { EXPLICIT_ZONED_DATETIME_RULE, type TimestampCandidate } from "../../src/adapters/types";
 import { resolveTrustedTimestamp } from "../../src/core/resolve-trusted-timestamp";
 
 describe("resolveTrustedTimestamp", () => {
@@ -17,7 +14,7 @@ describe("resolveTrustedTimestamp", () => {
             source: document.createElement("relative-time"),
             sourceKind: "relative-time",
             rawDatetime: "2026-08-23T10:15:00+03:00",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
         });
 
         expect(result?.instant.toISOString()).toBe("2026-08-23T07:15:00.000Z");
@@ -31,8 +28,8 @@ describe("resolveTrustedTimestamp", () => {
                 source: document.createElement("relative-time"),
                 sourceKind: "relative-time",
                 rawDatetime: "2026-08-23T10:15:00",
-                timestampRule: EXPLICIT_ZONED_DATETIME_RULE
-            })
+                timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+            }),
         ).toBeNull();
     });
 
@@ -42,7 +39,7 @@ describe("resolveTrustedTimestamp", () => {
             source: document.createElement("relative-time"),
             sourceKind: "relative-time" as const,
             rawDatetime,
-            ...(rule === null ? {} : { timestampRule: rule })
+            ...(rule === null ? {} : { timestampRule: rule }),
         }) as unknown as TimestampCandidate;
 
     it.each([
@@ -69,7 +66,7 @@ describe("resolveTrustedTimestamp", () => {
         ["2026-08-23T10:15-23", "2026-08-24T09:15:00.000Z"],
         ["2026-08-23T10:15-2359", "2026-08-24T10:14:00.000Z"],
         ["2026-08-23T10:15-23:59", "2026-08-24T10:14:00.000Z"],
-        ["2026-08-23T10:15-00:01", "2026-08-23T10:16:00.000Z"]
+        ["2026-08-23T10:15-00:01", "2026-08-23T10:16:00.000Z"],
     ])("accepts complete supported instant %s", (rawDatetime, expected) => {
         const source = document.createElement("relative-time");
         const result = resolveTrustedTimestamp({ ...candidate(rawDatetime), source });
@@ -131,7 +128,7 @@ describe("resolveTrustedTimestamp", () => {
         "2026-08-23T25:15Z",
         "2026-08-23T10:60Z",
         "2026-08-23T10:15:60Z",
-        "not a timestamp"
+        "not a timestamp",
     ])("rejects unsafe or incomplete input %j", (rawDatetime) => {
         const source = document.createElement("relative-time");
         source.textContent = "3 months ago";
@@ -140,7 +137,7 @@ describe("resolveTrustedTimestamp", () => {
         expect(source.textContent).toBe("3 months ago");
     });
 
-    it.each([null, "other:rule"])('rejects rule %j', (rule) => {
+    it.each([null, "other:rule"])("rejects rule %j", (rule) => {
         expect(resolveTrustedTimestamp(candidate("2026-08-23T10:15Z", rule))).toBeNull();
     });
 });

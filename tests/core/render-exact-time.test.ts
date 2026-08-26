@@ -10,7 +10,7 @@ import {
     renderExactTime,
     getOwnedSourceForOutput,
     restoreExactTime,
-    restoreExactTimes
+    restoreExactTimes,
 } from "../../src/core/render-exact-time";
 
 const DATETIME = "2026-08-23T10:15:00+03:00";
@@ -22,7 +22,8 @@ const DATETIME = "2026-08-23T10:15:00+03:00";
  * @returns - Connected relative-time source element.
  */
 function createSource(hidden = false): Element {
-    document.body.innerHTML = `<div id="host"><relative-time${hidden ? " hidden" : ""}>2 hours ago</relative-time></div>`;
+    document.body.innerHTML = `<div id="host"><relative-time${hidden ? " hidden" : ""}>`
+        + "2 hours ago</relative-time></div>";
     const source = document.querySelector("relative-time");
     if (!source) {
         throw new Error("Expected source");
@@ -56,61 +57,73 @@ describe("renderExactTime", () => {
         expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
     });
 
-    it.each([false, true])("repairs the same output after detachment (source hidden=%s)", (initiallyHidden) => {
-        const source = createSource(initiallyHidden);
-        const firstOutput = renderExactTime(source, DATETIME, "first");
-        if (!firstOutput) {
-            throw new Error("Expected output");
-        }
-        const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
-        firstOutput.remove();
+    it.each([false, true])(
+        "repairs the same output after detachment (source hidden=%s)",
+        (initiallyHidden) => {
+            const source = createSource(initiallyHidden);
+            const firstOutput = renderExactTime(source, DATETIME, "first");
+            if (!firstOutput) {
+                throw new Error("Expected output");
+            }
+            const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
+            firstOutput.remove();
 
-        const repaired = renderExactTime(source, "2026-08-24T11:15:00+03:00", "repaired");
-        expect(repaired).toBe(firstOutput);
-        expect(source.nextElementSibling).toBe(firstOutput);
-        expect(firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(token);
-        expect(firstOutput.dateTime).toBe("2026-08-24T11:15:00+03:00");
-        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
+            const repaired = renderExactTime(source, "2026-08-24T11:15:00+03:00", "repaired");
+            expect(repaired).toBe(firstOutput);
+            expect(source.nextElementSibling).toBe(firstOutput);
+            expect(firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(token);
+            expect(firstOutput.dateTime).toBe("2026-08-24T11:15:00+03:00");
+            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
 
-        const foreign = document.createElement("aside");
-        document.body.append(foreign);
-        foreign.append(firstOutput);
-        restoreExactTimes(document);
-        expect(source.isConnected).toBe(true);
-        expect(source.hasAttribute("hidden")).toBe(initiallyHidden);
-        expect(firstOutput.isConnected).toBe(false);
-        expect(firstOutput.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(false);
-        expect(source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
-        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}], [${OWNED_SOURCE_ATTRIBUTE}]`)).toHaveLength(0);
-    });
+            const foreign = document.createElement("aside");
+            document.body.append(foreign);
+            foreign.append(firstOutput);
+            restoreExactTimes(document);
+            expect(source.isConnected).toBe(true);
+            expect(source.hasAttribute("hidden")).toBe(initiallyHidden);
+            expect(firstOutput.isConnected).toBe(false);
+            expect(firstOutput.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(false);
+            expect(source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
+            expect(
+                document.querySelectorAll(
+                    `[${OWNED_OUTPUT_ATTRIBUTE}], [${OWNED_SOURCE_ATTRIBUTE}]`,
+                ),
+            ).toHaveLength(0);
+        },
+    );
 
-    it.each([false, true])("repairs the same output after reparenting (source hidden=%s)", (initiallyHidden) => {
-        const source = createSource(initiallyHidden);
-        const firstOutput = renderExactTime(source, DATETIME, "first");
-        if (!firstOutput) {
-            throw new Error("Expected output");
-        }
-        const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
-        const foreign = document.createElement("aside");
-        document.body.append(foreign);
-        foreign.append(firstOutput);
+    it.each([false, true])(
+        "repairs the same output after reparenting (source hidden=%s)",
+        (initiallyHidden) => {
+            const source = createSource(initiallyHidden);
+            const firstOutput = renderExactTime(source, DATETIME, "first");
+            if (!firstOutput) {
+                throw new Error("Expected output");
+            }
+            const token = firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
+            const foreign = document.createElement("aside");
+            document.body.append(foreign);
+            foreign.append(firstOutput);
 
-        const repaired = renderExactTime(source, DATETIME, "repaired");
-        expect(repaired).toBe(firstOutput);
-        expect(source.nextElementSibling).toBe(firstOutput);
-        expect(firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(token);
-        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
+            const repaired = renderExactTime(source, DATETIME, "repaired");
+            expect(repaired).toBe(firstOutput);
+            expect(source.nextElementSibling).toBe(firstOutput);
+            expect(firstOutput.getAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(token);
+            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
 
-        foreign.append(firstOutput);
-        restoreExactTimes(document);
-        expect(source.hasAttribute("hidden")).toBe(initiallyHidden);
-        expect(firstOutput.isConnected).toBe(false);
-        expect(firstOutput.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(false);
-    });
+            foreign.append(firstOutput);
+            restoreExactTimes(document);
+            expect(source.hasAttribute("hidden")).toBe(initiallyHidden);
+            expect(firstOutput.isConnected).toBe(false);
+            expect(firstOutput.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(false);
+        },
+    );
 
     it("fails closed for forged pairs, malformed markers, and orphan output", () => {
         document.body.innerHTML = `
-      <div id="forged"><relative-time data-no-more-ago-source="visible:forged">old</relative-time><time data-no-more-ago-output="forged" datetime="old">old exact</time></div>
+      <div id="forged"><relative-time data-no-more-ago-source="visible:forged">
+        old</relative-time><time data-no-more-ago-output="forged" datetime="old">
+        old exact</time></div>
       <relative-time id="malformed" data-no-more-ago-source="visible:">relative</relative-time>
       <relative-time id="unknown" data-no-more-ago-source="other:token">relative</relative-time>
       <relative-time id="tokenless" data-no-more-ago-source="hidden:">relative</relative-time>
@@ -183,15 +196,20 @@ describe("renderExactTime", () => {
             throw new Error("Expected output");
         }
         const forged = document.createElement("time");
-        forged.setAttribute(OWNED_OUTPUT_ATTRIBUTE, output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) ?? "");
+        forged.setAttribute(
+            OWNED_OUTPUT_ATTRIBUTE,
+            output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) ?? "",
+        );
         expect(getOwnedSourceForOutput(output)).toBe(source);
         expect(getOwnedSourceForOutput(forged)).toBeNull();
 
-        const sink = { beforeOwnedOutputRemoval: vi.fn(() => {
-            expect(getOwnedSourceForOutput(output)).toBe(source);
-            expect(source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
-            expect(output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(true);
-        }) };
+        const sink = {
+            beforeOwnedOutputRemoval: vi.fn(() => {
+                expect(getOwnedSourceForOutput(output)).toBe(source);
+                expect(source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
+                expect(output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(true);
+            }),
+        };
         restoreExactTime(source, sink);
         expect(sink.beforeOwnedOutputRemoval).toHaveBeenCalledWith(output);
         expect(getOwnedSourceForOutput(output)).toBeNull();
@@ -248,8 +266,9 @@ describe("renderExactTime", () => {
         restoreExactTimes(document);
     });
 
-    it("uses exact source provenance for disconnected scopes and ignores hostile output evidence", () => {
-        document.body.innerHTML = '<section id="scope"><relative-time>source</relative-time></section>';
+    it("uses source provenance in disconnected scopes and ignores hostile output", () => {
+        document.body.innerHTML =
+            '<section id="scope"><relative-time>source</relative-time></section>';
         const scope = document.getElementById("scope");
         const source = scope?.querySelector("relative-time");
         if (!scope || !source) {
@@ -265,7 +284,10 @@ describe("renderExactTime", () => {
         detachedSource.append(source);
         document.body.append(output);
         const foreign = document.createElement("time");
-        foreign.setAttribute(OWNED_OUTPUT_ATTRIBUTE, output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) ?? "");
+        foreign.setAttribute(
+            OWNED_OUTPUT_ATTRIBUTE,
+            output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) ?? "",
+        );
         foreign.textContent = "page-owned";
         document.body.append(foreign);
         output.setAttribute(OWNED_OUTPUT_ATTRIBUTE, "altered");
@@ -292,7 +314,7 @@ describe("renderExactTime", () => {
         restoreExactTimes(document);
     });
 
-    it("reports and removes a valid connected output from a disconnected scope before release", () => {
+    it("removes connected output from a disconnected scope before release", () => {
         document.body.innerHTML = `
       <section id="scope"><relative-time id="first">first</relative-time></section>
       <section id="second"><relative-time id="second">second</relative-time></section>`;
@@ -321,7 +343,7 @@ describe("renderExactTime", () => {
                 expect(first.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
                 expect(output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(true);
                 expect(output.isConnected).toBe(true);
-            })
+            }),
         };
 
         restoreExactTimes(detachedScope, sink);
@@ -340,7 +362,8 @@ describe("renderExactTime", () => {
 
     it("does not report or remove altered, forged, or cross-pair output evidence", () => {
         document.body.innerHTML = `
-      <section id="scope"><relative-time id="first">first</relative-time><relative-time id="second">second</relative-time></section>`;
+      <section id="scope"><relative-time id="first">first</relative-time>
+        <relative-time id="second">second</relative-time></section>`;
         const scope = document.getElementById("scope");
         const first = document.getElementById("first");
         const second = document.getElementById("second");

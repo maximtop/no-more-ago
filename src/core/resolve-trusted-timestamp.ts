@@ -4,16 +4,14 @@
 
 import { isValid, parseISO } from "date-fns";
 
-import {
-    EXPLICIT_ZONED_DATETIME_RULE,
-    type TimestampCandidate
-} from "../adapters/types";
+import { EXPLICIT_ZONED_DATETIME_RULE, type TimestampCandidate } from "../adapters/types";
 
 const ZONE = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/;
 const YEAR = "(?:\\d{4}|[+-]\\d{6})";
 const DATE = `(?:${YEAR}-(?:\\d{2}-\\d{2}|\\d{3}|W\\d{2}-\\d)|${YEAR}(?:\\d{4}|\\d{3}|W\\d{3}))`;
 const FRACTION = "(?:[.,]\\d+)";
-const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
+const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?`
+    + `|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
 const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
 
 /**
@@ -56,7 +54,6 @@ function hasControlCharacter(value: string): boolean {
  * Adapter candidate after its explicit-zone datetime has been validated and parsed into an instant.
  */
 export interface ResolvedTimestamp {
-
     /**
      * DOM element whose timestamp is being transformed.
      */
@@ -80,9 +77,7 @@ export interface ResolvedTimestamp {
  * @param candidate - Timestamp candidate extracted by a trusted adapter.
  * @returns - Valid resolved instant and source metadata, or null when rejected.
  */
-export function resolveTrustedTimestamp(
-    candidate: TimestampCandidate
-): ResolvedTimestamp | null {
+export function resolveTrustedTimestamp(candidate: TimestampCandidate): ResolvedTimestamp | null {
     const timestampRule: unknown = candidate.timestampRule;
     if (timestampRule !== EXPLICIT_ZONED_DATETIME_RULE) {
         return null;
@@ -90,8 +85,8 @@ export function resolveTrustedTimestamp(
     const rawDatetime = candidate.rawDatetime;
     if (
         rawDatetime.length === 0 ||
-    rawDatetime !== rawDatetime.trim() ||
-    hasControlCharacter(rawDatetime)
+        rawDatetime !== rawDatetime.trim() ||
+        hasControlCharacter(rawDatetime)
     ) {
         return null;
     }
@@ -119,6 +114,6 @@ export function resolveTrustedTimestamp(
     return {
         source: candidate.source,
         sourceDatetime: candidate.rawDatetime,
-        instant
+        instant,
     };
 }

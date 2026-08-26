@@ -9,19 +9,19 @@ import { enUS } from "date-fns/locale/en-US";
  * User-pattern validation result; successful patterns have passed all bounded safety checks.
  */
 export type CustomPatternValidation =
-  | { readonly ok: true; readonly pattern: string }
-  | {
-      readonly ok: false;
-      readonly error:
-        | "empty"
-        | "too-long"
-        | "control-character"
-        | "unclosed-quote"
-        | "missing-date-token"
-        | "legacy-token"
-        | "invalid-token"
-        | "empty-output";
-  };
+    | { readonly ok: true; readonly pattern: string }
+    | {
+        readonly ok: false;
+        readonly error:
+              | "empty"
+              | "too-long"
+              | "control-character"
+              | "unclosed-quote"
+              | "missing-date-token"
+              | "legacy-token"
+              | "invalid-token"
+              | "empty-output";
+    };
 
 /**
  * Fallback date-fns pattern used when users enable custom formatting without a saved pattern.
@@ -63,7 +63,7 @@ export function validateCustomFormatPattern(pattern: unknown): CustomPatternVali
 
     let quoted = false;
     let hasToken = false;
-    for (let index = 0; index < pattern.length;) {
+    for (let index = 0; index < pattern.length; ) {
         const character = pattern[index];
         if (character === undefined) {
             break;

@@ -22,7 +22,7 @@ const jsdocRules = {
             require: {
                 ClassDeclaration: true,
                 MethodDefinition: true,
-                FunctionDeclaration: true
+                FunctionDeclaration: true,
             },
             contexts: [
                 "TSInterfaceDeclaration",
@@ -30,11 +30,11 @@ const jsdocRules = {
                 "TSInterfaceDeclaration TSPropertySignature",
                 "TSInterfaceDeclaration TSMethodSignature",
                 "PropertyDefinition",
-                "ExportNamedDeclaration[declaration.type='VariableDeclaration']"
+                "ExportNamedDeclaration[declaration.type='VariableDeclaration']",
             ],
             checkConstructors: true,
-            exemptEmptyConstructors: true
-        }
+            exemptEmptyConstructors: true,
+        },
     ],
     "jsdoc/require-description": [
         "error",
@@ -52,9 +52,9 @@ const jsdocRules = {
                 "TSTypeAliasDeclaration",
                 "TSInterfaceDeclaration TSPropertySignature",
                 "TSInterfaceDeclaration TSMethodSignature",
-                "ExportNamedDeclaration[declaration.type='VariableDeclaration']"
-            ]
-        }
+                "ExportNamedDeclaration[declaration.type='VariableDeclaration']",
+            ],
+        },
     ],
     "jsdoc/require-param": ["error", { checkDestructured: false }],
     "jsdoc/require-returns": "error",
@@ -63,39 +63,46 @@ const jsdocRules = {
     "jsdoc/require-returns-description": "error",
     "jsdoc/require-param-type": "off",
     "jsdoc/require-returns-type": "off",
-    "jsdoc/require-throws-type": "off"
+    "jsdoc/require-throws-type": "off",
 } satisfies Linter.RulesRecord;
 
 const jsdocConfig = {
     plugins: { jsdoc },
     settings: { jsdoc: { mode: "typescript" } },
-    rules: jsdocRules
+    rules: jsdocRules,
 };
 
 export default tseslint.config(
     {
-        ignores: ["dist/**", "coverage/**", "node_modules/**"]
+        ignores: ["dist/**", "coverage/**", "node_modules/**"],
     },
     {
-        files: ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "vitest.config.ts"],
+        files: [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "tests/**/*.ts",
+            "tests/**/*.tsx",
+            "vitest.config.ts",
+        ],
         extends: [eslint.configs.recommended, ...tseslint.configs.strictTypeChecked],
         plugins: { "@stylistic": stylistic, ...jsdocConfig.plugins },
         languageOptions: {
             parserOptions: {
                 projectService: true,
-                tsconfigRootDir: import.meta.dirname
-            }
+                tsconfigRootDir: import.meta.dirname,
+            },
         },
         rules: {
             "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],
             "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
+            "@stylistic/max-len": ["error", { code: 100, comments: 100, tabWidth: 4 }],
             "@stylistic/no-trailing-spaces": "error",
-            "curly": ["error", "all"]
-        }
+            curly: ["error", "all"],
+        },
     },
     {
         ...jsdocConfig,
-        files: ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+        files: ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"],
     },
     {
         ...eslint.configs.recommended,
@@ -108,22 +115,23 @@ export default tseslint.config(
             sourceType: "module",
             parserOptions: {
                 projectService: true,
-                tsconfigRootDir: import.meta.dirname
+                tsconfigRootDir: import.meta.dirname,
             },
             globals: {
                 console: "readonly",
                 process: "readonly",
                 setTimeout: "readonly",
-                clearTimeout: "readonly"
-            }
+                clearTimeout: "readonly",
+            },
         },
         settings: jsdocConfig.settings,
         rules: {
             ...jsdocConfig.rules,
             "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],
             "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
+            "@stylistic/max-len": ["error", { code: 100, comments: 100, tabWidth: 4 }],
             "@stylistic/no-trailing-spaces": "error",
-            "curly": ["error", "all"]
-        }
-    }
+            curly: ["error", "all"],
+        },
+    },
 );

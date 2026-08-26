@@ -49,8 +49,8 @@ export interface TabsRuntime {
             /**
              * Top-level frame target.
              */
-            readonly frameId: 0
-        }
+            readonly frameId: 0;
+        },
     ): Promise<unknown>;
 }
 
@@ -70,5 +70,8 @@ export function isRuntimeTab(value: unknown): value is RuntimeTab {
         return false;
     }
     const record = value as Record<string, unknown>;
-    return Number.isSafeInteger(record.id) && (record.url === undefined || typeof record.url === "string");
+    return (
+        Number.isSafeInteger(record.id) &&
+        (record.url === undefined || typeof record.url === "string")
+    );
 }

@@ -4,7 +4,10 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DocumentMutationScheduler, type AffectedMutationBatch } from "../../src/core/document-mutation-scheduler";
+import {
+    DocumentMutationScheduler,
+    type AffectedMutationBatch,
+} from "../../src/core/document-mutation-scheduler";
 import { renderExactTime, restoreExactTime } from "../../src/core/render-exact-time";
 
 const flushMutations = async (): Promise<void> => {
@@ -22,7 +25,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: () => null
+            getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
         scheduler.start();
@@ -78,7 +81,7 @@ describe("DocumentMutationScheduler", () => {
             const scheduler = new DocumentMutationScheduler({
                 document,
                 onBatch: (batch) => batches.push(batch),
-                getOwnedSourceForOutput: () => null
+                getOwnedSourceForOutput: () => null,
             });
             scheduler.start();
             const outer = document.createElement("section");
@@ -93,14 +96,14 @@ describe("DocumentMutationScheduler", () => {
                     type: "childList",
                     target: document.body,
                     addedNodes: [outer, nested, sibling],
-                    removedNodes: [removedOuter, removedNested, document.createTextNode("ignored")]
+                    removedNodes: [removedOuter, removedNested, document.createTextNode("ignored")],
                 } as unknown as MutationRecord,
                 {
                     type: "characterData",
                     target: document.createTextNode("unrelated"),
                     addedNodes: [],
-                    removedNodes: []
-                } as unknown as MutationRecord
+                    removedNodes: [],
+                } as unknown as MutationRecord,
             ]);
             expect(batches).toHaveLength(1);
             expect(batches[0]?.addedRoots).toEqual([outer, sibling]);
@@ -118,7 +121,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: () => undefined,
-            getOwnedSourceForOutput: () => null
+            getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
         scheduler.start();
@@ -127,7 +130,7 @@ describe("DocumentMutationScheduler", () => {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["datetime"]
+            attributeFilter: ["datetime"],
         });
         scheduler.stop();
         document.body.append(document.createElement("section"));
@@ -140,7 +143,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: () => null
+            getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
         const unrelated = document.createElement("div");
@@ -155,7 +158,8 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("routes an exact output displacement to its recorded source", async () => {
-        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+        document.body.innerHTML =
+            '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -168,7 +172,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: (node) => node === output ? source : null
+            getOwnedSourceForOutput: (node) => (node === output ? source : null),
         });
         scheduler.start();
         output.remove();
@@ -180,8 +184,9 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
     });
 
-    it("does not emit work when an exact output is displaced and restored before delivery", async () => {
-        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+    it("emits no work when output is displaced and restored before delivery", async () => {
+        document.body.innerHTML =
+            '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -194,7 +199,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: (node) => node === output ? source : null
+            getOwnedSourceForOutput: (node) => (node === output ? source : null),
         });
         scheduler.start();
         output.remove();
@@ -205,7 +210,8 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("suppresses the observer delivery caused by owned restoration", async () => {
-        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+        document.body.innerHTML =
+            '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -218,7 +224,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: () => null
+            getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
         restoreExactTime(source, scheduler);
@@ -250,7 +256,8 @@ describe("DocumentMutationScheduler", () => {
         }
         vi.stubGlobal("MutationObserver", CountingObserver);
         try {
-            document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+            document.body.innerHTML =
+                '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
             const source = document.querySelector("relative-time");
             if (!source) {
                 throw new Error("Expected source");
@@ -263,7 +270,7 @@ describe("DocumentMutationScheduler", () => {
             const scheduler = new DocumentMutationScheduler({
                 document,
                 onBatch: (batch) => batches.push(batch),
-                getOwnedSourceForOutput: () => null
+                getOwnedSourceForOutput: () => null,
             });
             scheduler.start();
             restoreExactTime(source, scheduler);
@@ -277,7 +284,8 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("ignores a child-list record targeted at an exact owned output", async () => {
-        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+        document.body.innerHTML =
+            '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -290,7 +298,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: (node) => node === output ? source : null
+            getOwnedSourceForOutput: (node) => (node === output ? source : null),
         });
         scheduler.start();
         output.append(document.createElement("relative-time"));
@@ -308,7 +316,7 @@ describe("DocumentMutationScheduler", () => {
         const scheduler = new DocumentMutationScheduler({
             document,
             onBatch: (batch) => batches.push(batch),
-            getOwnedSourceForOutput: () => null
+            getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
         forged.append(nested);
@@ -356,7 +364,7 @@ describe("DocumentMutationScheduler", () => {
             const scheduler = new DocumentMutationScheduler({
                 document,
                 onBatch: (batch) => batches.push(batch),
-                getOwnedSourceForOutput: () => null
+                getOwnedSourceForOutput: () => null,
             });
             scheduler.start();
             scheduler.stop();
@@ -366,7 +374,7 @@ describe("DocumentMutationScheduler", () => {
                 type: "childList",
                 target: document.body,
                 addedNodes: [candidate],
-                removedNodes: []
+                removedNodes: [],
             } as unknown as MutationRecord;
             callbacks[0]?.([record]);
             expect(batches).toEqual([]);
@@ -411,7 +419,8 @@ describe("DocumentMutationScheduler", () => {
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
         try {
-            document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
+            document.body.innerHTML =
+                '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
             const source = document.querySelector("relative-time");
             if (!source) {
                 throw new Error("Expected source");
@@ -424,19 +433,21 @@ describe("DocumentMutationScheduler", () => {
             const scheduler = new DocumentMutationScheduler({
                 document,
                 onBatch: (batch) => batches.push(batch),
-                getOwnedSourceForOutput: (node) => node === output ? source : null
+                getOwnedSourceForOutput: (node) => (node === output ? source : null),
             });
             scheduler.start();
             scheduler.beforeOwnedOutputRemoval(output);
             scheduler.stop();
             scheduler.start();
             output.remove();
-            callbacks[1]?.([{
-                type: "childList",
-                target: source.parentNode,
-                addedNodes: [],
-                removedNodes: [output]
-            } as unknown as MutationRecord]);
+            callbacks[1]?.([
+                {
+                    type: "childList",
+                    target: source.parentNode,
+                    addedNodes: [],
+                    removedNodes: [output],
+                } as unknown as MutationRecord,
+            ]);
             expect(batches).toHaveLength(1);
             expect(batches[0]?.displacedOutputSources).toEqual([source]);
             scheduler.stop();
@@ -452,7 +463,7 @@ describe("DocumentMutationScheduler", () => {
             const scheduler = new DocumentMutationScheduler({
                 document,
                 onBatch: (batch) => batches.push(batch),
-                getOwnedSourceForOutput: () => null
+                getOwnedSourceForOutput: () => null,
             });
             scheduler.start();
             vi.advanceTimersByTime(60_000);

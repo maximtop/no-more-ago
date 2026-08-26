@@ -2,14 +2,21 @@
  * @file Coordinates adapter processing and mutation scheduling across a document's lifecycle.
  */
 
-import { DocumentMutationScheduler, type AffectedMutationBatch } from "./document-mutation-scheduler";
+import {
+    DocumentMutationScheduler,
+    type AffectedMutationBatch,
+} from "./document-mutation-scheduler";
 import {
     reconcileDocumentRegion,
     processDocument,
     type DocumentDiagnosticSink,
-    type ProcessInput
+    type ProcessInput,
 } from "./process-document";
-import { getOwnedSourceEntries, getOwnedSourceForOutput, restoreExactTimes } from "./render-exact-time";
+import {
+    getOwnedSourceEntries,
+    getOwnedSourceForOutput,
+    restoreExactTimes,
+} from "./render-exact-time";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -54,12 +61,14 @@ export class DocumentTransformationController {
     private scheduler: DocumentMutationScheduler | undefined;
 
     /**
-     * Current bounded diagnostic reporter, which callers may replace without restarting the controller.
+     * Current bounded diagnostic reporter, which callers may replace without restarting the
+     * controller.
      */
     private diagnosticSink: DocumentDiagnosticSink | undefined;
 
     /**
-     * Captures document-processing dependencies and seeds the current diagnostic sink before activation.
+     * Captures document-processing dependencies and seeds the current diagnostic sink before
+     * activation.
      *
      * @param input - Document, adapter, presentation, and observer dependencies.
      */
@@ -99,11 +108,15 @@ export class DocumentTransformationController {
                 if (this.diagnosticSink) {
                     this.diagnosticSink({
                         category: "mutation",
-                        count: batch.addedRoots.length + batch.removedRoots.length + batch.datetimeTargets.length + batch.displacedOutputSources.length
+                        count:
+                            batch.addedRoots.length +
+                            batch.removedRoots.length +
+                            batch.datetimeTargets.length +
+                            batch.displacedOutputSources.length,
                     });
                 }
                 this.reconcile(batch, scheduler);
-            }
+            },
         });
         this.scheduler = scheduler;
         try {
@@ -150,7 +163,13 @@ export class DocumentTransformationController {
             if (!isConnectedToDocument(source, this.input.root)) {
                 continue;
             }
-            outputs.push(...reconcileDocumentRegion({ ...this.input, root: source, ownedOutputMutations: scheduler }));
+            outputs.push(
+                ...reconcileDocumentRegion({
+                    ...this.input,
+                    root: source,
+                    ownedOutputMutations: scheduler,
+                }),
+            );
         }
         this.outputs = outputs;
         return outputs;
@@ -176,18 +195,29 @@ export class DocumentTransformationController {
         }
 
         for (const target of batch.datetimeTargets) {
-            if (isConnectedToDocument(target, this.input.root) && !coveredBy(batch.addedRoots, target)) {
-                reconcileDocumentRegion({ ...this.input, root: target, ownedOutputMutations: scheduler });
+            if (
+                isConnectedToDocument(target, this.input.root) &&
+                !coveredBy(batch.addedRoots, target)
+            ) {
+                reconcileDocumentRegion({
+                    ...this.input,
+                    root: target,
+                    ownedOutputMutations: scheduler,
+                });
             }
         }
 
         for (const source of batch.displacedOutputSources) {
             if (
                 isConnectedToDocument(source, this.input.root) &&
-        !coveredBy(batch.addedRoots, source) &&
-        !batch.datetimeTargets.includes(source)
+                !coveredBy(batch.addedRoots, source) &&
+                !batch.datetimeTargets.includes(source)
             ) {
-                reconcileDocumentRegion({ ...this.input, root: source, ownedOutputMutations: scheduler });
+                reconcileDocumentRegion({
+                    ...this.input,
+                    root: source,
+                    ownedOutputMutations: scheduler,
+                });
             }
         }
     }

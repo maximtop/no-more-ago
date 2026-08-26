@@ -34,12 +34,14 @@ describe("GitHub adapter registry", () => {
             adapterId: "github",
             rawDatetime: "2026-08-23T10:15:00Z",
             sourceKind: "relative-time",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
         });
     });
 
     it("includes an eligible element root exactly once in bounded discovery", () => {
-        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z"><time-ago datetime="2026-08-24T10:15:00Z">nested</time-ago></relative-time>';
+        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
+            + '<time-ago datetime="2026-08-24T10:15:00Z">nested</time-ago>'
+            + "</relative-time>";
         const adapter = defaultRegistry.select(new URL("https://github.com/org/repo"));
         const root = document.body.firstElementChild;
         if (!adapter || !root) {
@@ -52,7 +54,7 @@ describe("GitHub adapter registry", () => {
     it.each([
         ["relative-time", "relative-time"],
         ["time-ago", "time-ago"],
-        ["time-until", "time-until"]
+        ["time-until", "time-until"],
     ] as const)("supports the approved %s source kind", (tagName, sourceKind) => {
         document.body.innerHTML = `<${tagName} datetime=" 2026-08-23T10:15Z ">visible</${tagName}>`;
         const adapter = defaultRegistry.select(new URL("https://github.com/any/path"));
@@ -68,19 +70,20 @@ describe("GitHub adapter registry", () => {
             source: element,
             sourceKind,
             rawDatetime: " 2026-08-23T10:15Z ",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE
+            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
         });
     });
 
     it.each([
-        '<relative-time>no datetime</relative-time>',
+        "<relative-time>no datetime</relative-time>",
         '<relative-time datetime=""></relative-time>',
         '<relative-time datetime="   ">visible</relative-time>',
         '<relative-time datetime="2026-08-23T10:15Z" format="datetime">absolute</relative-time>',
         '<relative-time datetime="2026-08-23T10:15Z" format=" DATETIME ">absolute</relative-time>',
         '<local-time datetime="2026-08-23T10:15Z">local</local-time>',
         '<time datetime="2026-08-23T10:15Z">generic</time>',
-        '<relative-time title="2026-08-23T10:15Z" aria-label="2026-08-23T10:15Z" data-date="2026-08-23T10:15Z">prose</relative-time>'
+        '<relative-time title="2026-08-23T10:15Z" aria-label="2026-08-23T10:15Z" '
+            + 'data-date="2026-08-23T10:15Z">prose</relative-time>',
     ])("does not extract unsafe or non-authoritative markup: %s", (markup) => {
         document.body.innerHTML = markup;
         const original = document.body.innerHTML;
@@ -97,7 +100,7 @@ describe("GitHub adapter registry", () => {
         "https://www.github.com/org/repo",
         "https://github.com.example/org/repo",
         "https://github.io/org/repo",
-        "ftp://github.com/org/repo"
+        "ftp://github.com/org/repo",
     ])("does not select %s", (url) => {
         expect(defaultRegistry.select(new URL(url))).toBeNull();
     });

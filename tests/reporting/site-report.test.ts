@@ -8,7 +8,7 @@ import {
     composeSiteReportUrl,
     createSiteReportReporter,
     type SiteReportBrowserRuntime,
-    type SiteReportTab
+    type SiteReportTab,
 } from "../../src/reporting/site-report";
 
 const manifest = { version: "1.2.3" };
@@ -23,20 +23,29 @@ const manifest = { version: "1.2.3" };
  * @param options.userAgent - Browser user agent exposed to the reporter.
  * @returns - Browser runtime with query and creation counters.
  */
-function runtime(tab?: SiteReportTab, options: { readonly create?: () => Promise<unknown>; readonly manifest?: unknown; readonly userAgent?: string } = {}): SiteReportBrowserRuntime & { queries: number; creates: Array<Record<string, unknown>> } {
+function runtime(
+    tab?: SiteReportTab,
+    options: {
+        readonly create?: () => Promise<unknown>;
+        readonly manifest?: unknown;
+        readonly userAgent?: string;
+    } = {},
+): SiteReportBrowserRuntime & { queries: number; creates: Array<Record<string, unknown>> } {
     const result = {
         queries: 0,
         creates: [] as Array<Record<string, unknown>>,
         tabs: {
             query: () => {
-                result.queries += 1; return Promise.resolve(tab ? [tab] : []);
+                result.queries += 1;
+                return Promise.resolve(tab ? [tab] : []);
             },
             create: (properties: Record<string, unknown>) => {
-                result.creates.push(properties); return options.create ? options.create() : Promise.resolve(undefined);
-            }
+                result.creates.push(properties);
+                return options.create ? options.create() : Promise.resolve(undefined);
+            },
         },
         runtime: { getManifest: () => options.manifest ?? manifest },
-        navigator: { userAgent: options.userAgent ?? "Mozilla/5.0 Chrome/139.0.0.0" }
+        navigator: { userAgent: options.userAgent ?? "Mozilla/5.0 Chrome/139.0.0.0" },
     };
     return result;
 }
@@ -48,7 +57,7 @@ describe("site report composer", () => {
             hostname: "github.com",
             currentUrl: "https://github.com/acme/repo/issues/1?filter=all#discussion",
             extensionVersion: "1.2.3",
-            browser: "Chrome"
+            browser: "Chrome",
         });
         if (!url) {
             throw new Error("report URL was not composed");
@@ -59,7 +68,9 @@ describe("site report composer", () => {
         expect(parsed.searchParams.get("template")).toBe("site-report.yml");
         expect(parsed.searchParams.get("reason")).toBe("Dates are not working correctly");
         expect(parsed.searchParams.get("hostname")).toBe("github.com");
-        expect(parsed.searchParams.get("current_url")).toBe("https://github.com/acme/repo/issues/1?filter=all#discussion");
+        expect(parsed.searchParams.get("current_url")).toBe(
+            "https://github.com/acme/repo/issues/1?filter=all#discussion",
+        );
         expect(parsed.searchParams.get("extension_version")).toBe("1.2.3");
         expect(parsed.searchParams.get("browser")).toBe("Chrome");
     });
@@ -83,7 +94,7 @@ describe("site report composer", () => {
         [{ hostname: "github.com", currentUrl: "https://example.com/a" }],
         [{ hostname: "github.com", extensionVersion: "not valid" }],
         [{ hostname: "github.com", reason: "unexpected" }],
-        [{ hostname: "github.com", currentUrl: "https://github.com/a", secret: "private" }]
+        [{ hostname: "github.com", currentUrl: "https://github.com/a", secret: "private" }],
     ])("rejects unsafe or non-contract composer context %j", (context) => {
         expect(composeSiteReportUrl(context)).toBeNull();
     });
@@ -92,7 +103,7 @@ describe("site report composer", () => {
         ["Firefox/142.0", "Firefox"],
         ["Mozilla Edg/139.0", "Edge"],
         ["Mozilla Chrome/139.0", "Chrome"],
-        ["OtherBrowser/1.0", "Other"]
+        ["OtherBrowser/1.0", "Other"],
     ] as const)("derives coarse browser context for %s", (userAgent, expected) => {
         expect(browserContextFromUserAgent(userAgent)).toBe(expected);
     });
@@ -100,7 +111,11 @@ describe("site report composer", () => {
 
 describe("site report browser boundary", () => {
     it("does no tab work before an explicit report call and opens the adapter reason", async () => {
-        const browser = runtime({ url: "https://github.com/acme/repo", incognito: false, windowId: 4 });
+        const browser = runtime({
+            url: "https://github.com/acme/repo",
+            incognito: false,
+            windowId: 4,
+        });
         const reporter = createSiteReportReporter(browser);
         expect(browser.queries).toBe(0);
         expect(browser.creates).toHaveLength(0);
@@ -116,14 +131,26 @@ describe("site report browser boundary", () => {
 
     it("selects the add-support reason for a no-adapter site", async () => {
         const browser = runtime({ url: "http://example.test/path", incognito: false });
-        const result = await createSiteReportReporter(browser).openPopupReport({ hostname: "example.test", hasAdapter: false });
+        const result = await createSiteReportReporter(browser).openPopupReport({
+            hostname: "example.test",
+            hasAdapter: false,
+        });
         expect(result.ok).toBe(true);
-        expect(new URL(String(browser.creates[0]?.url)).searchParams.get("reason")).toBe("Add support for this site");
+        expect(new URL(String(browser.creates[0]?.url)).searchParams.get("reason")).toBe(
+            "Add support for this site",
+        );
     });
 
     it("keeps a private report in its originating window", async () => {
-        const browser = runtime({ url: "https://github.com/private", incognito: true, windowId: 42 });
-        const result = await createSiteReportReporter(browser).openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const browser = runtime({
+            url: "https://github.com/private",
+            incognito: true,
+            windowId: 42,
+        });
+        const result = await createSiteReportReporter(browser).openPopupReport({
+            hostname: "github.com",
+            hasAdapter: true,
+        });
         expect(result.ok).toBe(true);
         expect(browser.creates[0]?.windowId).toBe(42);
     });
@@ -132,10 +159,13 @@ describe("site report browser boundary", () => {
         [{ url: "chrome://settings", incognito: false }, "restricted-page"],
         [{ url: "https://example.com/private", incognito: false }, "hostname-mismatch"],
         [{ url: "https://user:pass@github.com/private", incognito: false }, "restricted-page"],
-        [{ url: "https://github.com/private", incognito: true }, "private-window"]
+        [{ url: "https://github.com/private", incognito: true }, "private-window"],
     ] as const)("rejects unsafe active tab context %j", async (tab, error) => {
         const browser = runtime(tab);
-        const result = await createSiteReportReporter(browser).openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const result = await createSiteReportReporter(browser).openPopupReport({
+            hostname: "github.com",
+            hasAdapter: true,
+        });
         expect(result).toEqual({ ok: false, error });
         expect(browser.creates).toHaveLength(0);
     });
@@ -156,24 +186,42 @@ describe("site report browser boundary", () => {
         const pending = new Promise<void>((resolve) => {
             release = resolve;
         });
-        const browser = runtime({ url: "https://github.com/repo", incognito: false }, { create: () => pending });
+        const browser = runtime(
+            { url: "https://github.com/repo", incognito: false },
+            { create: () => pending },
+        );
         const reporter = createSiteReportReporter(browser);
         const first = reporter.openPopupReport({ hostname: "github.com", hasAdapter: true });
-        const duplicate = await reporter.openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const duplicate = await reporter.openPopupReport({
+            hostname: "github.com",
+            hasAdapter: true,
+        });
         expect(duplicate).toEqual({ ok: false, error: "busy" });
         release?.();
         expect((await first).ok).toBe(true);
         expect(browser.creates).toHaveLength(1);
 
-        const failedBrowser = runtime({ url: "https://github.com/repo", incognito: false }, { create: () => Promise.reject(new Error("blocked")) });
-        const failed = await createSiteReportReporter(failedBrowser).openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const failedBrowser = runtime(
+            { url: "https://github.com/repo", incognito: false },
+            { create: () => Promise.reject(new Error("blocked")) },
+        );
+        const failed = await createSiteReportReporter(failedBrowser).openPopupReport({
+            hostname: "github.com",
+            hasAdapter: true,
+        });
         expect(failed).toEqual({ ok: false, error: "open-failed" });
         expect(failedBrowser.creates).toHaveLength(1);
     });
 
     it("fails closed when trusted environment metadata is unavailable", async () => {
-        const browser = runtime({ url: "https://github.com/repo", incognito: false }, { manifest: {} });
-        const result = await createSiteReportReporter(browser).openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const browser = runtime(
+            { url: "https://github.com/repo", incognito: false },
+            { manifest: {} },
+        );
+        const result = await createSiteReportReporter(browser).openPopupReport({
+            hostname: "github.com",
+            hasAdapter: true,
+        });
         expect(result).toEqual({ ok: false, error: "invalid-context" });
         expect(browser.creates).toHaveLength(0);
     });

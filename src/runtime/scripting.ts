@@ -1,4 +1,3 @@
-
 /**
  * Declares the Chrome Scripting API subset used for adapter registration and injection.
  *
@@ -102,7 +101,7 @@ export interface ScriptingRuntime {
         /**
          * Registration IDs to remove.
          */
-        ids: string[]
+        ids: string[];
     }): Promise<void>;
 
     /**
@@ -121,7 +120,7 @@ export interface ScriptingRuntime {
             /**
              * Prevents injection into child frames.
              */
-            readonly allFrames: false
+            readonly allFrames: false;
         };
 
         /**

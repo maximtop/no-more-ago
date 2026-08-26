@@ -4,21 +4,28 @@
  * @file Chrome scripting and tab reconciliation for runtime adapters.
  */
 
-
 import type { RuntimeTab, TabsRuntime, DocumentPhase } from "./tabs";
-import type { RegisteredContentScriptReference, RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
+import type {
+    RegisteredContentScriptReference,
+    RegisteredContentScriptSpec,
+    ScriptingRuntime,
+} from "./scripting";
 import {
     DOCUMENT_STATUS_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
     isDocumentStatusResponse,
-    type DocumentStatusResponse
+    type DocumentStatusResponse,
 } from "./messages";
 import { isSiteEnabled } from "../settings/snapshot";
 
 /**
  * Trigger that determines whether registrations are refreshed, swept, or failed closed.
  */
-export type ActivationMode = "cold-worker" | "activation-sweep" | "settings-change" | "failed-closed";
+export type ActivationMode =
+    | "cold-worker"
+    | "activation-sweep"
+    | "settings-change"
+    | "failed-closed";
 
 /**
  * Resolved global policy used to enable, disable, or conservatively stop adapters.
@@ -54,9 +61,18 @@ export interface RuntimeAdapterDefinition {
  * Structured registration, tab-query, and per-tab operation failures.
  */
 export type ReconcileFailure =
-  | { readonly scope: "registration"; readonly adapterId: string; readonly operation: "get" | "register" | "update" | "unregister" }
-  | { readonly scope: "matching-tabs-query"; readonly adapterId: string }
-  | { readonly scope: "tab"; readonly adapterId: string; readonly tabId: number; readonly action: "inject" | "teardown" | "status" };
+    | {
+        readonly scope: "registration";
+        readonly adapterId: string;
+        readonly operation: "get" | "register" | "update" | "unregister";
+    }
+    | { readonly scope: "matching-tabs-query"; readonly adapterId: string }
+    | {
+        readonly scope: "tab";
+        readonly adapterId: string;
+        readonly tabId: number;
+        readonly action: "inject" | "teardown" | "status";
+    };
 
 /**
  * Complete reconciliation outcome for the requested revision, policy, and adapters.
@@ -85,7 +101,9 @@ export interface ActivationReconcileResult {
     /**
      * Final registration outcome for each processed adapter.
      */
-    readonly registration: Readonly<Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed">>;
+    readonly registration: Readonly<
+        Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed">
+    >;
 
     /**
      * Injection, teardown, and status outcomes recorded for matching tabs.
@@ -114,7 +132,7 @@ export interface ActivationReconcileResult {
         /**
          * Whether the attempted tab action completed successfully.
          */
-        readonly ok: boolean
+        readonly ok: boolean;
     }[];
 }
 
@@ -170,7 +188,10 @@ export interface ReconcileInput {
  * @param right - Desired optional script field.
  * @returns - Whether both arrays are absent or contain the same ordered values.
  */
-function sameArray(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
+function sameArray(
+    left: readonly string[] | undefined,
+    right: readonly string[] | undefined,
+): boolean {
     if (left === undefined || right === undefined) {
         return left === right;
     }
@@ -186,14 +207,16 @@ function sameArray(left: readonly string[] | undefined, right: readonly string[]
  */
 export function registrationMatches(
     existing: RegisteredContentScriptReference,
-    expected: RegisteredContentScriptSpec
+    expected: RegisteredContentScriptSpec,
 ): boolean {
-    return existing.id === expected.id
-    && sameArray(existing.matches, expected.matches)
-    && sameArray(existing.js, expected.js)
-    && existing.runAt === expected.runAt
-    && existing.allFrames === expected.allFrames
-    && existing.persistAcrossSessions === expected.persistAcrossSessions;
+    return (
+        existing.id === expected.id &&
+        sameArray(existing.matches, expected.matches) &&
+        sameArray(existing.js, expected.js) &&
+        existing.runAt === expected.runAt &&
+        existing.allFrames === expected.allFrames &&
+        existing.persistAcrossSessions === expected.persistAcrossSessions
+    );
 }
 
 /**
@@ -234,7 +257,7 @@ function isStopped(value: DocumentStatusResponse): boolean {
 async function queryMatchingTabs(
     definition: RuntimeAdapterDefinition,
     tabs: TabsRuntime,
-    failures: ReconcileFailure[]
+    failures: ReconcileFailure[],
 ): Promise<readonly RuntimeTab[]> {
     let found: readonly RuntimeTab[];
     try {
@@ -266,11 +289,16 @@ async function registrationState(
     mode: ActivationMode,
     desiredEnabled: boolean,
     failures: ReconcileFailure[],
-    registration: Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed">
+    registration: Record<
+        string,
+        "unchanged" | "registered" | "updated" | "unregistered" | "failed"
+    >,
 ): Promise<{ readonly present: boolean; readonly changed: boolean }> {
     let existing: readonly RegisteredContentScriptReference[];
     try {
-        existing = await scripting.getRegisteredContentScripts({ ids: [definition.registration.id] });
+        existing = await scripting.getRegisteredContentScripts({
+            ids: [definition.registration.id],
+        });
     } catch {
         failures.push({ scope: "registration", adapterId: definition.id, operation: "get" });
         registration[definition.id] = "failed";
@@ -279,19 +307,24 @@ async function registrationState(
                 await scripting.unregisterContentScripts({ ids: [definition.registration.id] });
                 registration[definition.id] = "unregistered";
             } catch {
-                failures.push({ scope: "registration", adapterId: definition.id, operation: "unregister" });
+                failures.push({
+                    scope: "registration",
+                    adapterId: definition.id,
+                    operation: "unregister",
+                });
             }
         }
         return { present: false, changed: false };
     }
     const present = existing.some((item) => item.id === definition.registration.id);
     if (mode === "failed-closed" || mode === "settings-change") {
-    // settings-change is handled by the caller based on policy; this branch only
-    // describes registration inspection.
+        // settings-change is handled by the caller based on policy; this branch only
+        // describes registration inspection.
     }
     if (!desiredEnabled) {
         if (!present) {
-            registration[definition.id] = "unchanged"; return { present: false, changed: false };
+            registration[definition.id] = "unchanged";
+            return { present: false, changed: false };
         }
         try {
             if (!scripting.unregisterContentScripts) {
@@ -301,7 +334,11 @@ async function registrationState(
             registration[definition.id] = "unregistered";
             return { present: true, changed: true };
         } catch {
-            failures.push({ scope: "registration", adapterId: definition.id, operation: "unregister" });
+            failures.push({
+                scope: "registration",
+                adapterId: definition.id,
+                operation: "unregister",
+            });
             registration[definition.id] = "failed";
             return { present: true, changed: false };
         }
@@ -321,7 +358,11 @@ async function registrationState(
         }
         return { present: true, changed: true };
     } catch {
-        failures.push({ scope: "registration", adapterId: definition.id, operation: current ? "update" : "register" });
+        failures.push({
+            scope: "registration",
+            adapterId: definition.id,
+            operation: current ? "update" : "register",
+        });
         registration[definition.id] = "failed";
         return { present: Boolean(current), changed: false };
     }
@@ -343,17 +384,32 @@ async function teardownTab(
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: ActivationReconcileResult["tabs"],
-    checkStatus: boolean
+    checkStatus: boolean,
 ): Promise<void> {
     if (checkStatus) {
         try {
-            const response = await tabs.sendMessage(tab.id, { type: DOCUMENT_STATUS_MESSAGE }, { frameId: 0 });
+            const response = await tabs.sendMessage(
+                tab.id,
+                { type: DOCUMENT_STATUS_MESSAGE },
+                { frameId: 0 },
+            );
             if (isDocumentStatusResponse(response) && isStopped(response)) {
-                records.push({ adapterId: definition.id, tabId: tab.id, action: "status", phase: response.phase, ok: true });
+                records.push({
+                    adapterId: definition.id,
+                    tabId: tab.id,
+                    action: "status",
+                    phase: response.phase,
+                    ok: true,
+                });
                 return;
             }
         } catch {
-            failures.push({ scope: "tab", adapterId: definition.id, tabId: tab.id, action: "status" });
+            failures.push({
+                scope: "tab",
+                adapterId: definition.id,
+                tabId: tab.id,
+                action: "status",
+            });
             records.push({ adapterId: definition.id, tabId: tab.id, action: "status", ok: false });
             // A status failure must not prevent fail-closed/disable teardown: send the
             // exact top-frame teardown message as a separate operation.
@@ -363,7 +419,12 @@ async function teardownTab(
         await tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }, { frameId: 0 });
         records.push({ adapterId: definition.id, tabId: tab.id, action: "teardown", ok: true });
     } catch {
-        failures.push({ scope: "tab", adapterId: definition.id, tabId: tab.id, action: "teardown" });
+        failures.push({
+            scope: "tab",
+            adapterId: definition.id,
+            tabId: tab.id,
+            action: "teardown",
+        });
         records.push({ adapterId: definition.id, tabId: tab.id, action: "teardown", ok: false });
     }
 }
@@ -395,7 +456,11 @@ export class AdapterActivationCoordinator {
      * @param input.scripting - Chrome scripting API boundary.
      * @param input.tabs - Chrome tabs API boundary.
      */
-    public constructor(input: { readonly adapters?: readonly RuntimeAdapterDefinition[]; readonly scripting: ScriptingRuntime; readonly tabs: TabsRuntime }) {
+    public constructor(input: {
+        readonly adapters?: readonly RuntimeAdapterDefinition[];
+        readonly scripting: ScriptingRuntime;
+        readonly tabs: TabsRuntime;
+    }) {
         this.adapters = input.adapters ?? [];
         this.scripting = input.scripting;
         this.tabs = input.tabs;
@@ -420,20 +485,32 @@ export class AdapterActivationCoordinator {
         readonly affectedHostnames?: readonly string[];
     }): Promise<ActivationReconcileResult> {
         const failures: ReconcileFailure[] = [];
-        const registration: Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed"> = {};
+        const registration: Record<
+            string,
+            "unchanged" | "registered" | "updated" | "unregistered" | "failed"
+        > = {};
         const records: ActivationReconcileResult["tabs"] = [];
         for (const definition of this.adapters) {
-            if (input.affectedHostnames !== undefined && !input.affectedHostnames.includes(definition.hostname)) {
+            if (
+                input.affectedHostnames !== undefined &&
+                !input.affectedHostnames.includes(definition.hostname)
+            ) {
                 continue;
             }
-            const desiredEnabled = input.policy === "enabled" && isSiteEnabled(input.sitePreferences ?? {}, definition.hostname);
+            const desiredEnabled =
+                input.policy === "enabled" &&
+                isSiteEnabled(input.sitePreferences ?? {}, definition.hostname);
             const state = await registrationState(
                 definition,
                 this.scripting,
-                desiredEnabled ? input.mode : (input.mode === "failed-closed" || input.policy !== "enabled" ? "failed-closed" : input.mode),
+                desiredEnabled
+                    ? input.mode
+                    : input.mode === "failed-closed" || input.policy !== "enabled"
+                        ? "failed-closed"
+                        : input.mode,
                 desiredEnabled,
                 failures,
-                registration
+                registration,
             );
             if (desiredEnabled) {
                 const shouldInject = input.mode !== "cold-worker" || state.changed;
@@ -441,24 +518,62 @@ export class AdapterActivationCoordinator {
                     continue;
                 }
                 const matching = await queryMatchingTabs(definition, this.tabs, failures);
-                await Promise.all(matching.map(async (tab) => {
-                    try {
-                        if (!this.scripting.executeScript) {
-                            throw new Error("Script execution is unavailable");
+                await Promise.all(
+                    matching.map(async (tab) => {
+                        try {
+                            if (!this.scripting.executeScript) {
+                                throw new Error("Script execution is unavailable");
+                            }
+                            await this.scripting.executeScript({
+                                target: { tabId: tab.id, allFrames: false },
+                                files: definition.registration.js,
+                            });
+                            records.push({
+                                adapterId: definition.id,
+                                tabId: tab.id,
+                                action: "inject",
+                                ok: true,
+                            });
+                        } catch {
+                            failures.push({
+                                scope: "tab",
+                                adapterId: definition.id,
+                                tabId: tab.id,
+                                action: "inject",
+                            });
+                            records.push({
+                                adapterId: definition.id,
+                                tabId: tab.id,
+                                action: "inject",
+                                ok: false,
+                            });
                         }
-                        await this.scripting.executeScript({ target: { tabId: tab.id, allFrames: false }, files: definition.registration.js });
-                        records.push({ adapterId: definition.id, tabId: tab.id, action: "inject", ok: true });
-                    } catch {
-                        failures.push({ scope: "tab", adapterId: definition.id, tabId: tab.id, action: "inject" });
-                        records.push({ adapterId: definition.id, tabId: tab.id, action: "inject", ok: false });
-                    }
-                }));
+                    }),
+                );
             } else {
                 const matching = await queryMatchingTabs(definition, this.tabs, failures);
-                await Promise.all(matching.map((tab) => teardownTab(definition, tab, this.tabs, failures, records, input.policy !== "unknown" && input.mode !== "failed-closed")));
+                await Promise.all(
+                    matching.map((tab) =>
+                        teardownTab(
+                            definition,
+                            tab,
+                            this.tabs,
+                            failures,
+                            records,
+                            input.policy !== "unknown" && input.mode !== "failed-closed",
+                        ),
+                    ),
+                );
             }
         }
-        return { revision: input.revision, mode: input.mode, policy: input.policy, failures, registration, tabs: records };
+        return {
+            revision: input.revision,
+            mode: input.mode,
+            policy: input.policy,
+            failures,
+            registration,
+            tabs: records,
+        };
     }
 }
 
@@ -468,6 +583,8 @@ export class AdapterActivationCoordinator {
  * @param input - Desired activation state and Chrome runtime dependencies.
  * @returns - Complete registration and tab reconciliation result.
  */
-export async function reconcileActivation(input: ReconcileInput): Promise<ActivationReconcileResult> {
+export async function reconcileActivation(
+    input: ReconcileInput,
+): Promise<ActivationReconcileResult> {
     return new AdapterActivationCoordinator(input).reconcile(input);
 }

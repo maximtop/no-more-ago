@@ -9,21 +9,23 @@ import {
     createDiagnosticsZip,
     downloadDiagnosticsZip,
     type DiagnosticArchiveSnapshot,
-    type DownloadRuntime
+    type DownloadRuntime,
 } from "../../src/diagnostics/archive";
 
 const snapshot: DiagnosticArchiveSnapshot = {
-    entries: [{
-        category: "lifecycle",
-        timestamp: 1_700_000_000_000,
-        hostname: "github.com",
-        pageCategory: "repository",
-        incognito: false,
-        count: 2,
-        reason: "adapter-matched",
-        stack: ["frame:12:4"]
-    }],
-    environment: { browserFamily: "chromium", extensionVersion: "1.2.3" }
+    entries: [
+        {
+            category: "lifecycle",
+            timestamp: 1_700_000_000_000,
+            hostname: "github.com",
+            pageCategory: "repository",
+            incognito: false,
+            count: 2,
+            reason: "adapter-matched",
+            stack: ["frame:12:4"],
+        },
+    ],
+    environment: { browserFamily: "chromium", extensionVersion: "1.2.3" },
 };
 
 /**
@@ -54,15 +56,18 @@ describe("diagnostic archive", () => {
         expect(JSON.parse(strFromU8(json))).toEqual(snapshot);
     });
 
-    it("exports every retained entry when journal bytes fit but trusted metadata crosses the cap", () => {
+    it("exports every entry when journal bytes fit but trusted metadata exceeds the cap", () => {
         const entries = Array.from({ length: 44_345 }, (_, index) => ({
             category: "lifecycle" as const,
             timestamp: index,
             hostname: index < 20 ? "github.com." : "github.com",
             pageCategory: "repository" as const,
-            incognito: false
+            incognito: false,
         }));
-        const environment = { browserFamily: "chromium" as const, extensionVersion: "12345678901234567890123456789012" };
+        const environment = {
+            browserFamily: "chromium" as const,
+            extensionVersion: "12345678901234567890123456789012",
+        };
         const journalBytes = new TextEncoder().encode(JSON.stringify({ entries })).byteLength;
         const archive = createDiagnosticsZip({ entries, environment });
         const files = unzipSync(archive);
@@ -71,7 +76,10 @@ describe("diagnostic archive", () => {
             throw new Error("diagnostics.json is missing");
         }
         const exportedBytes = new TextEncoder().encode(strFromU8(json)).byteLength;
-        const exported = JSON.parse(strFromU8(json)) as { entries: unknown[]; environment: unknown };
+        const exported = JSON.parse(strFromU8(json)) as {
+            entries: unknown[];
+            environment: unknown;
+        };
         expect(journalBytes).toBeLessThanOrEqual(5_000_000);
         expect(exportedBytes).toBeGreaterThan(5_000_000);
         expect(exported.entries).toHaveLength(entries.length);
@@ -80,14 +88,36 @@ describe("diagnostic archive", () => {
 
     it("rejects empty, malformed, and unsafe snapshots before compression", () => {
         expectArchiveError(() => createDiagnosticsZip({ ...snapshot, entries: [] }), "empty");
-        expectArchiveError(() => createDiagnosticsZip({ entries: snapshot.entries, environment: { browserFamily: "chromium" }, extra: true }), "invalid-snapshot");
-        expectArchiveError(() => createDiagnosticsZip({
-            ...snapshot,
-            entries: [{ ...snapshot.entries[0], url: "https://private.invalid/path" }]
-        }), "invalid-snapshot");
-        const inheritedEnvironment = Object.create({ extensionVersion: "spoofed" }) as Record<string, unknown>;
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: snapshot.entries,
+                    environment: { browserFamily: "chromium" },
+                    extra: true,
+                }),
+            "invalid-snapshot",
+        );
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    ...snapshot,
+                    entries: [{ ...snapshot.entries[0], url: "https://private.invalid/path" }],
+                }),
+            "invalid-snapshot",
+        );
+        const inheritedEnvironment = Object.create({ extensionVersion: "spoofed" }) as Record<
+            string,
+            unknown
+        >;
         inheritedEnvironment.browserFamily = "chromium";
-        expectArchiveError(() => createDiagnosticsZip({ entries: snapshot.entries, environment: inheritedEnvironment }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: snapshot.entries,
+                    environment: inheritedEnvironment,
+                }),
+            "invalid-snapshot",
+        );
 
         const inheritedRoot = Object.create({ secret: "private" }) as Record<string, unknown>;
         inheritedRoot.entries = snapshot.entries;
@@ -95,32 +125,68 @@ describe("diagnostic archive", () => {
         expectArchiveError(() => createDiagnosticsZip(inheritedRoot), "invalid-snapshot");
 
         const toJSONPrototype = {};
-        Object.defineProperty(toJSONPrototype, "toJSON", { enumerable: false, value: () => ({ url: "https://private.invalid/token" }) });
+        Object.defineProperty(toJSONPrototype, "toJSON", {
+            enumerable: false,
+            value: () => ({ url: "https://private.invalid/token" }),
+        });
         const rootWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
         rootWithToJSON.entries = snapshot.entries;
         rootWithToJSON.environment = snapshot.environment;
         let encoderCalls = 0;
-        expectArchiveError(() => createDiagnosticsZip(rootWithToJSON, () => {
-            encoderCalls += 1; return new Uint8Array();
-        }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip(rootWithToJSON, () => {
+                    encoderCalls += 1;
+                    return new Uint8Array();
+                }),
+            "invalid-snapshot",
+        );
         expect(encoderCalls).toBe(0);
 
         const environmentWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
         environmentWithToJSON.browserFamily = "chromium";
-        expectArchiveError(() => createDiagnosticsZip({ entries: snapshot.entries, environment: environmentWithToJSON }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: snapshot.entries,
+                    environment: environmentWithToJSON,
+                }),
+            "invalid-snapshot",
+        );
 
         const entriesWithToJSON = [...snapshot.entries];
         Object.setPrototypeOf(entriesWithToJSON, toJSONPrototype);
-        expectArchiveError(() => createDiagnosticsZip({ entries: entriesWithToJSON, environment: snapshot.environment }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: entriesWithToJSON,
+                    environment: snapshot.environment,
+                }),
+            "invalid-snapshot",
+        );
 
         const eventWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
         Object.assign(eventWithToJSON, snapshot.entries[0]);
-        expectArchiveError(() => createDiagnosticsZip({ entries: [eventWithToJSON], environment: snapshot.environment }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: [eventWithToJSON],
+                    environment: snapshot.environment,
+                }),
+            "invalid-snapshot",
+        );
 
         const stackWithToJSON = ["frame:1"];
         Object.setPrototypeOf(stackWithToJSON, toJSONPrototype);
         const eventWithUnsafeStack = { ...snapshot.entries[0], stack: stackWithToJSON };
-        expectArchiveError(() => createDiagnosticsZip({ entries: [eventWithUnsafeStack], environment: snapshot.environment }), "invalid-snapshot");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: [eventWithUnsafeStack],
+                    environment: snapshot.environment,
+                }),
+            "invalid-snapshot",
+        );
 
         const oversizedEntries = Array.from({ length: 44_346 }, (_, index) => ({
             category: "lifecycle" as const,
@@ -128,12 +194,23 @@ describe("diagnostic archive", () => {
             hostname: "github.com",
             pageCategory: "repository" as const,
             incognito: false,
-            adapterVersion: "12345678901234567890123456789012"
+            adapterVersion: "12345678901234567890123456789012",
         }));
-        expectArchiveError(() => createDiagnosticsZip({ entries: oversizedEntries, environment: snapshot.environment }), "invalid-snapshot");
-        expectArchiveError(() => createDiagnosticsZip(snapshot, () => {
-            throw new Error("encoder failed");
-        }), "compression-failed");
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip({
+                    entries: oversizedEntries,
+                    environment: snapshot.environment,
+                }),
+            "invalid-snapshot",
+        );
+        expectArchiveError(
+            () =>
+                createDiagnosticsZip(snapshot, () => {
+                    throw new Error("encoder failed");
+                }),
+            "compression-failed",
+        );
     });
 
     it("keeps the object URL alive through the one click and revokes it once", () => {
@@ -151,13 +228,18 @@ describe("diagnostic archive", () => {
                 href: "",
                 download: "",
                 click() {
-                    clicked += 1; clickedUrl = this.href; expect(revoked).toEqual([]); expect(this.download).toBe("no-more-ago-diagnostics.zip");
+                    clicked += 1;
+                    clickedUrl = this.href;
+                    expect(revoked).toEqual([]);
+                    expect(this.download).toBe("no-more-ago-diagnostics.zip");
                 },
-                remove() { /* local anchor cleanup */ }
+                remove() {
+                    /* local anchor cleanup */
+                },
             }),
             scheduleRevoke: (callback) => {
                 scheduled.push(callback);
-            }
+            },
         };
         downloadDiagnosticsZip(new Uint8Array([1, 2, 3]), runtime);
         expect(clicked).toBe(1);
@@ -182,12 +264,19 @@ describe("diagnostic archive", () => {
             revokeObjectURL: (url) => {
                 revoked.push(url);
             },
-            createAnchor: () => ({ href: "", download: "", click: () => {
-                throw new Error("blocked");
-            }, remove: () => {
-                removed += 1;
-            } }),
-            scheduleRevoke: () => { /* no callback */ }
+            createAnchor: () => ({
+                href: "",
+                download: "",
+                click: () => {
+                    throw new Error("blocked");
+                },
+                remove: () => {
+                    removed += 1;
+                },
+            }),
+            scheduleRevoke: () => {
+                /* no callback */
+            },
         };
         expectArchiveError(() => {
             downloadDiagnosticsZip(new Uint8Array([1]), base);
@@ -198,12 +287,19 @@ describe("diagnostic archive", () => {
         revoked.length = 0;
         const schedulingFailure: DownloadRuntime = {
             ...base,
-            createAnchor: () => ({ href: "", download: "", click: () => { /* click succeeded */ }, remove: () => {
-                removed += 1;
-            } }),
+            createAnchor: () => ({
+                href: "",
+                download: "",
+                click: () => {
+                    /* click succeeded */
+                },
+                remove: () => {
+                    removed += 1;
+                },
+            }),
             scheduleRevoke: () => {
                 throw new Error("scheduler failed");
-            }
+            },
         };
         expectArchiveError(() => {
             downloadDiagnosticsZip(new Uint8Array([1]), schedulingFailure);

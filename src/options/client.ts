@@ -22,9 +22,18 @@ import {
     isSetDisplaySettingsResponse,
     isSetSiteEnabledResponse,
     isSitesState,
-    isResetAllSettingsResponse
+    isResetAllSettingsResponse,
 } from "../background/messages";
-import type { DebugState, DisplaySettings, DisplayState, ResetAllSettingsResponse, SetDebugEnabledResponse, SetDisplaySettingsResponse, SetSiteEnabledResponse, SitesState } from "../background/application";
+import type {
+    DebugState,
+    DisplaySettings,
+    DisplayState,
+    ResetAllSettingsResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetSiteEnabledResponse,
+    SitesState,
+} from "../background/application";
 import type { DiagnosticsSnapshot } from "../background/messages";
 
 /**
@@ -41,43 +50,54 @@ export interface SitesTransport {
  * Result of saving display settings, including any state reread after an ambiguous response.
  */
 export type DisplaySetResult =
-  | { readonly kind: "response"; readonly response: SetDisplaySettingsResponse }
-  | { readonly kind: "ambiguous"; readonly state?: DisplayState };
+    | { readonly kind: "response"; readonly response: SetDisplaySettingsResponse }
+    | { readonly kind: "ambiguous"; readonly state?: DisplayState };
 
 /**
  * Result of changing a site's enabled setting.
  */
 export type SitesSetResult =
-  | { readonly kind: "response"; readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "sites" }> }
-  | { readonly kind: "ambiguous"; readonly state?: SitesState };
+    | {
+        readonly kind: "response";
+        readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "sites" }>;
+    }
+    | { readonly kind: "ambiguous"; readonly state?: SitesState };
 
 /**
  * Result of resetting all persisted settings.
  */
 export type SitesResetResult =
-  | { readonly kind: "response"; readonly response: ResetAllSettingsResponse }
-  | { readonly kind: "ambiguous" };
+    | { readonly kind: "response"; readonly response: ResetAllSettingsResponse }
+    | { readonly kind: "ambiguous" };
 
 /**
  * Result of changing whether diagnostic logging is enabled.
  */
 export type DebugSetResult =
-  | { readonly kind: "response"; readonly response: SetDebugEnabledResponse }
-  | { readonly kind: "ambiguous"; readonly state?: DebugState };
+    | { readonly kind: "response"; readonly response: SetDebugEnabledResponse }
+    | { readonly kind: "ambiguous"; readonly state?: DebugState };
 
 /**
  * Diagnostics snapshot or the reason it could not be read.
  */
 export type DiagnosticsSnapshotResult =
-  | { readonly kind: "response"; readonly snapshot: DiagnosticsSnapshot }
-  | { readonly kind: "error"; readonly error: "disabled" | "unavailable" | "empty" | "invalid-journal" | "storage-failed" };
+    | { readonly kind: "response"; readonly snapshot: DiagnosticsSnapshot }
+    | {
+        readonly kind: "error";
+        readonly error:
+              | "disabled"
+              | "unavailable"
+              | "empty"
+              | "invalid-journal"
+              | "storage-failed";
+    };
 
 /**
  * Result of removing stored diagnostic entries.
  */
 export type DiagnosticsClearResult =
-  | { readonly kind: "response" }
-  | { readonly kind: "error"; readonly error: "disabled" | "unavailable" | "storage-failed" };
+    | { readonly kind: "response" }
+    | { readonly kind: "error"; readonly error: "disabled" | "unavailable" | "storage-failed" };
 
 /**
  * Wraps options-page messages and validates their background responses.
@@ -143,7 +163,7 @@ export class SitesClient {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
-                surface: "sites"
+                surface: "sites",
             });
         } catch {
             return this.rereadAfterAmbiguousResponse();
@@ -189,7 +209,10 @@ export class SitesClient {
     public async setDebugEnabled(enabled: boolean): Promise<DebugSetResult> {
         let response: unknown;
         try {
-            response = await this.transport.sendMessage({ type: SET_DEBUG_ENABLED_MESSAGE, enabled });
+            response = await this.transport.sendMessage({
+                type: SET_DEBUG_ENABLED_MESSAGE,
+                enabled,
+            });
         } catch {
             return this.rereadDebugAfterAmbiguousResponse();
         }
@@ -214,7 +237,9 @@ export class SitesClient {
         if (!isGetDiagnosticsSnapshotResponse(response)) {
             return { kind: "error", error: "unavailable" };
         }
-        return response.ok ? { kind: "response", snapshot: response.snapshot } : { kind: "error", error: response.error };
+        return response.ok
+            ? { kind: "response", snapshot: response.snapshot }
+            : { kind: "error", error: response.error };
     }
 
     /**
@@ -246,7 +271,7 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({
                 type: SET_DISPLAY_SETTINGS_MESSAGE,
-                display
+                display,
             });
         } catch {
             return this.rereadDisplayAfterAmbiguousResponse();
@@ -312,5 +337,7 @@ export function createSitesClient(transport?: SitesTransport): SitesClient {
     if (typeof chrome !== "undefined") {
         return new SitesClient(chrome.runtime);
     }
-    return new SitesClient({ sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")) });
+    return new SitesClient({
+        sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")),
+    });
 }

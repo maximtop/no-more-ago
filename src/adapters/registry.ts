@@ -29,6 +29,7 @@ export class AdapterRegistry {
 }
 
 /**
- * Production adapter registry; GitHub is the only site currently granted timestamp extraction trust.
+ * Production adapter registry; GitHub is the only site currently granted timestamp extraction
+ * trust.
  */
 export const defaultRegistry = new AdapterRegistry([githubAdapter]);

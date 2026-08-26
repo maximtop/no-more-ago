@@ -3,13 +3,21 @@
  */
 
 import { strToU8, zipSync } from "fflate";
-import { DIAGNOSTICS_MAX_BYTES, hasOnlyOwnDiagnosticProperties, isDiagnosticJournalEntries } from "./journal";
+import {
+    DIAGNOSTICS_MAX_BYTES,
+    hasOnlyOwnDiagnosticProperties,
+    isDiagnosticJournalEntries,
+} from "./journal";
 import type { DiagnosticEvent } from "./events";
 
 /**
  * Stable failure reasons surfaced by archive creation without exposing implementation exceptions.
  */
-export type DiagnosticArchiveErrorCode = "empty" | "invalid-snapshot" | "compression-failed" | "download-failed";
+export type DiagnosticArchiveErrorCode =
+    | "empty"
+    | "invalid-snapshot"
+    | "compression-failed"
+    | "download-failed";
 
 /**
  * Signals a user-facing archive failure with a stable code and the original error message.
@@ -23,7 +31,11 @@ export class DiagnosticArchiveError extends Error {
      * @param message - Human-readable archive failure description.
      * @param options - Optional native error cause.
      */
-    public constructor(public readonly code: DiagnosticArchiveErrorCode, message: string, options?: ErrorOptions) {
+    public constructor(
+        public readonly code: DiagnosticArchiveErrorCode,
+        message: string,
+        options?: ErrorOptions,
+    ) {
         super(message, options);
         this.name = "DiagnosticArchiveError";
     }
@@ -33,7 +45,6 @@ export class DiagnosticArchiveError extends Error {
  * Bounded journal state that can be serialized without reading browser storage again.
  */
 export interface DiagnosticArchiveSnapshot {
-
     /**
      * Newest-first diagnostic events retained within the byte limit.
      */
@@ -43,7 +54,6 @@ export interface DiagnosticArchiveSnapshot {
      * Extension and browser metadata included in exported diagnostics.
      */
     readonly environment: {
-
         /**
          * Coarse browser family reported without a user-agent string.
          */
@@ -65,7 +75,6 @@ export type ZipEncoder = (files: Record<string, Uint8Array>) => Uint8Array;
  * Minimal browser APIs required to download an archive and release its temporary URL.
  */
 export interface DownloadRuntime {
-
     /**
      * Blob constructor used to wrap the ZIP byte payload for download.
      */
@@ -103,7 +112,8 @@ export interface DownloadRuntime {
         /**
          * Deletes the supplied storage keys.
          */
-        remove?: () => void };
+        remove?: () => void;
+    };
 
     /**
      * Defers URL cleanup until the browser has consumed the download request.
@@ -130,14 +140,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * @returns - Whether the value has the exact safe export shape.
  */
 export function isDiagnosticArchiveSnapshot(value: unknown): value is DiagnosticArchiveSnapshot {
-    if (!isRecord(value) || !hasOnlyOwnDiagnosticProperties(value) || Object.keys(value).length !== 2 || !Object.hasOwn(value, "entries") || !Object.hasOwn(value, "environment") || !Array.isArray(value.entries) || !isRecord(value.environment) || !hasOnlyOwnDiagnosticProperties(value.environment)
-    || Object.keys(value.environment).some((key) => !ENVIRONMENT_KEYS.has(key))
-    || !Object.hasOwn(value.environment, "browserFamily")
-    || ("extensionVersion" in value.environment && !Object.hasOwn(value.environment, "extensionVersion"))
-    || !["chromium", "firefox", "other"].includes(String(value.environment.browserFamily))) {
+    if (
+        !isRecord(value) ||
+        !hasOnlyOwnDiagnosticProperties(value) ||
+        Object.keys(value).length !== 2 ||
+        !Object.hasOwn(value, "entries") ||
+        !Object.hasOwn(value, "environment") ||
+        !Array.isArray(value.entries) ||
+        !isRecord(value.environment) ||
+        !hasOnlyOwnDiagnosticProperties(value.environment) ||
+        Object.keys(value.environment).some((key) => !ENVIRONMENT_KEYS.has(key)) ||
+        !Object.hasOwn(value.environment, "browserFamily") ||
+        ("extensionVersion" in value.environment &&
+            !Object.hasOwn(value.environment, "extensionVersion")) ||
+        !["chromium", "firefox", "other"].includes(String(value.environment.browserFamily))
+    ) {
         return false;
     }
-    if (Object.hasOwn(value.environment, "extensionVersion") && (typeof value.environment.extensionVersion !== "string" || !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.environment.extensionVersion))) {
+    if (
+        Object.hasOwn(value.environment, "extensionVersion") &&
+        (typeof value.environment.extensionVersion !== "string" ||
+            !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.environment.extensionVersion))
+    ) {
         return false;
     }
     return isDiagnosticJournalEntries(value.entries, DIAGNOSTICS_MAX_BYTES);
@@ -152,7 +176,10 @@ export function isDiagnosticArchiveSnapshot(value: unknown): value is Diagnostic
  */
 export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zipSync): Uint8Array {
     if (!isDiagnosticArchiveSnapshot(snapshot)) {
-        throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is invalid or unsafe.");
+        throw new DiagnosticArchiveError(
+            "invalid-snapshot",
+            "The diagnostic snapshot is invalid or unsafe.",
+        );
     }
     if (snapshot.entries.length === 0) {
         throw new DiagnosticArchiveError("empty", "There are no diagnostic entries to download.");
@@ -167,11 +194,14 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
         });
         const journalBytes = strToU8(JSON.stringify({ entries: safeEntries }));
         if (journalBytes.byteLength > DIAGNOSTICS_MAX_BYTES) {
-            throw new DiagnosticArchiveError("invalid-snapshot", "The diagnostic snapshot is too large to download.");
+            throw new DiagnosticArchiveError(
+                "invalid-snapshot",
+                "The diagnostic snapshot is too large to download.",
+            );
         }
         const exportSnapshot = {
             entries: safeEntries,
-            environment: { ...snapshot.environment }
+            environment: { ...snapshot.environment },
         };
         const json = JSON.stringify(exportSnapshot);
         const jsonBytes = strToU8(json);
@@ -182,7 +212,11 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
         if (cause instanceof DiagnosticArchiveError) {
             throw cause;
         }
-        throw new DiagnosticArchiveError("compression-failed", "The diagnostic archive could not be created.", { cause });
+        throw new DiagnosticArchiveError(
+            "compression-failed",
+            "The diagnostic archive could not be created.",
+            { cause },
+        );
     }
 }
 
@@ -192,8 +226,15 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
  * @returns - Browser download runtime backed by the Chrome downloads API.
  */
 function defaultDownloadRuntime(): DownloadRuntime {
-    if (typeof Blob === "undefined" || typeof URL === "undefined" || typeof document === "undefined") {
-        throw new DiagnosticArchiveError("download-failed", "Local downloads are unavailable in this context.");
+    if (
+        typeof Blob === "undefined" ||
+        typeof URL === "undefined" ||
+        typeof document === "undefined"
+    ) {
+        throw new DiagnosticArchiveError(
+            "download-failed",
+            "Local downloads are unavailable in this context.",
+        );
     }
     return {
         Blob,
@@ -208,7 +249,7 @@ function defaultDownloadRuntime(): DownloadRuntime {
         },
         scheduleRevoke: (callback) => {
             setTimeout(callback, 0);
-        }
+        },
     };
 }
 
@@ -233,7 +274,9 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRunt
     try {
         const safeBuffer = new ArrayBuffer(bytes.byteLength);
         new Uint8Array(safeBuffer).set(bytes);
-        objectUrl = browser.createObjectURL(new browser.Blob([safeBuffer], { type: "application/zip" }));
+        objectUrl = browser.createObjectURL(
+            new browser.Blob([safeBuffer], { type: "application/zip" }),
+        );
         anchor = browser.createAnchor();
         anchor.href = objectUrl;
         anchor.download = "no-more-ago-diagnostics.zip";
@@ -243,6 +286,10 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRunt
     } catch (cause) {
         revoke();
         anchor?.remove?.();
-        throw new DiagnosticArchiveError("download-failed", "The diagnostic archive could not be downloaded.", { cause });
+        throw new DiagnosticArchiveError(
+            "download-failed",
+            "The diagnostic archive could not be downloaded.",
+            { cause },
+        );
     }
 }

@@ -2,7 +2,6 @@
  * @file Registers the content script required to process GitHub documents.
  */
 
-
 import type { RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
 import type { RuntimeAdapterDefinition } from "./adapter-activation";
 
@@ -15,7 +14,7 @@ export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
     js: ["content.js"],
     runAt: "document_start",
     allFrames: false,
-    persistAcrossSessions: true
+    persistAcrossSessions: true,
 };
 
 /**
@@ -25,19 +24,20 @@ export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
  */
 export async function ensureGitHubRuntime(runtime: ScriptingRuntime): Promise<void> {
     const existing = await runtime.getRegisteredContentScripts({
-        ids: [GITHUB_REGISTRATION.id]
+        ids: [GITHUB_REGISTRATION.id],
     });
     const current = existing.find((script) => script.id === GITHUB_REGISTRATION.id);
-    const same = current !== undefined
-    && current.matches !== undefined
-    && current.matches.length === GITHUB_REGISTRATION.matches.length
-    && current.matches.every((value, index) => value === GITHUB_REGISTRATION.matches[index])
-    && current.js !== undefined
-    && current.js.length === GITHUB_REGISTRATION.js.length
-    && current.js.every((value, index) => value === GITHUB_REGISTRATION.js[index])
-    && current.runAt === GITHUB_REGISTRATION.runAt
-    && current.allFrames === GITHUB_REGISTRATION.allFrames
-    && current.persistAcrossSessions === GITHUB_REGISTRATION.persistAcrossSessions;
+    const same =
+        current !== undefined &&
+        current.matches !== undefined &&
+        current.matches.length === GITHUB_REGISTRATION.matches.length &&
+        current.matches.every((value, index) => value === GITHUB_REGISTRATION.matches[index]) &&
+        current.js !== undefined &&
+        current.js.length === GITHUB_REGISTRATION.js.length &&
+        current.js.every((value, index) => value === GITHUB_REGISTRATION.js[index]) &&
+        current.runAt === GITHUB_REGISTRATION.runAt &&
+        current.allFrames === GITHUB_REGISTRATION.allFrames &&
+        current.persistAcrossSessions === GITHUB_REGISTRATION.persistAcrossSessions;
     if (!current) {
         await runtime.registerContentScripts([GITHUB_REGISTRATION]);
     } else if (!same) {
@@ -53,5 +53,5 @@ export const githubRuntimeDefinition: RuntimeAdapterDefinition = {
     hostname: "github.com",
     registration: GITHUB_REGISTRATION,
     matches: (url) =>
-        (url.protocol === "http:" || url.protocol === "https:") && url.hostname === "github.com"
+        (url.protocol === "http:" || url.protocol === "https:") && url.hostname === "github.com",
 };

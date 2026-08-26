@@ -8,6 +8,6 @@ export default defineConfig({
     test: {
         environment: "jsdom",
         restoreMocks: true,
-        include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"]
-    }
+        include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    },
 });

@@ -13,10 +13,10 @@ export const OWNED_SOURCE_ATTRIBUTE = "data-no-more-ago-source";
 export const OWNED_OUTPUT_ATTRIBUTE = "data-no-more-ago-output";
 
 /**
- * Private ownership record pairing one source element with its generated time node and marker token.
+ * Private ownership record pairing one source element with its generated time node and marker
+ * token.
  */
 interface OwnedPairRecord {
-
     /**
      * DOM element whose timestamp is being transformed.
      */
@@ -42,7 +42,6 @@ interface OwnedPairRecord {
  * Connected source/output pair exposed to targeted reconciliation without scanning the document.
  */
 export interface OwnedSourceEntry {
-
     /**
      * DOM element whose timestamp is being transformed.
      */
@@ -73,7 +72,9 @@ const SOURCE_MARKER = /^(visible|hidden):(.+)$/;
  * @param value - Candidate ownership marker value.
  * @returns - Decoded ownership token, or null when the marker is foreign or malformed.
  */
-function parseSourceMarker(value: string | null): { state: "visible" | "hidden"; token: string } | null {
+function parseSourceMarker(
+    value: string | null,
+): { state: "visible" | "hidden"; token: string } | null {
     const match = value?.match(SOURCE_MARKER);
     if (!match) {
         return null;
@@ -166,7 +167,7 @@ export function getOwnedSourceForOutput(node: Node): Element | null {
     for (const record of records.values()) {
         if (
             record.output === node &&
-      record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
+            record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
         ) {
             return record.source;
         }
@@ -214,7 +215,7 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
 export function renderExactTime(
     source: Element,
     datetime: string,
-    text: string
+    text: string,
 ): HTMLTimeElement | null {
     const document = source.ownerDocument;
     const records = getRecords(document);
@@ -224,9 +225,9 @@ export function renderExactTime(
         const sourceMarker = parseSourceMarker(source.getAttribute(OWNED_SOURCE_ATTRIBUTE));
         if (
             existing.source !== source ||
-      sourceMarker === null ||
-      `${sourceMarker.state}:${sourceMarker.token}` !== expectedSourceMarker(existing) ||
-      existing.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(existing)
+            sourceMarker === null ||
+            `${sourceMarker.state}:${sourceMarker.token}` !== expectedSourceMarker(existing) ||
+            existing.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(existing)
         ) {
             return null;
         }
@@ -253,7 +254,7 @@ export function renderExactTime(
         source,
         output: document.createElement("time"),
         token,
-        sourceWasHidden: source.hasAttribute("hidden")
+        sourceWasHidden: source.hasAttribute("hidden"),
     };
     updateOutput(record.output, datetime, text);
     record.output.setAttribute(OWNED_OUTPUT_ATTRIBUTE, expectedOutputMarker(record));
@@ -273,7 +274,8 @@ export function renderExactTime(
  */
 function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationSink): void {
     const { source, output } = record;
-    const validOutput = output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
+    const validOutput =
+        output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
     if (validOutput && output.isConnected && mutations) {
         mutations.beforeOwnedOutputRemoval(output);
     }
@@ -313,7 +315,7 @@ export function restoreExactTime(source: Element, mutations?: OwnedOutputMutatio
  */
 export function restoreExactTimes(root: ParentNode, mutations?: OwnedOutputMutationSink): void {
     const rootNode = root as Node;
-    const document = rootNode.nodeType === 9 ? rootNode as Document : rootNode.ownerDocument;
+    const document = rootNode.nodeType === 9 ? (rootNode as Document) : rootNode.ownerDocument;
     if (!document) {
         return;
     }

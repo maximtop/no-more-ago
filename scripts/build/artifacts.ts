@@ -3,7 +3,18 @@
  */
 
 import { Buffer } from "node:buffer";
-import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+    copyFileSync,
+    existsSync,
+    lstatSync,
+    mkdirSync,
+    mkdtempSync,
+    readFileSync,
+    realpathSync,
+    renameSync,
+    rmSync,
+    writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { unzipSync as fflateUnzipSync, unzlibSync, zipSync as fflateZipSync } from "fflate";
@@ -61,7 +72,9 @@ type ArtifactServicesOptions = {
  */
 function inside(root: string, candidate: string): boolean {
     const rel = path.relative(root, candidate);
-    return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+    return (
+        rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel))
+    );
 }
 
 /**
@@ -73,7 +86,11 @@ function inside(root: string, candidate: string): boolean {
  * @param options.allowMissing - Whether the final path may be absent.
  * @returns - Resolved candidate path after all safety checks pass.
  */
-function assertSafe(root: string, candidate: string, { allowMissing = false }: { allowMissing?: boolean } = {}): string {
+function assertSafe(
+    root: string,
+    candidate: string,
+    { allowMissing = false }: { allowMissing?: boolean } = {},
+): string {
     const absoluteRoot = path.resolve(root);
     const absolute = path.resolve(candidate);
     if (!inside(absoluteRoot, absolute)) {
@@ -165,7 +182,8 @@ function copyTree(source: string, destination: string): void {
         if (stat.isDirectory()) {
             copyTree(from, to);
         } else if (stat.isFile()) {
-            assertSafe(destination, to, { allowMissing: true }); copyFileSync(from, to);
+            assertSafe(destination, to, { allowMissing: true });
+            copyFileSync(from, to);
         } else {
             throw new Error(`Unsupported artifact entry: ${from}`);
         }
@@ -181,11 +199,12 @@ function copyTree(source: string, destination: string): void {
 function pngCrc32(buffer: Uint8Array): number {
     let crc = ~0;
     for (const byte of buffer) {
-        crc ^= byte; for (let i = 0; i < 8; i += 1) {
-            crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+        crc ^= byte;
+        for (let i = 0; i < 8; i += 1) {
+            crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
         }
     }
-    return (~crc) >>> 0;
+    return ~crc >>> 0;
 }
 
 /**
@@ -196,37 +215,61 @@ function pngCrc32(buffer: Uint8Array): number {
  */
 function validatePng(file: string, expectedSize: number): void {
     const bytes = readFileSync(file);
-    if (bytes.length < 24 || !bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) || bytes.toString("ascii", 12, 16) !== "IHDR") {
+    if (
+        bytes.length < 24 ||
+        !bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) ||
+        bytes.toString("ascii", 12, 16) !== "IHDR"
+    ) {
         throw new Error(`Invalid PNG: ${file}`);
     }
-    let offset = 8; let sawHeader = false; let sawEnd = false; let sawData = false; const imageData = [];
+    let offset = 8;
+    let sawHeader = false;
+    let sawEnd = false;
+    let sawData = false;
+    const imageData = [];
     while (offset < bytes.length) {
         if (offset + 12 > bytes.length) {
             throw new Error(`Truncated PNG chunk: ${file}`);
         }
-        const length = bytes.readUInt32BE(offset); const type = bytes.subarray(offset + 4, offset + 8).toString("ascii"); const end = offset + 12 + length;
+        const length = bytes.readUInt32BE(offset);
+        const type = bytes.subarray(offset + 4, offset + 8).toString("ascii");
+        const end = offset + 12 + length;
         if (end > bytes.length) {
             throw new Error(`Truncated PNG data: ${file}`);
         }
-        const data = bytes.subarray(offset + 8, offset + 8 + length); const expectedCrc = bytes.readUInt32BE(offset + 8 + length); if (pngCrc32(Buffer.concat([Buffer.from(type), data])) !== expectedCrc) {
+        const data = bytes.subarray(offset + 8, offset + 8 + length);
+        const expectedCrc = bytes.readUInt32BE(offset + 8 + length);
+        if (pngCrc32(Buffer.concat([Buffer.from(type), data])) !== expectedCrc) {
             throw new Error(`PNG CRC mismatch: ${file}`);
         }
         if (!sawHeader && type !== "IHDR") {
             throw new Error(`PNG IHDR is not first: ${file}`);
         }
         if (type === "IHDR") {
-            if (sawHeader || length !== 13 || data.readUInt32BE(0) !== expectedSize || data.readUInt32BE(4) !== expectedSize || data[8] !== 8 || data[9] !== 6 || data[10] !== 0 || data[11] !== 0 || data[12] !== 0) {
+            if (
+                sawHeader ||
+                length !== 13 ||
+                data.readUInt32BE(0) !== expectedSize ||
+                data.readUInt32BE(4) !== expectedSize ||
+                data[8] !== 8 ||
+                data[9] !== 6 ||
+                data[10] !== 0 ||
+                data[11] !== 0 ||
+                data[12] !== 0
+            ) {
                 throw new Error(`Unexpected PNG dimensions or format: ${file}`);
             }
             sawHeader = true;
         }
         if (type === "IDAT") {
-            sawData = true; imageData.push(data);
+            sawData = true;
+            imageData.push(data);
         }
         if (type === "IEND") {
             if (length !== 0 || sawEnd || end !== bytes.length) {
                 throw new Error(`Invalid PNG IEND: ${file}`);
-            } sawEnd = true;
+            }
+            sawEnd = true;
         }
         offset = end;
     }
@@ -251,43 +294,62 @@ function validatePng(file: string, expectedSize: number): void {
 }
 
 /**
- * Verifies directory and ZIP contents agree, manifest references resolve, and emitted scripts parse.
+ * Verifies directory and ZIP contents agree, manifest references resolve, and emitted scripts
+ * parse.
  *
  * @param directory - Unpacked artifact directory to validate.
  * @param zipBytes - ZIP archive expected to contain the same artifact files.
  * @param decoder - ZIP decoder used to inspect archive entries.
  * @returns - Validated file list, manifest, and original ZIP bytes.
  */
-function validatePair(directory: string, zipBytes: Buffer, decoder: (data: Uint8Array) => Record<string, Uint8Array> = fflateUnzipSync): { files: string[]; manifest: ArtifactManifest; zipBytes: Buffer } {
+function validatePair(
+    directory: string,
+    zipBytes: Buffer,
+    decoder: (data: Uint8Array) => Record<string, Uint8Array> = fflateUnzipSync,
+): { files: string[]; manifest: ArtifactManifest; zipBytes: Buffer } {
     const files = listFiles(directory);
     if (!files.includes("manifest.json")) {
         throw new Error("Artifact has no manifest.json");
     }
-    const manifest = JSON.parse(readFileSync(path.join(directory, "manifest.json"), "utf8")) as ArtifactManifest;
+    const manifest = JSON.parse(
+        readFileSync(path.join(directory, "manifest.json"), "utf8"),
+    ) as ArtifactManifest;
     if (manifest.manifest_version !== 3 || typeof manifest.version !== "string") {
         throw new Error("Invalid emitted manifest");
     }
-    if (manifest.background?.service_worker !== "background.js" && !Array.isArray(manifest.background?.scripts)) {
+    if (
+        manifest.background?.service_worker !== "background.js" &&
+        !Array.isArray(manifest.background?.scripts)
+    ) {
         throw new Error("Invalid background definition");
     }
     const references = ["background.js", "content.js", ...(manifest.background?.scripts ?? [])];
     for (const iconSize of [16, 32, 48, 128]) {
-        const icon = manifest.icons?.[String(iconSize)]; if (icon !== `icons/clock-${iconSize}.png`) {
+        const icon = manifest.icons?.[String(iconSize)];
+        if (icon !== `icons/clock-${iconSize}.png`) {
             throw new Error("Manifest icon references are invalid");
-        } validatePng(path.join(directory, icon), iconSize); references.push(icon);
+        }
+        validatePng(path.join(directory, icon), iconSize);
+        references.push(icon);
     }
     for (const reference of references) {
         if (!files.includes(reference)) {
             throw new Error(`Manifest references missing file: ${reference}`);
-        } if (reference.endsWith(".js")) {
+        }
+        if (reference.endsWith(".js")) {
             new vm.Script(readFileSync(path.join(directory, reference), "utf8"));
         }
     }
     const documents = [
         ["popup", manifest.action?.default_popup],
-        ["options", manifest.options_ui?.page]
+        ["options", manifest.options_ui?.page],
     ];
-    if (manifest.options_ui !== undefined && (typeof manifest.options_ui !== "object" || manifest.options_ui === null || manifest.options_ui.open_in_tab !== true)) {
+    if (
+        manifest.options_ui !== undefined &&
+        (typeof manifest.options_ui !== "object" ||
+            manifest.options_ui === null ||
+            manifest.options_ui.open_in_tab !== true)
+    ) {
         throw new Error("Invalid options page metadata");
     }
     for (const [label, document] of documents) {
@@ -301,13 +363,29 @@ function validatePair(directory: string, zipBytes: Buffer, decoder: (data: Uint8
             throw new Error(`Manifest references missing file: ${document}`);
         }
         const html = readFileSync(path.join(directory, document), "utf8");
-        if (/<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(html) || /<style\b/i.test(html) || /\son[a-z]+\s*=/i.test(html)) {
+        if (
+            /<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(html) ||
+            /<style\b/i.test(html) ||
+            /\son[a-z]+\s*=/i.test(html)
+        ) {
             throw new Error(`${label} contains inline executable markup`);
         }
-        const scriptReferences = [...html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]).filter((reference): reference is string => reference !== undefined);
-        const styleReferences = [...html.matchAll(/<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]).filter((reference): reference is string => reference !== undefined);
+        const scriptReferences = [
+            ...html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi),
+        ]
+            .map((match) => match[1])
+            .filter((reference): reference is string => reference !== undefined);
+        const styleReferences = [
+            ...html.matchAll(/<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi),
+        ]
+            .map((match) => match[1])
+            .filter((reference): reference is string => reference !== undefined);
         for (const reference of [...scriptReferences, ...styleReferences]) {
-            if (!reference || /^(?:[a-z]+:|\/\/|data:|blob:|javascript:)/i.test(reference) || reference.startsWith("/")) {
+            if (
+                !reference ||
+                /^(?:[a-z]+:|\/\/|data:|blob:|javascript:)/i.test(reference) ||
+                reference.startsWith("/")
+            ) {
                 throw new Error(`${label} contains a remote or executable reference`);
             }
             if (!files.includes(reference)) {
@@ -322,14 +400,21 @@ function validatePair(directory: string, zipBytes: Buffer, decoder: (data: Uint8
     try {
         archive = decoder(new Uint8Array(zipBytes));
     } catch (error) {
-        throw new Error(`Invalid ZIP archive: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+        throw new Error(
+            `Invalid ZIP archive: ${error instanceof Error ? error.message : String(error)}`,
+            { cause: error },
+        );
     }
-    const archiveNames = Object.keys(archive).sort(); if (archiveNames.join("\0") !== files.join("\0")) {
+    const archiveNames = Object.keys(archive).sort();
+    if (archiveNames.join("\0") !== files.join("\0")) {
         throw new Error("ZIP names differ from unpacked inventory");
     }
     for (const name of files) {
         const archived = archive[name];
-        if (!archived || !Buffer.from(archived).equals(readFileSync(path.join(directory, ...name.split("/"))))) {
+        if (
+            !archived ||
+            !Buffer.from(archived).equals(readFileSync(path.join(directory, ...name.split("/"))))
+        ) {
             throw new Error(`ZIP bytes differ for ${name}`);
         }
     }
@@ -360,19 +445,25 @@ function zipEntries(root: string): Record<string, Uint8Array> {
  * @param options.unzipSync - ZIP decoder override.
  * @returns - Guarded services used by the build pipeline.
  */
-export function createArtifactServices({ fs, zip, zipSync: injectedZipSync, unzipSync }: ArtifactServicesOptions = {}) {
+export function createArtifactServices({
+    fs,
+    zip,
+    zipSync: injectedZipSync,
+    unzipSync,
+}: ArtifactServicesOptions = {}) {
     // The public boundary is intentionally injectable; production uses pinned fflate.
     void fs;
     const pack = zip ?? injectedZipSync ?? fflateZipSync;
     const io = {
         existsSync: fs?.existsSync?.bind(fs) ?? existsSync,
         renameSync: fs?.renameSync?.bind(fs) ?? renameSync,
-        rmSync: fs?.rmSync?.bind(fs) ?? rmSync
+        rmSync: fs?.rmSync?.bind(fs) ?? rmSync,
     };
     return {
         listFiles,
         snapshot(source: string, destination: string) {
-            copyTree(source, destination); return listFiles(destination);
+            copyTree(source, destination);
+            return listFiles(destination);
         },
         createZip(source: string) {
             const entries = zipEntries(source);
@@ -382,33 +473,62 @@ export function createArtifactServices({ fs, zip, zipSync: injectedZipSync, unzi
         validatePair(directory: string, zipBytes: Buffer) {
             return validatePair(directory, zipBytes, unzipSync ?? fflateUnzipSync);
         },
-        buildCandidateModeRoot({ workspaceRoot, mode, pairs, selected }: { workspaceRoot: string; mode: string; pairs: PairMap; selected?: string }) {
-            const distRoot = path.join(workspaceRoot, "dist"); const modeRoot = path.join(distRoot, mode); const candidate = mkdtempSync(path.join(distRoot, `.candidate-${mode}-`));
+        buildCandidateModeRoot({
+            workspaceRoot,
+            mode,
+            pairs,
+            selected,
+        }: {
+            workspaceRoot: string;
+            mode: string;
+            pairs: PairMap;
+            selected?: string;
+        }) {
+            const distRoot = path.join(workspaceRoot, "dist");
+            const modeRoot = path.join(distRoot, mode);
+            const candidate = mkdtempSync(path.join(distRoot, `.candidate-${mode}-`));
             try {
                 for (const browser of SUPPORTED_BROWSERS) {
                     if (browser === selected || pairs[browser]) {
-                        const pair = pairs[browser]; if (!pair) {
+                        const pair = pairs[browser];
+                        if (!pair) {
                             continue;
                         }
-                        copyTree(pair.directory, path.join(candidate, browser)); writeFileSync(path.join(candidate, `${browser}.zip`), pair.zipBytes);
+                        copyTree(pair.directory, path.join(candidate, browser));
+                        writeFileSync(path.join(candidate, `${browser}.zip`), pair.zipBytes);
                     } else if (io.existsSync(path.join(modeRoot, browser))) {
                         copyTree(path.join(modeRoot, browser), path.join(candidate, browser));
                         if (io.existsSync(path.join(modeRoot, `${browser}.zip`))) {
-                            copyFileSync(path.join(modeRoot, `${browser}.zip`), path.join(candidate, `${browser}.zip`));
+                            copyFileSync(
+                                path.join(modeRoot, `${browser}.zip`),
+                                path.join(candidate, `${browser}.zip`),
+                            );
                         }
                     }
                 }
             } catch (error) {
-                rmSync(candidate, { recursive: true, force: true }); throw error;
+                rmSync(candidate, { recursive: true, force: true });
+                throw error;
             }
             return { candidate, modeRoot };
         },
-        publishModeRoot({ candidate, modeRoot, taskRoot }: { candidate: string; modeRoot: string; taskRoot: string }) {
-            assertSafe(path.dirname(modeRoot), modeRoot, { allowMissing: true }); assertSafe(path.dirname(candidate), candidate);
+        publishModeRoot({
+            candidate,
+            modeRoot,
+            taskRoot,
+        }: {
+            candidate: string;
+            modeRoot: string;
+            taskRoot: string;
+        }) {
+            assertSafe(path.dirname(modeRoot), modeRoot, { allowMissing: true });
+            assertSafe(path.dirname(candidate), candidate);
             ensureDir(path.dirname(modeRoot));
             let backup = null;
             if (io.existsSync(modeRoot)) {
-                backup = path.join(taskRoot, `previous-${path.basename(modeRoot)}`); assertSafe(taskRoot, backup, { allowMissing: true }); io.renameSync(modeRoot, backup);
+                backup = path.join(taskRoot, `previous-${path.basename(modeRoot)}`);
+                assertSafe(taskRoot, backup, { allowMissing: true });
+                io.renameSync(modeRoot, backup);
             }
             try {
                 io.renameSync(candidate, modeRoot);
@@ -417,7 +537,16 @@ export function createArtifactServices({ fs, zip, zipSync: injectedZipSync, unzi
                     try {
                         io.renameSync(backup, modeRoot);
                     } catch (restoreError) {
-                        const failure = new Error(`Publication failed; recovery: rename ${backup} -> ${modeRoot}; ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`, { cause: restoreError }) as Error & { keepTask?: boolean }; failure.keepTask = true; throw failure;
+                        const restoreMessage = restoreError instanceof Error
+                            ? restoreError.message
+                            : String(restoreError);
+                        const failure = new Error(
+                            `Publication failed; recovery: rename ${backup} -> ${modeRoot}; `
+                            + restoreMessage,
+                            { cause: restoreError },
+                        ) as Error & { keepTask?: boolean };
+                        failure.keepTask = true;
+                        throw failure;
                     }
                 }
                 throw error;
@@ -426,20 +555,28 @@ export function createArtifactServices({ fs, zip, zipSync: injectedZipSync, unzi
                 try {
                     io.rmSync(backup, { recursive: true, force: false });
                 } catch (error) {
-                    const failure = new Error(`Published successfully; remove backup ${backup}: ${error instanceof Error ? error.message : String(error)}`, { cause: error }) as Error & { keepTask?: boolean }; failure.keepTask = true; throw failure;
+                    const removalMessage = error instanceof Error ? error.message : String(error);
+                    const failure = new Error(
+                        `Published successfully; remove backup ${backup}: ${removalMessage}`,
+                        { cause: error },
+                    ) as Error & { keepTask?: boolean };
+                    failure.keepTask = true;
+                    throw failure;
                 }
             }
         },
         cleanupCandidate(candidate: string) {
-            assertSafe(path.dirname(candidate), candidate); if (existsSync(candidate)) {
+            assertSafe(path.dirname(candidate), candidate);
+            if (existsSync(candidate)) {
                 rmSync(candidate, { recursive: true, force: false });
             }
         },
         cleanupTask(taskRoot: string) {
-            assertSafe(path.dirname(taskRoot), taskRoot); if (existsSync(taskRoot)) {
+            assertSafe(path.dirname(taskRoot), taskRoot);
+            if (existsSync(taskRoot)) {
                 rmSync(taskRoot, { recursive: true, force: false });
             }
-        }
+        },
     };
 }
 

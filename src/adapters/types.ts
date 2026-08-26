@@ -5,8 +5,7 @@
 /**
  * Marker required before a raw adapter attribute may be parsed as an absolute instant.
  */
-export const EXPLICIT_ZONED_DATETIME_RULE =
-    "datetime:iso8601-explicit-zone" as const;
+export const EXPLICIT_ZONED_DATETIME_RULE = "datetime:iso8601-explicit-zone" as const;
 
 /**
  * Element names the GitHub adapter recognizes as relative-time widgets.
@@ -17,7 +16,6 @@ export type TimestampSourceKind = "relative-time" | "time-ago" | "time-until";
  * Trusted adapter output passed to timestamp validation; page markup itself is never trusted here.
  */
 export interface TimestampCandidate {
-
     /**
      * Identifier of the adapter that accepted the timestamp source.
      */
@@ -45,10 +43,10 @@ export interface TimestampCandidate {
 }
 
 /**
- * Site-specific discovery and extraction boundary; adapters identify candidates but never render them.
+ * Site-specific discovery and extraction boundary; adapters identify candidates but never render
+ * them.
  */
 export interface SiteAdapter {
-
     /**
      * Stable adapter identifier used in diagnostics and activation state.
      */

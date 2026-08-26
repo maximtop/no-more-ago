@@ -2,7 +2,6 @@
  * @file Coordinates the document controller with persisted settings and runtime messages.
  */
 
-
 import type { AdapterRegistry } from "../adapters/registry";
 import { DocumentTransformationController } from "../core/document-transformation-controller";
 import type { DocumentDiagnosticSink, ProcessInput } from "../core/process-document";
@@ -17,7 +16,7 @@ import {
     PRESENTATION_UPDATED_MESSAGE,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
-    type PresentationUpdateAcknowledgement
+    type PresentationUpdateAcknowledgement,
 } from "../runtime/messages";
 import type { DisplaySettings } from "../settings/snapshot";
 
@@ -34,7 +33,13 @@ export interface ContentMessageRuntime {
         /**
          * Registers a handler that may synchronously return a response.
          */
-        addListener(listener: (message: unknown, sender?: unknown, sendResponse?: (response: unknown) => void) => unknown): void;
+        addListener(
+            listener: (
+                message: unknown,
+                sender?: unknown,
+                sendResponse?: (response: unknown) => void,
+            ) => unknown,
+        ): void;
     };
 }
 
@@ -48,7 +53,10 @@ export interface ContentRuntimeHandle {
     teardown(): void;
 }
 
-const DEFAULT_DISPLAY: DisplaySettings = Object.freeze({ formatMode: "system", timeZone: Object.freeze({ mode: "system" }) });
+const DEFAULT_DISPLAY: DisplaySettings = Object.freeze({
+    formatMode: "system",
+    timeZone: Object.freeze({ mode: "system" }),
+});
 
 /**
  * Validated persisted display state returned during content-runtime startup.
@@ -97,17 +105,21 @@ function isDisplayState(value: unknown): value is DisplayStateLike {
     }
     const record = value as Record<string, unknown>;
     const keys = Object.keys(record);
-    return (keys.length === 4 || keys.length === 5)
-    && keys.every((key) => ["availability", "revision", "display", "debugEnabled", "error"].includes(key))
-    && Object.hasOwn(record, "availability")
-    && Object.hasOwn(record, "revision")
-    && Object.hasOwn(record, "display")
-    && record.availability === "ready"
-    && isSafeRevision(record.revision)
-    && isPresentationDisplay(record.display)
-    && Object.hasOwn(record, "debugEnabled")
-    && typeof record.debugEnabled === "boolean"
-    && (!Object.hasOwn(record, "error") || record.error === "unavailable-time-zone");
+    return (
+        (keys.length === 4 || keys.length === 5) &&
+        keys.every((key) =>
+            ["availability", "revision", "display", "debugEnabled", "error"].includes(key),
+        ) &&
+        Object.hasOwn(record, "availability") &&
+        Object.hasOwn(record, "revision") &&
+        Object.hasOwn(record, "display") &&
+        record.availability === "ready" &&
+        isSafeRevision(record.revision) &&
+        isPresentationDisplay(record.display) &&
+        Object.hasOwn(record, "debugEnabled") &&
+        typeof record.debugEnabled === "boolean" &&
+        (!Object.hasOwn(record, "error") || record.error === "unavailable-time-zone")
+    );
 }
 
 /**
@@ -223,8 +235,12 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
             return;
         }
         try {
-            void Promise.resolve(report(event as unknown as Record<string, unknown>)).catch(() => undefined);
-        } catch { /* diagnostics never interfere with page processing */ }
+            void Promise.resolve(report(event as unknown as Record<string, unknown>)).catch(
+                () => undefined,
+            );
+        } catch {
+            /* diagnostics never interfere with page processing */
+        }
     };
     slot.controller.setDiagnosticSink(sink);
 }
@@ -236,7 +252,12 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
  * @param generation - Activation generation allowed to start the controller.
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
-    if (slot.phase !== "waiting" || slot.generation !== generation || !slot.documentReady || slot.presentation === undefined) {
+    if (
+        slot.phase !== "waiting" ||
+        slot.generation !== generation ||
+        !slot.documentReady ||
+        slot.presentation === undefined
+    ) {
         return;
     }
     try {
@@ -289,7 +310,11 @@ function waitForDocument(slot: RuntimeSlot, generation: number): void {
  * @param generation - Activation generation being hydrated.
  * @param loader - Optional persisted-state loader.
  */
-function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Promise<unknown>) | undefined): void {
+function beginHydration(
+    slot: RuntimeSlot,
+    generation: number,
+    loader: (() => Promise<unknown>) | undefined,
+): void {
     if (!loader) {
         applyPresentation(slot, DEFAULT_DISPLAY, 0);
         applyDebugPolicy(slot, false, 0);
@@ -300,38 +325,54 @@ function beginHydration(slot: RuntimeSlot, generation: number, loader: (() => Pr
     try {
         request = loader();
     } catch {
-        slot.phase = "failed"; return;
+        slot.phase = "failed";
+        return;
     }
-    slot.hydration = Promise.resolve(request).then((response) => {
-        if (slot.phase !== "waiting" || slot.generation !== generation || !isDisplayState(response)) {
-            if (slot.generation === generation && slot.phase === "waiting") {
-                slot.phase = "failed";
-            }
-            return;
-        }
-        const previousRevision = Math.max(slot.presentationRevision ?? -1, slot.debugRevision ?? -1);
-        if (slot.presentationRevision === undefined || response.revision >= slot.presentationRevision) {
-            applyPresentation(slot, response.display, response.revision);
-        }
-        if (response.revision >= previousRevision) {
-            applyDebugPolicy(slot, response.debugEnabled, response.revision);
-        }
-        try {
-            waitForDocument(slot, generation);
-        } catch {
+    slot.hydration = Promise.resolve(request)
+        .then(
+            (response) => {
+                if (
+                    slot.phase !== "waiting" ||
+                    slot.generation !== generation ||
+                    !isDisplayState(response)
+                ) {
+                    if (slot.generation === generation && slot.phase === "waiting") {
+                        slot.phase = "failed";
+                    }
+                    return;
+                }
+                const previousRevision = Math.max(
+                    slot.presentationRevision ?? -1,
+                    slot.debugRevision ?? -1,
+                );
+                if (
+                    slot.presentationRevision === undefined ||
+                    response.revision >= slot.presentationRevision
+                ) {
+                    applyPresentation(slot, response.display, response.revision);
+                }
+                if (response.revision >= previousRevision) {
+                    applyDebugPolicy(slot, response.debugEnabled, response.revision);
+                }
+                try {
+                    waitForDocument(slot, generation);
+                } catch {
+                    if (slot.generation === generation) {
+                        slot.phase = "failed";
+                    }
+                }
+            },
+            () => {
+                if (slot.phase === "waiting" && slot.generation === generation) {
+                    slot.phase = "failed";
+                }
+            },
+        )
+        .finally(() => {
             if (slot.generation === generation) {
-                slot.phase = "failed";
+                slot.hydration = undefined;
             }
-        }
-    }, () => {
-        if (slot.phase === "waiting" && slot.generation === generation) {
-            slot.phase = "failed";
-        }
-    }).finally(() => {
-        if (slot.generation === generation) {
-            slot.hydration = undefined;
-        }
-    });
+        });
 }
 
 /**
@@ -432,9 +473,13 @@ export function installContentRuntime(input: {
         activate(existing, input.loadDisplayState);
         return existing.handle;
     }
-    const processInput = { url: input.url, root: input.document, locales: input.locales,
+    const processInput = {
+        url: input.url,
+        root: input.document,
+        locales: input.locales,
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
-        ...(input.registry === undefined ? {} : { registry: input.registry }) } as ProcessInput & Record<string, unknown>;
+        ...(input.registry === undefined ? {} : { registry: input.registry }),
+    } as ProcessInput & Record<string, unknown>;
     const slot = {} as RuntimeSlot;
     slot.document = input.document;
     slot.messages = input.messages;
@@ -450,12 +495,15 @@ export function installContentRuntime(input: {
     slot.debugRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.documentReady = false;
-    slot.handle = { teardown: () => {
-        teardown(slot);
-    } };
+    slot.handle = {
+        teardown: () => {
+            teardown(slot);
+        },
+    };
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
         if (isTeardownDocumentMessage(message)) {
-            teardown(slot); return undefined;
+            teardown(slot);
+            return undefined;
         }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
@@ -466,17 +514,27 @@ export function installContentRuntime(input: {
             if (slot.phase !== "waiting" && slot.phase !== "active") {
                 return undefined;
             }
-            if (slot.presentationRevision !== undefined && message.revision < slot.presentationRevision) {
+            if (
+                slot.presentationRevision !== undefined &&
+                message.revision < slot.presentationRevision
+            ) {
                 return undefined;
             }
-            if (slot.presentationRevision !== undefined && message.revision === slot.presentationRevision) {
+            if (
+                slot.presentationRevision !== undefined &&
+                message.revision === slot.presentationRevision
+            ) {
                 const response = presentationAcknowledgement(message.revision);
                 sendResponse?.(response);
                 return response;
             }
             applyPresentation(slot, message.display, message.revision);
             if (slot.phase === "active") {
-                (slot.controller as DocumentTransformationController & { reformatOwned: () => void }).reformatOwned();
+                (
+                    slot.controller as DocumentTransformationController & {
+                        reformatOwned: () => void;
+                    }
+                ).reformatOwned();
             }
             const response = presentationAcknowledgement(message.revision);
             sendResponse?.(response);
@@ -486,7 +544,10 @@ export function installContentRuntime(input: {
             if (slot.phase !== "waiting" && slot.phase !== "active") {
                 return undefined;
             }
-            const latestRevision = Math.max(slot.presentationRevision ?? -1, slot.debugRevision ?? -1);
+            const latestRevision = Math.max(
+                slot.presentationRevision ?? -1,
+                slot.debugRevision ?? -1,
+            );
             if (message.revision < latestRevision) {
                 return undefined;
             }

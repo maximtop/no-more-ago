@@ -11,7 +11,6 @@ import type { DisplaySettings } from "../settings/snapshot";
  * Date text together with the time-zone metadata needed to explain a fallback to callers.
  */
 export interface DatePresentationResult {
-
     /**
      * Localized visible timestamp text shown to the user.
      */
@@ -28,7 +27,10 @@ export interface DatePresentationResult {
  */
 export type TimeZoneAvailability = (identifier: string) => boolean;
 
-const SYSTEM_DISPLAY: DisplaySettings = Object.freeze({ formatMode: "system", timeZone: Object.freeze({ mode: "system" }) });
+const SYSTEM_DISPLAY: DisplaySettings = Object.freeze({
+    formatMode: "system",
+    timeZone: Object.freeze({ mode: "system" }),
+});
 
 /**
  * Formats an instant with the browser's locale and system time zone.
@@ -39,7 +41,9 @@ const SYSTEM_DISPLAY: DisplaySettings = Object.freeze({ formatMode: "system", ti
  */
 function systemFormat(instant: Date, locales: readonly string[]): string {
     const options = { dateStyle: "medium", timeStyle: "short" } as const;
-    return locales.length === 0 ? intlFormat(instant, options) : intlFormat(instant, options, { locale: [...locales] });
+    return locales.length === 0
+        ? intlFormat(instant, options)
+        : intlFormat(instant, options, { locale: [...locales] });
 }
 
 /**
@@ -50,7 +54,8 @@ function systemFormat(instant: Date, locales: readonly string[]): string {
  */
 export function isTimeZoneAvailable(identifier: string): boolean {
     try {
-        new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions(); return true;
+        new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions();
+        return true;
     } catch {
         return false;
     }
@@ -82,7 +87,7 @@ export function formatDateWithPresentation(
     instant: Date,
     locales: readonly string[],
     display: DisplaySettings = SYSTEM_DISPLAY,
-    available: TimeZoneAvailability = isTimeZoneAvailable
+    available: TimeZoneAvailability = isTimeZoneAvailable,
 ): DatePresentationResult {
     if (display.formatMode === "system") {
         const zone = display.timeZone;
@@ -93,8 +98,17 @@ export function formatDateWithPresentation(
             return { text: systemFormat(instant, locales), error: "unavailable-time-zone" };
         }
         try {
-            const options = { dateStyle: "medium", timeStyle: "short", timeZone: zone.mode === "utc" ? "UTC" : zone.identifier } as const;
-            return { text: locales.length === 0 ? intlFormat(instant, options) : intlFormat(instant, options, { locale: [...locales] }) };
+            const options = {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: zone.mode === "utc" ? "UTC" : zone.identifier,
+            } as const;
+            return {
+                text:
+                    locales.length === 0
+                        ? intlFormat(instant, options)
+                        : intlFormat(instant, options, { locale: [...locales] }),
+            };
         } catch (error) {
             if (zone.mode === "iana" && error instanceof RangeError) {
                 return { text: systemFormat(instant, locales), error: "unavailable-time-zone" };
@@ -105,14 +119,22 @@ export function formatDateWithPresentation(
     const zone = display.timeZone;
     if (zone.mode === "iana" && !available(zone.identifier)) {
         try {
-            return { text: format(instant, display.pattern, { locale: resolveDateLocale(locales).locale }), error: "unavailable-time-zone" };
+            return {
+                text: format(instant, display.pattern, {
+                    locale: resolveDateLocale(locales).locale,
+                }),
+                error: "unavailable-time-zone",
+            };
         } catch {
             return { text: "", error: "invalid-format" };
         }
     }
     try {
         const locale = resolveDateLocale(locales).locale;
-        const options = zone.mode === "system" ? { locale } : { locale, in: tz(zone.mode === "utc" ? "UTC" : zone.identifier) };
+        const options =
+            zone.mode === "system"
+                ? { locale }
+                : { locale, in: tz(zone.mode === "utc" ? "UTC" : zone.identifier) };
         const text = format(instant, display.pattern, options);
         return text.trim().length > 0 ? { text } : { text: "", error: "invalid-format" };
     } catch {

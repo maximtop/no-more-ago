@@ -3,76 +3,103 @@
  */
 
 import type { SettingsService } from "../settings/settings-service";
-import { isCanonicalHostname, isSiteEnabled, type DisplaySettings, type SettingsSnapshotV5 } from "../settings/snapshot";
-export type { DisplaySettings } from "../settings/snapshot";
-import { createDiagnosticEvent, sanitizeDiagnosticEvent, type DiagnosticBrowserFamily, type DiagnosticEvent, type DiagnosticEventInput, type DiagnosticSender } from "../diagnostics/events";
-import type { DiagnosticJournal } from "../diagnostics/journal";
-import type { RuntimeAdapterDefinition, ActivationReconcileResult, ActivationMode, ReconcileFailure } from "../runtime/adapter-activation";
-import type { ClearDiagnosticsResponse, DiagnosticsEnvironment, GetDiagnosticsSnapshotResponse } from "./messages";
-import type { TabsRuntime, RuntimeTab } from "../runtime/tabs";
 import {
-    DOCUMENT_STATUS_MESSAGE,
-    isDocumentStatusResponse
+    isCanonicalHostname,
+    isSiteEnabled,
+    type DisplaySettings,
+    type SettingsSnapshotV5,
+} from "../settings/snapshot";
+export type { DisplaySettings } from "../settings/snapshot";
+import {
+    createDiagnosticEvent,
+    sanitizeDiagnosticEvent,
+    type DiagnosticBrowserFamily,
+    type DiagnosticEvent,
+    type DiagnosticEventInput,
+    type DiagnosticSender,
+} from "../diagnostics/events";
+import type { DiagnosticJournal } from "../diagnostics/journal";
+import type {
+    RuntimeAdapterDefinition,
+    ActivationReconcileResult,
+    ActivationMode,
+    ReconcileFailure,
+} from "../runtime/adapter-activation";
+import type {
+    ClearDiagnosticsResponse,
+    DiagnosticsEnvironment,
+    GetDiagnosticsSnapshotResponse,
+} from "./messages";
+import type { TabsRuntime, RuntimeTab } from "../runtime/tabs";
+import { DOCUMENT_STATUS_MESSAGE, isDocumentStatusResponse } from "../runtime/messages";
+import {
+    UPDATE_DEBUG_POLICY_MESSAGE,
+    UPDATE_PRESENTATION_MESSAGE,
+    isDebugPolicyUpdateAcknowledgement,
+    isPresentationUpdateAcknowledgement,
 } from "../runtime/messages";
-import { UPDATE_DEBUG_POLICY_MESSAGE, UPDATE_PRESENTATION_MESSAGE, isDebugPolicyUpdateAcknowledgement, isPresentationUpdateAcknowledgement } from "../runtime/messages";
 import { isRuntimeTab } from "../runtime/tabs";
 
 /**
  * Availability and activation status presented for the active tab.
  */
 export type PopupStatus =
-  | "active"
-  | "global-disabled"
-  | "site-disabled"
-  | "inaccessible"
-  | "runtime-failed"
-  | "no-rules"
-  | "settings-unavailable";
+    | "active"
+    | "global-disabled"
+    | "site-disabled"
+    | "inaccessible"
+    | "runtime-failed"
+    | "no-rules"
+    | "settings-unavailable";
 
 /**
  * Failure that prevents the popup from reporting normal active-tab status.
  */
 export type PopupFailure =
-  | "current-tab-query"
-  | "registration"
-  | "matching-tabs-query"
-  | "current-tab-inject"
-  | "current-tab-teardown"
-  | "document-status"
-  | "settings-load"
-  | "fail-closed-cleanup";
+    | "current-tab-query"
+    | "registration"
+    | "matching-tabs-query"
+    | "current-tab-inject"
+    | "current-tab-teardown"
+    | "document-status"
+    | "settings-load"
+    | "fail-closed-cleanup";
 
 /**
  * Popup view of settings and runtime state for the active tab.
  */
 export type PopupState =
-  | {
-      readonly availability: "ready";
-      readonly revision: number;
-      readonly globalEnabled: boolean;
-      readonly hostname: string | null;
-      readonly siteEnabled: boolean | null;
-      readonly hasAdapter: boolean;
-      readonly status: Exclude<PopupStatus, "settings-unavailable">;
-      readonly failure?: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup">;
-  }
-  | {
-      readonly availability: "unavailable";
-      readonly revision: null;
-      readonly globalEnabled: null;
-      readonly hostname: string | null;
-      readonly siteEnabled: null;
-      readonly hasAdapter: false;
-      readonly status: "settings-unavailable" | "runtime-failed";
-      readonly failure: "settings-load" | "fail-closed-cleanup";
-  };
+    | {
+        readonly availability: "ready";
+        readonly revision: number;
+        readonly globalEnabled: boolean;
+        readonly hostname: string | null;
+        readonly siteEnabled: boolean | null;
+        readonly hasAdapter: boolean;
+        readonly status: Exclude<PopupStatus, "settings-unavailable">;
+        readonly failure?: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup">;
+    }
+    | {
+        readonly availability: "unavailable";
+        readonly revision: null;
+        readonly globalEnabled: null;
+        readonly hostname: string | null;
+        readonly siteEnabled: null;
+        readonly hasAdapter: false;
+        readonly status: "settings-unavailable" | "runtime-failed";
+        readonly failure: "settings-load" | "fail-closed-cleanup";
+    };
 
 /**
  * Result of changing the global activation setting, including the updated popup state.
  */
 export type SetGlobalEnabledResponse =
-  | { readonly ok: true; readonly acceptedRevision: number; readonly state: PopupState }
-  | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: PopupState };
+    | { readonly ok: true; readonly acceptedRevision: number; readonly state: PopupState }
+    | {
+        readonly ok: false;
+        readonly error: "save-failed" | "settings-unavailable";
+        readonly state: PopupState;
+    };
 
 /**
  * A hostname shown in the site preferences list.
@@ -98,56 +125,109 @@ export interface SiteListEntry {
  * Site-preferences view returned to the extension UI.
  */
 export type SitesState =
-  | {
-      readonly availability: "ready";
-      readonly revision: number;
-      readonly globalEnabled: boolean;
-      readonly sites: readonly SiteListEntry[];
-  }
-  | {
-      readonly availability: "unavailable";
-      readonly revision: null;
-      readonly globalEnabled: null;
-      readonly sites: readonly [];
-      readonly failure: "settings-load" | "fail-closed-cleanup";
-  };
+    | {
+        readonly availability: "ready";
+        readonly revision: number;
+        readonly globalEnabled: boolean;
+        readonly sites: readonly SiteListEntry[];
+    }
+    | {
+        readonly availability: "unavailable";
+        readonly revision: null;
+        readonly globalEnabled: null;
+        readonly sites: readonly [];
+        readonly failure: "settings-load" | "fail-closed-cleanup";
+    };
 
 /**
  * Result of changing one site's activation setting and refreshing its source surface.
  */
 export type SetSiteEnabledResponse =
-  | { readonly ok: true; readonly acceptedRevision: number; readonly surface: "popup"; readonly state: PopupState }
-  | { readonly ok: true; readonly acceptedRevision: number; readonly surface: "sites"; readonly state: SitesState }
-  | { readonly ok: false; readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable"; readonly surface: "popup"; readonly state: PopupState }
-  | { readonly ok: false; readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable"; readonly surface: "sites"; readonly state: SitesState };
+    | {
+        readonly ok: true;
+        readonly acceptedRevision: number;
+        readonly surface: "popup";
+        readonly state: PopupState;
+    }
+    | {
+        readonly ok: true;
+        readonly acceptedRevision: number;
+        readonly surface: "sites";
+        readonly state: SitesState;
+    }
+    | {
+        readonly ok: false;
+        readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable";
+        readonly surface: "popup";
+        readonly state: PopupState;
+    }
+    | {
+        readonly ok: false;
+        readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable";
+        readonly surface: "sites";
+        readonly state: SitesState;
+    };
 
 /**
  * Result of restoring all settings to their defaults.
  */
 export type ResetAllSettingsResponse =
-  | { readonly ok: true; readonly acceptedRevision: number; readonly state: Extract<SitesState, { readonly availability: "ready" }> }
-  | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: SitesState };
+    | {
+        readonly ok: true;
+        readonly acceptedRevision: number;
+        readonly state: Extract<SitesState, { readonly availability: "ready" }>;
+    }
+    | {
+        readonly ok: false;
+        readonly error: "save-failed" | "settings-unavailable";
+        readonly state: SitesState;
+    };
 
 /**
  * Current display configuration and its time-zone availability.
  */
 export type DisplayState =
-  | { readonly availability: "ready"; readonly revision: number; readonly display: DisplaySettings; readonly debugEnabled: boolean; readonly error?: "unavailable-time-zone" }
-  | { readonly availability: "unavailable"; readonly revision: null; readonly display: null; readonly failure: "settings-load" | "fail-closed-cleanup" };
+    | {
+        readonly availability: "ready";
+        readonly revision: number;
+        readonly display: DisplaySettings;
+        readonly debugEnabled: boolean;
+        readonly error?: "unavailable-time-zone";
+    }
+    | {
+        readonly availability: "unavailable";
+        readonly revision: null;
+        readonly display: null;
+        readonly failure: "settings-load" | "fail-closed-cleanup";
+    };
 
 /**
  * Current diagnostic logging setting.
  */
 export type DebugState =
-  | { readonly availability: "ready"; readonly revision: number; readonly enabled: boolean }
-  | { readonly availability: "unavailable"; readonly revision: null; readonly enabled: null; readonly failure: "settings-load" | "fail-closed-cleanup" };
+    | { readonly availability: "ready"; readonly revision: number; readonly enabled: boolean }
+    | {
+        readonly availability: "unavailable";
+        readonly revision: null;
+        readonly enabled: null;
+        readonly failure: "settings-load" | "fail-closed-cleanup";
+    };
 
 /**
  * Result of changing diagnostic logging, including tabs that could not be updated.
  */
 export type SetDebugEnabledResponse =
-  | { readonly ok: true; readonly acceptedRevision: number; readonly state: DebugState; readonly refreshFailures?: readonly DebugRefreshFailure[] }
-  | { readonly ok: false; readonly error: "save-failed" | "settings-unavailable"; readonly state: DebugState };
+    | {
+        readonly ok: true;
+        readonly acceptedRevision: number;
+        readonly state: DebugState;
+        readonly refreshFailures?: readonly DebugRefreshFailure[];
+    }
+    | {
+        readonly ok: false;
+        readonly error: "save-failed" | "settings-unavailable";
+        readonly state: DebugState;
+    };
 
 /**
  * A tab that did not acknowledge a diagnostic-policy update.
@@ -193,8 +273,22 @@ export interface DisplayRefreshFailure {
  * Result of changing display settings, including tabs that could not be refreshed.
  */
 export type SetDisplaySettingsResponse =
-  | { readonly ok: true; readonly acceptedRevision: number; readonly state: DisplayState; readonly refreshFailures: readonly DisplayRefreshFailure[] }
-  | { readonly ok: false; readonly error: "invalid-format" | "invalid-time-zone" | "invalid-display-settings" | "save-failed" | "settings-unavailable"; readonly state: DisplayState };
+    | {
+        readonly ok: true;
+        readonly acceptedRevision: number;
+        readonly state: DisplayState;
+        readonly refreshFailures: readonly DisplayRefreshFailure[];
+    }
+    | {
+        readonly ok: false;
+        readonly error:
+              | "invalid-format"
+              | "invalid-time-zone"
+              | "invalid-display-settings"
+              | "save-failed"
+              | "settings-unavailable";
+        readonly state: DisplayState;
+    };
 
 /**
  * Lifecycle state of the background application.
@@ -297,7 +391,7 @@ export type LifecycleReason = "startup" | "installed" | "updated" | "cold-worker
 function matchingTabFailure(
     failures: readonly ReconcileFailure[],
     adapterId: string,
-    tabId: number
+    tabId: number,
 ): Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined {
     for (const failure of failures) {
         if (failure.scope === "registration" && failure.adapterId === adapterId) {
@@ -343,10 +437,7 @@ function urlFromTab(tab: RuntimeTab | undefined): URL | null {
  * @param hostname - Canonical hostname to compare.
  * @returns - Whether the adapter is registered for that hostname.
  */
-function adapterHostnameMatches(
-    adapter: RuntimeAdapterDefinition,
-    hostname: string
-): boolean {
+function adapterHostnameMatches(adapter: RuntimeAdapterDefinition, hostname: string): boolean {
     return adapter.hostname === hostname;
 }
 
@@ -494,7 +585,10 @@ export class BackgroundApplication {
      */
     private enqueue<T>(operation: () => Promise<T>): Promise<T> {
         const run = this.transactionTail.then(operation);
-        this.transactionTail = run.then(() => undefined, () => undefined);
+        this.transactionTail = run.then(
+            () => undefined,
+            () => undefined,
+        );
         return run;
     }
 
@@ -513,32 +607,55 @@ export class BackgroundApplication {
         policy: "enabled" | "disabled" | "unknown",
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>> = this.snapshot?.sitePreferences ?? {},
-        affectedHostnames?: readonly string[]
+        affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         let result: ActivationReconcileResult;
         try {
-            result = await this.coordinator.reconcile({ revision, mode, policy, sitePreferences, ...(affectedHostnames === undefined ? {} : { affectedHostnames }) });
+            result = await this.coordinator.reconcile({
+                revision,
+                mode,
+                policy,
+                sitePreferences,
+                ...(affectedHostnames === undefined ? {} : { affectedHostnames }),
+            });
         } catch {
             result = {
                 revision,
                 mode,
                 policy,
                 failures: this.adapters
-                    .filter((adapter) => affectedHostnames === undefined || affectedHostnames.includes(adapter.hostname))
-                    .map((adapter) => ({ scope: "registration" as const, adapterId: adapter.id, operation: "get" as const })),
+                    .filter(
+                        (adapter) =>
+                            affectedHostnames === undefined ||
+                            affectedHostnames.includes(adapter.hostname),
+                    )
+                    .map((adapter) => ({
+                        scope: "registration" as const,
+                        adapterId: adapter.id,
+                        operation: "get" as const,
+                    })),
                 registration: {},
-                tabs: []
+                tabs: [],
             };
         }
         // Scoped site reconciliation replaces only the selected adapters. Results
         // for unrelated adapters remain authoritative until they are reconciled.
         if (affectedHostnames !== undefined && this.lastReconcile) {
-            const affectedIds = new Set(this.adapters.filter((adapter) => affectedHostnames.includes(adapter.hostname)).map((adapter) => adapter.id));
+            const affectedIds = new Set(
+                this.adapters
+                    .filter((adapter) => affectedHostnames.includes(adapter.hostname))
+                    .map((adapter) => adapter.id),
+            );
             const failures = [
-                ...this.lastReconcile.failures.filter((failure) => !affectedIds.has(failure.adapterId)),
-                ...result.failures
+                ...this.lastReconcile.failures.filter(
+                    (failure) => !affectedIds.has(failure.adapterId),
+                ),
+                ...result.failures,
             ];
-            const registration: Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed"> = {};
+            const registration: Record<
+                string,
+                "unchanged" | "registered" | "updated" | "unregistered" | "failed"
+            > = {};
             for (const [id, value] of Object.entries(this.lastReconcile.registration)) {
                 if (!affectedIds.has(id)) {
                     registration[id] = value;
@@ -549,13 +666,18 @@ export class BackgroundApplication {
             }
             const tabs = [
                 ...this.lastReconcile.tabs.filter((record) => !affectedIds.has(record.adapterId)),
-                ...result.tabs
+                ...result.tabs,
             ];
             result = { ...result, failures, registration, tabs };
         }
         // Calls are serialized, but retain the revision guard for injected/custom
         // coordinators that resolve after a newer result was published.
-        if (!this.lastReconcile || result.revision === null || this.lastReconcile.revision === null || result.revision >= this.lastReconcile.revision) {
+        if (
+            !this.lastReconcile ||
+            result.revision === null ||
+            this.lastReconcile.revision === null ||
+            result.revision >= this.lastReconcile.revision
+        ) {
             this.lastReconcile = result;
         }
         this.refreshCachedPopupProjection();
@@ -599,11 +721,19 @@ export class BackgroundApplication {
         if (loaded.snapshot.debugEnabled) {
             try {
                 await this.journal?.setEnabled(true);
-            } catch { /* diagnostics never block activation */ }
+            } catch {
+                /* diagnostics never block activation */
+            }
         }
-        const mode: ActivationMode = this.lifecycleReasons.size > 0 ? "activation-sweep" : "cold-worker";
+        const mode: ActivationMode =
+            this.lifecycleReasons.size > 0 ? "activation-sweep" : "cold-worker";
         try {
-            await this.performReconcile(mode, loaded.snapshot.globalEnabled ? "enabled" : "disabled", loaded.snapshot.revision, loaded.snapshot.sitePreferences);
+            await this.performReconcile(
+                mode,
+                loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+                loaded.snapshot.revision,
+                loaded.snapshot.sitePreferences,
+            );
             this.lifecycleReasons.clear();
             this.phaseValue = "ready";
             await this.seedPopupProjection();
@@ -617,7 +747,7 @@ export class BackgroundApplication {
                 policy: loaded.snapshot.globalEnabled ? "enabled" : "disabled",
                 failures: [],
                 registration: {},
-                tabs: []
+                tabs: [],
             };
             this.lifecycleReasons.clear();
             this.phaseValue = "ready";
@@ -645,8 +775,13 @@ export class BackgroundApplication {
                 const loaded = await this.settings.load();
                 if (!loaded.ok || loaded.source === "default") {
                     try {
-                        const cleanup = await this.performReconcile("failed-closed", "unknown", null);
-                        this.failure = cleanup.failures.length > 0 ? "fail-closed-cleanup" : "settings-load";
+                        const cleanup = await this.performReconcile(
+                            "failed-closed",
+                            "unknown",
+                            null,
+                        );
+                        this.failure =
+                            cleanup.failures.length > 0 ? "fail-closed-cleanup" : "settings-load";
                     } catch {
                         this.failure = "fail-closed-cleanup";
                     }
@@ -657,9 +792,16 @@ export class BackgroundApplication {
                 if (loaded.snapshot.debugEnabled) {
                     try {
                         await this.journal?.setEnabled(true);
-                    } catch { /* diagnostics never block recovery */ }
+                    } catch {
+                        /* diagnostics never block recovery */
+                    }
                 }
-                const result = await this.performReconcile("activation-sweep", loaded.snapshot.globalEnabled ? "enabled" : "disabled", loaded.snapshot.revision, loaded.snapshot.sitePreferences);
+                const result = await this.performReconcile(
+                    "activation-sweep",
+                    loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+                    loaded.snapshot.revision,
+                    loaded.snapshot.sitePreferences,
+                );
                 this.phaseValue = "ready";
                 await this.seedPopupProjection();
                 if (result.failures.length > 0) {
@@ -696,7 +838,12 @@ export class BackgroundApplication {
                 if (this.phaseValue !== "ready" || !this.snapshot) {
                     return;
                 }
-                await this.performReconcile("activation-sweep", this.snapshot.globalEnabled ? "enabled" : "disabled", this.snapshot.revision, this.snapshot.sitePreferences);
+                await this.performReconcile(
+                    "activation-sweep",
+                    this.snapshot.globalEnabled ? "enabled" : "disabled",
+                    this.snapshot.revision,
+                    this.snapshot.sitePreferences,
+                );
                 this.lifecycleReasons.clear();
                 this.logBackgroundEvent({ category: "lifecycle", count: 1 });
             }
@@ -722,7 +869,10 @@ export class BackgroundApplication {
      *
      * @returns - Active tab result plus a flag distinguishing query failure.
      */
-    private async activeTab(): Promise<{ readonly tab: RuntimeTab | undefined; readonly error: boolean }> {
+    private async activeTab(): Promise<{
+        readonly tab: RuntimeTab | undefined;
+        readonly error: boolean;
+    }> {
         try {
             const tabs = await this.tabs.query({ active: true, currentWindow: true });
             const tab = tabs.find(isRuntimeTab);
@@ -758,17 +908,23 @@ export class BackgroundApplication {
                 revision: this.snapshot.revision,
                 globalEnabled: this.snapshot.globalEnabled,
                 siteEnabled: null,
-                hasAdapter: false
+                hasAdapter: false,
             };
             return;
         }
         const adapter = this.adapters.find((candidate) => candidate.hostname === hostname);
         const siteEnabled = isSiteEnabled(this.snapshot.sitePreferences, hostname);
-        const relevantFailure = adapter && this.popupTabId !== undefined
-            ? matchingTabFailure(this.lastReconcile?.failures ?? [], adapter.id, this.popupTabId)
-            : undefined;
+        const relevantFailure =
+            adapter && this.popupTabId !== undefined
+                ? matchingTabFailure(
+                    this.lastReconcile?.failures ?? [],
+                    adapter.id,
+                    this.popupTabId,
+                )
+                : undefined;
         let status: Exclude<PopupStatus, "settings-unavailable"> = cached.status;
-        let failure: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined = cached.failure;
+        let failure: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined =
+            cached.failure;
         if (relevantFailure) {
             status = "runtime-failed";
             failure = relevantFailure;
@@ -781,7 +937,11 @@ export class BackgroundApplication {
         } else if (!adapter) {
             status = "no-rules";
             failure = undefined;
-        } else if (status === "global-disabled" || status === "site-disabled" || status === "no-rules") {
+        } else if (
+            status === "global-disabled" ||
+            status === "site-disabled" ||
+            status === "no-rules"
+        ) {
             // A successful activation reconciliation is sufficient to carry the
             // previously verified host back to its normal active projection without
             // issuing a status probe during an unrelated invalid intent.
@@ -796,7 +956,7 @@ export class BackgroundApplication {
             siteEnabled,
             hasAdapter: adapter !== undefined,
             status,
-            ...(failure === undefined ? {} : { failure })
+            ...(failure === undefined ? {} : { failure }),
         };
         this.popupStateCache = next;
     }
@@ -814,8 +974,9 @@ export class BackgroundApplication {
             hostname: null,
             siteEnabled: null,
             hasAdapter: false,
-            status: this.failure === "fail-closed-cleanup" ? "runtime-failed" : "settings-unavailable",
-            failure: this.failure ?? "settings-load"
+            status:
+                this.failure === "fail-closed-cleanup" ? "runtime-failed" : "settings-unavailable",
+            failure: this.failure ?? "settings-load",
         };
     }
 
@@ -830,7 +991,7 @@ export class BackgroundApplication {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: this.failure ?? "settings-load"
+            failure: this.failure ?? "settings-load",
         };
     }
 
@@ -866,43 +1027,138 @@ export class BackgroundApplication {
         const current = await this.activeTab();
         this.popupTabId = current.tab?.id;
         if (current.error) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: this.snapshot.globalEnabled, hostname: null, siteEnabled: null, hasAdapter: false, status: "runtime-failed", failure: "current-tab-query" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: this.snapshot.globalEnabled,
+                hostname: null,
+                siteEnabled: null,
+                hasAdapter: false,
+                status: "runtime-failed",
+                failure: "current-tab-query",
+            };
         }
         const url = urlFromTab(current.tab);
         if (!url || (url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: this.snapshot.globalEnabled, hostname: null, siteEnabled: null, hasAdapter: false, status: "inaccessible" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: this.snapshot.globalEnabled,
+                hostname: null,
+                siteEnabled: null,
+                hasAdapter: false,
+                status: "inaccessible",
+            };
         }
         const hostname = url.hostname;
         const adapter = this.adapterForUrl(url);
         const siteEnabled = this.siteEnabled(hostname);
         const tabId = current.tab?.id;
         if (adapter) {
-            const failure = tabId === undefined ? "current-tab-query" : matchingTabFailure(this.lastReconcile?.failures ?? [], adapter.id, tabId);
+            const failure =
+                tabId === undefined
+                    ? "current-tab-query"
+                    : matchingTabFailure(this.lastReconcile?.failures ?? [], adapter.id, tabId);
             if (failure) {
-                return { availability: "ready", revision: this.snapshot.revision, globalEnabled: this.snapshot.globalEnabled, hostname, siteEnabled, hasAdapter: true, status: "runtime-failed", failure };
+                return {
+                    availability: "ready",
+                    revision: this.snapshot.revision,
+                    globalEnabled: this.snapshot.globalEnabled,
+                    hostname,
+                    siteEnabled,
+                    hasAdapter: true,
+                    status: "runtime-failed",
+                    failure,
+                };
             }
         }
         if (!this.snapshot.globalEnabled) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: false, hostname, siteEnabled, hasAdapter: adapter !== undefined, status: "global-disabled" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: false,
+                hostname,
+                siteEnabled,
+                hasAdapter: adapter !== undefined,
+                status: "global-disabled",
+            };
         }
         if (!siteEnabled) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: false, hasAdapter: adapter !== undefined, status: "site-disabled" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: true,
+                hostname,
+                siteEnabled: false,
+                hasAdapter: adapter !== undefined,
+                status: "site-disabled",
+            };
         }
         if (!adapter) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: false, status: "no-rules" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: true,
+                hostname,
+                siteEnabled: true,
+                hasAdapter: false,
+                status: "no-rules",
+            };
         }
         if (tabId === undefined) {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: true, status: "runtime-failed", failure: "current-tab-query" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: true,
+                hostname,
+                siteEnabled: true,
+                hasAdapter: true,
+                status: "runtime-failed",
+                failure: "current-tab-query",
+            };
         }
         try {
-            const response = await this.tabs.sendMessage(tabId, { type: DOCUMENT_STATUS_MESSAGE }, { frameId: 0 });
-            if (!isDocumentStatusResponse(response) || (response.phase !== "waiting" && response.phase !== "active")) {
-                return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: true, status: "runtime-failed", failure: "document-status" };
+            const response = await this.tabs.sendMessage(
+                tabId,
+                { type: DOCUMENT_STATUS_MESSAGE },
+                { frameId: 0 },
+            );
+            if (
+                !isDocumentStatusResponse(response) ||
+                (response.phase !== "waiting" && response.phase !== "active")
+            ) {
+                return {
+                    availability: "ready",
+                    revision: this.snapshot.revision,
+                    globalEnabled: true,
+                    hostname,
+                    siteEnabled: true,
+                    hasAdapter: true,
+                    status: "runtime-failed",
+                    failure: "document-status",
+                };
             }
         } catch {
-            return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: true, status: "runtime-failed", failure: "document-status" };
+            return {
+                availability: "ready",
+                revision: this.snapshot.revision,
+                globalEnabled: true,
+                hostname,
+                siteEnabled: true,
+                hasAdapter: true,
+                status: "runtime-failed",
+                failure: "document-status",
+            };
         }
-        return { availability: "ready", revision: this.snapshot.revision, globalEnabled: true, hostname, siteEnabled: true, hasAdapter: true, status: "active" };
+        return {
+            availability: "ready",
+            revision: this.snapshot.revision,
+            globalEnabled: true,
+            hostname,
+            siteEnabled: true,
+            hasAdapter: true,
+            status: "active",
+        };
     }
 
     /**
@@ -916,7 +1172,9 @@ export class BackgroundApplication {
         }
         const adapterHostnames = this.adapters.map((adapter) => adapter.hostname);
         const explicitHostnames = Object.keys(this.snapshot.sitePreferences);
-        const hostnames = [...new Set([...adapterHostnames, ...explicitHostnames])].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+        const hostnames = [...new Set([...adapterHostnames, ...explicitHostnames])].sort(
+            (left, right) => (left < right ? -1 : left > right ? 1 : 0),
+        );
         return {
             availability: "ready",
             revision: this.snapshot.revision,
@@ -924,8 +1182,10 @@ export class BackgroundApplication {
             sites: hostnames.map((hostname) => ({
                 hostname,
                 enabled: this.siteEnabled(hostname),
-                hasAdapter: this.adapters.some((adapter) => adapterHostnameMatches(adapter, hostname))
-            }))
+                hasAdapter: this.adapters.some((adapter) =>
+                    adapterHostnameMatches(adapter, hostname),
+                ),
+            })),
         };
     }
 
@@ -966,10 +1226,17 @@ export class BackgroundApplication {
                 availability: "unavailable",
                 revision: null,
                 enabled: null,
-                failure: this.failure === "fail-closed-cleanup" ? "fail-closed-cleanup" : "settings-load"
+                failure:
+                    this.failure === "fail-closed-cleanup"
+                        ? "fail-closed-cleanup"
+                        : "settings-load",
             };
         }
-        return { availability: "ready", revision: this.snapshot.revision, enabled: this.snapshot.debugEnabled };
+        return {
+            availability: "ready",
+            revision: this.snapshot.revision,
+            enabled: this.snapshot.debugEnabled,
+        };
     }
 
     /**
@@ -1003,11 +1270,17 @@ export class BackgroundApplication {
                 return result;
             }
             const family = this.diagnosticEnvironment?.browserFamily;
-            const browserFamily: DiagnosticBrowserFamily = family === "chromium" || family === "firefox" || family === "other" ? family : "other";
+            const browserFamily: DiagnosticBrowserFamily =
+                family === "chromium" || family === "firefox" || family === "other"
+                    ? family
+                    : "other";
             const version = this.diagnosticEnvironment?.extensionVersion;
             const environment: DiagnosticsEnvironment = {
                 browserFamily,
-                ...(typeof version === "string" && /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(version) ? { extensionVersion: version } : {})
+                ...(typeof version === "string" &&
+                /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(version)
+                    ? { extensionVersion: version }
+                    : {}),
             };
             return { ok: true, snapshot: { entries: result.entries, environment } };
         });
@@ -1067,7 +1340,11 @@ export class BackgroundApplication {
         if (!hostname) {
             return;
         }
-        const event = sanitizeDiagnosticEvent(input, { hostname, pageCategory: "other", incognito: false });
+        const event = sanitizeDiagnosticEvent(input, {
+            hostname,
+            pageCategory: "other",
+            incognito: false,
+        });
         if (!event) {
             return;
         }
@@ -1083,9 +1360,14 @@ export class BackgroundApplication {
      */
     public async recordDocumentEvent(
         input: unknown,
-        sender: DiagnosticSender & { readonly frameId?: unknown }
+        sender: DiagnosticSender & { readonly frameId?: unknown },
     ): Promise<boolean> {
-        if (this.phaseValue !== "ready" || !this.snapshot?.debugEnabled || !this.snapshot.globalEnabled || !this.journal) {
+        if (
+            this.phaseValue !== "ready" ||
+            !this.snapshot?.debugEnabled ||
+            !this.snapshot.globalEnabled ||
+            !this.journal
+        ) {
             return false;
         }
         if (sender.frameId !== undefined && sender.frameId !== 0) {
@@ -1100,7 +1382,9 @@ export class BackgroundApplication {
         }
         try {
             await this.journal.append(this.trustedDiagnosticEvent(event));
-        } catch { /* diagnostics never block timestamp processing */ }
+        } catch {
+            /* diagnostics never block timestamp processing */
+        }
         return true;
     }
 
@@ -1114,13 +1398,14 @@ export class BackgroundApplication {
             return this.unavailableDisplayState();
         }
         const display = this.snapshot.display;
-        const unavailable = display.timeZone.mode === "iana" && !this.isZoneAvailable(display.timeZone.identifier);
+        const unavailable =
+            display.timeZone.mode === "iana" && !this.isZoneAvailable(display.timeZone.identifier);
         return {
             availability: "ready",
             revision: this.snapshot.revision,
             display,
             debugEnabled: this.snapshot.debugEnabled,
-            ...(unavailable ? { error: "unavailable-time-zone" as const } : {})
+            ...(unavailable ? { error: "unavailable-time-zone" as const } : {}),
         };
     }
 
@@ -1134,7 +1419,8 @@ export class BackgroundApplication {
             availability: "unavailable",
             revision: null,
             display: null,
-            failure: this.failure === "fail-closed-cleanup" ? "fail-closed-cleanup" : "settings-load"
+            failure:
+                this.failure === "fail-closed-cleanup" ? "fail-closed-cleanup" : "settings-load",
         };
     }
 
@@ -1171,7 +1457,10 @@ export class BackgroundApplication {
      * @param revision - Settings revision associated with the policy.
      * @returns - Per-tab diagnostic-policy refresh failures.
      */
-    private async refreshDebugPolicyTabs(enabled: boolean, revision: number): Promise<readonly DebugRefreshFailure[]> {
+    private async refreshDebugPolicyTabs(
+        enabled: boolean,
+        revision: number,
+    ): Promise<readonly DebugRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) {
             return [];
         }
@@ -1184,7 +1473,8 @@ export class BackgroundApplication {
             try {
                 tabs = await this.tabs.query({ url: adapter.registration.matches });
             } catch {
-                failures.push({ hostname: adapter.hostname, reason: "matching-tabs-query" }); continue;
+                failures.push({ hostname: adapter.hostname, reason: "matching-tabs-query" });
+                continue;
             }
             const seen = new Set<number>();
             for (const tab of tabs) {
@@ -1194,12 +1484,24 @@ export class BackgroundApplication {
                 }
                 seen.add(tab.id);
                 try {
-                    const acknowledgement = await this.tabs.sendMessage(tab.id, { type: UPDATE_DEBUG_POLICY_MESSAGE, revision, enabled }, { frameId: 0 });
+                    const acknowledgement = await this.tabs.sendMessage(
+                        tab.id,
+                        { type: UPDATE_DEBUG_POLICY_MESSAGE, revision, enabled },
+                        { frameId: 0 },
+                    );
                     if (!isDebugPolicyUpdateAcknowledgement(acknowledgement, revision)) {
-                        failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                        failures.push({
+                            hostname: adapter.hostname,
+                            tabId: tab.id,
+                            reason: "tab-update",
+                        });
                     }
                 } catch {
-                    failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                    failures.push({
+                        hostname: adapter.hostname,
+                        tabId: tab.id,
+                        reason: "tab-update",
+                    });
                 }
             }
         }
@@ -1220,7 +1522,8 @@ export class BackgroundApplication {
         let error: "save-failed" | "settings-unavailable" | undefined;
         await this.enqueue(async () => {
             if (this.phaseValue !== "ready" || !this.snapshot) {
-                error = "settings-unavailable"; return;
+                error = "settings-unavailable";
+                return;
             }
             const write = await this.settings.setDebugEnabled(enabled);
             if (!write.ok) {
@@ -1242,14 +1545,22 @@ export class BackgroundApplication {
             if (enabled) {
                 try {
                     await this.journal?.setEnabled(true);
-                } catch { /* diagnostics never block processing */ }
-                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+                } catch {
+                    /* diagnostics never block processing */
+                }
+                this.logBackgroundEvent({
+                    category: "settings",
+                    reason: "settings-updated",
+                    count: 1,
+                });
             }
             refreshFailures = await this.refreshDebugPolicyTabs(enabled, write.snapshot.revision);
             if (!enabled) {
                 try {
                     await this.journal?.setEnabled(false);
-                } catch { /* diagnostics never block processing */ }
+                } catch {
+                    /* diagnostics never block processing */
+                }
             }
             this.refreshCachedPopupProjection();
         });
@@ -1260,7 +1571,12 @@ export class BackgroundApplication {
         if (acceptedRevision === undefined) {
             return { ok: false, error: "settings-unavailable", state };
         }
-        return { ok: true, acceptedRevision, state, ...(refreshFailures.length === 0 ? {} : { refreshFailures }) };
+        return {
+            ok: true,
+            acceptedRevision,
+            state,
+            ...(refreshFailures.length === 0 ? {} : { refreshFailures }),
+        };
     }
 
     /**
@@ -1270,7 +1586,10 @@ export class BackgroundApplication {
      * @param revision - Settings revision associated with the display settings.
      * @returns - Per-tab display refresh failures.
      */
-    private async refreshDisplayTabs(display: DisplaySettings, revision: number): Promise<readonly DisplayRefreshFailure[]> {
+    private async refreshDisplayTabs(
+        display: DisplaySettings,
+        revision: number,
+    ): Promise<readonly DisplayRefreshFailure[]> {
         if (!this.snapshot?.globalEnabled) {
             return [];
         }
@@ -1297,16 +1616,28 @@ export class BackgroundApplication {
                 }
                 seen.add(tab.id);
                 try {
-                    const response = await this.tabs.sendMessage(tab.id, {
-                        type: UPDATE_PRESENTATION_MESSAGE,
-                        revision,
-                        display
-                    }, { frameId: 0 });
+                    const response = await this.tabs.sendMessage(
+                        tab.id,
+                        {
+                            type: UPDATE_PRESENTATION_MESSAGE,
+                            revision,
+                            display,
+                        },
+                        { frameId: 0 },
+                    );
                     if (!isPresentationUpdateAcknowledgement(response, revision)) {
-                        failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                        failures.push({
+                            hostname: adapter.hostname,
+                            tabId: tab.id,
+                            reason: "tab-update",
+                        });
                     }
                 } catch {
-                    failures.push({ hostname: adapter.hostname, tabId: tab.id, reason: "tab-update" });
+                    failures.push({
+                        hostname: adapter.hostname,
+                        tabId: tab.id,
+                        reason: "tab-update",
+                    });
                 }
             }
         }
@@ -1324,14 +1655,28 @@ export class BackgroundApplication {
         await this.requestLifecycleDrain();
         let acceptedRevision: number | undefined;
         let refreshFailures: readonly DisplayRefreshFailure[] = [];
-        let error: "invalid-format" | "invalid-time-zone" | "invalid-display-settings" | "save-failed" | "settings-unavailable" | undefined;
+        let error:
+            | "invalid-format"
+            | "invalid-time-zone"
+            | "invalid-display-settings"
+            | "save-failed"
+            | "settings-unavailable"
+            | undefined;
         await this.enqueue(async () => {
             if (this.phaseValue !== "ready" || !this.snapshot) {
-                error = "settings-unavailable"; return;
+                error = "settings-unavailable";
+                return;
             }
             const write = await this.settings.setDisplaySettings(display);
             if (!write.ok) {
-                error = write.error === "invalid-format" || write.error === "invalid-time-zone" || write.error === "invalid-display-settings" ? write.error : (this.settings.lastLoadError ? "settings-unavailable" : "save-failed");
+                error =
+                    write.error === "invalid-format" ||
+                    write.error === "invalid-time-zone" ||
+                    write.error === "invalid-display-settings"
+                        ? write.error
+                        : this.settings.lastLoadError
+                            ? "settings-unavailable"
+                            : "save-failed";
                 if (this.settings.lastLoadError) {
                     this.snapshot = undefined;
                     this.failure = "settings-load";
@@ -1344,8 +1689,15 @@ export class BackgroundApplication {
             acceptedRevision = write.snapshot.revision;
             this.advanceReconcileRevision(acceptedRevision);
             if (write.changed) {
-                refreshFailures = await this.refreshDisplayTabs(write.snapshot.display, acceptedRevision);
-                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+                refreshFailures = await this.refreshDisplayTabs(
+                    write.snapshot.display,
+                    acceptedRevision,
+                );
+                this.logBackgroundEvent({
+                    category: "settings",
+                    reason: "settings-updated",
+                    count: 1,
+                });
             }
             this.refreshCachedPopupProjection();
         });
@@ -1368,7 +1720,9 @@ export class BackgroundApplication {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         let acceptedRevision: number | undefined;
-        const outcome: { value: "accepted" | "save-failed" | "settings-unavailable" } = { value: "accepted" };
+        const outcome: { value: "accepted" | "save-failed" | "settings-unavailable" } = {
+            value: "accepted",
+        };
         await this.enqueue(async () => {
             const previousSnapshot = this.phaseValue === "ready" ? this.snapshot : undefined;
             const write = await this.settings.resetAll();
@@ -1400,24 +1754,40 @@ export class BackgroundApplication {
             acceptedRevision = write.snapshot.revision;
             this.lastReconcile = undefined;
             if (previousSnapshot?.globalEnabled) {
-                await this.performReconcile("settings-change", "disabled", write.snapshot.revision, previousSnapshot.sitePreferences);
+                await this.performReconcile(
+                    "settings-change",
+                    "disabled",
+                    write.snapshot.revision,
+                    previousSnapshot.sitePreferences,
+                );
             }
             try {
                 await this.journal?.clear();
-            } catch { /* recovery must not depend on diagnostics */ }
-            await this.performReconcile("activation-sweep", write.snapshot.globalEnabled ? "enabled" : "disabled", write.snapshot.revision, write.snapshot.sitePreferences);
+            } catch {
+                /* recovery must not depend on diagnostics */
+            }
+            await this.performReconcile(
+                "activation-sweep",
+                write.snapshot.globalEnabled ? "enabled" : "disabled",
+                write.snapshot.revision,
+                write.snapshot.sitePreferences,
+            );
             this.lifecycleReasons.clear();
             this.popupStateCache = undefined;
             await this.seedPopupProjection();
         });
         const state = await this.enqueue(() => Promise.resolve(this.deriveSitesState()));
-        if (outcome.value === "accepted" && acceptedRevision !== undefined && state.availability === "ready") {
+        if (
+            outcome.value === "accepted" &&
+            acceptedRevision !== undefined &&
+            state.availability === "ready"
+        ) {
             return { ok: true, acceptedRevision, state };
         }
         return {
             ok: false,
             error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable",
-            state
+            state,
         };
     }
 
@@ -1431,7 +1801,9 @@ export class BackgroundApplication {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         let acceptedRevision: number | undefined;
-        const outcome: { value: "accepted" | "save-failed" | "settings-unavailable" } = { value: "accepted" };
+        const outcome: { value: "accepted" | "save-failed" | "settings-unavailable" } = {
+            value: "accepted",
+        };
         await this.enqueue(async () => {
             if (this.phaseValue !== "ready" || !this.snapshot) {
                 outcome.value = "settings-unavailable";
@@ -1452,9 +1824,18 @@ export class BackgroundApplication {
             }
             this.snapshot = write.snapshot;
             acceptedRevision = write.snapshot.revision;
-            await this.performReconcile("settings-change", write.snapshot.globalEnabled ? "enabled" : "disabled", write.snapshot.revision, write.snapshot.sitePreferences);
+            await this.performReconcile(
+                "settings-change",
+                write.snapshot.globalEnabled ? "enabled" : "disabled",
+                write.snapshot.revision,
+                write.snapshot.sitePreferences,
+            );
             if (write.changed) {
-                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+                this.logBackgroundEvent({
+                    category: "settings",
+                    reason: "settings-updated",
+                    count: 1,
+                });
             }
         });
         const state = await this.enqueue(async () => {
@@ -1465,7 +1846,11 @@ export class BackgroundApplication {
         if (outcome.value === "accepted" && acceptedRevision !== undefined) {
             return { ok: true, acceptedRevision, state };
         }
-        return { ok: false, error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable", state };
+        return {
+            ok: false,
+            error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable",
+            state,
+        };
     }
 
     /**
@@ -1475,7 +1860,9 @@ export class BackgroundApplication {
      * @returns - Whether the latest reconciliation records its failure.
      */
     private hasFailureForAdapter(adapterId: string): boolean {
-        return (this.lastReconcile?.failures ?? []).some((failure) => failureBelongsToAdapter(failure, adapterId));
+        return (this.lastReconcile?.failures ?? []).some((failure) =>
+            failureBelongsToAdapter(failure, adapterId),
+        );
     }
 
     /**
@@ -1489,12 +1876,14 @@ export class BackgroundApplication {
     public async setSiteEnabled(
         hostname: string,
         enabled: boolean,
-        surface: "popup" | "sites"
+        surface: "popup" | "sites",
     ): Promise<SetSiteEnabledResponse> {
         await this.ensureReady("cold-worker");
         await this.requestLifecycleDrain();
         let acceptedRevision: number | undefined;
-        const outcome: { value: "accepted" | "save-failed" | "invalid-hostname" | "settings-unavailable" } = { value: "accepted" };
+        const outcome: {
+            value: "accepted" | "save-failed" | "invalid-hostname" | "settings-unavailable";
+        } = { value: "accepted" };
         await this.enqueue(async () => {
             if (this.phaseValue !== "ready" || !this.snapshot) {
                 outcome.value = "settings-unavailable";
@@ -1509,7 +1898,12 @@ export class BackgroundApplication {
             const previous = this.snapshot;
             const write = await this.settings.setSiteEnabled(hostname, enabled);
             if (!write.ok) {
-                outcome.value = write.error === "invalid-hostname" ? "invalid-hostname" : (this.settings.lastLoadError ? "settings-unavailable" : "save-failed");
+                outcome.value =
+                    write.error === "invalid-hostname"
+                        ? "invalid-hostname"
+                        : this.settings.lastLoadError
+                            ? "settings-unavailable"
+                            : "save-failed";
                 if (this.settings.lastLoadError) {
                     this.snapshot = undefined;
                     this.failure = "settings-load";
@@ -1525,11 +1919,20 @@ export class BackgroundApplication {
                 .filter((adapter) => {
                     const before = isSiteEnabled(previous.sitePreferences, adapter.hostname);
                     const after = isSiteEnabled(write.snapshot.sitePreferences, adapter.hostname);
-                    return before !== after || (write.snapshot.globalEnabled && this.hasFailureForAdapter(adapter.id));
+                    return (
+                        before !== after ||
+                        (write.snapshot.globalEnabled && this.hasFailureForAdapter(adapter.id))
+                    );
                 })
                 .map((adapter) => adapter.hostname);
             if (write.snapshot.globalEnabled && affected.length > 0) {
-                await this.performReconcile("settings-change", "enabled", write.snapshot.revision, write.snapshot.sitePreferences, affected);
+                await this.performReconcile(
+                    "settings-change",
+                    "enabled",
+                    write.snapshot.revision,
+                    write.snapshot.sitePreferences,
+                    affected,
+                );
             } else {
                 // A persisted no-effect/inactive edit must not touch runtime APIs, but
                 // its authoritative revision still advances the response barrier.
@@ -1537,14 +1940,21 @@ export class BackgroundApplication {
             }
             this.refreshCachedPopupProjection();
             if (write.changed) {
-                this.logBackgroundEvent({ category: "settings", reason: "settings-updated", count: 1 });
+                this.logBackgroundEvent({
+                    category: "settings",
+                    reason: "settings-updated",
+                    count: 1,
+                });
             }
         });
         if (outcome.value === "invalid-hostname") {
             // Typed semantic rejection is deliberately side-effect free. Use the
             // latest already-read popup projection instead of querying the active tab
             // or document merely to construct an error response.
-            const state = surface === "popup" ? (this.popupStateCache ?? this.unavailableState()) : this.deriveSitesState();
+            const state =
+                surface === "popup"
+                    ? (this.popupStateCache ?? this.unavailableState())
+                    : this.deriveSitesState();
             if (surface === "popup") {
                 return { ok: false, error: outcome.value, surface, state: state as PopupState };
             }

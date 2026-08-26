@@ -10,9 +10,13 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     isSetSiteEnabledResponse,
     isPopupState,
-    isSetGlobalEnabledResponse
+    isSetGlobalEnabledResponse,
 } from "../background/messages";
-import type { PopupState, SetGlobalEnabledResponse, SetSiteEnabledResponse } from "../background/application";
+import type {
+    PopupState,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+} from "../background/application";
 
 /**
  * Sends a popup request to the extension runtime.
@@ -28,15 +32,18 @@ export interface PopupTransport {
  * Result of changing the global enabled setting.
  */
 export type PopupSetResult =
-  | { readonly kind: "response"; readonly response: SetGlobalEnabledResponse }
-  | { readonly kind: "ambiguous"; readonly state?: PopupState };
+    | { readonly kind: "response"; readonly response: SetGlobalEnabledResponse }
+    | { readonly kind: "ambiguous"; readonly state?: PopupState };
 
 /**
  * Result of changing the current site's enabled setting.
  */
 export type PopupSiteSetResult =
-  | { readonly kind: "response"; readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "popup" }> }
-  | { readonly kind: "ambiguous"; readonly state?: PopupState };
+    | {
+        readonly kind: "response";
+        readonly response: Extract<SetSiteEnabledResponse, { readonly surface: "popup" }>;
+    }
+    | { readonly kind: "ambiguous"; readonly state?: PopupState };
 
 /**
  * Wraps popup messages and validates their background responses.
@@ -78,7 +85,10 @@ export class PopupClient {
     public async setGlobalEnabled(enabled: boolean): Promise<PopupSetResult> {
         let response: unknown;
         try {
-            response = await this.transport.sendMessage({ type: SET_GLOBAL_ENABLED_MESSAGE, enabled });
+            response = await this.transport.sendMessage({
+                type: SET_GLOBAL_ENABLED_MESSAGE,
+                enabled,
+            });
         } catch {
             return this.rereadAfterAmbiguousResponse();
         }
@@ -102,7 +112,7 @@ export class PopupClient {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
-                surface: "popup"
+                surface: "popup",
             });
         } catch {
             return this.rereadAfterAmbiguousSiteResponse();
@@ -155,5 +165,7 @@ export function createPopupClient(transport?: PopupTransport): PopupClient {
     if (typeof chrome !== "undefined") {
         return new PopupClient(chrome.runtime);
     }
-    return new PopupClient({ sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")) });
+    return new PopupClient({
+        sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")),
+    });
 }
