@@ -4,13 +4,14 @@
  * @file Typed client for popup requests and ambiguous-response recovery.
  */
 
+import * as v from "valibot";
 import {
     GET_POPUP_STATE_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
-    isSetSiteEnabledResponse,
-    isPopupState,
-    isSetGlobalEnabledResponse,
+    popupStateSchema,
+    setGlobalEnabledResponseSchema,
+    setSiteEnabledResponseSchema,
 } from "../background/messages";
 import type {
     PopupState,
@@ -18,6 +19,7 @@ import type {
     SetSiteEnabledResponse,
 } from "../background/application";
 import { CLIENT_RESULT_KIND } from "../core/client-result";
+import { SITE_SETTINGS_SURFACE } from "../background/view-state-values";
 
 /**
  * Sends a popup request to the extension runtime.
@@ -75,7 +77,7 @@ export type PopupSiteSetResult =
                 /**
                  * Selects responses projected for the popup surface.
                  */
-                readonly surface: "popup";
+                readonly surface: typeof SITE_SETTINGS_SURFACE.POPUP;
             }
         >;
     }
@@ -116,7 +118,7 @@ export class PopupClient {
      */
     public async getState(): Promise<PopupState> {
         const response = await this.transport.sendMessage({ type: GET_POPUP_STATE_MESSAGE });
-        if (!isPopupState(response)) {
+        if (!v.is(popupStateSchema, response)) {
             throw new Error("Invalid popup state response");
         }
         return response;
@@ -138,7 +140,7 @@ export class PopupClient {
         } catch {
             return this.rereadAfterAmbiguousResponse();
         }
-        if (isSetGlobalEnabledResponse(response)) {
+        if (v.is(setGlobalEnabledResponseSchema, response)) {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousResponse();
@@ -158,12 +160,15 @@ export class PopupClient {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
-                surface: "popup",
+                surface: SITE_SETTINGS_SURFACE.POPUP,
             });
         } catch {
             return this.rereadAfterAmbiguousSiteResponse();
         }
-        if (isSetSiteEnabledResponse(response) && response.surface === "popup") {
+        if (
+            v.is(setSiteEnabledResponseSchema, response)
+            && response.surface === SITE_SETTINGS_SURFACE.POPUP
+        ) {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousSiteResponse();

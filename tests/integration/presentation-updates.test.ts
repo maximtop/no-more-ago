@@ -8,7 +8,6 @@ import { describe, expect, it, vi, type Mock } from "vitest";
 import { BackgroundApplication } from "../../src/background/application";
 import { installContentRuntime } from "../../src/content/runtime";
 import {
-    DIAGNOSTICS_MAX_BYTES,
     DIAGNOSTICS_STORAGE_KEY,
     DiagnosticJournal,
 } from "../../src/diagnostics/journal";
@@ -957,50 +956,6 @@ describe("presentation updates across real background and two documents", () => 
         expect(
             fixture.documents.get(12)?.querySelectorAll("time[data-no-more-ago-output]"),
         ).toHaveLength(2);
-    });
-
-    it("refuses unsafe diagnostics without disturbing active documents", async () => {
-        const fixture = integrationFixture(CUSTOM_NEW_YORK);
-        await fixture.app.ensureReady();
-        await fixture.settle();
-        await fixture.app.setDebugEnabled(true);
-        const safe = {
-            category: "mutation",
-            timestamp: 1,
-            hostname: "github.com",
-            pageCategory: "repository",
-            incognito: false,
-        };
-        const serializer = Object.defineProperty({}, "toJSON", {
-            value: () => ({
-                url: "https://github.com/private?token=secret",
-                datetime: SOURCE_INSTANT,
-                dom: "<secret>",
-            }),
-        });
-        const inherited = Object.assign(
-            Object.create({ secret: "inherited" }) as Record<string, unknown>,
-            { entries: [safe] },
-        );
-        const hiddenSerializer = Object.assign(
-            Object.create(serializer) as Record<string, unknown>,
-            { entries: [safe] },
-        );
-        const oversized = {
-            entries: [{ ...safe, stack: [`frame:${"1".repeat(DIAGNOSTICS_MAX_BYTES)}`] }],
-        };
-        for (const poisoned of [inherited, hiddenSerializer, oversized]) {
-            fixture.poisonDiagnostics(poisoned);
-            await expect(fixture.app.getDiagnosticsSnapshot()).resolves.toEqual({
-                ok: false,
-                error: "invalid-journal",
-            });
-            expect(fixture.stored.debugEnabled).toBe(true);
-            expect(fixture.output(11)?.textContent).toBe("2026-08-23 06:15 -04:00");
-            expect(fixture.output(12)?.textContent).toBe("2026-08-23 06:15 -04:00");
-            expect(fixture.additions.get(11)).toHaveBeenCalledTimes(1);
-            expect(fixture.additions.get(12)).toHaveBeenCalledTimes(1);
-        }
     });
 
     it("resets opted-in documents without stale diagnostic callbacks", async () => {

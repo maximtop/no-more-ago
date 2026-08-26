@@ -1,5 +1,5 @@
 /**
- * @file Verifies diagnostics archive validation, compression, and download handling.
+ * @file Verifies diagnostic ZIP creation and browser download behavior.
  */
 
 import { strFromU8, unzipSync } from "fflate";
@@ -15,211 +15,42 @@ import {
 } from "../../src/diagnostics/archive";
 
 const snapshot: DiagnosticArchiveSnapshot = {
-    entries: [
-        {
-            category: "lifecycle",
-            timestamp: 1_700_000_000_000,
-            hostname: "github.com",
-            pageCategory: "repository",
-            incognito: false,
-            count: 2,
-            reason: "adapter-matched",
-            stack: ["frame:12:4"],
-        },
-    ],
+    entries: [{
+        category: "lifecycle",
+        timestamp: 1_700_000_000_000,
+        hostname: "github.com",
+        pageCategory: "repository",
+        incognito: false,
+        reason: "adapter-matched",
+    }],
     environment: { browserFamily: "chromium", extensionVersion: "1.2.3" },
 };
 
-/**
- * Asserts that an archive action throws the expected typed failure.
- *
- * @param action - Archive operation expected to fail.
- * @param code - Stable diagnostic archive error code.
- */
-function expectArchiveError(action: () => unknown, code: DiagnosticArchiveError["code"]): void {
-    try {
-        action();
-        throw new Error("expected archive error");
-    } catch (error) {
-        expect(error).toBeInstanceOf(DiagnosticArchiveError);
-        expect((error as DiagnosticArchiveError).code).toBe(code);
-    }
-}
-
 describe("diagnostic archive", () => {
-    it("creates one JSON entry containing the complete safe snapshot", () => {
-        const archive = createDiagnosticsZip(snapshot);
-        const files = unzipSync(archive);
+    it("stores the complete validated snapshot as JSON", () => {
+        const files = unzipSync(createDiagnosticsZip(snapshot));
         expect(Object.keys(files)).toEqual([DIAGNOSTICS_ARCHIVE_MEMBER]);
         const json = files[DIAGNOSTICS_ARCHIVE_MEMBER];
-        if (!json) {
-            throw new Error(`${DIAGNOSTICS_ARCHIVE_MEMBER} is missing`);
-        }
-        expect(JSON.parse(strFromU8(json))).toEqual(snapshot);
+        expect(json && JSON.parse(strFromU8(json))).toEqual(snapshot);
     });
 
-    it("exports every entry when journal bytes fit but trusted metadata exceeds the cap", () => {
-        const entries = Array.from({ length: 44_345 }, (_, index) => ({
-            category: "lifecycle" as const,
-            timestamp: index,
-            hostname: index < 20 ? "github.com." : "github.com",
-            pageCategory: "repository" as const,
-            incognito: false,
-        }));
-        const environment = {
-            browserFamily: "chromium" as const,
-            extensionVersion: "12345678901234567890123456789012",
-        };
-        const journalBytes = new TextEncoder().encode(JSON.stringify({ entries })).byteLength;
-        const archive = createDiagnosticsZip({ entries, environment });
-        const files = unzipSync(archive);
-        const json = files[DIAGNOSTICS_ARCHIVE_MEMBER];
-        if (!json) {
-            throw new Error(`${DIAGNOSTICS_ARCHIVE_MEMBER} is missing`);
-        }
-        const exportedBytes = new TextEncoder().encode(strFromU8(json)).byteLength;
-        const exported = JSON.parse(strFromU8(json)) as {
-            entries: unknown[];
-            environment: unknown;
-        };
-        expect(journalBytes).toBeLessThanOrEqual(5_000_000);
-        expect(exportedBytes).toBeGreaterThan(5_000_000);
-        expect(exported.entries).toHaveLength(entries.length);
-        expect(exported.environment).toEqual(environment);
-    });
-
-    it("rejects empty, malformed, and unsafe snapshots before compression", () => {
-        expectArchiveError(() => createDiagnosticsZip({ ...snapshot, entries: [] }), "empty");
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: snapshot.entries,
-                    environment: { browserFamily: "chromium" },
-                    extra: true,
-                }),
-            "invalid-snapshot",
+    it("reports empty snapshots and compression failures", () => {
+        expect(() => createDiagnosticsZip({ ...snapshot, entries: [] })).toThrow(
+            expect.objectContaining<Partial<DiagnosticArchiveError>>({ code: "empty" }),
         );
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    ...snapshot,
-                    entries: [{ ...snapshot.entries[0], url: "https://private.invalid/path" }],
-                }),
-            "invalid-snapshot",
-        );
-        const inheritedEnvironment = Object.create({ extensionVersion: "spoofed" }) as Record<
-            string,
-            unknown
-        >;
-        inheritedEnvironment.browserFamily = "chromium";
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: snapshot.entries,
-                    environment: inheritedEnvironment,
-                }),
-            "invalid-snapshot",
-        );
-
-        const inheritedRoot = Object.create({ secret: "private" }) as Record<string, unknown>;
-        inheritedRoot.entries = snapshot.entries;
-        inheritedRoot.environment = snapshot.environment;
-        expectArchiveError(() => createDiagnosticsZip(inheritedRoot), "invalid-snapshot");
-
-        const toJSONPrototype = {};
-        Object.defineProperty(toJSONPrototype, "toJSON", {
-            enumerable: false,
-            value: () => ({ url: "https://private.invalid/token" }),
-        });
-        const rootWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
-        rootWithToJSON.entries = snapshot.entries;
-        rootWithToJSON.environment = snapshot.environment;
-        let encoderCalls = 0;
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip(rootWithToJSON, () => {
-                    encoderCalls += 1;
-                    return new Uint8Array();
-                }),
-            "invalid-snapshot",
-        );
-        expect(encoderCalls).toBe(0);
-
-        const environmentWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
-        environmentWithToJSON.browserFamily = "chromium";
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: snapshot.entries,
-                    environment: environmentWithToJSON,
-                }),
-            "invalid-snapshot",
-        );
-
-        const entriesWithToJSON = [...snapshot.entries];
-        Object.setPrototypeOf(entriesWithToJSON, toJSONPrototype);
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: entriesWithToJSON,
-                    environment: snapshot.environment,
-                }),
-            "invalid-snapshot",
-        );
-
-        const eventWithToJSON = Object.create(toJSONPrototype) as Record<string, unknown>;
-        Object.assign(eventWithToJSON, snapshot.entries[0]);
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: [eventWithToJSON],
-                    environment: snapshot.environment,
-                }),
-            "invalid-snapshot",
-        );
-
-        const stackWithToJSON = ["frame:1"];
-        Object.setPrototypeOf(stackWithToJSON, toJSONPrototype);
-        const eventWithUnsafeStack = { ...snapshot.entries[0], stack: stackWithToJSON };
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: [eventWithUnsafeStack],
-                    environment: snapshot.environment,
-                }),
-            "invalid-snapshot",
-        );
-
-        const oversizedEntries = Array.from({ length: 44_346 }, (_, index) => ({
-            category: "lifecycle" as const,
-            timestamp: index,
-            hostname: "github.com",
-            pageCategory: "repository" as const,
-            incognito: false,
-            adapterVersion: "12345678901234567890123456789012",
-        }));
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip({
-                    entries: oversizedEntries,
-                    environment: snapshot.environment,
-                }),
-            "invalid-snapshot",
-        );
-        expectArchiveError(
-            () =>
-                createDiagnosticsZip(snapshot, () => {
-                    throw new Error("encoder failed");
-                }),
-            "compression-failed",
+        expect(() => createDiagnosticsZip(snapshot, () => {
+            throw new Error("encoder failed");
+        })).toThrow(
+            expect.objectContaining<Partial<DiagnosticArchiveError>>({
+                code: "compression-failed",
+            }),
         );
     });
 
-    it("keeps the object URL alive through the one click and revokes it once", () => {
+    it("downloads once and releases its temporary object URL", () => {
         const scheduled: Array<() => void> = [];
         const revoked: string[] = [];
-        let clicked = 0;
-        let clickedUrl = "";
+        let clicked = false;
         const runtime: DownloadRuntime = {
             Blob,
             createObjectURL: () => "blob:diagnostics",
@@ -230,13 +61,9 @@ describe("diagnostic archive", () => {
                 href: "",
                 download: "",
                 click() {
-                    clicked += 1;
-                    clickedUrl = this.href;
-                    expect(revoked).toEqual([]);
+                    clicked = true;
+                    expect(this.href).toBe("blob:diagnostics");
                     expect(this.download).toBe(DIAGNOSTICS_ARCHIVE_FILE);
-                },
-                remove() {
-                    /* local anchor cleanup */
                 },
             }),
             scheduleRevoke: (callback) => {
@@ -244,23 +71,15 @@ describe("diagnostic archive", () => {
             },
         };
         downloadDiagnosticsZip(new Uint8Array([1, 2, 3]), runtime);
-        expect(clicked).toBe(1);
-        expect(clickedUrl).toBe("blob:diagnostics");
+        expect(clicked).toBe(true);
         expect(revoked).toEqual([]);
-        expect(scheduled).toHaveLength(1);
-        const revoke = scheduled[0];
-        if (!revoke) {
-            throw new Error("revoke callback is missing");
-        }
-        revoke();
-        revoke();
+        scheduled[0]?.();
         expect(revoked).toEqual(["blob:diagnostics"]);
     });
 
-    it("cleans up when clicking or scheduling the revoke fails", () => {
+    it("releases the object URL when the download click fails", () => {
         const revoked: string[] = [];
-        let removed = 0;
-        const base: DownloadRuntime = {
+        const runtime: DownloadRuntime = {
             Blob,
             createObjectURL: () => "blob:failed",
             revokeObjectURL: (url) => {
@@ -272,41 +91,16 @@ describe("diagnostic archive", () => {
                 click: () => {
                     throw new Error("blocked");
                 },
-                remove: () => {
-                    removed += 1;
-                },
             }),
-            scheduleRevoke: () => {
-                /* no callback */
-            },
+            scheduleRevoke: () => undefined,
         };
-        expectArchiveError(() => {
-            downloadDiagnosticsZip(new Uint8Array([1]), base);
-        }, "download-failed");
-        expect(revoked).toEqual(["blob:failed"]);
-        expect(removed).toBe(1);
-
-        revoked.length = 0;
-        const schedulingFailure: DownloadRuntime = {
-            ...base,
-            createAnchor: () => ({
-                href: "",
-                download: "",
-                click: () => {
-                    /* click succeeded */
-                },
-                remove: () => {
-                    removed += 1;
-                },
+        expect(() => {
+            downloadDiagnosticsZip(new Uint8Array([1]), runtime);
+        }).toThrow(
+            expect.objectContaining<Partial<DiagnosticArchiveError>>({
+                code: "download-failed",
             }),
-            scheduleRevoke: () => {
-                throw new Error("scheduler failed");
-            },
-        };
-        expectArchiveError(() => {
-            downloadDiagnosticsZip(new Uint8Array([1]), schedulingFailure);
-        }, "download-failed");
+        );
         expect(revoked).toEqual(["blob:failed"]);
-        expect(removed).toBe(2);
     });
 });

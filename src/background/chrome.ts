@@ -5,19 +5,21 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
+import * as v from "valibot";
 import { BackgroundApplication } from "./application";
 import {
-    isGetPopupStateMessage,
-    isGetDebugStateMessage,
-    isGetDiagnosticsSnapshotMessage,
-    isClearDiagnosticsMessage,
-    isGetDisplayStateMessage,
-    isGetSitesStateMessage,
-    isResetAllSettingsMessage,
-    isSetDisplaySettingsMessage,
-    isSetGlobalEnabledMessage,
-    isSetDebugEnabledMessage,
-    isSetSiteEnabledMessage,
+    CLEAR_DIAGNOSTICS_MESSAGE,
+    GET_DEBUG_STATE_MESSAGE,
+    GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
+    GET_DISPLAY_STATE_MESSAGE,
+    GET_POPUP_STATE_MESSAGE,
+    GET_SITES_STATE_MESSAGE,
+    RESET_ALL_SETTINGS_MESSAGE,
+    SET_DEBUG_ENABLED_MESSAGE,
+    SET_DISPLAY_SETTINGS_MESSAGE,
+    SET_GLOBAL_ENABLED_MESSAGE,
+    SET_SITE_ENABLED_MESSAGE,
+    backgroundMessageSchema,
 } from "./messages";
 import { SettingsService, type SettingsStorage } from "../settings/settings-service";
 import { DiagnosticJournal, type DiagnosticStorage } from "../diagnostics/journal";
@@ -28,7 +30,7 @@ import { isDiagnosticEventMessage } from "../runtime/messages";
 import type { ScriptingRuntime } from "../runtime/scripting";
 import type { TabsRuntime } from "../runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../extension-files";
-import { POPUP_STATUS } from "./view-state-values";
+import { POPUP_STATUS, SITE_SETTINGS_SURFACE } from "./view-state-values";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -185,7 +187,19 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             responseSent = true;
             sendResponse(value);
         };
-        if (isGetDiagnosticsSnapshotMessage(message)) {
+        if (isDiagnosticEventMessage(message)) {
+            void application.recordDocumentEvent(message.event, sender).then(
+                (accepted) => sendOnce({ ok: accepted }),
+                () => sendOnce({ ok: false }),
+            );
+            return true;
+        }
+        const parsed = v.safeParse(backgroundMessageSchema, message);
+        if (!parsed.success) {
+            return false;
+        }
+        const request = parsed.output;
+        if (request.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
             if (!isTrustedOptionsSender(sender)) {
                 return false;
             }
@@ -194,7 +208,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
             return true;
         }
-        if (isClearDiagnosticsMessage(message)) {
+        if (request.type === CLEAR_DIAGNOSTICS_MESSAGE) {
             if (!isTrustedOptionsSender(sender)) {
                 return false;
             }
@@ -203,7 +217,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
             return true;
         }
-        if (isGetPopupStateMessage(message)) {
+        if (request.type === GET_POPUP_STATE_MESSAGE) {
             void application
                 .getPopupState()
                 .then(sendOnce, () =>
@@ -220,7 +234,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isGetDisplayStateMessage(message)) {
+        if (request.type === GET_DISPLAY_STATE_MESSAGE) {
             void application
                 .getDisplayState()
                 .then(sendOnce, () =>
@@ -233,7 +247,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isGetDebugStateMessage(message)) {
+        if (request.type === GET_DEBUG_STATE_MESSAGE) {
             void application
                 .getDebugState()
                 .then(sendOnce, () =>
@@ -246,9 +260,9 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isSetDebugEnabledMessage(message)) {
+        if (request.type === SET_DEBUG_ENABLED_MESSAGE) {
             void application
-                .setDebugEnabled(message.enabled)
+                .setDebugEnabled(request.enabled)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,
@@ -263,16 +277,9 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isDiagnosticEventMessage(message)) {
-            void application.recordDocumentEvent(message.event, sender).then(
-                (accepted) => sendOnce({ ok: accepted }),
-                () => sendOnce({ ok: false }),
-            );
-            return true;
-        }
-        if (isSetDisplaySettingsMessage(message)) {
+        if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(message.display)
+                .setDisplaySettings(request.display)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,
@@ -287,9 +294,9 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isSetGlobalEnabledMessage(message)) {
+        if (request.type === SET_GLOBAL_ENABLED_MESSAGE) {
             void application
-                .setGlobalEnabled(message.enabled)
+                .setGlobalEnabled(request.enabled)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,
@@ -308,7 +315,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isGetSitesStateMessage(message)) {
+        if (request.type === GET_SITES_STATE_MESSAGE) {
             void application
                 .getSitesState()
                 .then(sendOnce, () =>
@@ -322,7 +329,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isResetAllSettingsMessage(message)) {
+        if (request.type === RESET_ALL_SETTINGS_MESSAGE) {
             void application
                 .resetAllSettings()
                 .then(sendOnce, () =>
@@ -340,16 +347,16 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 );
             return true;
         }
-        if (isSetSiteEnabledMessage(message)) {
+        if (request.type === SET_SITE_ENABLED_MESSAGE) {
             void application
-                .setSiteEnabled(message.hostname, message.enabled, message.surface)
+                .setSiteEnabled(request.hostname, request.enabled, request.surface)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,
                         error: "settings-unavailable",
-                        surface: message.surface,
+                        surface: request.surface,
                         state:
-                            message.surface === "popup"
+                            request.surface === SITE_SETTINGS_SURFACE.POPUP
                                 ? {
                                     availability: "unavailable",
                                     revision: null,

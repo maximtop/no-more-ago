@@ -322,20 +322,18 @@ async function queryMatchingTabs(
  *
  * @param definition - Adapter registration definition to reconcile.
  * @param scripting - Chrome scripting API boundary.
- * @param mode - Reconciliation mode controlling failure handling.
  * @param desiredEnabled - Whether the adapter should be registered.
  * @param failures - Mutable reconciliation failure collector.
  * @param registration - Mutable per-adapter registration result map.
- * @returns - Whether registration was present or created and whether it changed.
+ * @returns - Whether the registration changed.
  */
 async function registrationState(
     definition: RuntimeAdapterDefinition,
     scripting: ScriptingRuntime,
-    mode: ActivationMode,
     desiredEnabled: boolean,
     failures: ReconcileFailure[],
     registration: Record<string, RegistrationOutcome>,
-): Promise<{ readonly present: boolean; readonly changed: boolean }> {
+): Promise<boolean> {
     let existing: readonly RegisteredContentScriptReference[];
     try {
         existing = await scripting.getRegisteredContentScripts({
@@ -356,17 +354,13 @@ async function registrationState(
                 });
             }
         }
-        return { present: false, changed: false };
+        return false;
     }
     const present = existing.some((item) => item.id === definition.registration.id);
-    if (mode === "failed-closed" || mode === "settings-change") {
-        // settings-change is handled by the caller based on policy; this branch only
-        // describes registration inspection.
-    }
     if (!desiredEnabled) {
         if (!present) {
             registration[definition.id] = "unchanged";
-            return { present: false, changed: false };
+            return false;
         }
         try {
             if (!scripting.unregisterContentScripts) {
@@ -374,7 +368,7 @@ async function registrationState(
             }
             await scripting.unregisterContentScripts({ ids: [definition.registration.id] });
             registration[definition.id] = "unregistered";
-            return { present: true, changed: true };
+            return true;
         } catch {
             failures.push({
                 scope: "registration",
@@ -382,13 +376,13 @@ async function registrationState(
                 operation: "unregister",
             });
             registration[definition.id] = "failed";
-            return { present: true, changed: false };
+            return false;
         }
     }
     const current = existing.find((item) => item.id === definition.registration.id);
     if (current && registrationMatches(current, definition.registration)) {
         registration[definition.id] = "unchanged";
-        return { present: true, changed: false };
+        return false;
     }
     try {
         if (current) {
@@ -398,7 +392,7 @@ async function registrationState(
             await scripting.registerContentScripts([definition.registration]);
             registration[definition.id] = "registered";
         }
-        return { present: true, changed: true };
+        return true;
     } catch {
         failures.push({
             scope: "registration",
@@ -406,7 +400,7 @@ async function registrationState(
             operation: current ? "update" : "register",
         });
         registration[definition.id] = "failed";
-        return { present: Boolean(current), changed: false };
+        return false;
     }
 }
 
@@ -539,20 +533,15 @@ export class AdapterActivationCoordinator {
             const desiredEnabled =
                 input.policy === "enabled" &&
                 isSiteEnabled(input.sitePreferences ?? {}, definition.hostname);
-            const state = await registrationState(
+            const registrationChanged = await registrationState(
                 definition,
                 this.scripting,
-                desiredEnabled
-                    ? input.mode
-                    : input.mode === "failed-closed" || input.policy !== "enabled"
-                        ? "failed-closed"
-                        : input.mode,
                 desiredEnabled,
                 failures,
                 registration,
             );
             if (desiredEnabled) {
-                const shouldInject = input.mode !== "cold-worker" || state.changed;
+                const shouldInject = input.mode !== "cold-worker" || registrationChanged;
                 if (!shouldInject) {
                     continue;
                 }

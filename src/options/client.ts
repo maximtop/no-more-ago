@@ -4,6 +4,7 @@
  * @file Typed client for options-page requests and background responses.
  */
 
+import * as v from "valibot";
 import {
     GET_DISPLAY_STATE_MESSAGE,
     GET_DEBUG_STATE_MESSAGE,
@@ -14,15 +15,15 @@ import {
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
-    isDisplayState,
-    isDebugState,
-    isSetDebugEnabledResponse,
-    isGetDiagnosticsSnapshotResponse,
-    isClearDiagnosticsResponse,
-    isSetDisplaySettingsResponse,
-    isSetSiteEnabledResponse,
-    isSitesState,
-    isResetAllSettingsResponse,
+    clearDiagnosticsResponseSchema,
+    getDiagnosticsSnapshotResponseSchema,
+    debugStateSchema,
+    displayStateSchema,
+    resetAllSettingsResponseSchema,
+    setDebugEnabledResponseSchema,
+    setDisplaySettingsResponseSchema,
+    setSiteEnabledResponseSchema,
+    sitesStateSchema,
 } from "../background/messages";
 import type {
     DebugState,
@@ -40,6 +41,7 @@ import type {
     DiagnosticsSnapshotError,
 } from "../background/messages";
 import { CLIENT_RESULT_KIND } from "../core/client-result";
+import { SITE_SETTINGS_SURFACE } from "../background/view-state-values";
 
 /**
  * Sends an options-page request to the extension runtime.
@@ -97,7 +99,7 @@ export type SitesSetResult =
                 /**
                  * Selects responses projected for the options-page sites surface.
                  */
-                readonly surface: "sites";
+                readonly surface: typeof SITE_SETTINGS_SURFACE.SITES;
             }
         >;
     }
@@ -236,7 +238,7 @@ export class SitesClient {
      */
     public async getState(): Promise<SitesState> {
         const response = await this.transport.sendMessage({ type: GET_SITES_STATE_MESSAGE });
-        if (!isSitesState(response)) {
+        if (!v.is(sitesStateSchema, response)) {
             throw new Error("Invalid Sites state response");
         }
         return response;
@@ -256,7 +258,7 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
-        return isResetAllSettingsResponse(response)
+        return v.is(resetAllSettingsResponseSchema, response)
             ? { kind: CLIENT_RESULT_KIND.RESPONSE, response }
             : { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
     }
@@ -275,12 +277,15 @@ export class SitesClient {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
-                surface: "sites",
+                surface: SITE_SETTINGS_SURFACE.SITES,
             });
         } catch {
             return this.rereadAfterAmbiguousResponse();
         }
-        if (isSetSiteEnabledResponse(response) && response.surface === "sites") {
+        if (
+            v.is(setSiteEnabledResponseSchema, response)
+            && response.surface === SITE_SETTINGS_SURFACE.SITES
+        ) {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousResponse();
@@ -293,7 +298,7 @@ export class SitesClient {
      */
     public async getDisplayState(): Promise<DisplayState> {
         const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
-        if (!isDisplayState(response)) {
+        if (!v.is(displayStateSchema, response)) {
             throw new Error("Invalid Display state response");
         }
         return response;
@@ -306,7 +311,7 @@ export class SitesClient {
      */
     public async getDebugState(): Promise<DebugState> {
         const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
-        if (!isDebugState(response)) {
+        if (!v.is(debugStateSchema, response)) {
             throw new Error("Invalid Debug state response");
         }
         return response;
@@ -328,7 +333,7 @@ export class SitesClient {
         } catch {
             return this.rereadDebugAfterAmbiguousResponse();
         }
-        if (isSetDebugEnabledResponse(response)) {
+        if (v.is(setDebugEnabledResponseSchema, response)) {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadDebugAfterAmbiguousResponse();
@@ -346,7 +351,7 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
-        if (!isGetDiagnosticsSnapshotResponse(response)) {
+        if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
         return response.ok
@@ -366,7 +371,7 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
-        if (!isClearDiagnosticsResponse(response)) {
+        if (!v.is(clearDiagnosticsResponseSchema, response)) {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
         }
         return response.ok
@@ -390,7 +395,7 @@ export class SitesClient {
         } catch {
             return this.rereadDisplayAfterAmbiguousResponse();
         }
-        if (isSetDisplaySettingsResponse(response)) {
+        if (v.is(setDisplaySettingsResponseSchema, response)) {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadDisplayAfterAmbiguousResponse();

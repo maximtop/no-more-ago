@@ -1,14 +1,13 @@
 /**
- * Builds and opens prefilled GitHub issue forms for site-support reports.
- *
- * @file Site-report URL validation and Chrome tab integration.
+ * @file Opens prefilled GitHub issue forms for site-support reports.
  */
 
-import { isCanonicalHostname } from "../settings/snapshot";
+import * as v from "valibot";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
+import { isCanonicalHostname } from "../settings/snapshot";
 
 /**
- * GitHub issue composer used for site-report submissions.
+ * GitHub issue composer used for site reports.
  */
 export const SITE_REPORT_DESTINATION =
     "https://github.com/maximtop/no-more-ago/issues/new" as const;
@@ -19,7 +18,7 @@ export const SITE_REPORT_DESTINATION =
 export const SITE_REPORT_TEMPLATE = "site-report.yml" as const;
 
 /**
- * User-visible reason prefilled in the report form.
+ * Reasons supported by the site-report form.
  */
 export const SITE_REPORT_REASONS = [
     "Add support for this site",
@@ -27,147 +26,12 @@ export const SITE_REPORT_REASONS = [
 ] as const;
 
 /**
- * User-visible reason prefilled in the report form.
- */
-export type SiteReportReason = (typeof SITE_REPORT_REASONS)[number];
-
-/**
- * Browser labels accepted by the site-report form.
+ * Browser labels supported by the site-report form.
  */
 export const SITE_REPORT_BROWSERS = ["Chrome", "Edge", "Firefox", "Other"] as const;
 
 /**
- * Browser family inferred from the user agent for the report form.
- */
-export type SiteReportBrowser = (typeof SITE_REPORT_BROWSERS)[number];
-
-/**
- * Validated fields serialized into the issue-form query string.
- */
-export interface SiteReportContext {
-    /**
-     * Reason selected in the report form.
-     */
-    readonly reason?: SiteReportReason;
-
-    /**
-     * Canonical site hostname reported to GitHub.
-     */
-    readonly hostname?: string;
-
-    /**
-     * HTTP(S) page URL, restricted to the reported hostname and no credentials.
-     */
-    readonly currentUrl?: string;
-
-    /**
-     * Manifest version, limited to the extension's accepted version format.
-     */
-    readonly extensionVersion?: string;
-
-    /**
-     * Browser family included with the report.
-     */
-    readonly browser?: SiteReportBrowser;
-}
-
-/**
- * Popup state needed to classify a report for the active site.
- */
-export interface SiteReportPopupState {
-    /**
-     * Canonical hostname shown by the popup.
-     */
-    readonly hostname: string;
-
-    /**
-     * Whether an adapter already handles the hostname.
-     */
-    readonly hasAdapter: boolean;
-}
-
-/**
- * Minimal untrusted subset of a Chrome tab result.
- */
-export interface SiteReportTab {
-    /**
-     * Active tab URL; validated before it is included in a report.
-     */
-    readonly url?: unknown;
-
-    /**
-     * Whether Chrome reports the tab as belonging to an incognito window.
-     */
-    readonly incognito?: unknown;
-
-    /**
-     * Window identifier used to keep an incognito composer in its source window.
-     */
-    readonly windowId?: unknown;
-}
-
-/**
- * Chrome APIs needed to inspect the active tab and open the issue composer.
- */
-export interface SiteReportBrowserRuntime {
-    /**
-     * Subset of the Chrome Tabs API used by reporting actions.
-     */
-    readonly tabs?: {
-        /**
-         * Returns tabs matching Chrome's active-tab query.
-         */
-        query(query: {
-            /**
-             * Limits the query to the active tab.
-             */
-            readonly active: true;
-
-            /**
-             * Limits the query to the current window.
-             */
-            readonly currentWindow: true;
-        }): Promise<readonly SiteReportTab[]>;
-
-        /**
-         * Opens the composer URL in Chrome, optionally in a specific window.
-         */
-        create(properties: {
-            /**
-             * URL to open in the new tab.
-             */
-            readonly url: string;
-
-            /**
-             * Target window ID when preserving an incognito context.
-             */
-            readonly windowId?: number;
-        }): Promise<unknown>;
-    };
-
-    /**
-     * Subset of the Chrome Runtime API used to read the manifest version.
-     */
-    readonly runtime?: {
-        /**
-         * Returns the extension manifest containing the version field.
-         */
-        getManifest(): unknown;
-    };
-
-    /**
-     * Browser user-agent source used for browser-family detection.
-     */
-    readonly navigator?: {
-        /**
-         * Raw user-agent string, treated as untrusted input.
-         */
-        readonly userAgent?: unknown;
-    };
-}
-
-/**
- * Stable failure reasons returned instead of throwing from report actions.
+ * Stable site-report failures shown by extension views.
  */
 export const SITE_REPORT_ERRORS = [
     "busy",
@@ -180,111 +44,182 @@ export const SITE_REPORT_ERRORS = [
     "open-failed",
 ] as const;
 
+const hostnameSchema = v.pipe(v.string(), v.check(isCanonicalHostname));
+const versionSchema = v.pipe(v.string(), v.regex(SAFE_EXTENSION_VERSION_PATTERN));
+const reportContextSchema = v.strictObject({
+    reason: v.exactOptional(v.picklist(SITE_REPORT_REASONS)),
+    hostname: v.exactOptional(hostnameSchema),
+    currentUrl: v.exactOptional(v.string()),
+    extensionVersion: v.exactOptional(versionSchema),
+    browser: v.exactOptional(v.picklist(SITE_REPORT_BROWSERS)),
+});
+const popupStateSchema = v.strictObject({
+    hostname: hostnameSchema,
+    hasAdapter: v.boolean(),
+});
+
 /**
- * Stable failure reason returned instead of throwing from report actions.
+ * Site-report reason inferred from the supported values.
+ */
+export type SiteReportReason = (typeof SITE_REPORT_REASONS)[number];
+
+/**
+ * Site-report browser inferred from the supported values.
+ */
+export type SiteReportBrowser = (typeof SITE_REPORT_BROWSERS)[number];
+
+/**
+ * Validated fields serialized into the GitHub issue form.
+ */
+export type SiteReportContext = v.InferOutput<typeof reportContextSchema>;
+
+/**
+ * Popup state required to report the current site.
+ */
+export type SiteReportPopupState = v.InferOutput<typeof popupStateSchema>;
+
+/**
+ * Stable site-report failure.
  */
 export type SiteReportError = (typeof SITE_REPORT_ERRORS)[number];
 
 /**
- * Report action outcome, including the composer URL when a tab was opened.
+ * Result of opening the site-report composer.
  */
 export type SiteReportResult =
     | {
         /**
-         * Indicates that the GitHub report composer was opened.
+         * Marks a successfully opened report.
          */
         readonly ok: true;
 
         /**
-         * Validated composer URL opened for the user.
+         * GitHub composer URL opened for the user.
          */
         readonly url: string;
     }
     | {
         /**
-         * Indicates that the report action failed safely.
+         * Marks a report that could not be opened.
          */
         readonly ok: false;
 
         /**
-         * Stable reason the report composer was not opened.
+         * Stable failure shown by the extension view.
          */
         readonly error: SiteReportError;
     };
 
-const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVersion", "browser"]);
-const REASON_SET = new Set<string>(SITE_REPORT_REASONS);
-const BROWSER_SET = new Set<string>(SITE_REPORT_BROWSERS);
-
 /**
- * Narrows a non-array object so its own data properties can be inspected safely.
- *
- * @param value - Untrusted form context value.
- * @returns - Whether the value is a non-array object record.
+ * Active-tab fields used to compose a site report.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
+export interface SiteReportTab {
+    /**
+     * Current page URL.
+     */
+    readonly url?: unknown;
+
+    /**
+     * Whether the tab belongs to a private window.
+     */
+    readonly incognito?: unknown;
+
+    /**
+     * Window in which a private report must be opened.
+     */
+    readonly windowId?: unknown;
 }
 
 /**
- * Rejects inherited, accessor, and unexpected keys from untrusted form context.
- *
- * @param value - Untrusted record whose properties are inspected.
- * @param allowed - Complete set of accepted own property names.
- * @returns - Whether the record contains only allowed own data properties.
+ * Browser APIs required to inspect the active tab and open a report.
  */
-function hasOnlyOwnKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
-    for (const key in value) {
-        if (!Object.hasOwn(value, key)) {
-            return false;
-        }
-    }
-    return Object.keys(value).every((key) => {
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        return allowed.has(key) && descriptor !== undefined && Object.hasOwn(descriptor, "value");
-    });
+export interface SiteReportBrowserRuntime {
+    /**
+     * Tab query and creation methods.
+     */
+    readonly tabs?: {
+        /**
+         * Returns the active tab in the current window.
+         */
+        query(query: {
+            /**
+             * Restricts the query to the active tab.
+             */
+            readonly active: true;
+
+            /**
+             * Restricts the query to the focused window.
+             */
+            readonly currentWindow: true;
+        }): Promise<readonly SiteReportTab[]>;
+
+        /**
+         * Opens the supplied report URL.
+         */
+        create(properties: {
+            /**
+             * Report URL to open.
+             */
+            readonly url: string;
+
+            /**
+             * Originating private window, when required.
+             */
+            readonly windowId?: number;
+        }): Promise<unknown>;
+    };
+
+    /**
+     * Manifest metadata source.
+     */
+    readonly runtime?: {
+        /**
+         * Returns the current extension manifest.
+         */
+        getManifest(): unknown;
+    };
+
+    /**
+     * Browser identification source.
+     */
+    readonly navigator?: {
+        /**
+         * Current browser user-agent string.
+         */
+        readonly userAgent?: unknown;
+    };
 }
 
 /**
- * Reads an own string property without invoking inherited lookup.
- *
- * @param value - Record containing untrusted form fields.
- * @param key - Own property name to read.
- * @returns - String property value, or undefined when absent or non-string.
+ * Actions exposed to popup and options views.
  */
-function ownString(value: Record<string, unknown>, key: string): string | undefined {
-    if (!Object.hasOwn(value, key)) {
-        return undefined;
-    }
-    return typeof value[key] === "string" ? value[key] : undefined;
+export interface SiteReportReporter {
+    /**
+     * Opens a report for the active popup site.
+     */
+    openPopupReport(state: SiteReportPopupState): Promise<SiteReportResult>;
+
+    /**
+     * Opens a generic report containing extension environment details.
+     */
+    openOptionsReport(): Promise<SiteReportResult>;
 }
 
 /**
- * Accepts the bounded manifest-version format allowed in report URLs.
+ * Checks whether a URL belongs to the exact reported HTTP(S) hostname.
  *
- * @param value - Candidate extension version.
- * @returns - Whether the version is safe and bounded for a report URL.
+ * @param value - Page URL to validate.
+ * @param hostname - Expected canonical hostname.
+ * @returns - Whether the URL is safe to include in the report.
  */
-function validVersion(value: string): boolean {
-    return SAFE_EXTENSION_VERSION_PATTERN.test(value);
-}
-
-/**
- * Accepts a credential-free HTTP(S) URL whose canonical hostname matches exactly.
- *
- * @param value - Candidate page URL.
- * @param hostname - Canonical hostname the URL must match.
- * @returns - Whether the URL is safe, credential-free HTTP(S) for that host.
- */
-function validSiteUrl(value: string, hostname: string): boolean {
+function isReportableUrl(value: string, hostname: string): boolean {
     try {
-        const parsed = new URL(value);
+        const url = new URL(value);
         return (
-            (parsed.protocol === "http:" || parsed.protocol === "https:") &&
-            parsed.username === "" &&
-            parsed.password === "" &&
-            isCanonicalHostname(parsed.hostname) &&
-            parsed.hostname === hostname
+            (url.protocol === "http:" || url.protocol === "https:")
+            && url.username === ""
+            && url.password === ""
+            && url.hostname === hostname
         );
     } catch {
         return false;
@@ -292,73 +227,48 @@ function validSiteUrl(value: string, hostname: string): boolean {
 }
 
 /**
- * Validates untrusted report fields and returns a prefilled GitHub issue URL.
+ * Creates a validated prefilled GitHub issue URL.
  *
- * @param context - Untrusted site-report context.
- * @returns - Prefilled GitHub issue URL, or null when validation fails.
+ * @param context - Site-report fields to serialize.
+ * @returns - GitHub issue URL, or null for invalid fields.
  */
 export function composeSiteReportUrl(context: unknown): string | null {
-    if (!isRecord(context) || !hasOnlyOwnKeys(context, CONTEXT_KEYS)) {
+    const parsed = v.safeParse(reportContextSchema, context);
+    if (!parsed.success) {
         return null;
     }
-    const reason = Object.hasOwn(context, "reason") ? context.reason : undefined;
-    const hostname = ownString(context, "hostname");
-    const currentUrl = ownString(context, "currentUrl");
-    const extensionVersion = ownString(context, "extensionVersion");
-    const browser = ownString(context, "browser");
-    if (reason !== undefined && (typeof reason !== "string" || !REASON_SET.has(reason))) {
-        return null;
-    }
+    const value = parsed.output;
     if (
-        Object.hasOwn(context, "hostname") &&
-        (hostname === undefined || !isCanonicalHostname(hostname))
+        value.currentUrl !== undefined
+        && (value.hostname === undefined || !isReportableUrl(value.currentUrl, value.hostname))
     ) {
         return null;
     }
-    if (
-        Object.hasOwn(context, "currentUrl") &&
-        (currentUrl === undefined || hostname === undefined || !validSiteUrl(currentUrl, hostname))
-    ) {
-        return null;
-    }
-    if (
-        Object.hasOwn(context, "extensionVersion") &&
-        (extensionVersion === undefined || !validVersion(extensionVersion))
-    ) {
-        return null;
-    }
-    if (
-        Object.hasOwn(context, "browser") &&
-        (browser === undefined || !BROWSER_SET.has(browser))
-    ) {
-        return null;
-    }
-
     const url = new URL(SITE_REPORT_DESTINATION);
     url.searchParams.set("template", SITE_REPORT_TEMPLATE);
-    if (reason !== undefined) {
-        url.searchParams.set("reason", reason);
+    if (value.reason !== undefined) {
+        url.searchParams.set("reason", value.reason);
     }
-    if (hostname !== undefined) {
-        url.searchParams.set("hostname", hostname);
+    if (value.hostname !== undefined) {
+        url.searchParams.set("hostname", value.hostname);
     }
-    if (currentUrl !== undefined) {
-        url.searchParams.set("current_url", currentUrl);
+    if (value.currentUrl !== undefined) {
+        url.searchParams.set("current_url", value.currentUrl);
     }
-    if (extensionVersion !== undefined) {
-        url.searchParams.set("extension_version", extensionVersion);
+    if (value.extensionVersion !== undefined) {
+        url.searchParams.set("extension_version", value.extensionVersion);
     }
-    if (browser !== undefined) {
-        url.searchParams.set("browser", browser);
+    if (value.browser !== undefined) {
+        url.searchParams.set("browser", value.browser);
     }
     return url.toString();
 }
 
 /**
- * Maps a raw user agent to the browser label expected by the report form.
+ * Maps a user agent to the browser label expected by the issue form.
  *
- * @param userAgent - Untrusted browser user-agent value.
- * @returns - Supported browser label for the report form.
+ * @param userAgent - Browser user-agent value.
+ * @returns - Supported browser label.
  */
 export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrowser {
     if (typeof userAgent !== "string") {
@@ -370,259 +280,171 @@ export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrows
     if (/Edg\//u.test(userAgent)) {
         return "Edge";
     }
-    if (/(?:Chrome|Chromium)\//u.test(userAgent)) {
-        return "Chrome";
-    }
-    return "Other";
+    return /(?:Chrome|Chromium)\//u.test(userAgent) ? "Chrome" : "Other";
 }
 
 /**
- * Reads and validates the manifest version, returning null when unavailable or malformed.
+ * Reads the current validated extension version.
  *
- * @param runtime - Browser runtime dependency exposing manifest metadata.
- * @returns - Valid extension version, or null when unavailable or malformed.
+ * @param runtime - Browser runtime dependency.
+ * @returns - Valid extension version, or null when unavailable.
  */
 function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
-    if (!runtime.runtime) {
-        return null;
-    }
     try {
-        const manifest = runtime.runtime.getManifest();
-        if (
-            !isRecord(manifest) ||
-            !Object.hasOwn(manifest, "version") ||
-            typeof manifest.version !== "string" ||
-            !validVersion(manifest.version)
-        ) {
+        const manifest = runtime.runtime?.getManifest();
+        if (typeof manifest !== "object" || manifest === null) {
             return null;
         }
-        return manifest.version;
+        const version = (manifest as { readonly version?: unknown }).version;
+        return typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)
+            ? version
+            : null;
     } catch {
         return null;
     }
 }
 
 /**
- * Collects validated manifest and browser details for a report form.
+ * Creates site-report actions over browser APIs.
  *
- * @param runtime - Browser runtime and navigator dependencies.
- * @returns - Validated extension version and browser label, or null.
- */
-function environment(
-    runtime: SiteReportBrowserRuntime,
-): Pick<SiteReportContext, "extensionVersion" | "browser"> | null {
-    const version = extensionVersion(runtime);
-    return version === null
-        ? null
-        : {
-            extensionVersion: version,
-            browser: browserContextFromUserAgent(runtime.navigator?.userAgent),
-        };
-}
-
-/**
- * Narrows popup state to a canonical hostname and adapter-presence flag.
- *
- * @param value - Untrusted popup state.
- * @returns - Whether it contains a canonical hostname and adapter flag.
- */
-function validPopupState(value: unknown): value is SiteReportPopupState {
-    return (
-        isRecord(value) &&
-        Object.hasOwn(value, "hostname") &&
-        Object.hasOwn(value, "hasAdapter") &&
-        typeof value.hostname === "string" &&
-        isCanonicalHostname(value.hostname) &&
-        typeof value.hasAdapter === "boolean"
-    );
-}
-
-/**
- * Narrows a tab response to own URL and incognito data properties before use.
- *
- * @param value - Untrusted browser tab response.
- * @returns - Whether it contains safe own URL and incognito properties.
- */
-function validTab(value: unknown): value is SiteReportTab {
-    if (!isRecord(value)) {
-        return false;
-    }
-    for (const key in value) {
-        if (!Object.hasOwn(value, key)) {
-            return false;
-        }
-    }
-    for (const key of ["url", "incognito"] as const) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        if (descriptor === undefined || !Object.hasOwn(descriptor, "value")) {
-            return false;
-        }
-    }
-    return typeof value.url === "string" && typeof value.incognito === "boolean";
-}
-
-/**
- * Actions exposed to the popup and options surfaces for opening report forms.
- */
-export interface SiteReportReporter {
-    /**
-     * Opens a report for the active popup site, preserving incognito window scope.
-     */
-    openPopupReport(state: SiteReportPopupState): Promise<SiteReportResult>;
-
-    /**
-     * Opens a generic report form containing extension and browser details.
-     */
-    openOptionsReport(): Promise<SiteReportResult>;
-}
-
-/**
- * Creates serialized report actions over injected Chrome API dependencies.
- *
- * @param runtime - Browser APIs and environment dependencies for report creation.
- * @returns - Serialized site-report action.
+ * @param runtime - Browser APIs used to collect context and open tabs.
+ * @returns - Site-report action service.
  */
 export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): SiteReportReporter {
-    let inFlight = false;
+    let busy = false;
+    const environment = (): Pick<SiteReportContext, "extensionVersion" | "browser"> | null => {
+        const version = extensionVersion(runtime);
+        return version === null
+            ? null
+            : {
+                extensionVersion: version,
+                browser: browserContextFromUserAgent(runtime.navigator?.userAgent),
+            };
+    };
     const open = async (url: string, windowId?: number): Promise<SiteReportResult> => {
         if (!runtime.tabs) {
             return { ok: false, error: "browser-unavailable" };
         }
         try {
-            const properties = windowId === undefined ? { url } : { url, windowId };
-            await runtime.tabs.create(properties);
+            await runtime.tabs.create(windowId === undefined ? { url } : { url, windowId });
             return { ok: true, url };
         } catch {
             return { ok: false, error: "open-failed" };
         }
     };
-
     return {
         async openPopupReport(state): Promise<SiteReportResult> {
-            if (inFlight) {
+            if (busy) {
                 return { ok: false, error: "busy" };
             }
-            if (!validPopupState(state)) {
+            const parsedState = v.safeParse(popupStateSchema, state);
+            if (!parsedState.success) {
                 return { ok: false, error: "invalid-context" };
             }
-            if (!runtime.tabs?.query) {
+            if (!runtime.tabs) {
                 return { ok: false, error: "browser-unavailable" };
             }
-            inFlight = true;
+            busy = true;
             try {
-                let tabs: readonly SiteReportTab[];
+                let tabs;
                 try {
                     tabs = await runtime.tabs.query({ active: true, currentWindow: true });
                 } catch {
                     return { ok: false, error: "missing-tab" };
                 }
-                if (tabs.length !== 1 || !validTab(tabs[0])) {
+                const tab = tabs.length === 1 ? tabs[0] : undefined;
+                if (!tab || typeof tab.url !== "string") {
                     return { ok: false, error: "missing-tab" };
                 }
-                const tab = tabs[0];
-                let parsed: URL;
+                let url: URL;
                 try {
-                    parsed = new URL(tab.url as string);
+                    url = new URL(tab.url);
                 } catch {
                     return { ok: false, error: "restricted-page" };
                 }
-                if (
-                    (parsed.protocol !== "http:" && parsed.protocol !== "https:") ||
-                    parsed.username !== "" ||
-                    parsed.password !== ""
-                ) {
+                if (url.protocol !== "http:" && url.protocol !== "https:") {
                     return { ok: false, error: "restricted-page" };
                 }
-                if (!isCanonicalHostname(parsed.hostname)) {
+                if (url.username !== "" || url.password !== "") {
                     return { ok: false, error: "restricted-page" };
                 }
-                if (parsed.hostname !== state.hostname) {
+                if (url.hostname !== parsedState.output.hostname) {
                     return { ok: false, error: "hostname-mismatch" };
                 }
-                const env = environment(runtime);
-                if (env === null) {
+                const env = environment();
+                if (!env) {
                     return { ok: false, error: "invalid-context" };
                 }
-                const url = composeSiteReportUrl({
+                const reportUrl = composeSiteReportUrl({
                     ...env,
-                    reason: state.hasAdapter
-                        ? "Dates are not working correctly"
-                        : "Add support for this site",
-                    hostname: state.hostname,
+                    reason: parsedState.output.hasAdapter
+                        ? SITE_REPORT_REASONS[1]
+                        : SITE_REPORT_REASONS[0],
+                    hostname: parsedState.output.hostname,
                     currentUrl: tab.url,
                 });
-                if (url === null) {
+                if (!reportUrl) {
                     return { ok: false, error: "invalid-context" };
                 }
                 if (tab.incognito === true) {
                     if (
-                        !Object.hasOwn(tab, "windowId") ||
-                        typeof tab.windowId !== "number" ||
-                        !Number.isSafeInteger(tab.windowId) ||
-                        tab.windowId < 0
+                        typeof tab.windowId !== "number"
+                        || !Number.isSafeInteger(tab.windowId)
+                        || tab.windowId < 0
                     ) {
                         return { ok: false, error: "private-window" };
                     }
-                    return await open(url, tab.windowId);
+                    return await open(reportUrl, tab.windowId);
                 }
-                return await open(url);
+                return await open(reportUrl);
             } finally {
-                inFlight = false;
+                busy = false;
             }
         },
         async openOptionsReport(): Promise<SiteReportResult> {
-            if (inFlight) {
+            if (busy) {
                 return { ok: false, error: "busy" };
             }
-            if (!runtime.tabs?.create) {
-                return { ok: false, error: "browser-unavailable" };
-            }
-            inFlight = true;
+            busy = true;
             try {
-                const env = environment(runtime);
-                if (env === null) {
+                const env = environment();
+                if (!env) {
                     return { ok: false, error: "invalid-context" };
                 }
                 const url = composeSiteReportUrl(env);
-                if (url === null) {
-                    return { ok: false, error: "invalid-context" };
-                }
-                return await open(url);
+                return url
+                    ? await open(url)
+                    : { ok: false, error: "invalid-context" };
             } finally {
-                inFlight = false;
+                busy = false;
             }
         },
     };
 }
 
 /**
- * Creates the default reporter lazily, so Chrome APIs run only after a report action.
+ * Creates the default reporter backed by available Chrome APIs.
  *
- * @returns - Lazily initialized reporter backed by available Chrome APIs.
+ * @returns - Site-report service for extension views.
  */
 export function createDefaultSiteReportReporter(): SiteReportReporter {
-    const browser = typeof chrome === "undefined" ? undefined : chrome;
-    const runtime: SiteReportBrowserRuntime = {
-        ...(browser?.tabs
-            ? {
-                tabs: {
-                    query: (query) => browser.tabs.query(query),
-                    create: (properties) => browser.tabs.create(properties),
-                },
-            }
-            : {}),
-        ...(browser?.runtime
-            ? { runtime: { getManifest: () => browser.runtime.getManifest() } }
-            : {}),
+    if (typeof chrome === "undefined") {
+        return createSiteReportReporter({});
+    }
+    return createSiteReportReporter({
+        tabs: {
+            query: (query) => chrome.tabs.query(query),
+            create: (properties) => chrome.tabs.create(properties),
+        },
+        runtime: { getManifest: () => chrome.runtime.getManifest() },
         ...(typeof navigator === "undefined"
             ? {}
             : {
                 navigator: {
-                    get userAgent() {
+                    get userAgent(): string {
                         return navigator.userAgent;
                     },
                 },
             }),
-    };
-    return createSiteReportReporter(runtime);
+    });
 }

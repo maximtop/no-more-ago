@@ -32,6 +32,7 @@ import type {
     SetSiteEnabledResponse,
     SitesState,
 } from "./view-state";
+import type { SiteSettingsSurface } from "./view-state-values";
 
 export type {
     ActivationCoordinator,
@@ -291,7 +292,7 @@ export class BackgroundApplication {
     public setSiteEnabled(
         hostname: string,
         enabled: boolean,
-        surface: "popup" | "sites",
+        surface: SiteSettingsSurface,
     ): Promise<SetSiteEnabledResponse> {
         return this.commands.setSiteEnabled(hostname, enabled, surface);
     }

@@ -10,12 +10,13 @@ import {
     nonNegativeSafeIntegerSchema,
     popupStateSchema,
     readySitesStateSchema,
-    refreshFailureSchema,
+    refreshFailuresSchema,
     sitesStateSchema,
 } from "./view-state-schemas";
 import {
     DISPLAY_SETTINGS_ERRORS,
     SETTINGS_PERSISTENCE_ERRORS,
+    SITE_SETTINGS_SURFACE,
     SITE_SETTINGS_ERRORS,
 } from "./view-state-values";
 
@@ -45,25 +46,25 @@ export const setSiteEnabledResponseSchema = v.union([
     strictMessageObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
-        surface: v.literal("popup"),
+        surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
         state: popupStateSchema,
     }),
     strictMessageObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
-        surface: v.literal("sites"),
+        surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
         state: sitesStateSchema,
     }),
     strictMessageObject({
         ok: v.literal(false),
         error: sitePersistenceErrorSchema,
-        surface: v.literal("popup"),
+        surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
         state: popupStateSchema,
     }),
     strictMessageObject({
         ok: v.literal(false),
         error: sitePersistenceErrorSchema,
-        surface: v.literal("sites"),
+        surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
         state: sitesStateSchema,
     }),
 ]);
@@ -76,7 +77,7 @@ export const setDisplaySettingsResponseSchema = v.union([
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: displayStateSchema,
-        refreshFailures: v.array(refreshFailureSchema),
+        refreshFailures: refreshFailuresSchema,
     }),
     strictMessageObject({
         ok: v.literal(false),
@@ -109,7 +110,7 @@ export const setDebugEnabledResponseSchema = v.union([
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: debugStateSchema,
-        refreshFailures: v.exactOptional(v.array(refreshFailureSchema)),
+        refreshFailures: v.exactOptional(refreshFailuresSchema),
     }),
     strictMessageObject({
         ok: v.literal(false),
@@ -117,3 +118,28 @@ export const setDebugEnabledResponseSchema = v.union([
         state: debugStateSchema,
     }),
 ]);
+
+/**
+ * Global activation response inferred from its runtime validation schema.
+ */
+export type SetGlobalEnabledResponse = v.InferOutput<typeof setGlobalEnabledResponseSchema>;
+
+/**
+ * Site activation response inferred from its runtime validation schema.
+ */
+export type SetSiteEnabledResponse = v.InferOutput<typeof setSiteEnabledResponseSchema>;
+
+/**
+ * Display settings response inferred from its runtime validation schema.
+ */
+export type SetDisplaySettingsResponse = v.InferOutput<typeof setDisplaySettingsResponseSchema>;
+
+/**
+ * Reset response inferred from its runtime validation schema.
+ */
+export type ResetAllSettingsResponse = v.InferOutput<typeof resetAllSettingsResponseSchema>;
+
+/**
+ * Diagnostic logging response inferred from its runtime validation schema.
+ */
+export type SetDebugEnabledResponse = v.InferOutput<typeof setDebugEnabledResponseSchema>;

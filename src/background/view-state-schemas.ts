@@ -131,3 +131,41 @@ export const refreshFailureSchema = strictMessageObject({
     tabId: v.optional(nonNegativeSafeIntegerSchema),
     reason: v.picklist(REFRESH_FAILURE_REASONS),
 });
+
+/**
+ * Immutable collection of tab-refresh failures returned by settings commands.
+ */
+export const refreshFailuresSchema = v.pipe(
+    v.array(refreshFailureSchema),
+    v.readonly(),
+);
+
+/**
+ * Popup view inferred from its runtime validation schema.
+ */
+export type PopupState = v.InferOutput<typeof popupStateSchema>;
+
+/**
+ * Site-list entry inferred from its runtime validation schema.
+ */
+export type SiteListEntry = v.InferOutput<typeof siteListEntrySchema>;
+
+/**
+ * Site preferences view inferred from its runtime validation schema.
+ */
+export type SitesState = v.InferOutput<typeof sitesStateSchema>;
+
+/**
+ * Display settings view inferred from its runtime validation schema.
+ */
+export type DisplayState = v.InferOutput<typeof displayStateSchema>;
+
+/**
+ * Diagnostic logging view inferred from its runtime validation schema.
+ */
+export type DebugState = v.InferOutput<typeof debugStateSchema>;
+
+/**
+ * Per-tab refresh failure inferred from its runtime validation schema.
+ */
+export type RefreshFailure = v.InferOutput<typeof refreshFailureSchema>;

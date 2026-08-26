@@ -16,6 +16,22 @@ export const POPUP_STATUS = {
 } as const;
 
 /**
+ * UI surfaces that request distinct site-setting projections.
+ */
+export const SITE_SETTINGS_SURFACE = {
+    POPUP: "popup",
+    SITES: "sites",
+} as const;
+
+/**
+ * Complete set of site-setting response surfaces.
+ */
+export const SITE_SETTINGS_SURFACES = [
+    SITE_SETTINGS_SURFACE.POPUP,
+    SITE_SETTINGS_SURFACE.SITES,
+] as const;
+
+/**
  * Popup statuses available when settings loaded successfully.
  */
 export const POPUP_READY_STATUSES = [
@@ -124,6 +140,11 @@ export type RefreshFailureReason = (typeof REFRESH_FAILURE_REASONS)[number];
  * Availability and activation status presented for the active tab.
  */
 export type PopupStatus = ReadyPopupStatus | UnavailablePopupStatus;
+
+/**
+ * UI surface whose site-setting projection is requested.
+ */
+export type SiteSettingsSurface = (typeof SITE_SETTINGS_SURFACES)[number];
 
 /**
  * Failure that prevents the popup from reporting normal active-tab status.

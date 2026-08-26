@@ -1,349 +1,142 @@
 /**
- * @file Persists bounded diagnostic entries with generation-safe asynchronous storage updates.
+ * @file Persists a bounded serialized journal of canonical diagnostic events.
  */
 
-import { isCanonicalHostname } from "../settings/snapshot";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
-import {
-    DIAGNOSTIC_BROWSER_FAMILIES,
-    DIAGNOSTIC_CATEGORIES,
-    DIAGNOSTIC_EVENT_OPTIONAL_KEYS,
-    DIAGNOSTIC_EVENT_REQUIRED_KEYS,
-    DIAGNOSTIC_MAX_COUNT,
-    DIAGNOSTIC_MAX_DURATION_MS,
-    DIAGNOSTIC_MAX_STACK_FRAMES,
-    DIAGNOSTIC_PAGE_CATEGORIES,
-    DIAGNOSTIC_REASONS,
-    DIAGNOSTIC_STACK_FRAME_PATTERN,
-} from "./contracts";
-import type { DiagnosticEvent } from "./events";
+import * as v from "valibot";
+import { diagnosticEventSchema, type DiagnosticEvent } from "./events";
 
 /**
- * Storage key containing the bounded, background-owned diagnostics envelope.
+ * Storage key containing diagnostic events.
  */
 export const DIAGNOSTICS_STORAGE_KEY = "diagnostics" as const;
 
 /**
- * Maximum UTF-8 size permitted for the serialized journal envelope.
+ * Maximum serialized diagnostic journal size.
  */
 export const DIAGNOSTICS_MAX_BYTES = 5_000_000 as const;
 
 /**
- * Async storage operations used by the journal; failures are intentionally contained.
+ * Storage operations used by the diagnostics journal.
  */
 export interface DiagnosticStorage {
     /**
-     * Fetches the journal keys from the durable storage backend.
+     * Reads diagnostic values from storage.
      */
     get(
         keys?: string | readonly string[] | Record<string, unknown>,
     ): Promise<Record<string, unknown>>;
 
     /**
-     * Persists a complete record of key-value updates.
+     * Writes diagnostic values to storage.
      */
     set(items: Record<string, unknown>): Promise<void>;
 
     /**
-     * Deletes the supplied storage keys.
+     * Removes diagnostic values from storage.
      */
     remove(keys: string | readonly string[]): Promise<void>;
 }
 
 /**
- * Exact on-disk JSON shape used to reject partial, stale, or oversized journal values.
- */
-interface DiagnosticEnvelope {
-    /**
-     * Newest-first diagnostic events retained within the byte limit.
-     */
-    readonly entries: readonly DiagnosticEvent[];
-}
-
-/**
- * Read result that exposes a usable snapshot without propagating storage errors.
+ * Result of reading a diagnostic snapshot.
  */
 export type DiagnosticJournalSnapshotResult =
     | {
         /**
-         * Indicates that a valid non-empty journal snapshot is available.
+         * Marks a successful snapshot read.
          */
         readonly ok: true;
 
         /**
-         * Validated persisted events in journal order.
+         * Canonical events loaded from storage.
          */
         readonly entries: readonly DiagnosticEvent[];
     }
     | {
         /**
-         * Indicates that the journal could not provide a usable snapshot.
+         * Marks a failed snapshot read.
          */
         readonly ok: false;
 
         /**
-         * Stable reason the journal snapshot is unavailable.
+         * Stable failure reported to the options page.
          */
         readonly error: "disabled" | "empty" | "invalid-journal" | "storage-failed";
     };
 
 /**
- * Clear result that distinguishes durable removal from a contained storage failure.
+ * Result of clearing diagnostic entries.
  */
 export type DiagnosticJournalClearResult =
     | {
         /**
-         * Indicates that journal storage is empty after the operation.
+         * Marks a successful clear.
          */
         readonly ok: true;
     }
     | {
         /**
-         * Indicates that journal storage could not be cleared.
+         * Marks a failed clear.
          */
         readonly ok: false;
 
         /**
-         * Stable reason the clear operation failed.
+         * Stable clear failure reported to the options page.
          */
         readonly error: "disabled" | "storage-failed";
     };
 
-/**
- * Accepts plain objects without inherited fields or accessors.
- *
- * @param value - Untrusted persisted value to inspect.
- * @returns - Whether the value is a non-array object record.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-const CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
-const PAGE_CATEGORY_SET = new Set<string>(DIAGNOSTIC_PAGE_CATEGORIES);
-const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
-const REASON_SET = new Set<string>(DIAGNOSTIC_REASONS);
-const EVENT_KEY_SET = new Set<string>([
-    ...DIAGNOSTIC_EVENT_REQUIRED_KEYS,
-    ...DIAGNOSTIC_EVENT_OPTIONAL_KEYS,
-]);
+const envelopeSchema = v.strictObject({ entries: v.array(diagnosticEventSchema) });
 
 /**
- * Allows ordinary cross-realm records while rejecting inherited fields, serializers, and getters.
+ * Measures a diagnostic envelope's serialized UTF-8 size.
  *
- * @param value - Candidate diagnostic object.
- * @returns - Whether every enumerable field is an own data property.
+ * @param value - Diagnostic envelope.
+ * @returns - Serialized byte length.
  */
-export function hasOnlyOwnDiagnosticProperties(value: object): boolean {
-    try {
-        if ("toJSON" in value) {
-            return false;
-        }
-        for (const key in value) {
-            if (!Object.hasOwn(value, key)) {
-                return false;
-            }
-        }
-        return Object.keys(value).every((key) => {
-            const property = Object.getOwnPropertyDescriptor(value, key);
-            return property !== undefined && Object.hasOwn(property, "value");
-        });
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Accepts only bounded arrays whose items satisfy the durable diagnostic event shape.
- *
- * @param value - Untrusted persisted entries value.
- * @returns - Whether the value is a safely bounded diagnostic array.
- */
-function isSafeDiagnosticArray(value: unknown): value is readonly unknown[] {
-    if (!Array.isArray(value) || !hasOnlyOwnDiagnosticProperties(value)) {
-        return false;
-    }
-    const keys = Object.keys(value);
-    return keys.length === value.length && keys.every((key, index) => key === String(index));
-}
-
-/**
- * Verifies every persisted event has the finite categories and redacted fields expected by the
- * journal.
- *
- * @param value - Untrusted persisted event value.
- * @returns - Whether the value has the complete durable event shape.
- */
-export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEvent {
-    if (
-        !isRecord(value) ||
-        !hasOnlyOwnDiagnosticProperties(value) ||
-        DIAGNOSTIC_EVENT_REQUIRED_KEYS.some((key) => !Object.hasOwn(value, key))
-    ) {
-        return false;
-    }
-    if (
-        !CATEGORY_SET.has(String(value.category)) ||
-        typeof value.timestamp !== "number" ||
-        !Number.isSafeInteger(value.timestamp) ||
-        value.timestamp < 0 ||
-        typeof value.hostname !== "string" ||
-        !isCanonicalHostname(value.hostname) ||
-        !PAGE_CATEGORY_SET.has(String(value.pageCategory)) ||
-        typeof value.incognito !== "boolean"
-    ) {
-        return false;
-    }
-    if (Object.keys(value).some((key) => !EVENT_KEY_SET.has(key))) {
-        return false;
-    }
-    if (
-        DIAGNOSTIC_EVENT_OPTIONAL_KEYS.some(
-            (key) => key in value && !Object.hasOwn(value, key),
-        )
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "count") &&
-        (typeof value.count !== "number" ||
-            !Number.isFinite(value.count) ||
-            value.count < 0 ||
-            value.count > DIAGNOSTIC_MAX_COUNT)
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "durationMs") &&
-        (typeof value.durationMs !== "number" ||
-            !Number.isFinite(value.durationMs) ||
-            value.durationMs < 0 ||
-            value.durationMs > DIAGNOSTIC_MAX_DURATION_MS)
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "adapterVersion") &&
-        (typeof value.adapterVersion !== "string" ||
-            !SAFE_EXTENSION_VERSION_PATTERN.test(value.adapterVersion))
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "extensionVersion") &&
-        (typeof value.extensionVersion !== "string" ||
-            !SAFE_EXTENSION_VERSION_PATTERN.test(value.extensionVersion))
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "browserFamily") &&
-        (
-            typeof value.browserFamily !== "string"
-            || !BROWSER_FAMILY_SET.has(value.browserFamily)
-        )
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "reason") &&
-        (typeof value.reason !== "string" || !REASON_SET.has(value.reason))
-    ) {
-        return false;
-    }
-    if (
-        Object.hasOwn(value, "stack") &&
-        (!isSafeDiagnosticArray(value.stack) ||
-            value.stack.length > DIAGNOSTIC_MAX_STACK_FRAMES ||
-            value.stack.some(
-                (frame) =>
-                    typeof frame !== "string" || !DIAGNOSTIC_STACK_FRAME_PATTERN.test(frame),
-            ))
-    ) {
-        return false;
-    }
-    return true;
-}
-
-/**
- * Validates the exact persisted journal envelope, including its complete UTF-8 byte limit.
- *
- * @param value - Untrusted persisted journal envelope.
- * @param maxBytes - Maximum serialized UTF-8 size.
- * @returns - Whether the envelope contains valid entries within the byte limit.
- */
-export function isDiagnosticJournalEntries(
-    value: unknown,
-    maxBytes: number = DIAGNOSTICS_MAX_BYTES,
-): value is readonly DiagnosticEvent[] {
-    if (
-        !Number.isSafeInteger(maxBytes) ||
-        maxBytes <= 0 ||
-        !isSafeDiagnosticArray(value) ||
-        !value.every(isDiagnosticJournalEvent)
-    ) {
-        return false;
-    }
-    try {
-        return bytes({ entries: value }) <= maxBytes;
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Returns journal entries only when the persisted envelope has the exact shape and fits its byte
- * budget.
- *
- * @param value - Untrusted persisted journal envelope.
- * @returns - Valid journal entries, or an empty array when rejected.
- */
-function readEntries(value: unknown): DiagnosticEvent[] {
-    if (
-        !isRecord(value) ||
-        Object.keys(value).length !== 1 ||
-        !Object.hasOwn(value, "entries") ||
-        !Array.isArray(value.entries)
-    ) {
-        return [];
-    }
-    return value.entries.filter(isDiagnosticJournalEvent);
-}
-
-/**
- * Measures the UTF-8 size used to enforce the journal storage limit.
- *
- * @param value - Diagnostic envelope to measure.
- * @returns - Serialized UTF-8 byte length.
- */
-function bytes(value: DiagnosticEnvelope): number {
+function byteLength(value: unknown): number {
     return new TextEncoder().encode(JSON.stringify(value)).byteLength;
 }
 
 /**
- * A background-owned journal. All storage work is serialized and failures are contained.
+ * Parses one stored diagnostic envelope within its byte limit.
+ *
+ * @param value - Stored diagnostic value.
+ * @param maxBytes - Maximum serialized size.
+ * @returns - Canonical events, or null for invalid storage data.
+ */
+function parseEnvelope(value: unknown, maxBytes: number): DiagnosticEvent[] | null {
+    const parsed = v.safeParse(envelopeSchema, value);
+    if (!parsed.success || byteLength(parsed.output) > maxBytes) {
+        return null;
+    }
+    return parsed.output.entries;
+}
+
+/**
+ * Serializes diagnostic storage work and deletes entries when logging is disabled.
  */
 export class DiagnosticJournal {
     /**
-     * Gates all append, read, and clear-entry operations after the caller enables diagnostics.
+     * Whether new events may be persisted.
      */
     private enabledState = false;
 
     /**
-     * Invalidates queued storage writes whenever journaling is cleared, disabled, or reset.
+     * Policy generation used to discard writes queued before a disable.
      */
     private generation = 0;
 
     /**
-     * Promise tail that serializes storage effects so a later operation cannot be overtaken.
+     * Tail of the serialized storage-operation queue.
      */
     private operationTail: Promise<void> = Promise.resolve();
 
     /**
-     * Initializes durable storage access and rejects a non-positive journal byte limit.
+     * Creates a bounded diagnostic journal.
      *
-     * @param storage - Durable storage boundary for journal entries.
-     * @param maxBytes - Maximum serialized journal size in bytes.
+     * @param storage - Durable extension storage.
+     * @param maxBytes - Maximum serialized journal size.
      */
     public constructor(
         private readonly storage: DiagnosticStorage,
@@ -355,53 +148,31 @@ export class DiagnosticJournal {
     }
 
     /**
-     * Indicates whether new diagnostic events are currently persisted.
+     * Reports whether new events are persisted.
      *
-     * @returns - Whether future diagnostic events are persisted.
+     * @returns - Current diagnostic policy.
      */
     public get enabled(): boolean {
         return this.enabledState;
     }
 
     /**
-     * Enables or disables future journal writes without discarding stored entries.
+     * Enables logging or disables it and deletes retained entries.
      *
-     * @param enabled - Requested persistence state.
-     * @returns - Promise settled after the policy transition is serialized.
+     * @param enabled - Requested logging policy.
+     * @returns - Promise settled after the policy change.
      */
     public setEnabled(enabled: boolean): Promise<void> {
-        if (typeof enabled !== "boolean") {
-            return Promise.resolve();
-        }
         this.generation += 1;
         this.enabledState = enabled;
-        if (!enabled) {
-            return this.enqueue(async () => {
-                try {
-                    await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
-                } catch {
-                    /* diagnostics must not affect processing */
-                }
-            });
-        }
-        return Promise.resolve();
+        return enabled ? Promise.resolve() : this.removeStoredEntries();
     }
 
     /**
-     * Records a bounded diagnostic event when journaling is enabled.
+     * Appends one canonical event and evicts oldest entries above the byte limit.
      *
-     * @param event - Valid bounded diagnostic event to record.
-     * @returns - Promise settled after the conditional write completes.
-     */
-    public record(event: DiagnosticEvent): Promise<void> {
-        return this.append(event);
-    }
-
-    /**
-     * Appends an event and trims oldest entries until the serialized envelope fits.
-     *
-     * @param event - Valid bounded diagnostic event to append.
-     * @returns - Promise settled after storage is trimmed and updated.
+     * @param event - Canonical diagnostic event.
+     * @returns - Promise settled after the storage attempt.
      */
     public append(event: DiagnosticEvent): Promise<void> {
         if (!this.enabledState) {
@@ -409,147 +180,127 @@ export class DiagnosticJournal {
         }
         const generation = this.generation;
         return this.enqueue(async () => {
-            if (!this.isCurrentGeneration(generation) || !isDiagnosticJournalEvent(event)) {
+            if (!this.isCurrent(generation)) {
                 return;
             }
-            let current: DiagnosticEvent[];
+            let values: Record<string, unknown>;
             try {
-                const values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
-                if (!this.isCurrentGeneration(generation)) {
-                    return;
-                }
-                current = readEntries(values[DIAGNOSTICS_STORAGE_KEY]);
+                values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
             } catch {
                 return;
             }
-            if (bytes({ entries: [event] }) > this.maxBytes) {
-                return;
-            }
-            const entries = [...current, event];
-            while (entries.length > 0 && bytes({ entries }) > this.maxBytes) {
+            const stored = Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)
+                ? parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes) ?? []
+                : [];
+            const entries = [...stored, event];
+            while (entries.length > 0 && byteLength({ entries }) > this.maxBytes) {
                 entries.shift();
             }
-            if (entries.length === 0) {
-                return;
-            }
-            if (!this.isCurrentGeneration(generation)) {
+            if (entries.length === 0 || !this.isCurrent(generation)) {
                 return;
             }
             try {
-                await this.storage.set({
-                    [DIAGNOSTICS_STORAGE_KEY]: { entries } satisfies DiagnosticEnvelope,
-                });
+                await this.storage.set({ [DIAGNOSTICS_STORAGE_KEY]: { entries } });
             } catch {
-                /* isolated failure */
+                /* diagnostics never interfere with timestamp processing */
             }
         });
     }
 
     /**
-     * Removes persisted journal entries and advances the write generation.
+     * Disables logging and removes all retained entries.
      *
-     * @returns - Promise settled after durable entries are removed.
+     * @returns - Promise settled after the removal attempt.
      */
     public clear(): Promise<void> {
         this.generation += 1;
         this.enabledState = false;
-        return this.enqueue(async () => {
-            try {
-                await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
-            } catch {
-                /* isolated failure */
-            }
-        });
+        return this.removeStoredEntries();
     }
 
     /**
-     * Returns the current journal snapshot without exposing storage failures.
+     * Reads and validates the current stored envelope once.
      *
-     * @returns - Current snapshot or a contained storage failure.
+     * @returns - Canonical events or a contained storage error.
      */
     public readSnapshot(): Promise<DiagnosticJournalSnapshotResult> {
         if (!this.enabledState) {
             return Promise.resolve({ ok: false, error: "disabled" });
         }
         const generation = this.generation;
-        return this.serialize(async (): Promise<DiagnosticJournalSnapshotResult> => {
-            if (!this.isCurrentGeneration(generation)) {
-                return { ok: false, error: "disabled" };
+        return this.serialize(async () => {
+            if (!this.isCurrent(generation)) {
+                return { ok: false, error: "disabled" } as const;
             }
             let values: Record<string, unknown>;
             try {
                 values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
             } catch {
-                return { ok: false, error: "storage-failed" };
-            }
-            if (!this.isCurrentGeneration(generation)) {
-                return { ok: false, error: "disabled" };
-            }
-            if (!isRecord(values)) {
-                return { ok: false, error: "invalid-journal" };
+                return { ok: false, error: "storage-failed" } as const;
             }
             if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
-                return { ok: false, error: "empty" };
+                return { ok: false, error: "empty" } as const;
             }
-            const value = values[DIAGNOSTICS_STORAGE_KEY];
-            if (
-                !isRecord(value) ||
-                !hasOnlyOwnDiagnosticProperties(value) ||
-                Object.keys(value).length !== 1 ||
-                !Object.hasOwn(value, "entries") ||
-                !isDiagnosticJournalEntries(value.entries, this.maxBytes)
-            ) {
-                return { ok: false, error: "invalid-journal" };
+            const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
+            if (!entries) {
+                return { ok: false, error: "invalid-journal" } as const;
             }
-            if (value.entries.length === 0) {
-                return { ok: false, error: "empty" };
-            }
-            return { ok: true, entries: [...value.entries] };
+            return entries.length === 0
+                ? { ok: false, error: "empty" } as const
+                : { ok: true, entries } as const;
         });
     }
 
     /**
-     * Advances the journal generation and removes durable entries; a failed storage removal leaves
-     * the journal enabled but reports a contained clear error.
+     * Clears retained entries while keeping logging enabled.
      *
-     * @returns - Clear result reporting success or a contained storage failure.
+     * @returns - Durable clear result.
      */
     public clearEntries(): Promise<DiagnosticJournalClearResult> {
         if (!this.enabledState) {
             return Promise.resolve({ ok: false, error: "disabled" });
         }
         this.generation += 1;
-        const generation = this.generation;
-        return this.serialize(async (): Promise<DiagnosticJournalClearResult> => {
-            if (!this.isCurrentGeneration(generation)) {
-                return { ok: false, error: "disabled" };
-            }
+        return this.serialize(async () => {
             try {
                 await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
+                return { ok: true } as const;
             } catch {
-                return { ok: false, error: "storage-failed" };
+                return { ok: false, error: "storage-failed" } as const;
             }
-            return this.isCurrentGeneration(generation)
-                ? { ok: true }
-                : { ok: false, error: "disabled" };
         });
     }
 
     /**
-     * Prevents an older queued write from committing after journaling is disabled or reset.
+     * Removes stored entries without exposing storage failures.
      *
-     * @param generation - Generation captured by a queued operation.
-     * @returns - Whether the operation still belongs to the active generation.
+     * @returns - Promise settled after the removal attempt.
      */
-    private isCurrentGeneration(generation: number): boolean {
+    private removeStoredEntries(): Promise<void> {
+        return this.enqueue(async () => {
+            try {
+                await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
+            } catch {
+                /* diagnostics cleanup is best effort */
+            }
+        });
+    }
+
+    /**
+     * Reports whether a queued operation still belongs to the active policy.
+     *
+     * @param generation - Operation generation.
+     * @returns - Whether the operation may persist data.
+     */
+    private isCurrent(generation: number): boolean {
         return this.enabledState && generation === this.generation;
     }
 
     /**
-     * Serializes storage operations so stale writes cannot overwrite a newer generation.
+     * Serializes a fire-and-forget storage operation.
      *
-     * @param operation - Storage write to append to the journal queue.
-     * @returns - Promise settled after the queued operation completes.
+     * @param operation - Storage operation.
+     * @returns - Promise settled after the operation.
      */
     private enqueue(operation: () => Promise<void>): Promise<void> {
         return this.serialize(operation).then(
@@ -559,10 +310,10 @@ export class DiagnosticJournal {
     }
 
     /**
-     * Chains a storage operation after earlier writes while preserving its own result.
+     * Serializes one storage operation and preserves its result.
      *
-     * @param operation - Result-bearing storage operation to serialize.
-     * @returns - Promise carrying the operation result after earlier writes complete.
+     * @param operation - Storage operation.
+     * @returns - Operation result.
      */
     private serialize<Result>(operation: () => Promise<Result>): Promise<Result> {
         const run = this.operationTail.then(operation, operation);

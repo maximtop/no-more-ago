@@ -21,6 +21,7 @@ import type {
     SetSiteEnabledResponse,
     SitesState,
 } from "./view-state";
+import { SITE_SETTINGS_SURFACE, type SiteSettingsSurface } from "./view-state-values";
 
 /**
  * Applies persisted settings changes and coordinates their runtime effects.
@@ -332,7 +333,7 @@ export class SettingsCommands {
     public async setSiteEnabled(
         hostname: string,
         enabled: boolean,
-        surface: "popup" | "sites",
+        surface: SiteSettingsSurface,
     ): Promise<SetSiteEnabledResponse> {
         await this.prepare();
         let acceptedRevision: number | undefined;
@@ -400,26 +401,26 @@ export class SettingsCommands {
             }
         });
         if (error === "invalid-hostname") {
-            const state = surface === "popup"
+            const state = surface === SITE_SETTINGS_SURFACE.POPUP
                 ? (this.projection.cachedPopup
                     ?? this.projection.unavailablePopup(this.lifecycle.state))
                 : this.projection.deriveSites(this.lifecycle.state);
-            return surface === "popup"
+            return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? { ok: false, error, surface, state: state as PopupState }
                 : { ok: false, error, surface, state: state as SitesState };
         }
         const state = await this.lifecycle.enqueue(async () =>
-            surface === "popup"
+            surface === SITE_SETTINGS_SURFACE.POPUP
                 ? this.projection.deriveAndCachePopup(this.lifecycle.state)
                 : this.projection.deriveSites(this.lifecycle.state),
         );
         if (error === undefined && acceptedRevision !== undefined) {
-            return surface === "popup"
+            return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? { ok: true, acceptedRevision, surface, state: state as PopupState }
                 : { ok: true, acceptedRevision, surface, state: state as SitesState };
         }
         const responseError = error ?? "settings-unavailable";
-        return surface === "popup"
+        return surface === SITE_SETTINGS_SURFACE.POPUP
             ? { ok: false, error: responseError, surface, state: state as PopupState }
             : { ok: false, error: responseError, surface, state: state as SitesState };
     }
