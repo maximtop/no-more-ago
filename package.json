@@ -1,0 +1,42 @@
+{
+  "name": "no-more-ago",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Replace trusted relative timestamps with exact dates.",
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": "10.34.5"
+  },
+  "scripts": {
+    "dev": "node scripts/build.mjs dev",
+    "release": "node scripts/build.mjs release",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "dependencies": {
+    "@date-fns/tz": "1.5.0",
+    "@mantine/core": "9.5.2",
+    "@mantine/hooks": "9.5.2",
+    "date-fns": "4.4.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@rspack/core": "2.1.10",
+    "@types/chrome": "0.2.7",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "eslint": "10.9.0",
+    "jsdom": "30.0.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "4.1.11",
+    "fflate": "0.8.2"
+  }
+}
