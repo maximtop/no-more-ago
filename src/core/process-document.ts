@@ -4,6 +4,7 @@
 
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
 import { formatDateWithPresentation } from "./format-default-date";
+import { INVALID_DATE_FORMAT_ERROR } from "./presentation-errors";
 import {
     renderExactTime,
     restoreExactTime,
@@ -154,7 +155,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
             restoreExactTime(element, ownedOutputMutations);
-            if (diagnosticSink && presentation.error === "invalid-format") {
+            if (diagnosticSink && presentation.error === INVALID_DATE_FORMAT_ERROR) {
                 diagnosticSink({ category: "error", reason: "processing-failed", count: 1 });
             }
             if (diagnosticSink) {
@@ -162,7 +163,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             continue;
         }
-        if (presentation.error === "invalid-format") {
+        if (presentation.error === INVALID_DATE_FORMAT_ERROR) {
             restoreExactTime(element, ownedOutputMutations);
             if (diagnosticSink) {
                 diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });

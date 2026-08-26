@@ -4,7 +4,8 @@
  * @file Chrome scripting and tab reconciliation for runtime adapters.
  */
 
-import type { RuntimeTab, TabsRuntime, DocumentPhase } from "./tabs";
+import type { DocumentPhase } from "./messages";
+import type { RuntimeTab, TabsRuntime } from "./tabs";
 import type {
     RegisteredContentScriptReference,
     RegisteredContentScriptSpec,
@@ -31,6 +32,16 @@ export type ActivationMode =
  * Resolved global policy used to enable, disable, or conservatively stop adapters.
  */
 export type ActivationPolicy = "enabled" | "disabled" | "unknown";
+
+/**
+ * Final content-script registration outcome retained for one adapter.
+ */
+export type RegistrationOutcome =
+    | "unchanged"
+    | "registered"
+    | "updated"
+    | "unregistered"
+    | "failed";
 
 /**
  * Adapter metadata used to register, match, and reconcile one supported site.
@@ -101,9 +112,7 @@ export interface ActivationReconcileResult {
     /**
      * Final registration outcome for each processed adapter.
      */
-    readonly registration: Readonly<
-        Record<string, "unchanged" | "registered" | "updated" | "unregistered" | "failed">
-    >;
+    readonly registration: Readonly<Record<string, RegistrationOutcome>>;
 
     /**
      * Injection, teardown, and status outcomes recorded for matching tabs.
@@ -289,10 +298,7 @@ async function registrationState(
     mode: ActivationMode,
     desiredEnabled: boolean,
     failures: ReconcileFailure[],
-    registration: Record<
-        string,
-        "unchanged" | "registered" | "updated" | "unregistered" | "failed"
-    >,
+    registration: Record<string, RegistrationOutcome>,
 ): Promise<{ readonly present: boolean; readonly changed: boolean }> {
     let existing: readonly RegisteredContentScriptReference[];
     try {
@@ -485,10 +491,7 @@ export class AdapterActivationCoordinator {
         readonly affectedHostnames?: readonly string[];
     }): Promise<ActivationReconcileResult> {
         const failures: ReconcileFailure[] = [];
-        const registration: Record<
-            string,
-            "unchanged" | "registered" | "updated" | "unregistered" | "failed"
-        > = {};
+        const registration: Record<string, RegistrationOutcome> = {};
         const records: ActivationReconcileResult["tabs"] = [];
         for (const definition of this.adapters) {
             if (

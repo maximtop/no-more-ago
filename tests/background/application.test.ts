@@ -26,8 +26,11 @@ import { AdapterActivationCoordinator } from "../../src/runtime/adapter-activati
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
+    PRESENTATION_UPDATED_MESSAGE,
+    TEARDOWN_DOCUMENT_MESSAGE,
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
+    type DocumentPhase,
 } from "../../src/runtime/messages";
 
 const settingsV5 = (
@@ -108,7 +111,7 @@ function appWith(
                 message.type === UPDATE_PRESENTATION_MESSAGE &&
                 "revision" in message
             ) {
-                return { type: "no-more-ago:presentation-updated", revision: message.revision };
+                return { type: PRESENTATION_UPDATED_MESSAGE, revision: message.revision };
             }
             return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
         }),
@@ -180,7 +183,7 @@ function realAppWith(
         }),
     };
     const registered = new Map<string, typeof adapter.registration>();
-    const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">([
+    const phases = new Map<number, DocumentPhase>([
         [5, "active"],
         [6, "active"],
     ]);
@@ -241,7 +244,7 @@ function realAppWith(
                     message.type === UPDATE_PRESENTATION_MESSAGE &&
                     "revision" in message
                 ) {
-                    return { type: "no-more-ago:presentation-updated", revision: message.revision };
+                    return { type: PRESENTATION_UPDATED_MESSAGE, revision: message.revision };
                 }
                 if (
                     message &&
@@ -1461,7 +1464,7 @@ describe("BackgroundApplication", () => {
         });
         expect(tabs.sendMessage).toHaveBeenCalledWith(
             5,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
     });
@@ -1492,12 +1495,12 @@ describe("BackgroundApplication", () => {
         );
         expect(fixture.tabs.sendMessage).toHaveBeenCalledWith(
             5,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         expect(fixture.tabs.sendMessage).toHaveBeenCalledWith(
             6,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         await expect(
@@ -1578,8 +1581,8 @@ describe("BackgroundApplication", () => {
                 "revision" in message
             ) {
                 return tabId === 5
-                    ? { type: "no-more-ago:presentation-updated", revision: 0 }
-                    : { type: "no-more-ago:presentation-updated", revision: 1 };
+                    ? { type: PRESENTATION_UPDATED_MESSAGE, revision: 0 }
+                    : { type: PRESENTATION_UPDATED_MESSAGE, revision: 1 };
             }
             if (
                 message &&
@@ -1616,9 +1619,9 @@ describe("BackgroundApplication", () => {
         ["null", null],
         ["malformed", {}],
         ["wrong type", { type: "wrong", revision: 1 }],
-        ["stale revision", { type: "no-more-ago:presentation-updated", revision: 0 }],
-        ["future revision", { type: "no-more-ago:presentation-updated", revision: 2 }],
-        ["extra keys", { type: "no-more-ago:presentation-updated", revision: 1, extra: true }],
+        ["stale revision", { type: PRESENTATION_UPDATED_MESSAGE, revision: 0 }],
+        ["future revision", { type: PRESENTATION_UPDATED_MESSAGE, revision: 2 }],
+        ["extra keys", { type: PRESENTATION_UPDATED_MESSAGE, revision: 1, extra: true }],
         ["rejected", "reject"],
     ] as const)(
         "treats %s acknowledgement as a committed partial refresh",
@@ -1639,7 +1642,7 @@ describe("BackgroundApplication", () => {
                         }
                         return acknowledgement as never;
                     }
-                    return { type: "no-more-ago:presentation-updated", revision: 1 };
+                    return { type: PRESENTATION_UPDATED_MESSAGE, revision: 1 };
                 }
                 if (
                     message &&

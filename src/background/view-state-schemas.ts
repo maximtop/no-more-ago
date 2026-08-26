@@ -3,27 +3,21 @@
  */
 
 import * as v from "valibot";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
 import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
 import { strictMessageObject } from "./message-schema-utils";
+import {
+    POPUP_READY_STATUSES,
+    POPUP_RUNTIME_FAILURES,
+    POPUP_UNAVAILABLE_STATUSES,
+    REFRESH_FAILURE_REASONS,
+    SETTINGS_STATE_FAILURES,
+} from "./view-state-values";
 
 const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
-const settingsFailureSchema = v.picklist(["settings-load", "fail-closed-cleanup"]);
-const popupStatusSchema = v.picklist([
-    "active",
-    "global-disabled",
-    "site-disabled",
-    "inaccessible",
-    "runtime-failed",
-    "no-rules",
-]);
-const popupFailureSchema = v.picklist([
-    "current-tab-query",
-    "registration",
-    "matching-tabs-query",
-    "current-tab-inject",
-    "current-tab-teardown",
-    "document-status",
-]);
+const settingsFailureSchema = v.picklist(SETTINGS_STATE_FAILURES);
+const popupStatusSchema = v.picklist(POPUP_READY_STATUSES);
+const popupFailureSchema = v.picklist(POPUP_RUNTIME_FAILURES);
 const readyPopupStateSchema = strictMessageObject({
     availability: v.literal("ready"),
     revision: revisionSchema,
@@ -41,7 +35,7 @@ const unavailablePopupStateSchema = strictMessageObject({
     hostname: v.nullable(v.string()),
     siteEnabled: v.null(),
     hasAdapter: v.literal(false),
-    status: v.picklist(["settings-unavailable", "runtime-failed"]),
+    status: v.picklist(POPUP_UNAVAILABLE_STATUSES),
     failure: settingsFailureSchema,
 });
 const siteListEntrySchema = strictMessageObject({
@@ -72,7 +66,7 @@ const readyDisplayStateSchema = strictMessageObject({
     revision: revisionSchema,
     display: v.custom<DisplaySettings>(isDisplaySettings),
     debugEnabled: v.boolean(),
-    error: v.exactOptional(v.literal("unavailable-time-zone")),
+    error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
 const unavailableDisplayStateSchema = strictMessageObject({
     availability: v.literal("unavailable"),
@@ -135,5 +129,5 @@ export const debugStateSchema = v.union([
 export const refreshFailureSchema = strictMessageObject({
     hostname: v.string(),
     tabId: v.optional(nonNegativeSafeIntegerSchema),
-    reason: v.picklist(["matching-tabs-query", "tab-update"]),
+    reason: v.picklist(REFRESH_FAILURE_REASONS),
 });

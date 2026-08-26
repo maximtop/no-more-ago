@@ -3,6 +3,19 @@
  */
 
 import { isCanonicalHostname } from "../settings/snapshot";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
+import {
+    DIAGNOSTIC_BROWSER_FAMILIES,
+    DIAGNOSTIC_CATEGORIES,
+    DIAGNOSTIC_EVENT_OPTIONAL_KEYS,
+    DIAGNOSTIC_EVENT_REQUIRED_KEYS,
+    DIAGNOSTIC_MAX_COUNT,
+    DIAGNOSTIC_MAX_DURATION_MS,
+    DIAGNOSTIC_MAX_STACK_FRAMES,
+    DIAGNOSTIC_PAGE_CATEGORIES,
+    DIAGNOSTIC_REASONS,
+    DIAGNOSTIC_STACK_FRAME_PATTERN,
+} from "./contracts";
 import type { DiagnosticEvent } from "./events";
 
 /**
@@ -74,36 +87,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-const CATEGORIES = new Set([
-    "lifecycle",
-    "adapter",
-    "mutation",
-    "timing",
-    "settings",
-    "skip",
-    "error",
-]);
-const PAGES = new Set(["repository", "issue", "pull-request", "actions", "settings", "other"]);
-const BROWSERS = new Set(["chromium", "firefox", "other"]);
-const OPTIONAL = new Set([
-    "count",
-    "durationMs",
-    "reason",
-    "adapterVersion",
-    "extensionVersion",
-    "browserFamily",
-    "stack",
-]);
-const REASONS = new Set([
-    "adapter-matched",
-    "adapter-missing",
-    "candidate-skipped",
-    "invalid-timestamp",
-    "already-owned",
-    "unsupported",
-    "processing-failed",
-    "storage-failed",
-    "settings-updated",
+const CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
+const PAGE_CATEGORY_SET = new Set<string>(DIAGNOSTIC_PAGE_CATEGORIES);
+const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
+const REASON_SET = new Set<string>(DIAGNOSTIC_REASONS);
+const EVENT_KEY_SET = new Set<string>([
+    ...DIAGNOSTIC_EVENT_REQUIRED_KEYS,
+    ...DIAGNOSTIC_EVENT_OPTIONAL_KEYS,
 ]);
 
 /**
@@ -156,42 +146,30 @@ export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEve
     if (
         !isRecord(value) ||
         !hasOnlyOwnDiagnosticProperties(value) ||
-        !Object.hasOwn(value, "category") ||
-        !Object.hasOwn(value, "timestamp") ||
-        !Object.hasOwn(value, "hostname") ||
-        !Object.hasOwn(value, "pageCategory") ||
-        !Object.hasOwn(value, "incognito")
+        DIAGNOSTIC_EVENT_REQUIRED_KEYS.some((key) => !Object.hasOwn(value, key))
     ) {
         return false;
     }
     if (
-        !CATEGORIES.has(String(value.category)) ||
+        !CATEGORY_SET.has(String(value.category)) ||
         typeof value.timestamp !== "number" ||
         !Number.isSafeInteger(value.timestamp) ||
         value.timestamp < 0 ||
         typeof value.hostname !== "string" ||
         !isCanonicalHostname(value.hostname) ||
-        !PAGES.has(String(value.pageCategory)) ||
+        !PAGE_CATEGORY_SET.has(String(value.pageCategory)) ||
         typeof value.incognito !== "boolean"
     ) {
         return false;
     }
-    if (
-        Object.keys(value).some(
-            (key) =>
-                ![
-                    "category",
-                    "timestamp",
-                    "hostname",
-                    "pageCategory",
-                    "incognito",
-                    ...OPTIONAL,
-                ].includes(key),
-        )
-    ) {
+    if (Object.keys(value).some((key) => !EVENT_KEY_SET.has(key))) {
         return false;
     }
-    if ([...OPTIONAL].some((key) => key in value && !Object.hasOwn(value, key))) {
+    if (
+        DIAGNOSTIC_EVENT_OPTIONAL_KEYS.some(
+            (key) => key in value && !Object.hasOwn(value, key),
+        )
+    ) {
         return false;
     }
     if (
@@ -199,7 +177,7 @@ export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEve
         (typeof value.count !== "number" ||
             !Number.isFinite(value.count) ||
             value.count < 0 ||
-            value.count > 1_000_000)
+            value.count > DIAGNOSTIC_MAX_COUNT)
     ) {
         return false;
     }
@@ -208,42 +186,46 @@ export function isDiagnosticJournalEvent(value: unknown): value is DiagnosticEve
         (typeof value.durationMs !== "number" ||
             !Number.isFinite(value.durationMs) ||
             value.durationMs < 0 ||
-            value.durationMs > 86_400_000)
+            value.durationMs > DIAGNOSTIC_MAX_DURATION_MS)
     ) {
         return false;
     }
     if (
         Object.hasOwn(value, "adapterVersion") &&
         (typeof value.adapterVersion !== "string" ||
-            !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.adapterVersion))
+            !SAFE_EXTENSION_VERSION_PATTERN.test(value.adapterVersion))
     ) {
         return false;
     }
     if (
         Object.hasOwn(value, "extensionVersion") &&
         (typeof value.extensionVersion !== "string" ||
-            !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.extensionVersion))
+            !SAFE_EXTENSION_VERSION_PATTERN.test(value.extensionVersion))
     ) {
         return false;
     }
     if (
         Object.hasOwn(value, "browserFamily") &&
-        (typeof value.browserFamily !== "string" || !BROWSERS.has(value.browserFamily))
+        (
+            typeof value.browserFamily !== "string"
+            || !BROWSER_FAMILY_SET.has(value.browserFamily)
+        )
     ) {
         return false;
     }
     if (
         Object.hasOwn(value, "reason") &&
-        (typeof value.reason !== "string" || !REASONS.has(value.reason))
+        (typeof value.reason !== "string" || !REASON_SET.has(value.reason))
     ) {
         return false;
     }
     if (
         Object.hasOwn(value, "stack") &&
         (!isSafeDiagnosticArray(value.stack) ||
-            value.stack.length > 16 ||
+            value.stack.length > DIAGNOSTIC_MAX_STACK_FRAMES ||
             value.stack.some(
-                (frame) => typeof frame !== "string" || !/^frame(?::\d+(?::\d+)?)?$/u.test(frame),
+                (frame) =>
+                    typeof frame !== "string" || !DIAGNOSTIC_STACK_FRAME_PATTERN.test(frame),
             ))
     ) {
         return false;

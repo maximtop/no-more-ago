@@ -6,11 +6,13 @@ import type { DiagnosticBrowserFamily } from "../diagnostics/events";
 import type { DiagnosticJournal } from "../diagnostics/journal";
 import type {
     ActivationMode,
+    ActivationPolicy,
     ActivationReconcileResult,
     RuntimeAdapterDefinition,
 } from "../runtime/adapter-activation";
 import type { TabsRuntime } from "../runtime/tabs";
 import type { SettingsService } from "../settings/settings-service";
+import type { SettingsStateFailure } from "./view-state-values";
 
 /**
  * Lifecycle state of the background application.
@@ -20,7 +22,7 @@ export type ApplicationPhase = "cold" | "initializing" | "ready" | "failed-close
 /**
  * Failure retained while the application is unavailable.
  */
-export type ApplicationFailure = "settings-load" | "fail-closed-cleanup";
+export type ApplicationFailure = SettingsStateFailure;
 
 /**
  * Reconciles registered scripts and matching tabs with the current settings.
@@ -43,7 +45,7 @@ export interface ActivationCoordinator {
         /**
          * Global activation policy to apply.
          */
-        readonly policy: "enabled" | "disabled" | "unknown";
+        readonly policy: ActivationPolicy;
 
         /**
          * Per-host activation overrides used by adapters.

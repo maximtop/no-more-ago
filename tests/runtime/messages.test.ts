@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     DOCUMENT_STATUS_MESSAGE,
+    DOCUMENT_PHASES,
     PRESENTATION_UPDATED_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
@@ -29,7 +30,7 @@ describe("teardown document message", () => {
         for (const value of [
             null,
             [],
-            "no-more-ago:teardown",
+            TEARDOWN_DOCUMENT_MESSAGE,
             {},
             { type: "other" },
             { type: TEARDOWN_DOCUMENT_MESSAGE, extra: true },
@@ -51,7 +52,7 @@ describe("document status message", () => {
         ]) {
             expect(isDocumentStatusMessage(value)).toBe(false);
         }
-        for (const phase of ["waiting", "active", "stopped", "failed"] as const) {
+        for (const phase of DOCUMENT_PHASES) {
             expect(isDocumentStatusResponse({ type: DOCUMENT_STATUS_MESSAGE, phase })).toBe(true);
         }
         expect(isDocumentStatusResponse({ type: DOCUMENT_STATUS_MESSAGE, phase: "unknown" })).toBe(

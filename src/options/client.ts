@@ -34,7 +34,11 @@ import type {
     SetSiteEnabledResponse,
     SitesState,
 } from "../background/application";
-import type { DiagnosticsSnapshot } from "../background/messages";
+import type {
+    DiagnosticsClearError,
+    DiagnosticsSnapshot,
+    DiagnosticsSnapshotError,
+} from "../background/messages";
 
 /**
  * Sends an options-page request to the extension runtime.
@@ -82,22 +86,14 @@ export type DebugSetResult =
  */
 export type DiagnosticsSnapshotResult =
     | { readonly kind: "response"; readonly snapshot: DiagnosticsSnapshot }
-    | {
-        readonly kind: "error";
-        readonly error:
-              | "disabled"
-              | "unavailable"
-              | "empty"
-              | "invalid-journal"
-              | "storage-failed";
-    };
+    | { readonly kind: "error"; readonly error: DiagnosticsSnapshotError };
 
 /**
  * Result of removing stored diagnostic entries.
  */
 export type DiagnosticsClearResult =
     | { readonly kind: "response" }
-    | { readonly kind: "error"; readonly error: "disabled" | "unavailable" | "storage-failed" };
+    | { readonly kind: "error"; readonly error: DiagnosticsClearError };
 
 /**
  * Wraps options-page messages and validates their background responses.

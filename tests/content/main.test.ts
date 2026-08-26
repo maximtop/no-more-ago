@@ -3,8 +3,9 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GET_DISPLAY_STATE_MESSAGE } from "../../src/background/message-contracts";
+import { DOCUMENT_RUNTIME_SLOT } from "../../src/content/runtime";
 
-const SLOT = Symbol.for("no-more-ago.document-runtime");
 
 /**
  * Overrides the JSDOM document readiness state for bootstrap tests.
@@ -69,9 +70,9 @@ describe("content entrypoint", () => {
                 symbol,
                 { readonly handle?: { teardown(): void } } | undefined
             >
-        )[SLOT];
+        )[DOCUMENT_RUNTIME_SLOT];
         previous?.handle?.teardown();
-        Reflect.deleteProperty(document, SLOT);
+        Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
         document.body.innerHTML =
             '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
     });
@@ -99,7 +100,7 @@ describe("content entrypoint", () => {
     it("hydrates display state before ownership and uses its zone", async () => {
         setReadyState("complete");
         const sendMessage = vi.fn((message: unknown) => {
-            expect(message).toEqual({ type: "no-more-ago:get-display-state" });
+            expect(message).toEqual({ type: GET_DISPLAY_STATE_MESSAGE });
             return Promise.resolve(displayState(3, "utc"));
         });
         const chrome = installChromeMock(sendMessage);

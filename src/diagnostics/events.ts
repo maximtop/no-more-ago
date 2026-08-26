@@ -2,35 +2,28 @@
  * @file Sanitizes diagnostic events before they cross the content/background trust boundary.
  */
 
+import { GITHUB_HOSTNAME } from "../adapters/github-contract";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
 import { isCanonicalHostname } from "../settings/snapshot";
+import {
+    DIAGNOSTIC_BROWSER_FAMILIES,
+    DIAGNOSTIC_CATEGORIES,
+    DIAGNOSTIC_EVENT_INPUT_KEYS,
+    DIAGNOSTIC_MAX_COUNT,
+    DIAGNOSTIC_MAX_DURATION_MS,
+    DIAGNOSTIC_MAX_STACK_FRAMES,
+    DIAGNOSTIC_PAGE_CATEGORIES,
+    DIAGNOSTIC_REASONS,
+    type DiagnosticBrowserFamily,
+    type DiagnosticCategory,
+    type DiagnosticPageCategory,
+} from "./contracts";
 
-/**
- * Coarse categories are deliberately finite: arbitrary page paths never enter the journal.
- */
-export type DiagnosticCategory =
-    | "lifecycle"
-    | "adapter"
-    | "mutation"
-    | "timing"
-    | "settings"
-    | "skip"
-    | "error";
-
-/**
- * Allow-listed page groups that retain no repository name, issue number, or path.
- */
-export type DiagnosticPageCategory =
-    | "repository"
-    | "issue"
-    | "pull-request"
-    | "actions"
-    | "settings"
-    | "other";
-
-/**
- * Coarse browser buckets used instead of detailed user-agent data.
- */
-export type DiagnosticBrowserFamily = "chromium" | "firefox" | "other";
+export type {
+    DiagnosticBrowserFamily,
+    DiagnosticCategory,
+    DiagnosticPageCategory,
+} from "./contracts";
 
 /**
  * Trusted WebExtension sender facts merged into every persisted diagnostic event.
@@ -189,19 +182,11 @@ const PAGE_PATHS: readonly [RegExp, DiagnosticPageCategory][] = [
     [/^\/[^/]+\/[^/]+(?:\/|$)/u, "repository"],
     [/^\/settings(?:\/|$)/u, "settings"],
 ];
-const REASONS = new Set([
-    "adapter-matched",
-    "adapter-missing",
-    "candidate-skipped",
-    "invalid-timestamp",
-    "already-owned",
-    "unsupported",
-    "processing-failed",
-    "storage-failed",
-    "settings-updated",
-]);
-const VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u;
-const MAX_STACK_FRAMES = 16;
+const CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
+const PAGE_CATEGORY_SET = new Set<string>(DIAGNOSTIC_PAGE_CATEGORIES);
+const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
+const REASON_SET = new Set<string>(DIAGNOSTIC_REASONS);
+const INPUT_KEY_SET = new Set<string>(DIAGNOSTIC_EVENT_INPUT_KEYS);
 
 /**
  * Accepts a plain object before reading untrusted event fields.
@@ -233,7 +218,9 @@ function safeNumber(value: unknown, maximum: number): number | undefined {
  * @returns - Safe printable version, or undefined when invalid.
  */
 function safeVersion(value: unknown): string | undefined {
-    return typeof value === "string" && VERSION.test(value) ? value : undefined;
+    return typeof value === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(value)
+        ? value
+        : undefined;
 }
 
 /**
@@ -247,7 +234,7 @@ function scrubStack(value: unknown): readonly string[] | undefined {
         return undefined;
     }
     const frames: string[] = [];
-    for (const line of value.split("\n").slice(0, MAX_STACK_FRAMES)) {
+    for (const line of value.split("\n").slice(0, DIAGNOSTIC_MAX_STACK_FRAMES)) {
         // Keep only a stable frame marker and source coordinates; paths, URLs and
         // arbitrary exception messages are intentionally discarded.
         const match = /(?:at\s+)?(?:[^:\s()]+\s+)?(?::(\d+))(?::(\d+))?\s*\)?$/u.exec(line.trim());
@@ -302,7 +289,7 @@ export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticCon
     return {
         hostname: parsed.hostname,
         pageCategory:
-            parsed.hostname === "github.com" ? pageCategoryFromPath(parsed.pathname) : "other",
+            parsed.hostname === GITHUB_HOSTNAME ? pageCategoryFromPath(parsed.pathname) : "other",
         incognito: sender.tab?.incognito === true,
     };
 }
@@ -329,9 +316,7 @@ export function sanitizeDiagnosticEvent(
         !Object.hasOwn(context, "pageCategory") ||
         !Object.hasOwn(context, "incognito") ||
         !isCanonicalHostname(context.hostname) ||
-        !["repository", "issue", "pull-request", "actions", "settings", "other"].includes(
-            context.pageCategory,
-        ) ||
+        !PAGE_CATEGORY_SET.has(context.pageCategory) ||
         typeof context.incognito !== "boolean"
     ) {
         return null;
@@ -344,29 +329,21 @@ export function sanitizeDiagnosticEvent(
     ) {
         return null;
     }
-    const allowedKeys = [
-        "category",
-        "count",
-        "durationMs",
-        "reason",
-        "adapterVersion",
-        "extensionVersion",
-        "browserFamily",
-        "stack",
-    ];
-    if (Object.keys(input).some((key) => !allowedKeys.includes(key))) {
+    if (Object.keys(input).some((key) => !INPUT_KEY_SET.has(key))) {
         return null;
     }
     // A hostile prototype must not be able to smuggle a value into the durable
     // event. Optional fields are either own properties or are rejected.
-    if (allowedKeys.some((key) => key in input && !Object.hasOwn(input, key))) {
+    if (
+        DIAGNOSTIC_EVENT_INPUT_KEYS.some(
+            (key) => key in input && !Object.hasOwn(input, key),
+        )
+    ) {
         return null;
     }
     if (
         !Object.hasOwn(input, "category") ||
-        !["lifecycle", "adapter", "mutation", "timing", "settings", "skip", "error"].includes(
-            String(input.category),
-        )
+        !CATEGORY_SET.has(String(input.category))
     ) {
         return null;
     }
@@ -380,17 +357,17 @@ export function sanitizeDiagnosticEvent(
         pageCategory: context.pageCategory,
         incognito: context.incognito,
     };
-    const count = safeNumber(input.count, 1_000_000);
-    const durationMs = safeNumber(input.durationMs, 86_400_000);
+    const count = safeNumber(input.count, DIAGNOSTIC_MAX_COUNT);
+    const durationMs = safeNumber(input.durationMs, DIAGNOSTIC_MAX_DURATION_MS);
     const reason =
-        typeof input.reason === "string" && REASONS.has(input.reason) ? input.reason : undefined;
+        typeof input.reason === "string" && REASON_SET.has(input.reason)
+            ? input.reason
+            : undefined;
     const adapterVersion = safeVersion(input.adapterVersion);
     const extensionVersion = safeVersion(input.extensionVersion);
     const browserFamily =
-        input.browserFamily === "chromium" ||
-        input.browserFamily === "firefox" ||
-        input.browserFamily === "other"
-            ? input.browserFamily
+        typeof input.browserFamily === "string" && BROWSER_FAMILY_SET.has(input.browserFamily)
+            ? (input.browserFamily as DiagnosticBrowserFamily)
             : undefined;
     const stack = scrubStack(input.stack);
     if (count !== undefined) {

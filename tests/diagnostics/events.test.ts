@@ -8,6 +8,7 @@ import {
     deriveDiagnosticContext,
     sanitizeDiagnosticEvent,
 } from "../../src/diagnostics/events";
+import { DIAGNOSTIC_BROWSER_FAMILIES } from "../../src/diagnostics/contracts";
 import {
     DIAGNOSTIC_EVENT_MESSAGE,
     DEBUG_POLICY_UPDATED_MESSAGE,
@@ -75,7 +76,7 @@ describe("diagnostic event privacy", () => {
         );
     });
 
-    it.each(["chromium", "firefox", "other"] as const)(
+    it.each(DIAGNOSTIC_BROWSER_FAMILIES)(
         "retains only an allowed browser family %s",
         (browserFamily) => {
             const event = createDiagnosticEvent(

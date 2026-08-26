@@ -3,6 +3,7 @@
  */
 
 import { installContentRuntime } from "./runtime";
+import { GET_DISPLAY_STATE_MESSAGE } from "../background/message-contracts";
 import { DIAGNOSTIC_EVENT_MESSAGE } from "../runtime/messages";
 
 installContentRuntime({
@@ -13,7 +14,7 @@ installContentRuntime({
     ...(typeof chrome.runtime.sendMessage === "function"
         ? {
             loadDisplayState: () =>
-                chrome.runtime.sendMessage({ type: "no-more-ago:get-display-state" }),
+                chrome.runtime.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE }),
             reportDiagnostic: (event: Record<string, unknown>) =>
                 chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
         }

@@ -4,14 +4,22 @@
 
 import type { RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
 import type { RuntimeAdapterDefinition } from "./adapter-activation";
+import {
+    GITHUB_ADAPTER_ID,
+    GITHUB_HOSTNAME,
+    GITHUB_MATCH_PATTERNS,
+    GITHUB_REGISTRATION_ID,
+    matchesGitHubUrl,
+} from "../adapters/github-contract";
+import { CONTENT_SCRIPT_FILE } from "../extension-files";
 
 /**
  * Persistent document-start registration for top-level GitHub pages.
  */
 export const GITHUB_REGISTRATION: RegisteredContentScriptSpec = {
-    id: "no-more-ago-github",
-    matches: ["http://github.com/*", "https://github.com/*"],
-    js: ["content.js"],
+    id: GITHUB_REGISTRATION_ID,
+    matches: [...GITHUB_MATCH_PATTERNS],
+    js: [CONTENT_SCRIPT_FILE],
     runAt: "document_start",
     allFrames: false,
     persistAcrossSessions: true,
@@ -49,9 +57,8 @@ export async function ensureGitHubRuntime(runtime: ScriptingRuntime): Promise<vo
  * GitHub adapter activation definition and its matching content-script registration.
  */
 export const githubRuntimeDefinition: RuntimeAdapterDefinition = {
-    id: "github",
-    hostname: "github.com",
+    id: GITHUB_ADAPTER_ID,
+    hostname: GITHUB_HOSTNAME,
     registration: GITHUB_REGISTRATION,
-    matches: (url) =>
-        (url.protocol === "http:" || url.protocol === "https:") && url.hostname === "github.com",
+    matches: matchesGitHubUrl,
 };

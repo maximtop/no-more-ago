@@ -11,7 +11,11 @@ import {
     AdapterActivationCoordinator,
     type RuntimeAdapterDefinition,
 } from "../../src/runtime/adapter-activation";
-import { DOCUMENT_STATUS_MESSAGE } from "../../src/runtime/messages";
+import {
+    DOCUMENT_STATUS_MESSAGE,
+    TEARDOWN_DOCUMENT_MESSAGE,
+    type DocumentPhase,
+} from "../../src/runtime/messages";
 
 const github: RuntimeAdapterDefinition = {
     id: "synthetic",
@@ -48,7 +52,7 @@ const sibling: RuntimeAdapterDefinition = {
  */
 function fakes() {
     const registered = new Map<string, typeof github.registration>();
-    const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();
+    const phases = new Map<number, DocumentPhase>();
     const scripting = {
         getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) =>
             ids.flatMap((id) => (registered.has(id) ? [{ ...registered.get(id)! }] : [])),
@@ -94,7 +98,7 @@ function fakes() {
  */
 function multiFakes() {
     const registered = new Map<string, typeof github.registration>();
-    const phases = new Map<number, "waiting" | "active" | "stopped" | "failed">();
+    const phases = new Map<number, DocumentPhase>();
     const scripting = {
         getRegisteredContentScripts: vi.fn(async ({ ids }: { ids: string[] }) =>
             ids.flatMap((id) => (registered.has(id) ? [{ ...registered.get(id)! }] : [])),
@@ -173,7 +177,7 @@ describe("AdapterActivationCoordinator", () => {
         });
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
     });
@@ -219,7 +223,7 @@ describe("AdapterActivationCoordinator", () => {
         );
         expect(fake.tabs.sendMessage).not.toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
     });
@@ -239,7 +243,7 @@ describe("AdapterActivationCoordinator", () => {
         });
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         expect(fake.tabs.sendMessage).not.toHaveBeenCalledWith(
@@ -303,12 +307,12 @@ describe("AdapterActivationCoordinator", () => {
         expect(disabled.failures).toEqual([]);
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             4,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         const recovered = await coordinator.reconcile({
@@ -390,7 +394,7 @@ describe("AdapterActivationCoordinator", () => {
         });
         expect(statusFake.tabs.sendMessage).toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
 
@@ -471,12 +475,12 @@ describe("AdapterActivationCoordinator", () => {
         expect(fake.tabs.query).not.toHaveBeenCalledWith({ url: sibling.registration.matches });
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             3,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         expect(fake.tabs.sendMessage).not.toHaveBeenCalledWith(
             4,
-            { type: "no-more-ago:teardown" },
+            { type: TEARDOWN_DOCUMENT_MESSAGE },
             { frameId: 0 },
         );
         expect(fake.scripting.executeScript).not.toHaveBeenCalled();

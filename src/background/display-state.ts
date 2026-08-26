@@ -3,7 +3,7 @@
  */
 
 import type { ApplicationStateView } from "./application-state";
-import type { DisplayState } from "./view-state";
+import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "./view-state";
 
 /**
  * Checks whether the runtime supports an IANA time-zone identifier.
@@ -46,6 +46,6 @@ export function deriveDisplayState(state: ApplicationStateView): DisplayState {
         revision: snapshot.revision,
         display,
         debugEnabled: snapshot.debugEnabled,
-        ...(unavailable ? { error: "unavailable-time-zone" as const } : {}),
+        ...(unavailable ? { error: UNAVAILABLE_TIME_ZONE_ERROR } : {}),
     };
 }

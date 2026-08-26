@@ -3,12 +3,28 @@
  */
 
 import { strToU8, zipSync } from "fflate";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
 import {
     DIAGNOSTICS_MAX_BYTES,
     hasOnlyOwnDiagnosticProperties,
     isDiagnosticJournalEntries,
 } from "./journal";
 import type { DiagnosticEvent } from "./events";
+import {
+    DIAGNOSTIC_BROWSER_FAMILIES,
+    DIAGNOSTIC_ENVIRONMENT_KEYS,
+    type DiagnosticBrowserFamily,
+} from "./contracts";
+
+/**
+ * JSON member stored inside a downloaded diagnostic archive.
+ */
+export const DIAGNOSTICS_ARCHIVE_MEMBER = "diagnostics.json" as const;
+
+/**
+ * Filename assigned to a downloaded diagnostic archive.
+ */
+export const DIAGNOSTICS_ARCHIVE_FILE = "no-more-ago-diagnostics.zip" as const;
 
 /**
  * Stable failure reasons surfaced by archive creation without exposing implementation exceptions.
@@ -57,7 +73,7 @@ export interface DiagnosticArchiveSnapshot {
         /**
          * Coarse browser family reported without a user-agent string.
          */
-        readonly browserFamily: "chromium" | "firefox" | "other";
+        readonly browserFamily: DiagnosticBrowserFamily;
 
         /**
          * Extension version captured when the event is created.
@@ -121,7 +137,8 @@ export interface DownloadRuntime {
     readonly scheduleRevoke: (callback: () => void) => void;
 }
 
-const ENVIRONMENT_KEYS = new Set(["browserFamily", "extensionVersion"]);
+const ENVIRONMENT_KEY_SET = new Set<string>(DIAGNOSTIC_ENVIRONMENT_KEYS);
+const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
 /**
  * Accepts a plain object for defensive archive payload parsing.
@@ -149,18 +166,18 @@ export function isDiagnosticArchiveSnapshot(value: unknown): value is Diagnostic
         !Array.isArray(value.entries) ||
         !isRecord(value.environment) ||
         !hasOnlyOwnDiagnosticProperties(value.environment) ||
-        Object.keys(value.environment).some((key) => !ENVIRONMENT_KEYS.has(key)) ||
+        Object.keys(value.environment).some((key) => !ENVIRONMENT_KEY_SET.has(key)) ||
         !Object.hasOwn(value.environment, "browserFamily") ||
         ("extensionVersion" in value.environment &&
             !Object.hasOwn(value.environment, "extensionVersion")) ||
-        !["chromium", "firefox", "other"].includes(String(value.environment.browserFamily))
+        !BROWSER_FAMILY_SET.has(String(value.environment.browserFamily))
     ) {
         return false;
     }
     if (
         Object.hasOwn(value.environment, "extensionVersion") &&
         (typeof value.environment.extensionVersion !== "string" ||
-            !/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u.test(value.environment.extensionVersion))
+            !SAFE_EXTENSION_VERSION_PATTERN.test(value.environment.extensionVersion))
     ) {
         return false;
     }
@@ -207,7 +224,7 @@ export function createDiagnosticsZip(snapshot: unknown, encoder: ZipEncoder = zi
         const jsonBytes = strToU8(json);
         // Copy into this realm so browser extension bundlers and isolated test
         // contexts agree that the value is a byte array rather than a directory.
-        return encoder({ "diagnostics.json": new Uint8Array(jsonBytes) });
+        return encoder({ [DIAGNOSTICS_ARCHIVE_MEMBER]: new Uint8Array(jsonBytes) });
     } catch (cause) {
         if (cause instanceof DiagnosticArchiveError) {
             throw cause;
@@ -279,7 +296,7 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRunt
         );
         anchor = browser.createAnchor();
         anchor.href = objectUrl;
-        anchor.download = "no-more-ago-diagnostics.zip";
+        anchor.download = DIAGNOSTICS_ARCHIVE_FILE;
         anchor.click();
         browser.scheduleRevoke(revoke);
         anchor.remove?.();

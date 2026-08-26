@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
     DocumentTransformationController,
 } from "../../src/core/document-transformation-controller";
-import { installContentRuntime } from "../../src/content/runtime";
+import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../src/content/runtime";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
@@ -18,8 +18,6 @@ import {
     isDocumentStatusResponse,
 } from "../../src/runtime/messages";
 import { createSyntheticRegistry } from "../fixtures/synthetic/adapter";
-
-const SLOT = Symbol.for("no-more-ago.document-runtime");
 
 /**
  * Overrides the JSDOM document readiness state for runtime tests.
@@ -115,9 +113,9 @@ describe("installContentRuntime", () => {
                 symbol,
                 { readonly handle?: { teardown(): void } } | undefined
             >
-        )[SLOT];
+        )[DOCUMENT_RUNTIME_SLOT];
         previous?.handle?.teardown();
-        Reflect.deleteProperty(document, SLOT);
+        Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
         document.body.innerHTML =
             '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         setReadyState("loading");
@@ -612,7 +610,7 @@ describe("installContentRuntime", () => {
                 debugEnabled: false,
             }),
         ]) {
-            Reflect.deleteProperty(document, SLOT);
+            Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
             document.body.innerHTML =
                 '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
             const messages = createMessages();

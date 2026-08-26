@@ -5,7 +5,15 @@
 import { format, intlFormat } from "date-fns";
 import { tz } from "@date-fns/tz";
 import { resolveDateLocale } from "./date-locale";
-import type { DisplaySettings } from "../settings/snapshot";
+import {
+    INVALID_DATE_FORMAT_ERROR,
+    UNAVAILABLE_TIME_ZONE_ERROR,
+    type DatePresentationError,
+} from "./presentation-errors";
+import {
+    DEFAULT_DISPLAY_SETTINGS,
+    type DisplaySettings,
+} from "../settings/snapshot";
 
 /**
  * Date text together with the time-zone metadata needed to explain a fallback to callers.
@@ -19,18 +27,13 @@ export interface DatePresentationResult {
     /**
      * Reason a requested time zone could not be applied to the formatted result.
      */
-    readonly error?: "unavailable-time-zone" | "invalid-format";
+    readonly error?: DatePresentationError;
 }
 
 /**
  * Capability check for named IANA zones, injectable for deterministic tests.
  */
 export type TimeZoneAvailability = (identifier: string) => boolean;
-
-const SYSTEM_DISPLAY: DisplaySettings = Object.freeze({
-    formatMode: "system",
-    timeZone: Object.freeze({ mode: "system" }),
-});
 
 /**
  * Formats an instant with the browser's locale and system time zone.
@@ -86,7 +89,7 @@ export function formatDefaultDate(instant: Date, locales: readonly string[]): st
 export function formatDateWithPresentation(
     instant: Date,
     locales: readonly string[],
-    display: DisplaySettings = SYSTEM_DISPLAY,
+    display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
     available: TimeZoneAvailability = isTimeZoneAvailable,
 ): DatePresentationResult {
     if (display.formatMode === "system") {
@@ -95,7 +98,7 @@ export function formatDateWithPresentation(
             return { text: systemFormat(instant, locales) };
         }
         if (zone.mode === "iana" && !available(zone.identifier)) {
-            return { text: systemFormat(instant, locales), error: "unavailable-time-zone" };
+            return { text: systemFormat(instant, locales), error: UNAVAILABLE_TIME_ZONE_ERROR };
         }
         try {
             const options = {
@@ -111,7 +114,10 @@ export function formatDateWithPresentation(
             };
         } catch (error) {
             if (zone.mode === "iana" && error instanceof RangeError) {
-                return { text: systemFormat(instant, locales), error: "unavailable-time-zone" };
+                return {
+                    text: systemFormat(instant, locales),
+                    error: UNAVAILABLE_TIME_ZONE_ERROR,
+                };
             }
             throw error;
         }
@@ -123,10 +129,10 @@ export function formatDateWithPresentation(
                 text: format(instant, display.pattern, {
                     locale: resolveDateLocale(locales).locale,
                 }),
-                error: "unavailable-time-zone",
+                error: UNAVAILABLE_TIME_ZONE_ERROR,
             };
         } catch {
-            return { text: "", error: "invalid-format" };
+            return { text: "", error: INVALID_DATE_FORMAT_ERROR };
         }
     }
     try {
@@ -136,8 +142,8 @@ export function formatDateWithPresentation(
                 ? { locale }
                 : { locale, in: tz(zone.mode === "utc" ? "UTC" : zone.identifier) };
         const text = format(instant, display.pattern, options);
-        return text.trim().length > 0 ? { text } : { text: "", error: "invalid-format" };
+        return text.trim().length > 0 ? { text } : { text: "", error: INVALID_DATE_FORMAT_ERROR };
     } catch {
-        return { text: "", error: "invalid-format" };
+        return { text: "", error: INVALID_DATE_FORMAT_ERROR };
     }
 }

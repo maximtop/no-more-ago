@@ -27,6 +27,7 @@ import { githubRuntimeDefinition } from "../runtime/register-github";
 import { isDiagnosticEventMessage } from "../runtime/messages";
 import type { ScriptingRuntime } from "../runtime/scripting";
 import type { TabsRuntime } from "../runtime/tabs";
+import { OPTIONS_PAGE_FILE } from "../extension-files";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -158,7 +159,7 @@ function isTrustedOptionsSender(sender: unknown): boolean {
     let optionsUrl: unknown;
     let extensionId: unknown;
     try {
-        optionsUrl = chrome.runtime?.getURL?.("options.html");
+        optionsUrl = chrome.runtime?.getURL?.(OPTIONS_PAGE_FILE);
         extensionId = chrome.runtime?.id;
     } catch {
         return false;

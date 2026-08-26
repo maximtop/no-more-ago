@@ -3,33 +3,32 @@
  */
 
 import type { DisplaySettings } from "../settings/snapshot";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
+import type {
+    DisplaySettingsError,
+    PopupRuntimeFailure,
+    ReadyPopupStatus,
+    RefreshFailureReason,
+    SettingsPersistenceError,
+    SettingsStateFailure,
+    SiteSettingsError,
+    UnavailablePopupStatus,
+} from "./view-state-values";
 
 export type { DisplaySettings } from "../settings/snapshot";
-
-/**
- * Availability and activation status presented for the active tab.
- */
-export type PopupStatus =
-    | "active"
-    | "global-disabled"
-    | "site-disabled"
-    | "inaccessible"
-    | "runtime-failed"
-    | "no-rules"
-    | "settings-unavailable";
-
-/**
- * Failure that prevents the popup from reporting normal active-tab status.
- */
-export type PopupFailure =
-    | "current-tab-query"
-    | "registration"
-    | "matching-tabs-query"
-    | "current-tab-inject"
-    | "current-tab-teardown"
-    | "document-status"
-    | "settings-load"
-    | "fail-closed-cleanup";
+export { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
+export type {
+    DisplaySettingsError,
+    PopupFailure,
+    PopupRuntimeFailure,
+    PopupStatus,
+    ReadyPopupStatus,
+    RefreshFailureReason,
+    SettingsPersistenceError,
+    SettingsStateFailure,
+    SiteSettingsError,
+    UnavailablePopupStatus,
+} from "./view-state-values";
 
 /**
  * Popup view of settings and runtime state for the active tab.
@@ -42,8 +41,8 @@ export type PopupState =
         readonly hostname: string | null;
         readonly siteEnabled: boolean | null;
         readonly hasAdapter: boolean;
-        readonly status: Exclude<PopupStatus, "settings-unavailable">;
-        readonly failure?: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup">;
+        readonly status: ReadyPopupStatus;
+        readonly failure?: PopupRuntimeFailure;
     }
     | {
         readonly availability: "unavailable";
@@ -52,8 +51,8 @@ export type PopupState =
         readonly hostname: string | null;
         readonly siteEnabled: null;
         readonly hasAdapter: false;
-        readonly status: "settings-unavailable" | "runtime-failed";
-        readonly failure: "settings-load" | "fail-closed-cleanup";
+        readonly status: UnavailablePopupStatus;
+        readonly failure: SettingsStateFailure;
     };
 
 /**
@@ -63,7 +62,7 @@ export type SetGlobalEnabledResponse =
     | { readonly ok: true; readonly acceptedRevision: number; readonly state: PopupState }
     | {
         readonly ok: false;
-        readonly error: "save-failed" | "settings-unavailable";
+        readonly error: SettingsPersistenceError;
         readonly state: PopupState;
     };
 
@@ -102,7 +101,7 @@ export type SitesState =
         readonly revision: null;
         readonly globalEnabled: null;
         readonly sites: readonly [];
-        readonly failure: "settings-load" | "fail-closed-cleanup";
+        readonly failure: SettingsStateFailure;
     };
 
 /**
@@ -123,13 +122,13 @@ export type SetSiteEnabledResponse =
     }
     | {
         readonly ok: false;
-        readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable";
+        readonly error: SiteSettingsError;
         readonly surface: "popup";
         readonly state: PopupState;
     }
     | {
         readonly ok: false;
-        readonly error: "save-failed" | "invalid-hostname" | "settings-unavailable";
+        readonly error: SiteSettingsError;
         readonly surface: "sites";
         readonly state: SitesState;
     };
@@ -145,7 +144,7 @@ export type ResetAllSettingsResponse =
     }
     | {
         readonly ok: false;
-        readonly error: "save-failed" | "settings-unavailable";
+        readonly error: SettingsPersistenceError;
         readonly state: SitesState;
     };
 
@@ -158,13 +157,13 @@ export type DisplayState =
         readonly revision: number;
         readonly display: DisplaySettings;
         readonly debugEnabled: boolean;
-        readonly error?: "unavailable-time-zone";
+        readonly error?: typeof UNAVAILABLE_TIME_ZONE_ERROR;
     }
     | {
         readonly availability: "unavailable";
         readonly revision: null;
         readonly display: null;
-        readonly failure: "settings-load" | "fail-closed-cleanup";
+        readonly failure: SettingsStateFailure;
     };
 
 /**
@@ -176,7 +175,7 @@ export type DebugState =
         readonly availability: "unavailable";
         readonly revision: null;
         readonly enabled: null;
-        readonly failure: "settings-load" | "fail-closed-cleanup";
+        readonly failure: SettingsStateFailure;
     };
 
 /**
@@ -191,7 +190,7 @@ export type SetDebugEnabledResponse =
     }
     | {
         readonly ok: false;
-        readonly error: "save-failed" | "settings-unavailable";
+        readonly error: SettingsPersistenceError;
         readonly state: DebugState;
     };
 
@@ -212,7 +211,7 @@ export interface DebugRefreshFailure {
     /**
      * Whether tab discovery or the per-tab message failed.
      */
-    readonly reason: "matching-tabs-query" | "tab-update";
+    readonly reason: RefreshFailureReason;
 }
 
 /**
@@ -232,7 +231,7 @@ export interface DisplayRefreshFailure {
     /**
      * Whether tab discovery or the per-tab message failed.
      */
-    readonly reason: "matching-tabs-query" | "tab-update";
+    readonly reason: RefreshFailureReason;
 }
 
 /**
@@ -247,11 +246,6 @@ export type SetDisplaySettingsResponse =
     }
     | {
         readonly ok: false;
-        readonly error:
-              | "invalid-format"
-              | "invalid-time-zone"
-              | "invalid-display-settings"
-              | "save-failed"
-              | "settings-unavailable";
+        readonly error: DisplaySettingsError;
         readonly state: DisplayState;
     };

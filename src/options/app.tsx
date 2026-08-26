@@ -24,10 +24,12 @@ import type {
     SitesState,
 } from "../background/application";
 import {
+    CUSTOM_FORMAT_MAX_LENGTH,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../settings/custom-format";
 import { formatDateWithPresentation } from "../core/format-default-date";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
 import {
     DiagnosticArchiveError,
     createDiagnosticsZip,
@@ -170,7 +172,7 @@ function unavailableText(state: Extract<SitesState, { availability: "unavailable
 type DisplayNotice =
     | "invalid-time-zone"
     | "invalid-format"
-    | "unavailable-time-zone"
+    | typeof UNAVAILABLE_TIME_ZONE_ERROR
     | "save-failed"
     | "interrupted"
     | "partial-refresh"
@@ -272,7 +274,7 @@ function displayNoticeText(notice: DisplayNotice): string | undefined {
     if (notice === "invalid-format") {
         return "The date format is invalid. Correct the pattern and try again.";
     }
-    if (notice === "unavailable-time-zone") {
+    if (notice === UNAVAILABLE_TIME_ZONE_ERROR) {
         return "The saved time zone is unavailable in this browser. Choose System or another "
             + "supported zone, then save.";
     }
@@ -309,7 +311,8 @@ function customPatternError(pattern: string): string | undefined {
         case "empty":
             return "Enter a date format pattern.";
         case "too-long":
-            return "Use a date format pattern of 256 characters or fewer.";
+            return `Use a date format pattern of ${String(CUSTOM_FORMAT_MAX_LENGTH)} `
+                + "characters or fewer.";
         case "control-character":
             return "Remove control characters from the date format pattern.";
         case "unclosed-quote":
@@ -1111,14 +1114,14 @@ export function OptionsApp({
                                                 disabled={savingDisplay}
                                             />
                                         ) : null}
-                                        {displayState.error === "unavailable-time-zone" ? (
+                                        {displayState.error === UNAVAILABLE_TIME_ZONE_ERROR ? (
                                             <Alert role="alert" color="yellow">
-                                                {displayNoticeText("unavailable-time-zone")}
+                                                {displayNoticeText(UNAVAILABLE_TIME_ZONE_ERROR)}
                                             </Alert>
                                         ) : null}
                                         {displayNotice &&
                                     displayNotice !== "invalid-time-zone" &&
-                                    displayState.error !== "unavailable-time-zone" ? (
+                                    displayState.error !== UNAVAILABLE_TIME_ZONE_ERROR ? (
                                                 <Alert
                                                     role="alert"
                                                     color={

@@ -3,6 +3,10 @@
  */
 
 import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
+import {
+    DIAGNOSTIC_CATEGORIES,
+    DIAGNOSTIC_EVENT_INPUT_KEYS,
+} from "../diagnostics/contracts";
 
 /**
  * Requests that a document runtime stop and release its controller.
@@ -38,6 +42,15 @@ export const DEBUG_POLICY_UPDATED_MESSAGE = "no-more-ago:debug-policy-updated";
  * Carries a content-runtime diagnostic event to the background context.
  */
 export const DIAGNOSTIC_EVENT_MESSAGE = "no-more-ago:diagnostic-event";
+
+/**
+ * Lifecycle phases returned by a content document runtime.
+ */
+export const DOCUMENT_PHASES = ["waiting", "active", "stopped", "failed"] as const;
+
+const DIAGNOSTIC_CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
+const DIAGNOSTIC_EVENT_KEY_SET = new Set<string>(DIAGNOSTIC_EVENT_INPUT_KEYS);
+const DOCUMENT_PHASE_SET = new Set<string>(DOCUMENT_PHASES);
 
 /**
  * Command that stops a document runtime.
@@ -147,7 +160,7 @@ export interface DiagnosticEventMessage {
 /**
  * Lifecycle state returned by a document runtime.
  */
-export type DocumentPhase = "waiting" | "active" | "stopped" | "failed";
+export type DocumentPhase = (typeof DOCUMENT_PHASES)[number];
 
 /**
  * Reply to a document-status command.
@@ -206,7 +219,7 @@ export function isDocumentStatusResponse(value: unknown): value is DocumentStatu
     return (
         Object.keys(record).length === 2 &&
         record.type === DOCUMENT_STATUS_MESSAGE &&
-        ["waiting", "active", "stopped", "failed"].includes(String(record.phase))
+        DOCUMENT_PHASE_SET.has(String(record.phase))
     );
 }
 
@@ -344,27 +357,18 @@ export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEve
         return false;
     }
     const event = value.event;
-    const allowed = new Set([
-        "category",
-        "count",
-        "durationMs",
-        "reason",
-        "adapterVersion",
-        "extensionVersion",
-        "browserFamily",
-        "stack",
-    ]);
-    if (Object.keys(event).some((key) => !allowed.has(key))) {
+    if (Object.keys(event).some((key) => !DIAGNOSTIC_EVENT_KEY_SET.has(key))) {
         return false;
     }
-    if ([...allowed].some((key) => key in event && !Object.hasOwn(event, key))) {
+    if (
+        DIAGNOSTIC_EVENT_INPUT_KEYS.some(
+            (key) => key in event && !Object.hasOwn(event, key),
+        )
+    ) {
         return false;
     }
     return (
-        Object.keys(event).every((key) => allowed.has(key)) &&
-        Object.hasOwn(event, "category") &&
-        ["lifecycle", "adapter", "mutation", "timing", "settings", "skip", "error"].includes(
-            String(event.category),
-        )
+        Object.hasOwn(event, "category")
+        && DIAGNOSTIC_CATEGORY_SET.has(String(event.category))
     );
 }

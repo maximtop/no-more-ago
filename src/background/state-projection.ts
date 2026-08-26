@@ -8,7 +8,11 @@ import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs
 import { isSiteEnabled } from "../settings/snapshot";
 import type { ActivationManager } from "./activation-manager";
 import type { ApplicationStateView } from "./application-state";
-import type { PopupFailure, PopupState, PopupStatus, SitesState } from "./view-state";
+import type {
+    PopupRuntimeFailure,
+    ReadyPopupStatus,
+} from "./view-state-values";
+import type { PopupState, SitesState } from "./view-state";
 
 /**
  * Maps a reconcile failure for an adapter and tab to a popup failure.
@@ -22,7 +26,7 @@ function matchingTabFailure(
     failures: readonly ReconcileFailure[],
     adapterId: string,
     tabId: number,
-): Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined {
+): PopupRuntimeFailure | undefined {
     for (const failure of failures) {
         if (failure.scope === "registration" && failure.adapterId === adapterId) {
             return "registration";
@@ -179,9 +183,8 @@ export class StateProjection {
                 this.popupTabId,
             )
             : undefined;
-        let status: Exclude<PopupStatus, "settings-unavailable"> = cached.status;
-        let failure: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup"> | undefined =
-            cached.failure;
+        let status: ReadyPopupStatus = cached.status;
+        let failure: PopupRuntimeFailure | undefined = cached.failure;
         if (relevantFailure) {
             status = "runtime-failed";
             failure = relevantFailure;
@@ -415,8 +418,8 @@ export class StateProjection {
         siteEnabled: boolean,
         adapter: RuntimeAdapterDefinition | undefined,
         outcome: {
-            readonly status: Exclude<PopupStatus, "settings-unavailable">;
-            readonly failure?: Exclude<PopupFailure, "settings-load" | "fail-closed-cleanup">;
+            readonly status: ReadyPopupStatus;
+            readonly failure?: PopupRuntimeFailure;
         },
     ): PopupState {
         return {

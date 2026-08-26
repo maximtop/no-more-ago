@@ -24,6 +24,7 @@ import {
     type SiteReportReporter,
 } from "../reporting/site-report";
 import { createPopupClient, type PopupClient } from "./client";
+import { OPTIONS_PAGE_FILE } from "../extension-files";
 
 /**
  * Optional dependencies and initial state for the popup UI.
@@ -397,7 +398,7 @@ export function PopupApp({
                                 {reportNotice}
                             </Alert>
                         ) : null}
-                        <Anchor href="options.html">Settings</Anchor>
+                        <Anchor href={OPTIONS_PAGE_FILE}>Settings</Anchor>
                     </Stack>
                 </Paper>
             </main>

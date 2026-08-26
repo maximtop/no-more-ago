@@ -5,16 +5,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { sources, Compilation } from "@rspack/core";
-
-/**
- * Browser targets for which the extension manifest and bundles are emitted.
- */
-export const BROWSERS = ["chrome", "firefox", "edge"];
-
-/**
- * Build modes controlling source maps and release-oriented output.
- */
-export const MODES = ["dev", "release"];
+import {
+    EXTENSION_ICON_SIZES,
+    MANIFEST_FILE,
+    OPTIONS_PAGE_FILE,
+    POPUP_PAGE_FILE,
+} from "./src/extension-files.ts";
+import { isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
 
 /**
  * Loads a trusted build-time JSON file and returns its object representation.
@@ -38,11 +35,11 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     const commonPath = path.join(workspaceRoot, "src/manifest/common.json");
     const variantPath = path.join(workspaceRoot, `src/manifest/${browser}.json`);
     const packagePath = path.join(workspaceRoot, "package.json");
-    const iconPaths = [16, 32, 48, 128].map((size) =>
+    const iconPaths = EXTENSION_ICON_SIZES.map((size) =>
         path.join(workspaceRoot, `src/assets/icons/clock-${size}.png`),
     );
-    const popupHtmlPath = path.join(workspaceRoot, "src/popup/popup.html");
-    const optionsHtmlPath = path.join(workspaceRoot, "src/options/options.html");
+    const popupHtmlPath = path.join(workspaceRoot, "src/popup", POPUP_PAGE_FILE);
+    const optionsHtmlPath = path.join(workspaceRoot, "src/options", OPTIONS_PAGE_FILE);
     return {
         apply(compiler: any): void {
             compiler.hooks.thisCompilation.tap("NoMoreAgoMetadata", (compilation: any) => {
@@ -68,18 +65,18 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
                             version: readJson(packagePath).version,
                         };
                         compilation.emitAsset(
-                            "manifest.json",
+                            MANIFEST_FILE,
                             new sources.RawSource(`${JSON.stringify(manifest, null, 2)}\n`),
                         );
                         compilation.emitAsset(
-                            "popup.html",
+                            POPUP_PAGE_FILE,
                             new sources.RawSource(readFileSync(popupHtmlPath)),
                         );
                         compilation.emitAsset(
-                            "options.html",
+                            OPTIONS_PAGE_FILE,
                             new sources.RawSource(readFileSync(optionsHtmlPath)),
                         );
-                        for (const size of [16, 32, 48, 128]) {
+                        for (const size of EXTENSION_ICON_SIZES) {
                             const file = path.join(
                                 workspaceRoot,
                                 `src/assets/icons/clock-${size}.png`,
@@ -117,7 +114,7 @@ export function createRspackConfig({
     mode: string;
     outputPath: string;
 }): Record<string, any> {
-    if (!BROWSERS.includes(browser) || !MODES.includes(mode)) {
+    if (!isBrowser(browser) || !isBuildMode(mode)) {
         throw new Error("Invalid browser or mode");
     }
     return {

@@ -5,6 +5,8 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
+    DIAGNOSTICS_ARCHIVE_FILE,
+    DIAGNOSTICS_ARCHIVE_MEMBER,
     DiagnosticArchiveError,
     createDiagnosticsZip,
     downloadDiagnosticsZip,
@@ -48,10 +50,10 @@ describe("diagnostic archive", () => {
     it("creates one JSON entry containing the complete safe snapshot", () => {
         const archive = createDiagnosticsZip(snapshot);
         const files = unzipSync(archive);
-        expect(Object.keys(files)).toEqual(["diagnostics.json"]);
-        const json = files["diagnostics.json"];
+        expect(Object.keys(files)).toEqual([DIAGNOSTICS_ARCHIVE_MEMBER]);
+        const json = files[DIAGNOSTICS_ARCHIVE_MEMBER];
         if (!json) {
-            throw new Error("diagnostics.json is missing");
+            throw new Error(`${DIAGNOSTICS_ARCHIVE_MEMBER} is missing`);
         }
         expect(JSON.parse(strFromU8(json))).toEqual(snapshot);
     });
@@ -71,9 +73,9 @@ describe("diagnostic archive", () => {
         const journalBytes = new TextEncoder().encode(JSON.stringify({ entries })).byteLength;
         const archive = createDiagnosticsZip({ entries, environment });
         const files = unzipSync(archive);
-        const json = files["diagnostics.json"];
+        const json = files[DIAGNOSTICS_ARCHIVE_MEMBER];
         if (!json) {
-            throw new Error("diagnostics.json is missing");
+            throw new Error(`${DIAGNOSTICS_ARCHIVE_MEMBER} is missing`);
         }
         const exportedBytes = new TextEncoder().encode(strFromU8(json)).byteLength;
         const exported = JSON.parse(strFromU8(json)) as {
@@ -231,7 +233,7 @@ describe("diagnostic archive", () => {
                     clicked += 1;
                     clickedUrl = this.href;
                     expect(revoked).toEqual([]);
-                    expect(this.download).toBe("no-more-ago-diagnostics.zip");
+                    expect(this.download).toBe(DIAGNOSTICS_ARCHIVE_FILE);
                 },
                 remove() {
                     /* local anchor cleanup */

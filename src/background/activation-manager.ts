@@ -4,7 +4,9 @@
 
 import type {
     ActivationMode,
+    ActivationPolicy,
     ActivationReconcileResult,
+    RegistrationOutcome,
     RuntimeAdapterDefinition,
 } from "../runtime/adapter-activation";
 import type { ActivationCoordinator } from "./application-contracts";
@@ -63,7 +65,7 @@ export class ActivationManager {
      */
     public async reconcile(
         mode: ActivationMode,
-        policy: "enabled" | "disabled" | "unknown",
+        policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>>,
         affectedHostnames?: readonly string[],
@@ -131,7 +133,7 @@ export class ActivationManager {
      */
     private async run(
         mode: ActivationMode,
-        policy: "enabled" | "disabled" | "unknown",
+        policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>>,
         affectedHostnames?: readonly string[],
@@ -190,10 +192,7 @@ export class ActivationManager {
             ...previous.failures.filter((failure) => !affectedIds.has(failure.adapterId)),
             ...result.failures,
         ];
-        const registration: Record<
-            string,
-            "unchanged" | "registered" | "updated" | "unregistered" | "failed"
-        > = {};
+        const registration: Record<string, RegistrationOutcome> = {};
         for (const [id, value] of Object.entries(previous.registration)) {
             if (!affectedIds.has(id)) {
                 registration[id] = value;

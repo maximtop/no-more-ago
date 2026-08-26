@@ -25,13 +25,46 @@ import vm from "node:vm";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { unzipSync, zipSync } from "fflate";
-import { DIAGNOSTICS_MAX_BYTES } from "../../src/diagnostics/journal";
+import { BROWSERS } from "../../scripts/build/contracts.ts";
+import {
+    CLEAR_DIAGNOSTICS_MESSAGE,
+    GET_DEBUG_STATE_MESSAGE,
+    GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
+    GET_DISPLAY_STATE_MESSAGE,
+    GET_POPUP_STATE_MESSAGE,
+    GET_SITES_STATE_MESSAGE,
+    RESET_ALL_SETTINGS_MESSAGE,
+    SET_DEBUG_ENABLED_MESSAGE,
+    SET_DISPLAY_SETTINGS_MESSAGE,
+    SET_GLOBAL_ENABLED_MESSAGE,
+    SET_SITE_ENABLED_MESSAGE,
+} from "../../src/background/message-contracts";
+import {
+    DIAGNOSTICS_ARCHIVE_FILE,
+    DIAGNOSTICS_ARCHIVE_MEMBER,
+} from "../../src/diagnostics/archive";
+import {
+    DIAGNOSTICS_MAX_BYTES,
+    DIAGNOSTICS_STORAGE_KEY,
+} from "../../src/diagnostics/journal";
+import {
+    DEBUG_POLICY_UPDATED_MESSAGE,
+    DIAGNOSTIC_EVENT_MESSAGE,
+    DOCUMENT_STATUS_MESSAGE,
+    PRESENTATION_UPDATED_MESSAGE,
+    TEARDOWN_DOCUMENT_MESSAGE,
+    UPDATE_DEBUG_POLICY_MESSAGE,
+    UPDATE_PRESENTATION_MESSAGE,
+} from "../../src/runtime/messages";
+import {
+    SETTINGS_PREVIOUS_STORAGE_KEY,
+    SETTINGS_STORAGE_KEY,
+} from "../../src/settings/snapshot";
+import { SETTINGS_PERSISTENCE_ERRORS } from "../../src/background/view-state-values";
 import { artifactBytes, hashPath, makeWorkspace, removeWorkspace } from "./build-workspace";
 import { createArtifactServices } from "../../scripts/build/artifacts.ts";
 
 const execFileAsync = promisify(execFile);
-const browsers = ["chrome", "firefox", "edge"] as const;
-
 const settingsV5 = (
     revision: number,
     globalEnabled: boolean,
@@ -60,7 +93,7 @@ function manifestFor(workspace: string, mode: string, browser: string): Record<s
 }
 
 describe("fresh browser artifacts", () => {
-    it.each(browsers)("builds a clean isolated %s development artifact", async (browser) => {
+    it.each(BROWSERS)("builds a clean isolated %s development artifact", async (browser) => {
         const workspace = makeWorkspace();
         try {
             await execFileAsync(
@@ -96,7 +129,7 @@ describe("fresh browser artifacts", () => {
                 cwd: workspace,
                 timeout: 60_000,
             });
-            for (const browser of browsers) {
+            for (const browser of BROWSERS) {
                 expect(manifestFor(workspace, "release", browser).version).toBe("0.1.0");
                 expect(artifactBytes(`${workspace}/dist/release/${browser}`)).not.toContain(
                     "background.js.map",
@@ -126,7 +159,7 @@ describe("fresh browser artifacts", () => {
                 timeout: 60_000,
             });
             for (const mode of ["dev", "release"]) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const calls: string[] = [];
                     const chrome = {
                         scripting: {
@@ -184,7 +217,7 @@ describe("fresh browser artifacts", () => {
                 timeout: 60_000,
             });
             for (const mode of ["dev", "release"] as const) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const expected = {
                         id: "no-more-ago-github",
                         matches: ["http://github.com/*", "https://github.com/*"],
@@ -221,7 +254,9 @@ describe("fresh browser artifacts", () => {
                                         deferredLoadCalls += 1;
                                         return load;
                                     }
-                                    return Promise.resolve({ settings: settingsV5(2, true) });
+                                    return Promise.resolve({
+                                        [SETTINGS_STORAGE_KEY]: settingsV5(2, true),
+                                    });
                                 },
                                 set: async () => undefined,
                                 remove: async () => undefined,
@@ -249,11 +284,11 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:teardown"
+                                    message.type === TEARDOWN_DOCUMENT_MESSAGE
                                 ) {
                                     calls.push("teardown");
                                 }
-                                return { type: "no-more-ago:status", phase: "active" };
+                                return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
                             },
                         },
                         runtime: { onMessage, onStartup, onInstalled },
@@ -274,7 +309,7 @@ describe("fresh browser artifacts", () => {
                     const responseCounts = { get: 0, set: 0 };
                     const earlyGet = new Promise<unknown>((resolve) => {
                         onMessage.fire(
-                            { type: "no-more-ago:get-popup-state" },
+                            { type: GET_POPUP_STATE_MESSAGE },
                             {},
                             (response: unknown) => {
                                 responseCounts.get += 1;
@@ -284,7 +319,7 @@ describe("fresh browser artifacts", () => {
                     });
                     const earlySet = new Promise<unknown>((resolve) => {
                         onMessage.fire(
-                            { type: "no-more-ago:set-global-enabled", enabled: false },
+                            { type: SET_GLOBAL_ENABLED_MESSAGE, enabled: false },
                             {},
                             (response: unknown) => {
                                 responseCounts.set += 1;
@@ -294,7 +329,7 @@ describe("fresh browser artifacts", () => {
                     });
                     onStartup.fire();
                     onInstalled.fire();
-                    releaseLoad?.({ settings: settingsV5(2, true) });
+                    releaseLoad?.({ [SETTINGS_STORAGE_KEY]: settingsV5(2, true) });
                     const [getResponse, setResponse] = await Promise.all([earlyGet, earlySet]);
                     expect(deferredLoadCalls).toBe(1);
                     expect(loadCalls).toBe(2);
@@ -332,7 +367,9 @@ describe("fresh browser artifacts", () => {
                     const coldChrome = {
                         storage: {
                             local: {
-                                get: async () => ({ settings: settingsV5(2, true) }),
+                                get: async () => ({
+                                    [SETTINGS_STORAGE_KEY]: settingsV5(2, true),
+                                }),
                                 set: async () => undefined,
                                 remove: async () => undefined,
                             },
@@ -355,7 +392,7 @@ describe("fresh browser artifacts", () => {
                         tabs: {
                             query: async () => [{ id: 7, url: "https://github.com/example" }],
                             sendMessage: async () => ({
-                                type: "no-more-ago:status",
+                                type: DOCUMENT_STATUS_MESSAGE,
                                 phase: "active",
                             }),
                         },
@@ -377,7 +414,9 @@ describe("fresh browser artifacts", () => {
                     const disabledChrome = {
                         storage: {
                             local: {
-                                get: async () => ({ settings: settingsV5(3, false) }),
+                                get: async () => ({
+                                    [SETTINGS_STORAGE_KEY]: settingsV5(3, false),
+                                }),
                                 set: async () => undefined,
                                 remove: async () => undefined,
                             },
@@ -399,7 +438,7 @@ describe("fresh browser artifacts", () => {
                                 if (message && typeof message === "object" && "type" in message) {
                                     disabledCalls.push(String(message.type));
                                 }
-                                return { type: "no-more-ago:status", phase: "active" };
+                                return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
                             },
                         },
                         runtime: {
@@ -415,7 +454,7 @@ describe("fresh browser artifacts", () => {
                     );
                     await new Promise<void>((resolve) => setTimeout(resolve, 100));
                     expect(disabledCalls).toContain("unregister");
-                    expect(disabledCalls).toContain("no-more-ago:teardown");
+                    expect(disabledCalls).toContain(TEARDOWN_DOCUMENT_MESSAGE);
 
                     let pairCurrent: unknown = { schemaVersion: 3, revision: 4 };
                     let pairPrevious: unknown = settingsV5(8, false);
@@ -423,16 +462,16 @@ describe("fresh browser artifacts", () => {
                     let rejectReset = false;
                     const pairStorage = {
                         get: async () => ({
-                            settings: structuredClone(pairCurrent),
-                            "settings.previous": structuredClone(pairPrevious),
+                            [SETTINGS_STORAGE_KEY]: structuredClone(pairCurrent),
+                            [SETTINGS_PREVIOUS_STORAGE_KEY]: structuredClone(pairPrevious),
                         }),
                         set: async (items: Record<string, unknown>) => {
                             if (rejectReset) {
                                 throw new Error("disk full");
                             }
                             pairWrites += 1;
-                            pairCurrent = structuredClone(items.settings);
-                            pairPrevious = structuredClone(items["settings.previous"]);
+                            pairCurrent = structuredClone(items[SETTINGS_STORAGE_KEY]);
+                            pairPrevious = structuredClone(items[SETTINGS_PREVIOUS_STORAGE_KEY]);
                         },
                     };
                     const startPairRuntime = () => {
@@ -463,7 +502,7 @@ describe("fresh browser artifacts", () => {
                                             ? String(message.type)
                                             : "unknown",
                                     );
-                                    return { type: "no-more-ago:status", phase: "active" };
+                                    return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
                                 },
                             },
                             runtime: {
@@ -527,7 +566,7 @@ describe("fresh browser artifacts", () => {
                                             message &&
                                             typeof message === "object" &&
                                             "type" in message &&
-                                            message.type === "no-more-ago:reset-all-settings"
+                                            message.type === RESET_ALL_SETTINGS_MESSAGE
                                         ) {
                                             resetResponses.push(response);
                                         }
@@ -571,7 +610,7 @@ describe("fresh browser artifacts", () => {
                     await new Promise<void>((resolve) => setTimeout(resolve, 250));
                     expect(pairWrites).toBe(1);
                     expect(dualRuntime.calls).toContain("unregister");
-                    expect(dualRuntime.calls).toContain("no-more-ago:teardown");
+                    expect(dualRuntime.calls).toContain(TEARDOWN_DOCUMENT_MESSAGE);
                     const recoveryOptions = await mountPairOptions(dualRuntime);
                     recoveryOptions.action.click();
                     for (
@@ -619,7 +658,7 @@ describe("fresh browser artifacts", () => {
                     const rejectedResult = await new Promise<unknown>((resolve) => {
                         let count = 0;
                         rejectedRuntime.onMessage.fire(
-                            { type: "no-more-ago:reset-all-settings" },
+                            { type: RESET_ALL_SETTINGS_MESSAGE },
                             {},
                             (response: unknown) => {
                                 count += 1;
@@ -631,7 +670,7 @@ describe("fresh browser artifacts", () => {
                         count: 1,
                         response: { ok: false, state: { availability: "unavailable" } },
                     });
-                    expect(["save-failed", "settings-unavailable"]).toContain(
+                    expect(SETTINGS_PERSISTENCE_ERRORS).toContain(
                         (rejectedResult as { response: { error: string } }).response.error,
                     );
                     expect(pairWrites).toBe(2);
@@ -789,7 +828,7 @@ describe("fresh browser artifacts", () => {
                 timeout: 60_000,
             });
             for (const mode of ["dev", "release"] as const) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const expected = {
                         id: "no-more-ago-github",
                         matches: ["http://github.com/*", "https://github.com/*"],
@@ -821,20 +860,25 @@ describe("fresh browser artifacts", () => {
                         storage: {
                             local: {
                                 get: async () => ({
-                                    settings: structuredClone(stored),
-                                    "settings.previous": structuredClone(previousStored),
+                                    [SETTINGS_STORAGE_KEY]: structuredClone(stored),
+                                    [SETTINGS_PREVIOUS_STORAGE_KEY]: structuredClone(
+                                        previousStored,
+                                    ),
                                 }),
                                 set: async (items: Record<string, unknown>) => {
                                     storageSets += 1;
-                                    if (!items.settings || !items["settings.previous"]) {
+                                    if (
+                                        !items[SETTINGS_STORAGE_KEY]
+                                        || !items[SETTINGS_PREVIOUS_STORAGE_KEY]
+                                    ) {
                                         throw new Error("atomic pair required");
                                     }
-                                    stored = structuredClone(items.settings) as Record<
+                                    stored = structuredClone(items[SETTINGS_STORAGE_KEY]) as Record<
                                         string,
                                         unknown
                                     >;
                                     previousStored = structuredClone(
-                                        items["settings.previous"],
+                                        items[SETTINGS_PREVIOUS_STORAGE_KEY],
                                     ) as Record<string, unknown>;
                                 },
                                 remove: async () => undefined,
@@ -865,11 +909,11 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:teardown"
+                                    message.type === TEARDOWN_DOCUMENT_MESSAGE
                                 ) {
                                     calls.push("teardown");
                                 }
-                                return { type: "no-more-ago:status", phase: "active" };
+                                return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
                             },
                         },
                         runtime: { onMessage, onStartup, onInstalled },
@@ -889,7 +933,7 @@ describe("fresh browser artifacts", () => {
                     };
                     const getResponse = new Promise<unknown>((resolve) => {
                         onMessage.fire(
-                            { type: "no-more-ago:get-sites-state" },
+                            { type: GET_SITES_STATE_MESSAGE },
                             {},
                             (value: unknown) => {
                                 responses.get += 1;
@@ -900,7 +944,7 @@ describe("fresh browser artifacts", () => {
                     const noAdapterResponse = new Promise<unknown>((resolve) => {
                         onMessage.fire(
                             {
-                                type: "no-more-ago:set-site-enabled",
+                                type: SET_SITE_ENABLED_MESSAGE,
                                 hostname: "example.test",
                                 enabled: false,
                                 surface: "sites",
@@ -931,7 +975,7 @@ describe("fresh browser artifacts", () => {
                     const invalidPopup = new Promise<unknown>((resolve) => {
                         onMessage.fire(
                             {
-                                type: "no-more-ago:set-site-enabled",
+                                type: SET_SITE_ENABLED_MESSAGE,
                                 hostname: "EXAMPLE.TEST",
                                 enabled: false,
                                 surface: "popup",
@@ -946,7 +990,7 @@ describe("fresh browser artifacts", () => {
                     const invalidSites = new Promise<unknown>((resolve) => {
                         onMessage.fire(
                             {
-                                type: "no-more-ago:set-site-enabled",
+                                type: SET_SITE_ENABLED_MESSAGE,
                                 hostname: "example.test:443",
                                 enabled: false,
                                 surface: "sites",
@@ -998,7 +1042,7 @@ describe("fresh browser artifacts", () => {
                     const githubResponse = new Promise<unknown>((resolve) => {
                         onMessage.fire(
                             {
-                                type: "no-more-ago:set-site-enabled",
+                                type: SET_SITE_ENABLED_MESSAGE,
                                 hostname: "github.com",
                                 enabled: false,
                                 surface: "sites",
@@ -1049,7 +1093,7 @@ describe("fresh browser artifacts", () => {
             }
             const initial = new Map<string, string>();
             for (const mode of ["dev", "release"]) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const directory = `${workspace}/dist/${mode}/${browser}`;
                     const archivePath = `${workspace}/dist/${mode}/${browser}.zip`;
                     const manifest = manifestFor(workspace, mode, browser);
@@ -1122,7 +1166,7 @@ describe("fresh browser artifacts", () => {
                 timeout: 60_000,
             });
             for (const mode of ["dev", "release"] as const) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const directory = `${workspace}/dist/${mode}/${browser}`;
                     const expectedRegistration = {
                         id: "no-more-ago-github",
@@ -1181,25 +1225,33 @@ describe("fresh browser artifacts", () => {
                         storage: {
                             local: {
                                 get: async (keys?: unknown) => {
-                                    if (keys === "diagnostics") {
+                                    if (keys === DIAGNOSTICS_STORAGE_KEY) {
                                         diagnosticsAccesses.push("get");
                                     }
                                     return {
-                                        settings: structuredClone(stored),
-                                        "settings.previous": structuredClone(previousStored),
+                                        [SETTINGS_STORAGE_KEY]: structuredClone(stored),
+                                        [SETTINGS_PREVIOUS_STORAGE_KEY]: structuredClone(
+                                            previousStored,
+                                        ),
                                         ...(diagnosticsStored === undefined
                                             ? {}
-                                            : { diagnostics: structuredClone(diagnosticsStored) }),
+                                            : {
+                                                [DIAGNOSTICS_STORAGE_KEY]: structuredClone(
+                                                    diagnosticsStored,
+                                                ),
+                                            }),
                                     };
                                 },
                                 set: async (items: Record<string, unknown>) => {
                                     storageKinds.push(Object.keys(items).join(","));
-                                    if (Object.hasOwn(items, "diagnostics")) {
+                                    if (Object.hasOwn(items, DIAGNOSTICS_STORAGE_KEY)) {
                                         if (rejectNextDiagnosticWrite) {
                                             rejectNextDiagnosticWrite = false;
                                             throw new Error("diagnostic storage unavailable");
                                         }
-                                        diagnosticsStored = structuredClone(items.diagnostics);
+                                        diagnosticsStored = structuredClone(
+                                            items[DIAGNOSTICS_STORAGE_KEY],
+                                        );
                                         return;
                                     }
                                     if (rejectNextSettingsWrite) {
@@ -1207,21 +1259,27 @@ describe("fresh browser artifacts", () => {
                                         throw new Error("settings storage unavailable");
                                     }
                                     storageSets += 1;
-                                    if (!items.settings || !items["settings.previous"]) {
+                                    if (
+                                        !items[SETTINGS_STORAGE_KEY]
+                                        || !items[SETTINGS_PREVIOUS_STORAGE_KEY]
+                                    ) {
                                         throw new Error("atomic pair required");
                                     }
-                                    stored = structuredClone(items.settings) as Record<
+                                    stored = structuredClone(items[SETTINGS_STORAGE_KEY]) as Record<
                                         string,
                                         unknown
                                     >;
                                     previousStored = structuredClone(
-                                        items["settings.previous"],
+                                        items[SETTINGS_PREVIOUS_STORAGE_KEY],
                                     ) as Record<string, unknown>;
                                 },
                                 remove: async (keys: string | readonly string[]) => {
                                     if (
-                                        keys === "diagnostics" ||
-                                        (Array.isArray(keys) && keys.includes("diagnostics"))
+                                        keys === DIAGNOSTICS_STORAGE_KEY
+                                        || (
+                                            Array.isArray(keys)
+                                            && keys.includes(DIAGNOSTICS_STORAGE_KEY)
+                                        )
                                     ) {
                                         diagnosticsAccesses.push("remove");
                                         diagnosticsStored = undefined;
@@ -1273,7 +1331,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:update-presentation"
+                                    message.type === UPDATE_PRESENTATION_MESSAGE
                                 ) {
                                     updates.push({ message, options });
                                     if (acknowledgement === "missing") {
@@ -1281,7 +1339,7 @@ describe("fresh browser artifacts", () => {
                                     }
                                     if (acknowledgement === "stale") {
                                         return {
-                                            type: "no-more-ago:presentation-updated",
+                                            type: PRESENTATION_UPDATED_MESSAGE,
                                             revision: 1,
                                         };
                                     }
@@ -1293,7 +1351,7 @@ describe("fresh browser artifacts", () => {
                                         );
                                     }
                                     return {
-                                        type: "no-more-ago:presentation-updated",
+                                        type: PRESENTATION_UPDATED_MESSAGE,
                                         revision: (message as unknown as { revision: number })
                                             .revision,
                                     };
@@ -1302,7 +1360,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:update-debug-policy" &&
+                                    message.type === UPDATE_DEBUG_POLICY_MESSAGE &&
                                     "revision" in message
                                 ) {
                                     debugUpdates.push({ message, options });
@@ -1314,7 +1372,7 @@ describe("fresh browser artifacts", () => {
                                         );
                                     }
                                     return {
-                                        type: "no-more-ago:debug-policy-updated",
+                                        type: DEBUG_POLICY_UPDATED_MESSAGE,
                                         revision: message.revision,
                                     };
                                 }
@@ -1323,12 +1381,12 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    (message.type === "no-more-ago:status" ||
-                                        message.type === "no-more-ago:teardown")
+                                    (message.type === DOCUMENT_STATUS_MESSAGE ||
+                                        message.type === TEARDOWN_DOCUMENT_MESSAGE)
                                 ) {
                                     return diagnosticsContentListener(message, {}, () => undefined);
                                 }
-                                return { type: "no-more-ago:status", phase: "active" };
+                                return { type: DOCUMENT_STATUS_MESSAGE, phase: "active" };
                             },
                         },
                         runtime: {
@@ -1373,7 +1431,7 @@ describe("fresh browser artifacts", () => {
                                 resolve({ response, count });
                             });
                         });
-                    const initialRead = await dispatch({ type: "no-more-ago:get-display-state" });
+                    const initialRead = await dispatch({ type: GET_DISPLAY_STATE_MESSAGE });
                     expect(initialRead).toEqual({
                         count: 1,
                         response: {
@@ -1387,7 +1445,7 @@ describe("fresh browser artifacts", () => {
                     const beforeInvalidWrites = storageSets;
                     const beforeInvalidUpdates = updates.length;
                     const invalid = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: {
                             formatMode: "system",
                             timeZone: { mode: "iana", identifier: "No/SuchZone" },
@@ -1405,7 +1463,7 @@ describe("fresh browser artifacts", () => {
                     expect(updates.length).toBe(beforeInvalidUpdates);
 
                     const invalidCustom = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: {
                             formatMode: "custom",
                             pattern: "YYYY-MM-dd",
@@ -1423,7 +1481,7 @@ describe("fresh browser artifacts", () => {
                     expect(storageSets).toBe(beforeInvalidWrites);
                     expect(updates.length).toBe(beforeInvalidUpdates);
                     const invalidEmpty = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: { formatMode: "custom", pattern: "", timeZone: { mode: "utc" } },
                     });
                     expect(invalidEmpty).toMatchObject({
@@ -1438,7 +1496,7 @@ describe("fresh browser artifacts", () => {
                     expect(updates.length).toBe(beforeInvalidUpdates);
 
                     const utc = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: { formatMode: "system", timeZone: { mode: "utc" } },
                     });
                     expect(utc).toMatchObject({
@@ -1459,7 +1517,7 @@ describe("fresh browser artifacts", () => {
                     expect(updates).toHaveLength(1);
                     expect(updates[0]).toMatchObject({
                         message: {
-                            type: "no-more-ago:update-presentation",
+                            type: UPDATE_PRESENTATION_MESSAGE,
                             revision: 3,
                             display: { timeZone: { mode: "utc" } },
                         },
@@ -1467,7 +1525,7 @@ describe("fresh browser artifacts", () => {
                     });
 
                     const custom = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: {
                             formatMode: "custom",
                             pattern: "yyyy-MM-dd HH:mm 'UTC'",
@@ -1499,7 +1557,7 @@ describe("fresh browser artifacts", () => {
 
                     acknowledgement = "missing";
                     const partial = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: {
                             formatMode: "system",
                             timeZone: { mode: "iana", identifier: "America/New_York" },
@@ -1522,10 +1580,10 @@ describe("fresh browser artifacts", () => {
                     });
 
                     const updatesBeforeGlobalOff = updates.length;
-                    await dispatch({ type: "no-more-ago:set-global-enabled", enabled: false });
+                    await dispatch({ type: SET_GLOBAL_ENABLED_MESSAGE, enabled: false });
                     acknowledgement = "correct";
                     const disabledSave = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: { formatMode: "system", timeZone: { mode: "utc" } },
                     });
                     expect(disabledSave).toMatchObject({
@@ -1550,7 +1608,7 @@ describe("fresh browser artifacts", () => {
                                 message &&
                                 typeof message === "object" &&
                                 "type" in message &&
-                                message.type === "no-more-ago:get-display-state"
+                                message.type === GET_DISPLAY_STATE_MESSAGE
                             ) {
                                 contentReads += 1;
                                 return Promise.resolve({
@@ -1593,7 +1651,7 @@ describe("fresh browser artifacts", () => {
                         throw new Error("content timestamp ownership pair missing");
                     }
                     const contentStatus = contentListener?.(
-                        { type: "no-more-ago:status" },
+                        { type: DOCUMENT_STATUS_MESSAGE },
                         {},
                         () => undefined,
                     );
@@ -1601,7 +1659,7 @@ describe("fresh browser artifacts", () => {
                     expect(source.hasAttribute("hidden")).toBe(true);
                     expect(output.textContent).toBe("2026-08-23 06:15 -04:00");
                     const updateMessage = {
-                        type: "no-more-ago:update-presentation",
+                        type: UPDATE_PRESENTATION_MESSAGE,
                         revision: 2,
                         display: {
                             formatMode: "custom",
@@ -1611,7 +1669,7 @@ describe("fresh browser artifacts", () => {
                     };
                     const updateResponse = contentListener?.(updateMessage, {}, () => undefined);
                     expect(updateResponse).toEqual({
-                        type: "no-more-ago:presentation-updated",
+                        type: PRESENTATION_UPDATED_MESSAGE,
                         revision: 2,
                     });
                     expect(output.textContent).toBe("2026-08-23 10:15 UTC");
@@ -1621,7 +1679,7 @@ describe("fresh browser artifacts", () => {
                     });
                     const germanResponse = contentListener?.(
                         {
-                            type: "no-more-ago:update-presentation",
+                            type: UPDATE_PRESENTATION_MESSAGE,
                             revision: 3,
                             display: {
                                 formatMode: "custom",
@@ -1633,7 +1691,7 @@ describe("fresh browser artifacts", () => {
                         () => undefined,
                     );
                     expect(germanResponse).toEqual({
-                        type: "no-more-ago:presentation-updated",
+                        type: PRESENTATION_UPDATED_MESSAGE,
                         revision: 3,
                     });
                     expect(output.textContent).toBe("Sonntag, 23 August 2026");
@@ -1643,7 +1701,7 @@ describe("fresh browser artifacts", () => {
                     });
                     const fallbackResponse = contentListener?.(
                         {
-                            type: "no-more-ago:update-presentation",
+                            type: UPDATE_PRESENTATION_MESSAGE,
                             revision: 4,
                             display: {
                                 formatMode: "custom",
@@ -1655,7 +1713,7 @@ describe("fresh browser artifacts", () => {
                         () => undefined,
                     );
                     expect(fallbackResponse).toEqual({
-                        type: "no-more-ago:presentation-updated",
+                        type: PRESENTATION_UPDATED_MESSAGE,
                         revision: 4,
                     });
                     expect(output.textContent).toBe("Sunday, 23 August 2026");
@@ -1664,7 +1722,7 @@ describe("fresh browser artifacts", () => {
                     const beforeResetWrites = storageSets;
                     let malformedResetResponses = 0;
                     onMessage.fire(
-                        { type: "no-more-ago:reset-all-settings", extra: true },
+                        { type: RESET_ALL_SETTINGS_MESSAGE, extra: true },
                         {},
                         () => {
                             malformedResetResponses += 1;
@@ -1673,7 +1731,7 @@ describe("fresh browser artifacts", () => {
                     await new Promise<void>((resolve) => setTimeout(resolve, 20));
                     expect(malformedResetResponses).toBe(0);
                     expect(storageSets).toBe(beforeResetWrites);
-                    const reset = await dispatch({ type: "no-more-ago:reset-all-settings" });
+                    const reset = await dispatch({ type: RESET_ALL_SETTINGS_MESSAGE });
                     expect(reset).toMatchObject({
                         count: 1,
                         response: {
@@ -1720,7 +1778,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:get-display-state"
+                                    message.type === GET_DISPLAY_STATE_MESSAGE
                                 ) {
                                     diagnosticHydrationReads += 1;
                                 }
@@ -1728,7 +1786,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:diagnostic-event"
+                                    message.type === DIAGNOSTIC_EVENT_MESSAGE
                                 ) {
                                     emittedDiagnosticEvents += 1;
                                 }
@@ -1763,19 +1821,19 @@ describe("fresh browser artifacts", () => {
                     expect(emittedDiagnosticEvents).toBe(0);
                     expect(diagnosticsStored).toBeUndefined();
 
-                    const debugRead = await dispatch({ type: "no-more-ago:get-debug-state" });
+                    const debugRead = await dispatch({ type: GET_DEBUG_STATE_MESSAGE });
                     expect(debugRead).toEqual({
                         count: 1,
                         response: { availability: "ready", revision: 0, enabled: false },
                     });
                     await expect(
-                        dispatch({ type: "no-more-ago:get-diagnostics-snapshot" }, optionsSender),
+                        dispatch({ type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE }, optionsSender),
                     ).resolves.toEqual({ count: 1, response: { ok: false, error: "disabled" } });
                     await expect(
-                        dispatch({ type: "no-more-ago:clear-diagnostics" }, optionsSender),
+                        dispatch({ type: CLEAR_DIAGNOSTICS_MESSAGE }, optionsSender),
                     ).resolves.toEqual({ count: 1, response: { ok: false, error: "disabled" } });
                     const debugOn = await dispatch({
-                        type: "no-more-ago:set-debug-enabled",
+                        type: SET_DEBUG_ENABLED_MESSAGE,
                         enabled: true,
                     });
                     expect(debugOn).toMatchObject({
@@ -1794,7 +1852,7 @@ describe("fresh browser artifacts", () => {
                     expect(debugUpdates).toEqual([
                         {
                             message: {
-                                type: "no-more-ago:update-debug-policy",
+                                type: UPDATE_DEBUG_POLICY_MESSAGE,
                                 revision: 1,
                                 enabled: true,
                             },
@@ -1804,7 +1862,7 @@ describe("fresh browser artifacts", () => {
                     expect(
                         diagnosticsContentListener?.(
                             {
-                                type: "no-more-ago:update-debug-policy",
+                                type: UPDATE_DEBUG_POLICY_MESSAGE,
                                 revision: 0,
                                 enabled: false,
                             },
@@ -1828,7 +1886,7 @@ describe("fresh browser artifacts", () => {
                     let malformedEventResponses = 0;
                     onMessage.fire(
                         {
-                            type: "no-more-ago:diagnostic-event",
+                            type: DIAGNOSTIC_EVENT_MESSAGE,
                             event: {
                                 category: "mutation",
                                 count: 1,
@@ -1849,7 +1907,7 @@ describe("fresh browser artifacts", () => {
                     expect(malformedEventResponses).toBe(0);
                     const safeEvent = await dispatch(
                         {
-                            type: "no-more-ago:diagnostic-event",
+                            type: DIAGNOSTIC_EVENT_MESSAGE,
                             event: { category: "mutation", count: 1, reason: "adapter-matched" },
                         },
                         {
@@ -1920,8 +1978,8 @@ describe("fresh browser artifacts", () => {
                         ),
                     ];
                     for (const type of [
-                        "no-more-ago:get-diagnostics-snapshot",
-                        "no-more-ago:clear-diagnostics",
+                        GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
+                        CLEAR_DIAGNOSTICS_MESSAGE,
                     ]) {
                         for (const sender of unauthorizedSenders) {
                             const beforeAccess = diagnosticsAccesses.length;
@@ -1934,7 +1992,7 @@ describe("fresh browser artifacts", () => {
                         }
                     }
                     const authorizedSnapshot = await dispatch(
-                        { type: "no-more-ago:get-diagnostics-snapshot" },
+                        { type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE },
                         optionsSender,
                     );
                     expect(authorizedSnapshot).toMatchObject({
@@ -2053,7 +2111,7 @@ describe("fresh browser artifacts", () => {
                         configurable: true,
                         value: function click(this: HTMLAnchorElement): void {
                             expect(validUrls.has(this.href)).toBe(true);
-                            expect(this.download).toBe("no-more-ago-diagnostics.zip");
+                            expect(this.download).toBe(DIAGNOSTICS_ARCHIVE_FILE);
                             if (failNextClick) {
                                 failNextClick = false;
                                 throw new Error("download unavailable");
@@ -2070,7 +2128,7 @@ describe("fresh browser artifacts", () => {
                                 message &&
                                 typeof message === "object" &&
                                 "type" in message &&
-                                message.type === "no-more-ago:get-diagnostics-snapshot"
+                                message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                             ) {
                                 const snapshot = forgedSnapshot;
                                 forgedSnapshot = undefined;
@@ -2154,8 +2212,10 @@ describe("fresh browser artifacts", () => {
                     const unpackedDiagnostics = unzipSync(
                         new Uint8Array(await firstBlob.arrayBuffer()),
                     );
-                    expect(Object.keys(unpackedDiagnostics)).toEqual(["diagnostics.json"]);
-                    const packedEntries = unpackedDiagnostics["diagnostics.json"];
+                    expect(Object.keys(unpackedDiagnostics)).toEqual([
+                        DIAGNOSTICS_ARCHIVE_MEMBER,
+                    ]);
+                    const packedEntries = unpackedDiagnostics[DIAGNOSTICS_ARCHIVE_MEMBER];
                     if (!packedEntries) {
                         throw new Error("diagnostics member missing");
                     }
@@ -2229,7 +2289,7 @@ describe("fresh browser artifacts", () => {
                     };
                     expect(
                         await dispatch(
-                            { type: "no-more-ago:get-diagnostics-snapshot" },
+                            { type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE },
                             optionsSender,
                         ),
                     ).toEqual({ count: 1, response: { ok: false, error: "invalid-journal" } });
@@ -2277,7 +2337,7 @@ describe("fresh browser artifacts", () => {
                     });
                     expect(
                         await dispatch(
-                            { type: "no-more-ago:get-diagnostics-snapshot" },
+                            { type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE },
                             optionsSender,
                         ),
                     ).toEqual({ count: 1, response: { ok: false, error: "empty" } });
@@ -2330,7 +2390,7 @@ describe("fresh browser artifacts", () => {
                     optionsDom.window.close();
 
                     const debugOff = await dispatch({
-                        type: "no-more-ago:set-debug-enabled",
+                        type: SET_DEBUG_ENABLED_MESSAGE,
                         enabled: false,
                     });
                     expect(debugOff).toMatchObject({
@@ -2340,7 +2400,7 @@ describe("fresh browser artifacts", () => {
                     expect(debugUpdates).toHaveLength(2);
                     expect(debugUpdates[1]).toMatchObject({
                         message: {
-                            type: "no-more-ago:update-debug-policy",
+                            type: UPDATE_DEBUG_POLICY_MESSAGE,
                             revision: 2,
                             enabled: false,
                         },
@@ -2362,7 +2422,7 @@ describe("fresh browser artifacts", () => {
                     expect(diagnosticListenerCount).toBe(1);
 
                     const activeCustom = await dispatch({
-                        type: "no-more-ago:set-display-settings",
+                        type: SET_DISPLAY_SETTINGS_MESSAGE,
                         display: {
                             formatMode: "custom",
                             pattern: "yyyy-MM-dd",
@@ -2381,7 +2441,7 @@ describe("fresh browser artifacts", () => {
                         ].map((output) => output.textContent),
                     ).toEqual(["2026-08-23", "2026-08-24", "2026-08-25"]);
                     const activeDebug = await dispatch({
-                        type: "no-more-ago:set-debug-enabled",
+                        type: SET_DEBUG_ENABLED_MESSAGE,
                         enabled: true,
                     });
                     expect(activeDebug).toMatchObject({
@@ -2390,29 +2450,29 @@ describe("fresh browser artifacts", () => {
                     });
                     await dispatch(
                         {
-                            type: "no-more-ago:diagnostic-event",
+                            type: DIAGNOSTIC_EVENT_MESSAGE,
                             event: { category: "mutation", count: 1 },
                         },
                         diagnosticSender,
                     );
                     expect(diagnosticsStored).toBeDefined();
                     await dispatch({
-                        type: "no-more-ago:set-site-enabled",
+                        type: SET_SITE_ENABLED_MESSAGE,
                         hostname: "managed-enabled.test",
                         enabled: true,
                         surface: "sites",
                     });
                     await dispatch({
-                        type: "no-more-ago:set-site-enabled",
+                        type: SET_SITE_ENABLED_MESSAGE,
                         hostname: "managed-disabled.test",
                         enabled: false,
                         surface: "sites",
                     });
                     if (mode === "release") {
-                        await dispatch({ type: "no-more-ago:set-global-enabled", enabled: false });
+                        await dispatch({ type: SET_GLOBAL_ENABLED_MESSAGE, enabled: false });
                     } else {
                         await dispatch({
-                            type: "no-more-ago:set-site-enabled",
+                            type: SET_SITE_ENABLED_MESSAGE,
                             hostname: "github.com",
                             enabled: false,
                             surface: "sites",
@@ -2476,7 +2536,7 @@ describe("fresh browser artifacts", () => {
                                         : "unknown";
                                 resetMessages.push(type);
                                 onMessage.fire(message, optionsSender, (response: unknown) => {
-                                    if (type === "no-more-ago:reset-all-settings") {
+                                    if (type === RESET_ALL_SETTINGS_MESSAGE) {
                                         resetResponses.push(response);
                                         if (interruptNextResetResponse) {
                                             interruptNextResetResponse = false;
@@ -2588,17 +2648,17 @@ describe("fresh browser artifacts", () => {
                     });
                     expect(
                         resetMessages.filter(
-                            (message) => message === "no-more-ago:reset-all-settings",
+                            (message) => message === RESET_ALL_SETTINGS_MESSAGE,
                         ),
                     ).toHaveLength(2);
                     expect(
                         resetMessages.filter(
-                            (message) => message === "no-more-ago:get-display-state",
+                            (message) => message === GET_DISPLAY_STATE_MESSAGE,
                         ),
                     ).toHaveLength(2);
                     expect(
                         resetMessages.filter(
-                            (message) => message === "no-more-ago:get-debug-state",
+                            (message) => message === GET_DEBUG_STATE_MESSAGE,
                         ),
                     ).toHaveLength(2);
                     expect(confirmations).toBe(0);
@@ -2924,7 +2984,7 @@ describe("fresh browser artifacts", () => {
                     noAdapterDom.window.close();
 
                     await dispatch({
-                        type: "no-more-ago:set-site-enabled",
+                        type: SET_SITE_ENABLED_MESSAGE,
                         hostname: "interrupted.test",
                         enabled: true,
                         surface: "sites",
@@ -2946,7 +3006,7 @@ describe("fresh browser artifacts", () => {
                     expect(resetResponses).toHaveLength(3);
                     expect(
                         resetMessages.filter(
-                            (message) => message === "no-more-ago:reset-all-settings",
+                            (message) => message === RESET_ALL_SETTINGS_MESSAGE,
                         ),
                     ).toHaveLength(3);
                     expect(storageSets).toBe(writesBeforeInterruptedReset + 1);
@@ -2973,7 +3033,7 @@ describe("fresh browser artifacts", () => {
                     );
                     expect(diagnosticListenerCount).toBe(1);
 
-                    const shippedSites = await dispatch({ type: "no-more-ago:get-sites-state" });
+                    const shippedSites = await dispatch({ type: GET_SITES_STATE_MESSAGE });
                     expect(shippedSites).toEqual({
                         count: 1,
                         response: {
@@ -2985,7 +3045,7 @@ describe("fresh browser artifacts", () => {
                     });
                     const injectionsBeforeForeignHost = executedContentTargets.length;
                     activeTabUrl = "https://synthetic.test/example/events?filter=recent";
-                    const foreignPopup = await dispatch({ type: "no-more-ago:get-popup-state" });
+                    const foreignPopup = await dispatch({ type: GET_POPUP_STATE_MESSAGE });
                     expect(foreignPopup).toMatchObject({
                         count: 1,
                         response: {
@@ -2998,7 +3058,7 @@ describe("fresh browser artifacts", () => {
                         },
                     });
                     activeTabUrl = "https://sub.github.com/example";
-                    expect(await dispatch({ type: "no-more-ago:get-popup-state" })).toMatchObject({
+                    expect(await dispatch({ type: GET_POPUP_STATE_MESSAGE })).toMatchObject({
                         count: 1,
                         response: {
                             availability: "ready",
@@ -3008,7 +3068,7 @@ describe("fresh browser artifacts", () => {
                         },
                     });
                     activeTabUrl = "file:///private/synthetic.html";
-                    expect(await dispatch({ type: "no-more-ago:get-popup-state" })).toMatchObject({
+                    expect(await dispatch({ type: GET_POPUP_STATE_MESSAGE })).toMatchObject({
                         count: 1,
                         response: {
                             availability: "ready",
@@ -3019,7 +3079,7 @@ describe("fresh browser artifacts", () => {
                     });
                     activeTabUrl = "https://synthetic.test/example/events";
                     const syntheticPreference = await dispatch({
-                        type: "no-more-ago:set-site-enabled",
+                        type: SET_SITE_ENABLED_MESSAGE,
                         hostname: "synthetic.test",
                         enabled: false,
                         surface: "sites",
@@ -3087,7 +3147,11 @@ describe("fresh browser artifacts", () => {
                     );
                     await new Promise<void>((resolve) => setTimeout(resolve, 20));
                     expect(
-                        unsupportedListener?.({ type: "no-more-ago:status" }, {}, () => undefined),
+                        unsupportedListener?.(
+                            { type: DOCUMENT_STATUS_MESSAGE },
+                            {},
+                            () => undefined,
+                        ),
                     ).toMatchObject({ phase: "active" });
                     expect(
                         unsupportedDom.window.document.querySelector(
@@ -3121,7 +3185,7 @@ describe("fresh browser artifacts", () => {
                 timeout: 60_000,
             });
             for (const mode of ["dev", "release"] as const) {
-                for (const browser of browsers) {
+                for (const browser of BROWSERS) {
                     const directory = `${workspace}/dist/${mode}/${browser}`;
                     const manifest = manifestFor(workspace, mode, browser);
                     expect((manifest.action as Record<string, unknown>).default_popup).toBe(
@@ -3163,7 +3227,7 @@ describe("fresh browser artifacts", () => {
                                 message &&
                                 typeof message === "object" &&
                                 "type" in message &&
-                                message.type === "no-more-ago:get-sites-state"
+                                message.type === GET_SITES_STATE_MESSAGE
                                     ? Promise.resolve({
                                         availability: "ready",
                                         revision: 4,
@@ -3220,7 +3284,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:get-display-state"
+                                    message.type === GET_DISPLAY_STATE_MESSAGE
                                 ) {
                                     return Promise.resolve({
                                         availability: "ready",
@@ -3236,7 +3300,7 @@ describe("fresh browser artifacts", () => {
                                     message &&
                                     typeof message === "object" &&
                                     "type" in message &&
-                                    message.type === "no-more-ago:get-debug-state"
+                                    message.type === GET_DEBUG_STATE_MESSAGE
                                 ) {
                                     return Promise.resolve({
                                         availability: "ready",

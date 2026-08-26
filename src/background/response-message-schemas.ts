@@ -13,13 +13,14 @@ import {
     refreshFailureSchema,
     sitesStateSchema,
 } from "./view-state-schemas";
+import {
+    DISPLAY_SETTINGS_ERRORS,
+    SETTINGS_PERSISTENCE_ERRORS,
+    SITE_SETTINGS_ERRORS,
+} from "./view-state-values";
 
-const persistenceErrorSchema = v.picklist(["save-failed", "settings-unavailable"]);
-const sitePersistenceErrorSchema = v.picklist([
-    "save-failed",
-    "invalid-hostname",
-    "settings-unavailable",
-]);
+const persistenceErrorSchema = v.picklist(SETTINGS_PERSISTENCE_ERRORS);
+const sitePersistenceErrorSchema = v.picklist(SITE_SETTINGS_ERRORS);
 
 /**
  * Result of changing global activation.
@@ -79,13 +80,7 @@ export const setDisplaySettingsResponseSchema = v.union([
     }),
     strictMessageObject({
         ok: v.literal(false),
-        error: v.picklist([
-            "invalid-format",
-            "invalid-time-zone",
-            "invalid-display-settings",
-            "save-failed",
-            "settings-unavailable",
-        ]),
+        error: v.picklist(DISPLAY_SETTINGS_ERRORS),
         state: displayStateSchema,
     }),
 ]);

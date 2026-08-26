@@ -16,13 +16,15 @@ import {
     writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import {
+    BACKGROUND_SCRIPT_FILE,
+    CONTENT_SCRIPT_FILE,
+    EXTENSION_ICON_SIZES,
+    MANIFEST_FILE,
+} from "../../src/extension-files.ts";
+import { BROWSERS } from "./contracts.ts";
 import vm from "node:vm";
 import { unzipSync as fflateUnzipSync, unzlibSync, zipSync as fflateZipSync } from "fflate";
-
-/**
- * Browser variants emitted by the artifact build.
- */
-export const SUPPORTED_BROWSERS: string[] = ["chrome", "firefox", "edge"];
 
 /**
  * Minimal manifest fields checked before an emitted browser artifact is accepted.
@@ -308,23 +310,27 @@ function validatePair(
     decoder: (data: Uint8Array) => Record<string, Uint8Array> = fflateUnzipSync,
 ): { files: string[]; manifest: ArtifactManifest; zipBytes: Buffer } {
     const files = listFiles(directory);
-    if (!files.includes("manifest.json")) {
+    if (!files.includes(MANIFEST_FILE)) {
         throw new Error("Artifact has no manifest.json");
     }
     const manifest = JSON.parse(
-        readFileSync(path.join(directory, "manifest.json"), "utf8"),
+        readFileSync(path.join(directory, MANIFEST_FILE), "utf8"),
     ) as ArtifactManifest;
     if (manifest.manifest_version !== 3 || typeof manifest.version !== "string") {
         throw new Error("Invalid emitted manifest");
     }
     if (
-        manifest.background?.service_worker !== "background.js" &&
+        manifest.background?.service_worker !== BACKGROUND_SCRIPT_FILE &&
         !Array.isArray(manifest.background?.scripts)
     ) {
         throw new Error("Invalid background definition");
     }
-    const references = ["background.js", "content.js", ...(manifest.background?.scripts ?? [])];
-    for (const iconSize of [16, 32, 48, 128]) {
+    const references = [
+        BACKGROUND_SCRIPT_FILE,
+        CONTENT_SCRIPT_FILE,
+        ...(manifest.background?.scripts ?? []),
+    ];
+    for (const iconSize of EXTENSION_ICON_SIZES) {
         const icon = manifest.icons?.[String(iconSize)];
         if (icon !== `icons/clock-${iconSize}.png`) {
             throw new Error("Manifest icon references are invalid");
@@ -488,7 +494,7 @@ export function createArtifactServices({
             const modeRoot = path.join(distRoot, mode);
             const candidate = mkdtempSync(path.join(distRoot, `.candidate-${mode}-`));
             try {
-                for (const browser of SUPPORTED_BROWSERS) {
+                for (const browser of BROWSERS) {
                     if (browser === selected || pairs[browser]) {
                         const pair = pairs[browser];
                         if (!pair) {

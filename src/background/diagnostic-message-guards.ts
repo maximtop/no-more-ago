@@ -3,6 +3,10 @@
  */
 
 import * as v from "valibot";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
+import {
+    DIAGNOSTIC_BROWSER_FAMILIES,
+} from "../diagnostics/contracts";
 import type { DiagnosticEvent } from "../diagnostics/events";
 import { isDiagnosticJournalEntries } from "../diagnostics/journal";
 import type {
@@ -10,17 +14,21 @@ import type {
     DiagnosticsSnapshot,
     GetDiagnosticsSnapshotResponse,
 } from "./message-contracts";
+import {
+    DIAGNOSTICS_CLEAR_ERRORS,
+    DIAGNOSTICS_SNAPSHOT_ERRORS,
+} from "./message-contracts";
 import { strictMessageObject } from "./message-schema-utils";
 
 const versionSchema = v.pipe(
     v.string(),
-    v.regex(/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u),
+    v.regex(SAFE_EXTENSION_VERSION_PATTERN),
 );
 const entriesSchema = v.custom<readonly DiagnosticEvent[]>(
     (value) => isDiagnosticJournalEntries(value) && value.length > 0,
 );
 const environmentSchema = strictMessageObject({
-    browserFamily: v.picklist(["chromium", "firefox", "other"]),
+    browserFamily: v.picklist(DIAGNOSTIC_BROWSER_FAMILIES),
     extensionVersion: v.exactOptional(versionSchema),
 });
 const diagnosticsSnapshotSchema = strictMessageObject({
@@ -34,20 +42,14 @@ const getDiagnosticsSnapshotResponseSchema = v.union([
     }),
     strictMessageObject({
         ok: v.literal(false),
-        error: v.picklist([
-            "disabled",
-            "unavailable",
-            "empty",
-            "invalid-journal",
-            "storage-failed",
-        ]),
+        error: v.picklist(DIAGNOSTICS_SNAPSHOT_ERRORS),
     }),
 ]);
 const clearDiagnosticsResponseSchema = v.union([
     strictMessageObject({ ok: v.literal(true) }),
     strictMessageObject({
         ok: v.literal(false),
-        error: v.picklist(["disabled", "unavailable", "storage-failed"]),
+        error: v.picklist(DIAGNOSTICS_CLEAR_ERRORS),
     }),
 ]);
 

@@ -10,6 +10,10 @@ import {
     type DiagnosticEventInput,
     type DiagnosticSender,
 } from "../diagnostics/events";
+import {
+    DIAGNOSTIC_BROWSER_FAMILIES,
+} from "../diagnostics/contracts";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
 import type { DiagnosticJournal } from "../diagnostics/journal";
 import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import { isSiteEnabled } from "../settings/snapshot";
@@ -22,10 +26,7 @@ import type {
 } from "./message-contracts";
 import type { DebugState } from "./view-state";
 
-/**
- * Recognizes extension versions safe to include in exported diagnostics.
- */
-const SAFE_EXTENSION_VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u;
+const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
 /**
  * Owns diagnostic opt-in state, trusted metadata, and journal operations.
@@ -231,11 +232,11 @@ export class DiagnosticsService {
         delete trusted.extensionVersion;
         delete trusted.browserFamily;
         const version = this.environment?.extensionVersion;
-        if (typeof version === "string" && SAFE_EXTENSION_VERSION.test(version)) {
+        if (typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)) {
             trusted.extensionVersion = version;
         }
         const family = this.environment?.browserFamily;
-        if (family === "chromium" || family === "firefox" || family === "other") {
+        if (typeof family === "string" && BROWSER_FAMILY_SET.has(family)) {
             trusted.browserFamily = family;
         }
         return Object.freeze(trusted);
@@ -249,13 +250,13 @@ export class DiagnosticsService {
     private exportEnvironment(): DiagnosticsEnvironment {
         const family = this.environment?.browserFamily;
         const browserFamily: DiagnosticBrowserFamily =
-            family === "chromium" || family === "firefox" || family === "other"
+            typeof family === "string" && BROWSER_FAMILY_SET.has(family)
                 ? family
                 : "other";
         const version = this.environment?.extensionVersion;
         return {
             browserFamily,
-            ...(typeof version === "string" && SAFE_EXTENSION_VERSION.test(version)
+            ...(typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)
                 ? { extensionVersion: version }
                 : {}),
         };

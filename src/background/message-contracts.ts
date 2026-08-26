@@ -71,6 +71,36 @@ export const GET_DIAGNOSTICS_SNAPSHOT_MESSAGE = "no-more-ago:get-diagnostics-sna
 export const CLEAR_DIAGNOSTICS_MESSAGE = "no-more-ago:clear-diagnostics" as const;
 
 /**
+ * Errors returned when a diagnostic snapshot cannot be read safely.
+ */
+export const DIAGNOSTICS_SNAPSHOT_ERRORS = [
+    "disabled",
+    "unavailable",
+    "empty",
+    "invalid-journal",
+    "storage-failed",
+] as const;
+
+/**
+ * Error returned when a diagnostic snapshot cannot be read safely.
+ */
+export type DiagnosticsSnapshotError = (typeof DIAGNOSTICS_SNAPSHOT_ERRORS)[number];
+
+/**
+ * Errors returned when diagnostic entries cannot be cleared safely.
+ */
+export const DIAGNOSTICS_CLEAR_ERRORS = [
+    "disabled",
+    "unavailable",
+    "storage-failed",
+] as const;
+
+/**
+ * Error returned when diagnostic entries cannot be cleared safely.
+ */
+export type DiagnosticsClearError = (typeof DIAGNOSTICS_CLEAR_ERRORS)[number];
+
+/**
  * Trusted environment metadata included with a diagnostics snapshot.
  */
 export interface DiagnosticsEnvironment {
@@ -107,12 +137,7 @@ export type GetDiagnosticsSnapshotResponse =
     | { readonly ok: true; readonly snapshot: DiagnosticsSnapshot }
     | {
         readonly ok: false;
-        readonly error:
-              | "disabled"
-              | "unavailable"
-              | "empty"
-              | "invalid-journal"
-              | "storage-failed";
+        readonly error: DiagnosticsSnapshotError;
     };
 
 /**
@@ -120,7 +145,7 @@ export type GetDiagnosticsSnapshotResponse =
  */
 export type ClearDiagnosticsResponse =
     | { readonly ok: true }
-    | { readonly ok: false; readonly error: "disabled" | "unavailable" | "storage-failed" };
+    | { readonly ok: false; readonly error: DiagnosticsClearError };
 
 /**
  * Request for the active-tab popup state.

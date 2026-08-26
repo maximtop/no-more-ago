@@ -5,6 +5,7 @@
  */
 
 import { isCanonicalHostname } from "../settings/snapshot";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
 
 /**
  * GitHub issue composer used for site-report submissions.
@@ -20,12 +21,25 @@ export const SITE_REPORT_TEMPLATE = "site-report.yml" as const;
 /**
  * User-visible reason prefilled in the report form.
  */
-export type SiteReportReason = "Add support for this site" | "Dates are not working correctly";
+export const SITE_REPORT_REASONS = [
+    "Add support for this site",
+    "Dates are not working correctly",
+] as const;
+
+/**
+ * User-visible reason prefilled in the report form.
+ */
+export type SiteReportReason = (typeof SITE_REPORT_REASONS)[number];
+
+/**
+ * Browser labels accepted by the site-report form.
+ */
+export const SITE_REPORT_BROWSERS = ["Chrome", "Edge", "Firefox", "Other"] as const;
 
 /**
  * Browser family inferred from the user agent for the report form.
  */
-export type SiteReportBrowser = "Chrome" | "Edge" | "Firefox" | "Other";
+export type SiteReportBrowser = (typeof SITE_REPORT_BROWSERS)[number];
 
 /**
  * Validated fields serialized into the issue-form query string.
@@ -155,15 +169,21 @@ export interface SiteReportBrowserRuntime {
 /**
  * Stable failure reasons returned instead of throwing from report actions.
  */
-export type SiteReportError =
-    | "busy"
-    | "invalid-context"
-    | "browser-unavailable"
-    | "missing-tab"
-    | "restricted-page"
-    | "hostname-mismatch"
-    | "private-window"
-    | "open-failed";
+export const SITE_REPORT_ERRORS = [
+    "busy",
+    "invalid-context",
+    "browser-unavailable",
+    "missing-tab",
+    "restricted-page",
+    "hostname-mismatch",
+    "private-window",
+    "open-failed",
+] as const;
+
+/**
+ * Stable failure reason returned instead of throwing from report actions.
+ */
+export type SiteReportError = (typeof SITE_REPORT_ERRORS)[number];
 
 /**
  * Report action outcome, including the composer URL when a tab was opened.
@@ -172,8 +192,9 @@ export type SiteReportResult =
     | { readonly ok: true; readonly url: string }
     | { readonly ok: false; readonly error: SiteReportError };
 
-const VERSION = /^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/u;
 const CONTEXT_KEYS = new Set(["reason", "hostname", "currentUrl", "extensionVersion", "browser"]);
+const REASON_SET = new Set<string>(SITE_REPORT_REASONS);
+const BROWSER_SET = new Set<string>(SITE_REPORT_BROWSERS);
 
 /**
  * Narrows a non-array object so its own data properties can be inspected safely.
@@ -225,7 +246,7 @@ function ownString(value: Record<string, unknown>, key: string): string | undefi
  * @returns - Whether the version is safe and bounded for a report URL.
  */
 function validVersion(value: string): boolean {
-    return VERSION.test(value);
+    return SAFE_EXTENSION_VERSION_PATTERN.test(value);
 }
 
 /**
@@ -265,11 +286,7 @@ export function composeSiteReportUrl(context: unknown): string | null {
     const currentUrl = ownString(context, "currentUrl");
     const extensionVersion = ownString(context, "extensionVersion");
     const browser = ownString(context, "browser");
-    if (
-        reason !== undefined &&
-        reason !== "Add support for this site" &&
-        reason !== "Dates are not working correctly"
-    ) {
+    if (reason !== undefined && (typeof reason !== "string" || !REASON_SET.has(reason))) {
         return null;
     }
     if (
@@ -292,10 +309,7 @@ export function composeSiteReportUrl(context: unknown): string | null {
     }
     if (
         Object.hasOwn(context, "browser") &&
-        browser !== "Chrome" &&
-        browser !== "Edge" &&
-        browser !== "Firefox" &&
-        browser !== "Other"
+        (browser === undefined || !BROWSER_SET.has(browser))
     ) {
         return null;
     }

@@ -4,6 +4,7 @@
 
 import type { AdapterRegistry } from "../adapters/registry";
 import { DocumentTransformationController } from "../core/document-transformation-controller";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
 import type { DocumentDiagnosticSink, ProcessInput } from "../core/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
@@ -18,9 +19,15 @@ import {
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
 } from "../runtime/messages";
-import type { DisplaySettings } from "../settings/snapshot";
+import {
+    DEFAULT_DISPLAY_SETTINGS,
+    type DisplaySettings,
+} from "../settings/snapshot";
 
-const DOCUMENT_RUNTIME_SLOT = Symbol.for("no-more-ago.document-runtime");
+/**
+ * Global symbol used to retain the single content-runtime instance for a document.
+ */
+export const DOCUMENT_RUNTIME_SLOT = Symbol.for("no-more-ago.document-runtime");
 
 /**
  * Subset of the extension runtime API used to receive content-script commands.
@@ -52,11 +59,6 @@ export interface ContentRuntimeHandle {
      */
     teardown(): void;
 }
-
-const DEFAULT_DISPLAY: DisplaySettings = Object.freeze({
-    formatMode: "system",
-    timeZone: Object.freeze({ mode: "system" }),
-});
 
 /**
  * Validated persisted display state returned during content-runtime startup.
@@ -118,7 +120,7 @@ function isDisplayState(value: unknown): value is DisplayStateLike {
         isPresentationDisplay(record.display) &&
         Object.hasOwn(record, "debugEnabled") &&
         typeof record.debugEnabled === "boolean" &&
-        (!Object.hasOwn(record, "error") || record.error === "unavailable-time-zone")
+        (!Object.hasOwn(record, "error") || record.error === UNAVAILABLE_TIME_ZONE_ERROR)
     );
 }
 
@@ -316,7 +318,7 @@ function beginHydration(
     loader: (() => Promise<unknown>) | undefined,
 ): void {
     if (!loader) {
-        applyPresentation(slot, DEFAULT_DISPLAY, 0);
+        applyPresentation(slot, DEFAULT_DISPLAY_SETTINGS, 0);
         applyDebugPolicy(slot, false, 0);
         waitForDocument(slot, generation);
         return;

@@ -2,7 +2,11 @@
  * @file Background initialization, serialization, and lifecycle reconciliation.
  */
 
-import type { ActivationMode, ActivationReconcileResult } from "../runtime/adapter-activation";
+import type {
+    ActivationMode,
+    ActivationPolicy,
+    ActivationReconcileResult,
+} from "../runtime/adapter-activation";
 import type { SettingsService } from "../settings/settings-service";
 import type { SettingsSnapshotV5 } from "../settings/snapshot";
 import type { ActivationManager } from "./activation-manager";
@@ -230,7 +234,7 @@ export class ApplicationLifecycle {
      */
     public async reconcile(
         mode: ActivationMode,
-        policy: "enabled" | "disabled" | "unknown",
+        policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>> =
             this.snapshotValue?.sitePreferences ?? {},

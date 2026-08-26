@@ -3,6 +3,7 @@
  */
 
 import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter, type TimestampSourceKind } from "./types";
+import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "./github-contract";
 
 const APPROVED_KINDS = new Set<TimestampSourceKind>(["relative-time", "time-ago", "time-until"]);
 
@@ -11,9 +12,8 @@ const APPROVED_KINDS = new Set<TimestampSourceKind>(["relative-time", "time-ago"
  * widgets.
  */
 export const githubAdapter: SiteAdapter = {
-    id: "github",
-    matches: (url) =>
-        (url.protocol === "https:" || url.protocol === "http:") && url.hostname === "github.com",
+    id: GITHUB_ADAPTER_ID,
+    matches: matchesGitHubUrl,
     discover: (root) => {
         const candidates: Element[] = [];
         if (root instanceof Element && APPROVED_KINDS.has(root.localName as TimestampSourceKind)) {
@@ -37,7 +37,7 @@ export const githubAdapter: SiteAdapter = {
         }
         return rawDatetime
             ? {
-                adapterId: "github",
+                adapterId: GITHUB_ADAPTER_ID,
                 source: element,
                 sourceKind,
                 rawDatetime,

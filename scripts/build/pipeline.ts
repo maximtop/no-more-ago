@@ -6,8 +6,15 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { setImmediate } from "node:timers";
 import path from "node:path";
 import rspack from "@rspack/core";
-import { BROWSERS, MODES, createRspackConfig } from "../../rspack.config.ts";
+import { createRspackConfig } from "../../rspack.config.ts";
 import { assertSafe, createArtifactServices } from "./artifacts.ts";
+import {
+    BROWSERS,
+    isBrowser,
+    isBuildMode,
+    type Browser,
+    type BuildMode,
+} from "./contracts.ts";
 
 /**
  * Command-line usage text for the build entry point.
@@ -15,9 +22,14 @@ import { assertSafe, createArtifactServices } from "./artifacts.ts";
 export const USAGE = "Usage: pnpm dev|release [chrome|firefox|edge] [--watch]";
 
 /**
+ * Maximum time allowed for the watch compiler to close after an interrupted build.
+ */
+const WATCH_CLOSE_TIMEOUT_MS = 5_000;
+
+/**
  * Normalized command-line request describing the build mode, target browsers, and watch behavior.
  */
-type BuildRequest = { mode: string; browsers: string[]; watch: boolean };
+type BuildRequest = { mode: BuildMode; browsers: Browser[]; watch: boolean };
 
 /**
  * Lifecycle notification emitted around compile, package, publish, and watch transitions.
@@ -106,7 +118,7 @@ const defaultCompilerFactory = rspack as unknown as CompilerFactory;
  * @returns - Normalized build request.
  */
 export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
-    if (!MODES.includes(mode)) {
+    if (!isBuildMode(mode)) {
         throw new UsageError(`Unknown mode: ${mode}`);
     }
     const args = [...argv];
@@ -126,15 +138,13 @@ export function parseBuildRequest(mode: string, argv: string[]): BuildRequest {
     if (watch && args.length !== 1) {
         throw new UsageError("Watch requires one browser");
     }
-    const browsers =
-        args.length === 0
-            ? [...BROWSERS]
-            : [args[0]].filter((browser): browser is string => browser !== undefined);
-    if (browsers.some((browser) => !BROWSERS.includes(browser))) {
-        throw new UsageError(
-            `Unknown browser: ${browsers.find((browser) => !BROWSERS.includes(browser))}`,
-        );
+    const requestedBrowser = args[0];
+    if (requestedBrowser !== undefined && !isBrowser(requestedBrowser)) {
+        throw new UsageError(`Unknown browser: ${requestedBrowser}`);
     }
+    const browsers: Browser[] = requestedBrowser === undefined
+        ? [...BROWSERS]
+        : [requestedBrowser];
     return { mode, browsers, watch };
 }
 
@@ -462,7 +472,7 @@ function startWatch({
             phaseHooks.afterCleanup?.();
             settled();
         };
-        const timeout = setTimeout(complete, 5000);
+        const timeout = setTimeout(complete, WATCH_CLOSE_TIMEOUT_MS);
         if (typeof compiler?.close === "function") {
             compiler.close(() => {
                 clearTimeout(timeout);

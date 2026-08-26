@@ -5,6 +5,11 @@
 import { validateCustomFormatPattern } from "./custom-format";
 
 /**
+ * Current schema version accepted by the settings parser.
+ */
+export const SETTINGS_SCHEMA_VERSION = 5 as const;
+
+/**
  * The presentation choices persisted alongside the extension policy.
  */
 export type TimeZoneSelection =
@@ -30,7 +35,7 @@ export interface SettingsSnapshotV5 {
     /**
      * Exact schema revision required before a snapshot is accepted.
      */
-    readonly schemaVersion: 5;
+    readonly schemaVersion: typeof SETTINGS_SCHEMA_VERSION;
 
     /**
      * Monotonic revision used to order persisted settings writes.
@@ -57,11 +62,6 @@ export interface SettingsSnapshotV5 {
      */
     readonly debugEnabled: boolean;
 }
-
-/**
- * Current schema version accepted by the settings parser.
- */
-export const SETTINGS_SCHEMA_VERSION = 5 as const;
 
 /**
  * Storage key for the active settings snapshot.

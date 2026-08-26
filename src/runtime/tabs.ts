@@ -55,11 +55,6 @@ export interface TabsRuntime {
 }
 
 /**
- * Lifecycle state reported by a document runtime in response to a status message.
- */
-export type DocumentPhase = "waiting" | "active" | "stopped" | "failed";
-
-/**
  * Recognizes browser tab records with a safe numeric ID and optional string URL.
  *
  * @param value - Untrusted browser tab value.
