@@ -23,7 +23,8 @@
     "@mantine/hooks": "9.5.2",
     "date-fns": "4.4.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "valibot": "1.4.2"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

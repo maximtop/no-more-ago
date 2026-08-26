@@ -379,6 +379,7 @@ describe("background V3 message contracts", () => {
         expect(isDisplayState(ready)).toBe(true);
         expect(isDisplayState({ ...ready, extra: true })).toBe(false);
         expect(isDisplayState({ ...ready, error: "unavailable-time-zone" })).toBe(true);
+        expect(isDisplayState({ ...ready, error: undefined })).toBe(false);
         expect(
             isDisplayState({
                 availability: "ready",
@@ -507,6 +508,14 @@ describe("background V3 message contracts", () => {
             }),
         ).toBe(false);
         expect(
+            isSetDebugEnabledResponse({
+                ok: true,
+                acceptedRevision: 4,
+                state: ready,
+                refreshFailures: undefined,
+            }),
+        ).toBe(false);
+        expect(
             isSetDebugEnabledResponse({ ok: false, error: "save-failed", state: unavailable }),
         ).toBe(true);
         expect(isSetDebugEnabledResponse({ ok: true, acceptedRevision: -1, state: ready })).toBe(
@@ -580,6 +589,16 @@ describe("background V3 message contracts", () => {
         ).toBe(false);
         expect(isPopupState(popup)).toBe(true);
         expect(isPopupState({ ...popup, siteEnabled: undefined })).toBe(false);
+        let statusRead = false;
+        const accessorPopup = Object.defineProperty({ ...popup }, "status", {
+            enumerable: true,
+            get: () => {
+                statusRead = true;
+                return "active";
+            },
+        });
+        expect(isPopupState(accessorPopup)).toBe(false);
+        expect(statusRead).toBe(false);
         expect(
             isPopupState({
                 availability: "unavailable",
