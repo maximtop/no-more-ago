@@ -4,7 +4,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { formatDateWithPresentation, formatDefaultDate } from "../../src/core/format-default-date";
+import {
+    formatDateWithPresentation,
+    formatDefaultDate,
+} from "../../src/shared/date/format-default-date";
 
 describe("formatDefaultDate", () => {
     it("matches browser defaults for explicit and runtime-default locales", () => {

@@ -4,8 +4,8 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { processDocument } from "../../src/core/process-document";
-import { restoreExactTimes } from "../../src/core/render-exact-time";
+import { processDocument } from "../../src/content-script/transformation/process-document";
+import { restoreExactTimes } from "../../src/content-script/transformation/render-exact-time";
 
 describe("document ownership integration", () => {
     it("preserves link interaction and exposes one visible semantic date", () => {

@@ -4,13 +4,16 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { AdapterRegistry } from "../../src/adapters/registry";
-import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter } from "../../src/adapters/types";
+import { AdapterRegistry } from "../../src/content-script/adapters/registry";
+import {
+    EXPLICIT_ZONED_DATETIME_RULE,
+    type SiteAdapter,
+} from "../../src/content-script/adapters/types";
 import {
     DocumentTransformationController,
-} from "../../src/core/document-transformation-controller";
-import { formatDefaultDate } from "../../src/core/format-default-date";
-import type { DisplaySettings } from "../../src/settings/snapshot";
+} from "../../src/content-script/transformation/document-transformation-controller";
+import { formatDefaultDate } from "../../src/shared/date/format-default-date";
+import type { DisplaySettings } from "../../src/shared/settings/snapshot";
 
 describe("DocumentTransformationController", () => {
     const flushMutations = async (): Promise<void> => {

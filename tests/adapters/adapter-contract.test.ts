@@ -6,10 +6,12 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { githubAdapter } from "../../src/adapters/github";
-import { defaultRegistry } from "../../src/adapters/registry";
-import { resolveTrustedTimestamp } from "../../src/core/resolve-trusted-timestamp";
-import { EXPLICIT_ZONED_DATETIME_RULE } from "../../src/adapters/types";
+import { githubAdapter } from "../../src/content-script/adapters/github";
+import { defaultRegistry } from "../../src/content-script/adapters/registry";
+import {
+    resolveTrustedTimestamp,
+} from "../../src/content-script/transformation/resolve-trusted-timestamp";
+import { EXPLICIT_ZONED_DATETIME_RULE } from "../../src/content-script/adapters/types";
 import {
     SYNTHETIC_HOSTNAME,
     SYNTHETIC_SELECTOR,

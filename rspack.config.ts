@@ -10,7 +10,7 @@ import {
     MANIFEST_FILE,
     OPTIONS_PAGE_FILE,
     POPUP_PAGE_FILE,
-} from "./src/extension-files.ts";
+} from "./src/shared/extension-files.ts";
 import { BUILD_MODE, isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
 
 /**
@@ -122,7 +122,7 @@ export function createRspackConfig({
         target: "web",
         entry: {
             background: "./src/background/chrome.ts",
-            content: "./src/content/main.ts",
+            content: "./src/content-script/main.ts",
             popup: "./src/popup/main.tsx",
             options: "./src/options/main.tsx",
         },

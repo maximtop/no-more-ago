@@ -2,16 +2,16 @@
  * @file Converts, validates, and previews editable options-page display settings.
  */
 
-import type { DatePresentationResult } from "../core/format-default-date";
-import { formatDateWithPresentation } from "../core/format-default-date";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
-import type { DisplaySettings } from "../background/application";
+import type { DatePresentationResult } from "../shared/date/format-default-date";
+import { formatDateWithPresentation } from "../shared/date/format-default-date";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
+import type { DisplaySettings } from "../shared/messages";
 import {
     CUSTOM_FORMAT_MAX_LENGTH,
     CUSTOM_FORMAT_ERROR,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
-} from "../settings/custom-format";
+} from "../shared/settings/custom-format";
 
 /**
  * User-visible outcome of saving display settings.

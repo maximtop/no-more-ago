@@ -3,8 +3,8 @@
  */
 
 import { useEffect, useState } from "react";
-import type { DisplayState } from "../background/application";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
+import type { DisplayState } from "../shared/messages";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import {
     customPatternError,

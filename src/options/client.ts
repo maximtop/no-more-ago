@@ -24,24 +24,20 @@ import {
     setDisplaySettingsResponseSchema,
     setSiteEnabledResponseSchema,
     sitesStateSchema,
-} from "../background/messages";
-import type {
-    DebugState,
-    DisplaySettings,
-    DisplayState,
-    ResetAllSettingsResponse,
-    SetDebugEnabledResponse,
-    SetDisplaySettingsResponse,
-    SetSiteEnabledResponse,
-    SitesState,
-} from "../background/application";
-import type {
-    DiagnosticsClearError,
-    DiagnosticsSnapshot,
-    DiagnosticsSnapshotError,
-} from "../background/messages";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
-import { SITE_SETTINGS_SURFACE } from "../background/messages";
+    SITE_SETTINGS_SURFACE,
+    type DebugState,
+    type DisplaySettings,
+    type DisplayState,
+    type ResetAllSettingsResponse,
+    type SetDebugEnabledResponse,
+    type SetDisplaySettingsResponse,
+    type SetSiteEnabledResponse,
+    type SitesState,
+    type DiagnosticsClearError,
+    type DiagnosticsSnapshot,
+    type DiagnosticsSnapshotError,
+} from "../shared/messages";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 
 /**
  * Sends an options-page request to the extension runtime.

@@ -3,7 +3,7 @@
  */
 
 import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter, type TimestampSourceKind } from "./types";
-import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "./github-contract";
+import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "../../shared/adapters/github-contract";
 
 const APPROVED_KINDS = new Set<TimestampSourceKind>(["relative-time", "time-ago", "time-until"]);
 

@@ -3,8 +3,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET_DISPLAY_STATE_MESSAGE } from "../../src/background/messages";
-import { DOCUMENT_RUNTIME_SLOT } from "../../src/content/runtime";
+import { GET_DISPLAY_STATE_MESSAGE } from "../../src/shared/messages";
+import { DOCUMENT_RUNTIME_SLOT } from "../../src/content-script/runtime";
 
 
 /**
@@ -81,7 +81,7 @@ describe("content entrypoint", () => {
         setReadyState("loading");
         const chrome = installChromeMock();
         vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
         expect(document.querySelector("time")).toBeNull();
         document.dispatchEvent(new Event("DOMContentLoaded"));
@@ -92,7 +92,7 @@ describe("content entrypoint", () => {
         setReadyState("complete");
         const chrome = installChromeMock();
         vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
         expect(document.querySelector("time")).not.toBeNull();
     });
@@ -105,7 +105,7 @@ describe("content entrypoint", () => {
         });
         const chrome = installChromeMock(sendMessage);
         vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         expect(sendMessage).toHaveBeenCalledTimes(1);
         expect(document.querySelector("time[data-no-more-ago-output]")?.textContent).toBe(
             new Intl.DateTimeFormat(undefined, {
@@ -128,7 +128,7 @@ describe("content entrypoint", () => {
                 throw error;
             });
         const addEventListener = vi.spyOn(document, "addEventListener");
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         const callback = addEventListener.mock.calls.find(
             ([type]) => type === "DOMContentLoaded",
         )?.[1];
@@ -142,7 +142,7 @@ describe("content entrypoint", () => {
 
         vi.resetModules();
         setReadyState("complete");
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
         expect(document.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(1);
         addEventListener.mockRestore();
@@ -159,10 +159,10 @@ describe("content entrypoint", () => {
                 throw error;
             });
 
-        await expect(import("../../src/content/main")).rejects.toThrow(error);
+        await expect(import("../../src/content-script/main")).rejects.toThrow(error);
         observe.mockRestore();
         vi.resetModules();
-        await import("../../src/content/main");
+        await import("../../src/content-script/main");
         expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
         expect(document.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(1);
     });

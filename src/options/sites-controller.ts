@@ -3,8 +3,8 @@
  */
 
 import { useEffect, useState } from "react";
-import type { SitesState } from "../background/application";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
+import type { SitesState } from "../shared/messages";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
 

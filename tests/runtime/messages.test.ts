@@ -15,7 +15,7 @@ import {
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
     isTeardownDocumentMessage,
-} from "../../src/runtime/messages";
+} from "../../src/shared/messaging/document-messages";
 
 const display = { formatMode: "system" as const, timeZone: { mode: "utc" as const } };
 const customDisplay = {

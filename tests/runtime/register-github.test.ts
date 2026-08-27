@@ -4,7 +4,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { ensureGitHubRuntime, GITHUB_REGISTRATION } from "../../src/runtime/register-github";
+import {
+    ensureGitHubRuntime,
+    GITHUB_REGISTRATION,
+} from "../../src/background/runtime/register-github";
 
 describe("ensureGitHubRuntime", () => {
     it("registers the exact GitHub content script when missing", async () => {

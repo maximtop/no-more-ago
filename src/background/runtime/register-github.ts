@@ -10,8 +10,8 @@ import {
     GITHUB_MATCH_PATTERNS,
     GITHUB_REGISTRATION_ID,
     matchesGitHubUrl,
-} from "../adapters/github-contract";
-import { CONTENT_SCRIPT_FILE } from "../extension-files";
+} from "../../shared/adapters/github-contract";
+import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
 
 /**
  * Persistent document-start registration for top-level GitHub pages.

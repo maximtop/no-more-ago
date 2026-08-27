@@ -12,14 +12,12 @@ import {
     popupStateSchema,
     setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
-} from "../background/messages";
-import type {
-    PopupState,
-    SetGlobalEnabledResponse,
-    SetSiteEnabledResponse,
-} from "../background/application";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
-import { SITE_SETTINGS_SURFACE } from "../background/messages";
+    SITE_SETTINGS_SURFACE,
+    type PopupState,
+    type SetGlobalEnabledResponse,
+    type SetSiteEnabledResponse,
+} from "../shared/messages";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 
 /**
  * Sends a popup request to the extension runtime.

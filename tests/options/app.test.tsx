@@ -16,17 +16,17 @@ import {
     SET_DEBUG_ENABLED_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
-} from "../../src/background/messages";
+} from "../../src/shared/messages";
 import type {
     DebugState,
     DisplaySettings,
     DisplayState,
     SitesState,
-} from "../../src/background/application";
+} from "../../src/shared/messages";
 import { OptionsApp } from "../../src/options/app";
 import { SitesClient, type SitesTransport } from "../../src/options/client";
-import type { DownloadRuntime } from "../../src/diagnostics/archive";
-import type { SiteReportReporter } from "../../src/reporting/site-report";
+import type { DownloadRuntime } from "../../src/options/diagnostics/archive";
+import type { SiteReportReporter } from "../../src/shared/reporting/site-report";
 
 const ready: SitesState = {
     availability: "ready",

@@ -10,12 +10,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
     AdapterActivationCoordinator,
     type RuntimeAdapterDefinition,
-} from "../../src/runtime/adapter-activation";
+} from "../../src/background/runtime/adapter-activation";
 import {
     DOCUMENT_STATUS_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
     type DocumentPhase,
-} from "../../src/runtime/messages";
+} from "../../src/shared/messaging/document-messages";
 
 const github: RuntimeAdapterDefinition = {
     id: "synthetic",

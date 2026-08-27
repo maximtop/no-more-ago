@@ -17,16 +17,15 @@ import {
     Title,
 } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
-import type { PopupState } from "../background/application";
-import { POPUP_STATUS } from "../background/messages";
+import { POPUP_STATUS, type PopupState } from "../shared/messages";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
     type SiteReportReporter,
-} from "../reporting/site-report";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
+} from "../shared/reporting/site-report";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
-import { OPTIONS_PAGE_FILE } from "../extension-files";
+import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 
 /**
  * Optional dependencies and initial state for the popup UI.

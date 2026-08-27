@@ -2,10 +2,12 @@
  * @file Coordinates the document controller with persisted settings and runtime messages.
  */
 
-import type { AdapterRegistry } from "../adapters/registry";
-import { DocumentTransformationController } from "../core/document-transformation-controller";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
-import type { DocumentDiagnosticSink, ProcessInput } from "../core/process-document";
+import type { AdapterRegistry } from "./adapters/registry";
+import {
+    DocumentTransformationController,
+} from "./transformation/document-transformation-controller";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
+import type { DocumentDiagnosticSink, ProcessInput } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
@@ -18,11 +20,11 @@ import {
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
-} from "../runtime/messages";
+} from "../shared/messages";
 import {
     DEFAULT_DISPLAY_SETTINGS,
     type DisplaySettings,
-} from "../settings/snapshot";
+} from "../shared/settings/snapshot";
 
 /**
  * Global symbol used to retain the single content-runtime instance for a document.

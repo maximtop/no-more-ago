@@ -2,20 +2,21 @@
  * @file Broadcasts committed display and diagnostic policy changes to active documents.
  */
 
-import type { RuntimeAdapterDefinition } from "../../runtime/adapter-activation";
+import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
     isDebugPolicyUpdateAcknowledgement,
     isPresentationUpdateAcknowledgement,
-} from "../../runtime/messages";
-import type { RuntimeTab, TabsRuntime } from "../../runtime/tabs";
+    type DebugRefreshFailure,
+    type DisplayRefreshFailure,
+} from "../../shared/messages";
+import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import {
     isSiteEnabled,
     type DisplaySettings,
     type SettingsSnapshotV5,
-} from "../../settings/snapshot";
-import type { DebugRefreshFailure, DisplayRefreshFailure } from "../messaging/view-state";
+} from "../../shared/settings/snapshot";
 
 /**
  * Parses a tab URL, returning null when it is absent or invalid.

@@ -6,9 +6,9 @@ import type {
     ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
-} from "../../runtime/adapter-activation";
-import type { SettingsService } from "../../settings/settings-service";
-import type { SettingsSnapshotV5 } from "../../settings/snapshot";
+} from "../runtime/adapter-activation";
+import type { SettingsService } from "../settings/service";
+import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
 import type { ActivationManager } from "./activation-manager";
 import type {
     ApplicationFailure,

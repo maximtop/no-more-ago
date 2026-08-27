@@ -4,7 +4,7 @@
 
 import * as v from "valibot";
 import { GITHUB_HOSTNAME } from "../adapters/github-contract";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../core/extension-version";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
 import { isCanonicalHostname } from "../settings/snapshot";
 import {
     DIAGNOSTIC_BROWSER_FAMILIES,

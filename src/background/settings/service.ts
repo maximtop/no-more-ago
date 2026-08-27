@@ -14,8 +14,8 @@ import {
     type DisplaySettings,
     type SettingsLoadResult,
     type SettingsSnapshotV5,
-} from "./snapshot";
-import { validateCustomFormatPattern } from "./custom-format";
+} from "../../shared/settings/snapshot";
+import { validateCustomFormatPattern } from "../../shared/settings/custom-format";
 
 /**
  * Durable storage operations needed to read, atomically replace, and recover settings snapshots.

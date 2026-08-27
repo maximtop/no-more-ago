@@ -4,7 +4,7 @@
 
 import { Alert, Box, Stack, Switch, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { SitesState } from "../background/application";
+import type { SitesState } from "../shared/messages";
 import type { OptionsNotice } from "./options-notice";
 import { optionsNoticeText } from "./options-notice";
 import type { SitesController } from "./sites-controller";

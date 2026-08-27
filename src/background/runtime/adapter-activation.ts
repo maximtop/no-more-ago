@@ -4,7 +4,6 @@
  * @file Chrome scripting and tab reconciliation for runtime adapters.
  */
 
-import type { DocumentPhase } from "./messages";
 import type { RuntimeTab, TabsRuntime } from "./tabs";
 import type {
     RegisteredContentScriptReference,
@@ -15,9 +14,10 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
     isDocumentStatusResponse,
+    type DocumentPhase,
     type DocumentStatusResponse,
-} from "./messages";
-import { isSiteEnabled } from "../settings/snapshot";
+} from "../../shared/messages";
+import { isSiteEnabled } from "../../shared/settings/snapshot";
 
 /**
  * Trigger that determines whether registrations are refreshed, swept, or failed closed.

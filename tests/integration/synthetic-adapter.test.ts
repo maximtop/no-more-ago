@@ -8,17 +8,20 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi, type Mock } from "vitest";
 
 import { BackgroundApplication } from "../../src/background/application";
-import { installContentRuntime } from "../../src/content/runtime";
+import { installContentRuntime } from "../../src/content-script/runtime";
 import {
     DocumentTransformationController,
-} from "../../src/core/document-transformation-controller";
-import { processDocument } from "../../src/core/process-document";
-import { DIAGNOSTICS_STORAGE_KEY, DiagnosticJournal } from "../../src/diagnostics/journal";
-import { AdapterActivationCoordinator } from "../../src/runtime/adapter-activation";
-import { TEARDOWN_DOCUMENT_MESSAGE } from "../../src/runtime/messages";
-import { githubRuntimeDefinition } from "../../src/runtime/register-github";
-import type { RegisteredContentScriptSpec } from "../../src/runtime/scripting";
-import { SettingsService } from "../../src/settings/settings-service";
+} from "../../src/content-script/transformation/document-transformation-controller";
+import { processDocument } from "../../src/content-script/transformation/process-document";
+import {
+    DIAGNOSTICS_STORAGE_KEY,
+    DiagnosticJournal,
+} from "../../src/background/diagnostics/journal";
+import { AdapterActivationCoordinator } from "../../src/background/runtime/adapter-activation";
+import { TEARDOWN_DOCUMENT_MESSAGE } from "../../src/shared/messaging/document-messages";
+import { githubRuntimeDefinition } from "../../src/background/runtime/register-github";
+import type { RegisteredContentScriptSpec } from "../../src/background/runtime/scripting";
+import { SettingsService } from "../../src/background/settings/service";
 import {
     createSettingsSnapshot,
     isSettingsSnapshotV5,
@@ -26,7 +29,7 @@ import {
     SETTINGS_STORAGE_KEY,
     type DisplaySettings,
     type SettingsSnapshotV5,
-} from "../../src/settings/snapshot";
+} from "../../src/shared/settings/snapshot";
 import {
     createSyntheticRegistry,
     SYNTHETIC_HOSTNAME,

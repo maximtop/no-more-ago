@@ -2,8 +2,8 @@
  * @file Public background view-state types inferred from Valibot schemas.
  */
 
-export type { DisplaySettings } from "../../settings/snapshot";
-export { UNAVAILABLE_TIME_ZONE_ERROR } from "../../core/presentation-errors";
+export type { DisplaySettings } from "../settings/snapshot";
+export { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 export type {
     DebugState,
     DisplayState,

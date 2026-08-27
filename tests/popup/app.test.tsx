@@ -12,14 +12,14 @@ import {
     GET_POPUP_STATE_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
-} from "../../src/background/messages";
-import type { PopupState } from "../../src/background/application";
+} from "../../src/shared/messages";
+import type { PopupState } from "../../src/shared/messages";
 import {
     createSiteReportReporter,
     type SiteReportReporter,
     type SiteReportResult,
     type SiteReportTab,
-} from "../../src/reporting/site-report";
+} from "../../src/shared/reporting/site-report";
 
 const active: PopupState = {
     availability: "ready",

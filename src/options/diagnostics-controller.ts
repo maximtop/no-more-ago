@@ -3,19 +3,19 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { DebugState } from "../background/application";
 import type {
+    DebugState,
     DiagnosticsClearError,
     DiagnosticsSnapshotError,
-} from "../background/messages";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
+} from "../shared/messages";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import {
     DiagnosticArchiveError,
     createDiagnosticsZip,
     downloadDiagnosticsZip,
     type DownloadRuntime,
-} from "../diagnostics/archive";
-import type { SiteReportReporter } from "../reporting/site-report";
+} from "./diagnostics/archive";
+import type { SiteReportReporter } from "../shared/reporting/site-report";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
 

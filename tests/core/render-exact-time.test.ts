@@ -11,7 +11,7 @@ import {
     getOwnedSourceForOutput,
     restoreExactTime,
     restoreExactTimes,
-} from "../../src/core/render-exact-time";
+} from "../../src/content-script/transformation/render-exact-time";
 
 const DATETIME = "2026-08-23T10:15:00+03:00";
 

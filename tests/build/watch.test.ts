@@ -21,7 +21,7 @@ describe("development watch command", () => {
             const sequence = initial.sequence ?? 0;
             const marker = "__noMoreAgoWatchMarker";
             appendFileSync(
-                `${workspace.root}/src/content/main.ts`,
+                `${workspace.root}/src/content-script/main.ts`,
                 `\nglobalThis.${marker} = true;\n`,
             );
             await running.waitFor(

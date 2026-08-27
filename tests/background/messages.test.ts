@@ -25,7 +25,7 @@ import {
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
     sitesStateSchema,
-} from "../../src/background/messages";
+} from "../../src/shared/messages";
 
 const readyPopup = {
     availability: "ready",

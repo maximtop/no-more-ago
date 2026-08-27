@@ -3,13 +3,13 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import type { DiagnosticEvent } from "../../src/diagnostics/events";
+import type { DiagnosticEvent } from "../../src/shared/diagnostics/events";
 import {
     DIAGNOSTICS_MAX_BYTES,
     DIAGNOSTICS_STORAGE_KEY,
     DiagnosticJournal,
     type DiagnosticStorage,
-} from "../../src/diagnostics/journal";
+} from "../../src/background/diagnostics/journal";
 
 const event = (timestamp: number): DiagnosticEvent => ({
     category: "mutation",

@@ -2,11 +2,14 @@
  * @file Defines a synthetic trusted adapter fixture for integration tests.
  */
 
-import { githubAdapter } from "../../../src/adapters/github";
-import { AdapterRegistry } from "../../../src/adapters/registry";
-import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter } from "../../../src/adapters/types";
-import type { RegisteredContentScriptSpec } from "../../../src/runtime/scripting";
-import type { RuntimeAdapterDefinition } from "../../../src/runtime/adapter-activation";
+import { githubAdapter } from "../../../src/content-script/adapters/github";
+import { AdapterRegistry } from "../../../src/content-script/adapters/registry";
+import {
+    EXPLICIT_ZONED_DATETIME_RULE,
+    type SiteAdapter,
+} from "../../../src/content-script/adapters/types";
+import type { RegisteredContentScriptSpec } from "../../../src/background/runtime/scripting";
+import type { RuntimeAdapterDefinition } from "../../../src/background/runtime/adapter-activation";
 
 /**
  * Canonical hostname accepted by the synthetic adapter.

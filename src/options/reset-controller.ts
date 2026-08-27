@@ -3,7 +3,7 @@
  */
 
 import { useRef, useState } from "react";
-import { CLIENT_RESULT_KIND } from "../core/client-result";
+import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import type { DiagnosticsController } from "./diagnostics-controller";
 import type { DisplayController } from "./display-controller";

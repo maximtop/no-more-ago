@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { resolveDateLocale } from "../../src/core/date-locale";
+import { resolveDateLocale } from "../../src/shared/date/date-locale";
 
 describe("date locale resolution", () => {
     it("uses exact and ordered language-region matches", () => {

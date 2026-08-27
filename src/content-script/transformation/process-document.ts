@@ -3,16 +3,16 @@
  */
 
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
-import { formatDateWithPresentation } from "./format-default-date";
-import { INVALID_DATE_FORMAT_ERROR } from "./presentation-errors";
+import { formatDateWithPresentation } from "../../shared/date/format-default-date";
+import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
 import {
     renderExactTime,
     restoreExactTime,
     type OwnedOutputMutationSink,
 } from "./render-exact-time";
 import { resolveTrustedTimestamp } from "./resolve-trusted-timestamp";
-import type { DisplaySettings } from "../settings/snapshot";
-import type { DiagnosticEventInput } from "../diagnostics/events";
+import type { DisplaySettings } from "../../shared/settings/snapshot";
+import type { DiagnosticEventInput } from "../../shared/diagnostics/events";
 
 /**
  * Receives bounded processing facts after page-derived data has been sanitized.

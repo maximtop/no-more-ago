@@ -3,8 +3,8 @@
  */
 
 import * as v from "valibot";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../core/presentation-errors";
-import { isDisplaySettings, type DisplaySettings } from "../../settings/snapshot";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
+import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
 import { strictMessageObject } from "./schema-utils";
 import {
     POPUP_READY_STATUSES,

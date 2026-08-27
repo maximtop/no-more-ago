@@ -11,18 +11,21 @@ import { describe, expect, it, vi } from "vitest";
 import {
     BackgroundApplication,
     type BackgroundApplicationOptions,
-    type SetDisplaySettingsResponse,
 } from "../../src/background/application";
-import { DIAGNOSTICS_STORAGE_KEY, DiagnosticJournal } from "../../src/diagnostics/journal";
-import { SettingsService } from "../../src/settings/settings-service";
+import {
+    DIAGNOSTICS_STORAGE_KEY,
+    DiagnosticJournal,
+} from "../../src/background/diagnostics/journal";
+import { SettingsService } from "../../src/background/settings/service";
 import {
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     type DisplaySettings,
-} from "../../src/settings/snapshot";
-import type { RuntimeAdapterDefinition } from "../../src/runtime/adapter-activation";
-import { AdapterActivationCoordinator } from "../../src/runtime/adapter-activation";
+} from "../../src/shared/settings/snapshot";
+import type { SetDisplaySettingsResponse } from "../../src/shared/messages";
+import type { RuntimeAdapterDefinition } from "../../src/background/runtime/adapter-activation";
+import { AdapterActivationCoordinator } from "../../src/background/runtime/adapter-activation";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
@@ -31,7 +34,7 @@ import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
     type DocumentPhase,
-} from "../../src/runtime/messages";
+} from "../../src/shared/messaging/document-messages";
 
 const settingsV5 = (
     revision: number,

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
     createDiagnosticEvent,
     deriveDiagnosticContext,
-} from "../../src/diagnostics/events";
+} from "../../src/shared/diagnostics/events";
 
 describe("diagnostic events", () => {
     it("derives only coarse context from the browser sender", () => {

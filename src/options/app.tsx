@@ -4,12 +4,12 @@
 
 import { MantineProvider, Paper, Stack, Text } from "@mantine/core";
 import { useMemo, useState, type ReactElement } from "react";
-import type { DebugState, DisplayState, SitesState } from "../background/application";
-import type { DownloadRuntime } from "../diagnostics/archive";
+import type { DebugState, DisplayState, SitesState } from "../shared/messages";
+import type { DownloadRuntime } from "./diagnostics/archive";
 import {
     createDefaultSiteReportReporter,
     type SiteReportReporter,
-} from "../reporting/site-report";
+} from "../shared/reporting/site-report";
 import { createSitesClient, type SitesClient } from "./client";
 import { useDiagnosticsController } from "./diagnostics-controller";
 import { DiagnosticsSection } from "./diagnostics-section";

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
-} from "../../src/settings/custom-format";
+} from "../../src/shared/settings/custom-format";
 
 describe("custom format validation", () => {
     it("accepts Unicode date tokens and quoted literals", () => {

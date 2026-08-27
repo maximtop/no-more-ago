@@ -3,8 +3,10 @@
  */
 
 import { installContentRuntime } from "./runtime";
-import { GET_DISPLAY_STATE_MESSAGE } from "../background/messages";
-import { DIAGNOSTIC_EVENT_MESSAGE } from "../runtime/messages";
+import {
+    DIAGNOSTIC_EVENT_MESSAGE,
+    GET_DISPLAY_STATE_MESSAGE,
+} from "../shared/messages";
 
 installContentRuntime({
     document,

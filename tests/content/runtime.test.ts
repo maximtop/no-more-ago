@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
     DocumentTransformationController,
-} from "../../src/core/document-transformation-controller";
-import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../src/content/runtime";
+} from "../../src/content-script/transformation/document-transformation-controller";
+import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../src/content-script/runtime";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
@@ -16,7 +16,7 @@ import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
     isDocumentStatusResponse,
-} from "../../src/runtime/messages";
+} from "../../src/shared/messaging/document-messages";
 import { createSyntheticRegistry } from "../fixtures/synthetic/adapter";
 
 /**

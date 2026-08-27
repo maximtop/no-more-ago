@@ -6,9 +6,12 @@ import { readFile } from "node:fs/promises";
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { processDocument, reconcileDocumentRegion } from "../../src/core/process-document";
-import { OWNED_SOURCE_ATTRIBUTE } from "../../src/core/render-exact-time";
-import type { DisplaySettings } from "../../src/settings/snapshot";
+import {
+    processDocument,
+    reconcileDocumentRegion,
+} from "../../src/content-script/transformation/process-document";
+import { OWNED_SOURCE_ATTRIBUTE } from "../../src/content-script/transformation/render-exact-time";
+import type { DisplaySettings } from "../../src/shared/settings/snapshot";
 
 describe("processDocument", () => {
     let fixture = "";

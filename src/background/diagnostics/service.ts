@@ -9,22 +9,22 @@ import {
     type DiagnosticEvent,
     type DiagnosticEventInput,
     type DiagnosticSender,
-} from "../../diagnostics/events";
+} from "../../shared/diagnostics/events";
 import {
     DIAGNOSTIC_BROWSER_FAMILIES,
-} from "../../diagnostics/contracts";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../../core/extension-version";
-import type { DiagnosticJournal } from "../../diagnostics/journal";
-import type { RuntimeAdapterDefinition } from "../../runtime/adapter-activation";
-import { isSiteEnabled } from "../../settings/snapshot";
+} from "../../shared/diagnostics/contracts";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
+import type { DiagnosticJournal } from "../diagnostics/journal";
+import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
+import { isSiteEnabled } from "../../shared/settings/snapshot";
 import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
 import type {
     ClearDiagnosticsResponse,
     DiagnosticsEnvironment,
     GetDiagnosticsSnapshotResponse,
-} from "../messaging/contracts";
-import type { DebugState } from "../messaging/view-state";
+    DebugState,
+} from "../../shared/messages";
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 

@@ -20,17 +20,18 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     backgroundMessageSchema,
-} from "./messages";
-import { SettingsService, type SettingsStorage } from "../settings/settings-service";
-import { DiagnosticJournal, type DiagnosticStorage } from "../diagnostics/journal";
-import type { DiagnosticBrowserFamily } from "../diagnostics/events";
-import { AdapterActivationCoordinator } from "../runtime/adapter-activation";
-import { githubRuntimeDefinition } from "../runtime/register-github";
-import { isDiagnosticEventMessage } from "../runtime/messages";
-import type { ScriptingRuntime } from "../runtime/scripting";
-import type { TabsRuntime } from "../runtime/tabs";
-import { OPTIONS_PAGE_FILE } from "../extension-files";
-import { POPUP_STATUS, SITE_SETTINGS_SURFACE } from "./messaging/view-state-values";
+    isDiagnosticEventMessage,
+    POPUP_STATUS,
+    SITE_SETTINGS_SURFACE,
+} from "../shared/messages";
+import { SettingsService, type SettingsStorage } from "./settings/service";
+import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
+import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
+import { AdapterActivationCoordinator } from "./runtime/adapter-activation";
+import { githubRuntimeDefinition } from "./runtime/register-github";
+import type { ScriptingRuntime } from "./runtime/scripting";
+import type { TabsRuntime } from "./runtime/tabs";
+import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -391,7 +392,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
     });
 } else {
     // Incomplete local API shims retain the validated registration smoke path.
-    void import("../runtime/register-github")
+    void import("./runtime/register-github")
         .then(({ ensureGitHubRuntime }) =>
             ensureGitHubRuntime({
                 getRegisteredContentScripts: (filter) =>

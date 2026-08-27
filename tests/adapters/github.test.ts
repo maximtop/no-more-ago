@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { defaultRegistry } from "../../src/adapters/registry";
-import { EXPLICIT_ZONED_DATETIME_RULE } from "../../src/adapters/types";
+import { defaultRegistry } from "../../src/content-script/adapters/registry";
+import { EXPLICIT_ZONED_DATETIME_RULE } from "../../src/content-script/adapters/types";
 
 describe("GitHub adapter registry", () => {
     it("selects only exact GitHub HTTP(S) URLs", () => {

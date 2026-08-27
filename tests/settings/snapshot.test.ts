@@ -16,7 +16,7 @@ import {
     parseDisplaySettings,
     parseTimeZoneSelection,
     parseSettingsSnapshot,
-} from "../../src/settings/snapshot";
+} from "../../src/shared/settings/snapshot";
 
 const display = (mode: "system" | "utc" | "iana", identifier?: string) => ({
     formatMode: "system" as const,

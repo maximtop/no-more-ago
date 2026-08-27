@@ -2,9 +2,9 @@
  * @file Public background application facade.
  */
 
-import type { DiagnosticSender } from "../../diagnostics/events";
-import type { ActivationReconcileResult } from "../../runtime/adapter-activation";
-import type { SettingsSnapshotV5 } from "../../settings/snapshot";
+import type { DiagnosticSender } from "../../shared/diagnostics/events";
+import type { ActivationReconcileResult } from "../runtime/adapter-activation";
+import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
 import { ActivationManager } from "./activation-manager";
 import { ApplicationLifecycle } from "./lifecycle";
 import type {
@@ -17,13 +17,9 @@ import { deriveDisplayState } from "../projection/display-state";
 import { DocumentRefresh } from "../settings/document-refresh";
 import type {
     ClearDiagnosticsResponse,
-    GetDiagnosticsSnapshotResponse,
-} from "../messaging/contracts";
-import { SettingsCommands } from "../settings/commands";
-import { StateProjection } from "../projection/state-projection";
-import type {
     DebugState,
     DisplayState,
+    GetDiagnosticsSnapshotResponse,
     PopupState,
     ResetAllSettingsResponse,
     SetDebugEnabledResponse,
@@ -31,8 +27,10 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SitesState,
-} from "../messaging/view-state";
-import type { SiteSettingsSurface } from "../messaging/view-state-values";
+    SiteSettingsSurface,
+} from "../../shared/messages";
+import { SettingsCommands } from "../settings/commands";
+import { StateProjection } from "../projection/state-projection";
 
 export type {
     ActivationCoordinator,
@@ -41,23 +39,6 @@ export type {
     BackgroundApplicationOptions,
     LifecycleReason,
 } from "./contracts";
-export type {
-    DebugRefreshFailure,
-    DebugState,
-    DisplayRefreshFailure,
-    DisplaySettings,
-    DisplayState,
-    PopupFailure,
-    PopupState,
-    PopupStatus,
-    ResetAllSettingsResponse,
-    SetDebugEnabledResponse,
-    SetDisplaySettingsResponse,
-    SetGlobalEnabledResponse,
-    SetSiteEnabledResponse,
-    SiteListEntry,
-    SitesState,
-} from "../messaging/view-state";
 
 /**
  * Stable public facade coordinating focused background services.

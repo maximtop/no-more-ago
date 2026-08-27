@@ -3,7 +3,7 @@
  */
 
 import type { ApplicationStateView } from "../application/state";
-import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "../messaging/view-state";
+import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "../../shared/messages";
 
 /**
  * Checks whether the runtime supports an IANA time-zone identifier.

@@ -3,9 +3,9 @@
  */
 
 import * as v from "valibot";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../../core/extension-version";
-import { DIAGNOSTIC_BROWSER_FAMILIES } from "../../diagnostics/contracts";
-import { diagnosticEventSchema } from "../../diagnostics/events";
+import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
+import { DIAGNOSTIC_BROWSER_FAMILIES } from "../diagnostics/contracts";
+import { diagnosticEventSchema } from "../diagnostics/events";
 import { strictMessageObject } from "./schema-utils";
 import { SITE_SETTINGS_SURFACES } from "./view-state-values";
 import type {

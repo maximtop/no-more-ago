@@ -4,8 +4,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { EXPLICIT_ZONED_DATETIME_RULE, type TimestampCandidate } from "../../src/adapters/types";
-import { resolveTrustedTimestamp } from "../../src/core/resolve-trusted-timestamp";
+import {
+    EXPLICIT_ZONED_DATETIME_RULE,
+    type TimestampCandidate,
+} from "../../src/content-script/adapters/types";
+import {
+    resolveTrustedTimestamp,
+} from "../../src/content-script/transformation/resolve-trusted-timestamp";
 
 describe("resolveTrustedTimestamp", () => {
     it("normalizes an explicitly zoned timestamp to its instant", () => {

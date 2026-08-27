@@ -6,24 +6,24 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
 
 import { BackgroundApplication } from "../../src/background/application";
-import { installContentRuntime } from "../../src/content/runtime";
+import { installContentRuntime } from "../../src/content-script/runtime";
 import {
     DIAGNOSTICS_STORAGE_KEY,
     DiagnosticJournal,
-} from "../../src/diagnostics/journal";
+} from "../../src/background/diagnostics/journal";
 import {
     AdapterActivationCoordinator,
     type RuntimeAdapterDefinition,
-} from "../../src/runtime/adapter-activation";
+} from "../../src/background/runtime/adapter-activation";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-} from "../../src/runtime/messages";
-import type { RegisteredContentScriptSpec } from "../../src/runtime/scripting";
-import { SettingsService } from "../../src/settings/settings-service";
+} from "../../src/shared/messaging/document-messages";
+import type { RegisteredContentScriptSpec } from "../../src/background/runtime/scripting";
+import { SettingsService } from "../../src/background/settings/service";
 import {
     createSettingsSnapshot,
     DEFAULT_SETTINGS_SNAPSHOT,
@@ -32,7 +32,7 @@ import {
     SETTINGS_STORAGE_KEY,
     type DisplaySettings,
     type SettingsSnapshotV5,
-} from "../../src/settings/snapshot";
+} from "../../src/shared/settings/snapshot";
 
 /**
  * Content-runtime message listener retained for one simulated browser tab.

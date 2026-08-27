@@ -4,8 +4,8 @@
 
 import { Alert, Box, Button, Stack, Text, TextInput } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { DisplayState } from "../background/application";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../core/presentation-errors";
+import type { DisplayState } from "../shared/messages";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
 import type { DisplayController } from "./display-controller";
 import {
     customPatternError,

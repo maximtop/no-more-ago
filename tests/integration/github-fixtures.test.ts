@@ -6,12 +6,12 @@ import { readFile } from "node:fs/promises";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { defaultRegistry } from "../../src/adapters/registry";
+import { defaultRegistry } from "../../src/content-script/adapters/registry";
 import {
     DocumentTransformationController,
-} from "../../src/core/document-transformation-controller";
-import { processDocument } from "../../src/core/process-document";
-import { OWNED_SOURCE_ATTRIBUTE } from "../../src/core/render-exact-time";
+} from "../../src/content-script/transformation/document-transformation-controller";
+import { processDocument } from "../../src/content-script/transformation/process-document";
+import { OWNED_SOURCE_ATTRIBUTE } from "../../src/content-script/transformation/render-exact-time";
 
 const githubPages = [
     "/github/docs/commit/4f8c3170cea7f72cf41fc976f5dbf4e8a0b8567f",

@@ -3,7 +3,7 @@
  */
 
 import * as v from "valibot";
-import { diagnosticEventSchema, type DiagnosticEvent } from "./events";
+import { diagnosticEventSchema, type DiagnosticEvent } from "../../shared/diagnostics/events";
 
 /**
  * Storage key containing diagnostic events.

@@ -8,7 +8,7 @@ import type {
     ActivationReconcileResult,
     RegistrationOutcome,
     RuntimeAdapterDefinition,
-} from "../../runtime/adapter-activation";
+} from "../runtime/adapter-activation";
 import type { ActivationCoordinator } from "./contracts";
 
 /**

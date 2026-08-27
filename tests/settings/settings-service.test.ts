@@ -4,14 +4,14 @@
 
 /* eslint-disable @typescript-eslint/require-await */
 import { describe, expect, it, vi } from "vitest";
-import { SettingsService } from "../../src/settings/settings-service";
+import { SettingsService } from "../../src/background/settings/service";
 import {
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     isSettingsSnapshotV5,
     type DisplaySettings,
-} from "../../src/settings/snapshot";
+} from "../../src/shared/settings/snapshot";
 
 const v5 = (
     revision = 0,

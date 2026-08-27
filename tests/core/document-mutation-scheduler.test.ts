@@ -7,8 +7,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
     DocumentMutationScheduler,
     type AffectedMutationBatch,
-} from "../../src/core/document-mutation-scheduler";
-import { renderExactTime, restoreExactTime } from "../../src/core/render-exact-time";
+} from "../../src/content-script/transformation/document-mutation-scheduler";
+import {
+    renderExactTime,
+    restoreExactTime,
+} from "../../src/content-script/transformation/render-exact-time";
 
 const flushMutations = async (): Promise<void> => {
     await Promise.resolve();

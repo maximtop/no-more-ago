@@ -9,7 +9,7 @@ import {
     createSiteReportReporter,
     type SiteReportBrowserRuntime,
     type SiteReportTab,
-} from "../../src/reporting/site-report";
+} from "../../src/shared/reporting/site-report";
 
 const manifest = { version: "1.2.3" };
 
