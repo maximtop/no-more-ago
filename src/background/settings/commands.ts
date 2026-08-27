@@ -2,14 +2,14 @@
  * @file Serialized settings mutations and their runtime side effects.
  */
 
-import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
-import type { SettingsService } from "../settings/settings-service";
-import { isCanonicalHostname, isSiteEnabled } from "../settings/snapshot";
-import type { ApplicationLifecycle } from "./application-lifecycle";
-import type { DiagnosticsService } from "./diagnostics-service";
-import { deriveDisplayState } from "./display-state";
+import type { RuntimeAdapterDefinition } from "../../runtime/adapter-activation";
+import type { SettingsService } from "../../settings/settings-service";
+import { isCanonicalHostname, isSiteEnabled } from "../../settings/snapshot";
+import type { ApplicationLifecycle } from "../application/lifecycle";
+import type { DiagnosticsService } from "../diagnostics/service";
+import { deriveDisplayState } from "../projection/display-state";
 import type { DocumentRefresh } from "./document-refresh";
-import type { StateProjection } from "./state-projection";
+import type { StateProjection } from "../projection/state-projection";
 import type {
     DebugRefreshFailure,
     DisplayRefreshFailure,
@@ -20,8 +20,8 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SitesState,
-} from "./view-state";
-import { SITE_SETTINGS_SURFACE, type SiteSettingsSurface } from "./view-state-values";
+} from "../messaging/view-state";
+import { SITE_SETTINGS_SURFACE, type SiteSettingsSurface } from "../messaging/view-state-values";
 
 /**
  * Applies persisted settings changes and coordinates their runtime effects.

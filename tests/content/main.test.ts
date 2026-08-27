@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET_DISPLAY_STATE_MESSAGE } from "../../src/background/message-contracts";
+import { GET_DISPLAY_STATE_MESSAGE } from "../../src/background/messages";
 import { DOCUMENT_RUNTIME_SLOT } from "../../src/content/runtime";
 
 

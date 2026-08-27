@@ -3,7 +3,7 @@
  */
 
 import * as v from "valibot";
-import { strictMessageObject } from "./message-schema-utils";
+import { strictMessageObject } from "./schema-utils";
 import {
     debugStateSchema,
     displayStateSchema,

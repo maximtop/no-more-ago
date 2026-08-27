@@ -19,7 +19,7 @@ import type {
     SetSiteEnabledResponse,
 } from "../background/application";
 import { CLIENT_RESULT_KIND } from "../core/client-result";
-import { SITE_SETTINGS_SURFACE } from "../background/view-state-values";
+import { SITE_SETTINGS_SURFACE } from "../background/messages";
 
 /**
  * Sends a popup request to the extension runtime.

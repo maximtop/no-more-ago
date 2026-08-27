@@ -2,17 +2,17 @@
  * @file Background application lifecycle and dependency contracts.
  */
 
-import type { DiagnosticBrowserFamily } from "../diagnostics/events";
-import type { DiagnosticJournal } from "../diagnostics/journal";
+import type { DiagnosticBrowserFamily } from "../../diagnostics/events";
+import type { DiagnosticJournal } from "../../diagnostics/journal";
 import type {
     ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
     RuntimeAdapterDefinition,
-} from "../runtime/adapter-activation";
-import type { TabsRuntime } from "../runtime/tabs";
-import type { SettingsService } from "../settings/settings-service";
-import type { SettingsStateFailure } from "./view-state-values";
+} from "../../runtime/adapter-activation";
+import type { TabsRuntime } from "../../runtime/tabs";
+import type { SettingsService } from "../../settings/settings-service";
+import type { SettingsStateFailure } from "../messaging/view-state-values";
 
 /**
  * Lifecycle state of the background application.

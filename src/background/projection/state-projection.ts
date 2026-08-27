@@ -2,18 +2,18 @@
  * @file Popup and sites-state projections derived from background runtime state.
  */
 
-import type { ReconcileFailure, RuntimeAdapterDefinition } from "../runtime/adapter-activation";
-import { DOCUMENT_STATUS_MESSAGE, isDocumentStatusResponse } from "../runtime/messages";
-import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs";
-import { isSiteEnabled } from "../settings/snapshot";
-import type { ActivationManager } from "./activation-manager";
-import type { ApplicationStateView } from "./application-state";
+import type { ReconcileFailure, RuntimeAdapterDefinition } from "../../runtime/adapter-activation";
+import { DOCUMENT_STATUS_MESSAGE, isDocumentStatusResponse } from "../../runtime/messages";
+import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../../runtime/tabs";
+import { isSiteEnabled } from "../../settings/snapshot";
+import type { ActivationManager } from "../application/activation-manager";
+import type { ApplicationStateView } from "../application/state";
 import {
     POPUP_STATUS,
     type PopupRuntimeFailure,
     type ReadyPopupStatus,
-} from "./view-state-values";
-import type { PopupState, SitesState } from "./view-state";
+} from "../messaging/view-state-values";
+import type { PopupState, SitesState } from "../messaging/view-state";
 
 /**
  * Maps a reconcile failure for an adapter and tab to a popup failure.

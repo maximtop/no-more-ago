@@ -2,8 +2,8 @@
  * @file Display-settings projection from authoritative application state.
  */
 
-import type { ApplicationStateView } from "./application-state";
-import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "./view-state";
+import type { ApplicationStateView } from "../application/state";
+import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "../messaging/view-state";
 
 /**
  * Checks whether the runtime supports an IANA time-zone identifier.

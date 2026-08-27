@@ -3,7 +3,7 @@
  */
 
 import { installContentRuntime } from "./runtime";
-import { GET_DISPLAY_STATE_MESSAGE } from "../background/message-contracts";
+import { GET_DISPLAY_STATE_MESSAGE } from "../background/messages";
 import { DIAGNOSTIC_EVENT_MESSAGE } from "../runtime/messages";
 
 installContentRuntime({

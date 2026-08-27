@@ -30,7 +30,7 @@ import { isDiagnosticEventMessage } from "../runtime/messages";
 import type { ScriptingRuntime } from "../runtime/scripting";
 import type { TabsRuntime } from "../runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../extension-files";
-import { POPUP_STATUS, SITE_SETTINGS_SURFACE } from "./view-state-values";
+import { POPUP_STATUS, SITE_SETTINGS_SURFACE } from "./messaging/view-state-values";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for

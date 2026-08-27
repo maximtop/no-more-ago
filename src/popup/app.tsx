@@ -18,7 +18,7 @@ import {
 } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import type { PopupState } from "../background/application";
-import { POPUP_STATUS } from "../background/view-state-values";
+import { POPUP_STATUS } from "../background/messages";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,

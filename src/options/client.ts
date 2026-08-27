@@ -41,7 +41,7 @@ import type {
     DiagnosticsSnapshotError,
 } from "../background/messages";
 import { CLIENT_RESULT_KIND } from "../core/client-result";
-import { SITE_SETTINGS_SURFACE } from "../background/view-state-values";
+import { SITE_SETTINGS_SURFACE } from "../background/messages";
 
 /**
  * Sends an options-page request to the extension runtime.

@@ -8,8 +8,8 @@ import type {
     ActivationReconcileResult,
     RegistrationOutcome,
     RuntimeAdapterDefinition,
-} from "../runtime/adapter-activation";
-import type { ActivationCoordinator } from "./application-contracts";
+} from "../../runtime/adapter-activation";
+import type { ActivationCoordinator } from "./contracts";
 
 /**
  * Owns runtime reconciliation and the latest authoritative result.
