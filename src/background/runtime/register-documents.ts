@@ -3,8 +3,10 @@
  *
  * @file Dynamic registration for all HTTP(S) document frames.
  */
-import type { RegisteredContentScriptSpec, ScriptingRuntime } from "./scripting";
-import type { RegisteredContentScriptReference } from "./scripting";
+import type {
+    RegisteredContentScriptReference,
+    RegisteredContentScriptSpec,
+} from "./scripting";
 import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS } from "../../shared/url/http";
 
@@ -59,31 +61,4 @@ export function registrationMatches(
         && existing.runAt === expected.runAt
         && existing.allFrames === expected.allFrames
         && existing.persistAcrossSessions === expected.persistAcrossSessions;
-}
-
-/**
- * Ensures the universal registration exists with the canonical specification.
- *
- * @param runtime - Browser scripting API boundary.
- * @returns Promise settled after registration repair.
- */
-export async function ensureDocumentRuntime(runtime: ScriptingRuntime): Promise<void> {
-    const existing = await runtime.getRegisteredContentScripts({
-        ids: [...DOCUMENT_RUNTIME_REGISTRATION_IDS],
-    });
-    const legacyIds = existing
-        .map((entry) => entry.id)
-        .filter((id) => (LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS as readonly string[])
-            .includes(id));
-    if (legacyIds.length > 0) {
-        await runtime.unregisterContentScripts({ ids: legacyIds });
-    }
-    const current = existing.find((entry) => entry.id === DOCUMENT_RUNTIME_REGISTRATION_ID);
-    if (!current) {
-        await runtime.registerContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-        return;
-    }
-    if (!registrationMatches(current, DOCUMENT_RUNTIME_REGISTRATION)) {
-        await runtime.updateContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-    }
 }

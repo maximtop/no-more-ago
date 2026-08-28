@@ -14,6 +14,29 @@ import {
 import type { ActivationCoordinator } from "./contracts";
 
 /**
+ * Merges a host-scoped reconciliation into the cached complete result.
+ *
+ * @param previous - Previously cached reconciliation result.
+ * @param current - Newly completed reconciliation result.
+ * @returns - Result containing current data and untouched tab data.
+ */
+function mergeScopedResult(
+    previous: ActivationReconcileResult,
+    current: ActivationReconcileResult,
+): ActivationReconcileResult {
+    const reconciledTabIds = new Set(current.tabs.map(({ tabId }) => tabId));
+    const preservedFailures = previous.failures.filter((failure) =>
+        failure.scope === RECONCILE_FAILURE_SCOPE.TAB
+        && !reconciledTabIds.has(failure.tabId));
+    const preservedTabs = previous.tabs.filter(({ tabId }) => !reconciledTabIds.has(tabId));
+    return {
+        ...current,
+        failures: [...current.failures, ...preservedFailures],
+        tabs: [...current.tabs, ...preservedTabs],
+    };
+}
+
+/**
  * Owns the latest non-stale universal-runtime reconciliation result.
  */
 export class ActivationManager {
@@ -84,7 +107,9 @@ export class ActivationManager {
             || this.lastResult.revision === null
             || result.revision >= this.lastResult.revision
         ) {
-            this.lastResult = result;
+            this.lastResult = affectedHostnames === undefined || !this.lastResult
+                ? result
+                : mergeScopedResult(this.lastResult, result);
         }
         return result;
     }

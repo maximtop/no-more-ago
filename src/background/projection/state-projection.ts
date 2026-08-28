@@ -30,11 +30,13 @@ import { APPLICATION_PHASE } from "../application/contracts";
  *
  * @param failures - Failures observed during the latest reconciliation.
  * @param tabId - Active tab identifier.
+ * @param hostname - Active tab's canonical top-level hostname.
  * @returns - Popup failure for the tab, when one exists.
  */
 function failureFor(
     failures: readonly ReconcileFailure[],
     tabId: number,
+    hostname: string,
 ): PopupRuntimeFailure | undefined {
     for (const failure of failures) {
         if (failure.scope === RECONCILE_FAILURE_SCOPE.REGISTRATION) {
@@ -43,7 +45,7 @@ function failureFor(
         if (failure.scope === RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY) {
             return POPUP_RUNTIME_FAILURE.MATCHING_TABS_QUERY;
         }
-        if (failure.tabId === tabId) {
+        if (failure.tabId === tabId && failure.hostname === hostname) {
             return failure.action === TAB_ACTION.INJECT
                 ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_INJECT
                 : POPUP_RUNTIME_FAILURE.CURRENT_TAB_TEARDOWN;
@@ -146,7 +148,7 @@ export class StateProjection {
         const siteEnabled = isSiteEnabled(snapshot.sitePreferences, cached.hostname);
         const failure = this.popupTabId === undefined
             ? undefined
-            : failureFor(this.activation.result?.failures ?? [], this.popupTabId);
+            : failureFor(this.activation.result?.failures ?? [], this.popupTabId, cached.hostname);
         let status: ReadyPopupStatus = cached.status;
         if (failure) {
             status = POPUP_STATUS.RUNTIME_FAILED;
@@ -210,7 +212,7 @@ export class StateProjection {
         const siteEnabled = isSiteEnabled(snapshot.sitePreferences, url.hostname);
         const failure = current.tab === undefined
             ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY
-            : failureFor(this.activation.result?.failures ?? [], current.tab.id);
+            : failureFor(this.activation.result?.failures ?? [], current.tab.id, url.hostname);
         if (failure) {
             return this.ready(
                 snapshot.revision,

@@ -130,6 +130,11 @@ export type ReconcileFailure =
         readonly tabId: number;
 
         /**
+         * Canonical top-level hostname at the time of the failed operation.
+         */
+        readonly hostname: string;
+
+        /**
          * Failed tab action.
          */
         readonly action: (typeof TAB_ACTION)[keyof typeof TAB_ACTION];
@@ -171,9 +176,9 @@ export interface ActivationReconcileResult {
 }
 
 /**
- * Input to the stateless reconciliation helper.
+ * Reconciliation policy and optional host filter.
  */
-export interface ReconcileInput {
+interface ReconcileOptions {
     /**
      * Settings revision associated with this operation.
      */
@@ -198,16 +203,6 @@ export interface ReconcileInput {
      * Optional host filter for a settings update.
      */
     readonly affectedHostnames?: readonly string[];
-
-    /**
-     * Scripting API boundary.
-     */
-    readonly scripting: ScriptingRuntime;
-
-    /**
-     * Tabs API boundary.
-     */
-    readonly tabs: TabsRuntime;
 }
 
 /**
@@ -218,6 +213,11 @@ interface TabOutcome {
      * Top-level tab identifier.
      */
     readonly tabId: number;
+
+    /**
+     * Canonical top-level hostname at the time of the operation.
+     */
+    readonly hostname: string;
 
     /**
      * Operation attempted for the tab.
@@ -396,6 +396,7 @@ async function httpTabs(
  * Broadcasts policy, then ensures the content runtime in all frames.
  *
  * @param tab - Target tab.
+ * @param hostname - Canonical top-level hostname for the target tab.
  * @param enabled - Whether the site's effective policy is enabled.
  * @param scripting - Scripting API boundary.
  * @param tabs - Tabs API boundary.
@@ -405,6 +406,7 @@ async function httpTabs(
  */
 async function refresh(
     tab: RuntimeTab,
+    hostname: string,
     enabled: boolean,
     scripting: ScriptingRuntime,
     tabs: TabsRuntime,
@@ -425,16 +427,18 @@ async function refresh(
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: tab.id,
+            hostname,
             action: TAB_ACTION.INJECT,
         });
     }
-    records.push({ tabId: tab.id, action: TAB_ACTION.INJECT, ok });
+    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.INJECT, ok });
 }
 
 /**
  * Broadcasts synchronous teardown to every reachable frame.
  *
  * @param tab - Target tab.
+ * @param hostname - Canonical top-level hostname for the target tab.
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
  * @param records - Tab outcome collection to append to.
@@ -442,6 +446,7 @@ async function refresh(
  */
 async function teardown(
     tab: RuntimeTab,
+    hostname: string,
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
@@ -452,10 +457,11 @@ async function teardown(
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: tab.id,
+            hostname,
             action: TAB_ACTION.TEARDOWN,
         });
     }
-    records.push({ tabId: tab.id, action: TAB_ACTION.TEARDOWN, ok: result.ok });
+    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok: result.ok });
 }
 
 /**
@@ -479,7 +485,7 @@ export class DocumentActivationCoordinator {
      * @returns - Complete reconciliation result.
      */
     public async reconcile(
-        input: Omit<ReconcileInput, "scripting" | "tabs">,
+        input: ReconcileOptions,
     ): Promise<ActivationReconcileResult> {
         const failures: ReconcileFailure[] = [];
         const records: TabOutcome[] = [];
@@ -494,15 +500,18 @@ export class DocumentActivationCoordinator {
             return url !== null && (affected === undefined || affected.has(url.hostname));
         });
         await Promise.all(selected.map(async (tab) => {
-            if (!enabled) {
-                await teardown(tab, this.input.tabs, failures, records);
+            const url = parseHttpUrl(tab.url);
+            if (!url) {
                 return;
             }
-            const url = parseHttpUrl(tab.url);
-            const siteEnabled = url !== null
-                && isSiteEnabled(input.sitePreferences ?? {}, url.hostname);
+            if (!enabled) {
+                await teardown(tab, url.hostname, this.input.tabs, failures, records);
+                return;
+            }
+            const siteEnabled = isSiteEnabled(input.sitePreferences ?? {}, url.hostname);
             await refresh(
                 tab,
+                url.hostname,
                 siteEnabled,
                 this.input.scripting,
                 this.input.tabs,
@@ -519,14 +528,4 @@ export class DocumentActivationCoordinator {
             tabs: records,
         };
     }
-}
-
-/**
- * Reconciles once using the supplied browser API boundaries.
- *
- * @param input - Browser boundaries and reconciliation policy.
- * @returns - Complete reconciliation result.
- */
-export function reconcileActivation(input: ReconcileInput): Promise<ActivationReconcileResult> {
-    return new DocumentActivationCoordinator(input).reconcile(input);
 }

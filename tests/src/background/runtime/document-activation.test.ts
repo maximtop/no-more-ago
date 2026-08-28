@@ -232,12 +232,13 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.tabs).toEqual([
-            { tabId: 1, action: TAB_ACTION.INJECT, ok: false },
-            { tabId: 2, action: TAB_ACTION.INJECT, ok: true },
+            { tabId: 1, hostname: "first.test", action: TAB_ACTION.INJECT, ok: false },
+            { tabId: 2, hostname: "second.test", action: TAB_ACTION.INJECT, ok: true },
         ]);
         expect(result.failures).toContainEqual({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: 1,
+            hostname: "first.test",
             action: TAB_ACTION.INJECT,
         });
     });
@@ -267,8 +268,8 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.tabs).toEqual([
-            { tabId: 1, action: TAB_ACTION.INJECT, ok: false },
-            { tabId: 2, action: TAB_ACTION.INJECT, ok: true },
+            { tabId: 1, hostname: "first.test", action: TAB_ACTION.INJECT, ok: false },
+            { tabId: 2, hostname: "second.test", action: TAB_ACTION.INJECT, ok: true },
         ]);
     });
 
@@ -312,7 +313,7 @@ describe("DocumentActivationCoordinator", () => {
                 expect(frames.map(hasOutput)).toEqual([false, false]);
                 expect(siteDisabled.failures).toEqual([]);
                 expect(siteDisabled.tabs).toEqual([
-                    { tabId: 1, action: TAB_ACTION.INJECT, ok: true },
+                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.INJECT, ok: true },
                 ]);
 
                 siteEnabled = true;
@@ -327,7 +328,7 @@ describe("DocumentActivationCoordinator", () => {
                 await Promise.resolve();
                 expect(frames.map(hasOutput)).toEqual([true, true]);
                 expect(siteEnabledResult.tabs).toEqual([
-                    { tabId: 1, action: TAB_ACTION.INJECT, ok: true },
+                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.INJECT, ok: true },
                 ]);
 
                 const globallyDisabled = await coordinator.reconcile({
@@ -337,7 +338,7 @@ describe("DocumentActivationCoordinator", () => {
                 });
                 expect(frames.map(hasOutput)).toEqual([false, false]);
                 expect(globallyDisabled.tabs).toEqual([
-                    { tabId: 1, action: TAB_ACTION.TEARDOWN, ok: true },
+                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.TEARDOWN, ok: true },
                 ]);
             } finally {
                 first.handle.teardown();
