@@ -7,6 +7,7 @@ import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    ADJACENT_TIME_PRESENTATION,
     type TimestampSourceRule,
 } from "./types";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
@@ -81,6 +82,7 @@ function extractStandardTime(
         source: element,
         sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
         rawDatetime,
+        presentation: ADJACENT_TIME_PRESENTATION,
         validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
         visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
     };

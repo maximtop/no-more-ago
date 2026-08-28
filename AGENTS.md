@@ -23,8 +23,8 @@
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized relative timestamps with exact, localized dates.
 It ships a generic `time[datetime]` source for HTTP(S) documents and
-site-specific specialized sources such as GitHub, while keeping extraction
-separate from shared timestamp validation and rendering.
+site-specific specialized sources for GitHub and Hacker News, while keeping
+extraction separate from shared timestamp validation and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -49,8 +49,8 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   runtime can process standard timestamps and future specialized sources;
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
-  available, and the production registry contains GitHub as a specialized
-  source.
+  available, and the production registry contains GitHub and Hacker News as
+  specialized sources.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -350,7 +350,8 @@ Known architectural exclusions to improve when their area changes:
 - Keep all user-facing extension copy in English.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
-- Keep GitHub-specific selectors and timestamp sources inside the GitHub
-  adapter so adding another site changes minimal shared business logic.
+- Keep GitHub- and Hacker News-specific selectors and timestamp sources inside
+  their respective adapters so adding another site changes minimal shared
+  business logic.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.

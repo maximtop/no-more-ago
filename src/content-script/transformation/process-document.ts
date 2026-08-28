@@ -7,14 +7,18 @@ import { formatDateWithPresentation } from "../../shared/date/format-default-dat
 import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
 import {
     releaseSourceHiddenForReconciliation,
-    renderExactTime,
-    restoreExactTime,
-    type OwnedDomMutationSink,
 } from "./render-exact-time";
+import type { OwnedDomMutationSink } from "./owned-dom-mutations";
+import {
+    hasOwnedTimestampSource,
+    renderTimestampPresentation,
+    restoreTimestampPresentation,
+} from "./render-timestamp-presentation";
 import { resolveTrustedTimestamp } from "./resolve-trusted-timestamp";
 import { isSourceSuppressed } from "./source-visibility";
 import {
     TIMESTAMP_VISIBILITY_POLICY,
+    TIMESTAMP_PRESENTATION_KIND,
     type TimestampCandidate,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
@@ -189,6 +193,15 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         }
     }
 
+    if (
+        root.nodeType === 1
+        && hasOwnedTimestampSource(root as Element)
+        && !discovered.has(root as Element)
+    ) {
+        discovered.add(root as Element);
+        discoveredSources.push(root as Element);
+    }
+
     if (diagnosticSink && discoveredSources.length > 0) {
         diagnosticSink({
             category: DIAGNOSTIC_CATEGORY.ADAPTER,
@@ -198,13 +211,14 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     }
 
     const outputs: HTMLTimeElement[] = [];
+    let renderedCount = 0;
     for (const source of discoveredSources) {
         const resolved = candidatesBySource
             .get(source)
             ?.map(resolveTrustedTimestamp)
             .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
-            restoreExactTime(source, ownedDomMutations);
+            restoreTimestampPresentation(source, ownedDomMutations);
             if (diagnosticSink) {
                 diagnosticSink({
                     category: DIAGNOSTIC_CATEGORY.SKIP,
@@ -217,14 +231,14 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
             releaseSourceHiddenForReconciliation(source, ownedDomMutations);
             if (isSourceSuppressed(source)) {
-                restoreExactTime(source, ownedDomMutations);
+                restoreTimestampPresentation(source, ownedDomMutations);
                 emitCandidateSkipped(diagnosticSink);
                 continue;
             }
         }
         const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
-            restoreExactTime(source, ownedDomMutations);
+            restoreTimestampPresentation(source, ownedDomMutations);
             if (diagnosticSink && presentation.error === INVALID_DATE_FORMAT_ERROR) {
                 diagnosticSink({
                     category: DIAGNOSTIC_CATEGORY.ERROR,
@@ -236,24 +250,28 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             continue;
         }
         if (presentation.error === INVALID_DATE_FORMAT_ERROR) {
-            restoreExactTime(source, ownedDomMutations);
+            restoreTimestampPresentation(source, ownedDomMutations);
             emitCandidateSkipped(diagnosticSink);
             continue;
         }
-        const output = renderExactTime(
+        const result = renderTimestampPresentation(
             resolved.source,
             resolved.sourceDatetime,
+            resolved.presentation,
             presentation.text,
             ownedDomMutations,
         );
-        if (output) {
-            outputs.push(output);
+        if (result) {
+            renderedCount += 1;
+            if (result.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
+                outputs.push(result.output);
+            }
         }
     }
     if (diagnosticSink && started !== undefined && discoveredSources.length > 0) {
         diagnosticSink({
             category: DIAGNOSTIC_CATEGORY.TIMING,
-            count: outputs.length,
+            count: renderedCount,
             durationMs: Math.max(0, performance.now() - started),
         });
     }

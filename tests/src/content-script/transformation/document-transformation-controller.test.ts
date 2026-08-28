@@ -4,8 +4,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
+import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
+    ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
@@ -13,6 +16,9 @@ import {
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
+import {
+    getOwnedSourceForText,
+} from "../../../../src/content-script/transformation/render-timestamp-presentation";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
 
@@ -359,6 +365,7 @@ describe("DocumentTransformationController", () => {
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
+                    presentation: ADJACENT_TIME_PRESENTATION,
                     validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                     visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
@@ -464,6 +471,7 @@ describe("DocumentTransformationController", () => {
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
+                    presentation: ADJACENT_TIME_PRESENTATION,
                     validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                     visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
@@ -507,6 +515,7 @@ describe("DocumentTransformationController", () => {
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
+                    presentation: ADJACENT_TIME_PRESENTATION,
                     validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                     visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
@@ -623,6 +632,7 @@ describe("DocumentTransformationController", () => {
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
+                    presentation: ADJACENT_TIME_PRESENTATION,
                     validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                     visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
@@ -668,6 +678,132 @@ describe("DocumentTransformationController", () => {
         expect(output.getAttribute("data-no-more-ago-output")).toBe(token);
         controller.teardown();
     });
+
+    it.each([
+        ["the trusted title is removed", "remove-title"],
+        ["the trusted title becomes blank", "blank-title"],
+        ["the trusted title becomes unzoned", "unzone-title"],
+        ["the age class is removed", "remove-class"],
+    ] as const)("restores an owned in-place source when %s", async (_name, mutation) => {
+        document.body.innerHTML = `<span class="age"
+            title="2026-08-28T10:09:07.000000Z"><a id="age-link"
+            href="item?id=1">1 hour ago</a></span>`;
+        const source = document.querySelector("span.age");
+        const link = document.getElementById("age-link");
+        if (!source || !link) {
+            throw new Error("Expected Hacker News age source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy",
+                timeZone: { mode: "utc" },
+            },
+        });
+        controller.start();
+        expect(link.textContent).toBe("2026");
+
+        if (mutation === "remove-title") {
+            source.removeAttribute("title");
+        } else if (mutation === "blank-title") {
+            source.setAttribute("title", "   ");
+        } else if (mutation === "unzone-title") {
+            source.setAttribute("title", "2026-08-28T10:09:07");
+        } else {
+            source.classList.remove("age");
+        }
+        await flushMutations();
+        expect(link.textContent).toBe("1 hour ago");
+        expect(document.getElementById("age-link")).toBe(link);
+        controller.teardown();
+    });
+
+    it(
+        "handles dynamic Hacker News insertion, updates, replacement, movement, and idle",
+        async () => {
+            document.body.innerHTML = "<main><section id='one'></section>"
+            + "<section id='two'></section></main>";
+            const visits: Element[] = [];
+            const instrumented: TimestampSourceRule = {
+                ...hackerNewsAdapter,
+                extract: (element) => {
+                    visits.push(element);
+                    return hackerNewsAdapter.extract(element);
+                },
+            };
+            const controller = new DocumentTransformationController({
+                url: new URL("https://news.ycombinator.com/item?id=1"),
+                root: document,
+                locales: ["en-US"],
+                display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+                registry: new AdapterRegistry([instrumented], genericTimeRule),
+            });
+            controller.start();
+            const wrapper = document.createElement("span");
+            wrapper.className = "age";
+            wrapper.title = "2026-08-28T10:09:07Z";
+            const link = document.createElement("a");
+            link.href = "item?id=1";
+            link.textContent = "new relative";
+            wrapper.append(link);
+            document.querySelector("#one")?.append(wrapper);
+            await flushMutations();
+            expect(link.textContent).toBe("2026");
+            const originalLink = link;
+            wrapper.title = "2027-08-28T10:09:07Z";
+            await flushMutations();
+            expect(link.textContent).toBe("2027");
+            const target = link.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected dynamic text target");
+            }
+            target.data = "page refreshed label";
+            await flushMutations();
+            expect(link.textContent).toBe("2027");
+            document.querySelector("#two")?.append(wrapper);
+            await flushMutations();
+            expect(document.querySelector("#two .age")).toBe(wrapper);
+            expect(wrapper.querySelector("a")).toBe(originalLink);
+            const replacement = document.createElement("a");
+            replacement.id = "replacement-link";
+            replacement.href = "item?id=2";
+            replacement.textContent = "replacement relative";
+            wrapper.replaceChildren(replacement);
+            await flushMutations();
+            expect(replacement.textContent).toBe("2027");
+            expect(originalLink.textContent).toBe("page refreshed label");
+            const replacementTarget = replacement.firstChild;
+            if (!(replacementTarget instanceof Text)) {
+                throw new Error("Expected replacement text target");
+            }
+            document.querySelector("#two")?.replaceChildren();
+            await flushMutations();
+            expect(replacement.textContent).toBe("replacement relative");
+            expect(getOwnedSourceForText(replacementTarget)).toBeNull();
+            wrapper.title = "2027-08-28T10:09:07";
+            document.querySelector("#one")?.append(wrapper);
+            await flushMutations();
+            expect(replacement.textContent).toBe("replacement relative");
+            wrapper.title = "2027-08-28T10:09:07Z";
+            await flushMutations();
+            for (const invalidTitle of ["   ", "not a timestamp"]) {
+                wrapper.title = invalidTitle;
+                await flushMutations();
+                expect(replacement.textContent).toBe("replacement relative");
+            }
+            wrapper.removeAttribute("title");
+            await flushMutations();
+            expect(replacement.textContent).toBe("replacement relative");
+            visits.length = 0;
+            await flushMutations();
+            await flushMutations();
+            expect(visits).toEqual([]);
+            controller.teardown();
+        },
+    );
 
     it("does not mistake extension-owned hidden styling for page suppression", async () => {
         const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(

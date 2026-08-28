@@ -6,6 +6,11 @@ import {
     clearSourceHiddenProvenance,
     OWNED_OUTPUT_ATTRIBUTE,
 } from "./render-exact-time";
+import {
+    capturePageOwnedTextChange,
+    getOwnedTextSourcesContainingNode,
+    hasOwnedTimestampSource,
+} from "./render-timestamp-presentation";
 
 /**
  * Attribute names whose page-authored changes can affect generic visibility.
@@ -13,9 +18,14 @@ import {
 const VISIBILITY_ATTRIBUTES = ["hidden", "aria-hidden", "inert", "style", "class"] as const;
 
 /**
+ * Attribute names whose page-authored changes can affect timestamp resolution.
+ */
+const TIMESTAMP_ATTRIBUTES = ["datetime", "title"] as const;
+
+/**
  * Complete observer attribute filter for timestamp and visibility changes.
  */
-const OBSERVED_ATTRIBUTES = ["datetime", ...VISIBILITY_ATTRIBUTES] as const;
+const OBSERVED_ATTRIBUTES = [...TIMESTAMP_ATTRIBUTES, ...VISIBILITY_ATTRIBUTES] as const;
 
 /**
  * Coalesced observer changes that can be processed once without revisiting overlapping DOM roots.
@@ -27,9 +37,9 @@ export interface AffectedMutationBatch {
     readonly addedRoots: readonly Element[];
 
     /**
-     * Existing time elements whose datetime attribute changed in place.
+     * Existing timestamp sources whose timestamp attribute or owned text changed in place.
      */
-    readonly datetimeTargets: readonly Element[];
+    readonly sourceTargets: readonly Element[];
 
     /**
      * Source or ancestor roots whose visibility policy may have changed.
@@ -70,6 +80,31 @@ interface SchedulerInput {
      * Clears renderer hidden ownership when a page-authored mutation is observed.
      */
     readonly clearSourceHiddenProvenance?: (source: Element) => void;
+
+    /**
+     * Records an observed page-authored text value and returns its source.
+     *
+     * @param node - Changed text node.
+     * @param text - New page-authored value.
+     * @returns - Owning source, or null when the node is not owned.
+     */
+    readonly capturePageOwnedTextChange?: (node: Node, text: string) => Element | null;
+
+    /**
+     * Returns owned sources containing a child-list mutation target.
+     *
+     * @param node - Mutation target node.
+     * @returns - Containing owned sources.
+     */
+    readonly getOwnedTextSourcesContainingNode?: (node: Node) => readonly Element[];
+
+    /**
+     * Checks whether a source belongs to either presentation renderer.
+     *
+     * @param source - Candidate source element.
+     * @returns - Whether the source is owned.
+     */
+    readonly isOwnedSource?: (source: Element) => boolean;
 }
 
 /**
@@ -142,6 +177,14 @@ export class DocumentMutationScheduler {
     >();
 
     /**
+     * Expected extension-authored text changes awaiting observer delivery.
+     */
+    private readonly expectedTextChanges = new Map<
+        Text,
+        { readonly oldValue: string; readonly text: string }[]
+    >();
+
+    /**
      * Sources discovered by the active adapter pass, indexed by relevant ancestors.
      */
     private readonly sourcesByRelevantElement = new Map<Element, Set<Element>>();
@@ -196,12 +239,15 @@ export class DocumentMutationScheduler {
      * Disconnects the observer and drops any pending mutation batch.
      */
     stop(): void {
+        const pending = this.observer?.takeRecords() ?? [];
+        this.captureTextChanges(pending);
         this.observer?.disconnect();
         this.observer = undefined;
         this.phase = "idle";
         this.generation += 1;
         this.suppressedRemovals.clear();
         this.expectedHiddenChanges.clear();
+        this.expectedTextChanges.clear();
         this.sourcesByRelevantElement.clear();
         this.relevantElementsBySource.clear();
     }
@@ -238,6 +284,41 @@ export class DocumentMutationScheduler {
             oldValue: source.getAttribute("hidden"),
         });
         this.expectedHiddenChanges.set(source, changes);
+    }
+
+    /**
+     * Registers bounded character-data observation for one owned in-place source.
+     *
+     * @param source - Owned source whose label changes must be observed.
+     */
+    trackOwnedTextSource(source: Element): void {
+        if (
+            this.phase !== "observing"
+            || source.ownerDocument !== this.input.document
+            || !source.isConnected
+        ) {
+            return;
+        }
+        this.observer?.observe(source, {
+            characterData: true,
+            characterDataOldValue: true,
+            subtree: true,
+        });
+    }
+
+    /**
+     * Records an extension-authored text change before it reaches the observer.
+     *
+     * @param target - Owned text node about to change.
+     * @param text - Final exact value.
+     */
+    beforeOwnedTextChange(target: Text, text: string): void {
+        if (this.phase !== "observing" || target.ownerDocument !== this.input.document) {
+            return;
+        }
+        const changes = this.expectedTextChanges.get(target) ?? [];
+        changes.push({ oldValue: target.data, text });
+        this.expectedTextChanges.set(target, changes);
     }
 
     /**
@@ -338,18 +419,94 @@ export class DocumentMutationScheduler {
     }
 
     /**
+     * Resolves the value produced by one character-data record.
+     *
+     * @param records - Complete ordered observer delivery.
+     * @param index - Index of the record being interpreted.
+     * @param target - Text target changed by the record.
+     * @returns - Intermediate or final value produced by that record.
+     */
+    private getCharacterDataNewValue(
+        records: readonly MutationRecord[],
+        index: number,
+        target: Text,
+    ): string {
+        for (let nextIndex = index + 1; nextIndex < records.length; nextIndex += 1) {
+            const next = records[nextIndex];
+            if (next?.type === "characterData" && next.target === target) {
+                return next.oldValue ?? target.data;
+            }
+        }
+        return target.data;
+    }
+
+    /**
+     * Consumes an exact extension-authored old/new text pair.
+     *
+     * @param target - Changed owned text target.
+     * @param oldValue - Value captured before the mutation.
+     * @param newValue - Value produced by the mutation.
+     * @returns - Whether the record is extension-authored.
+     */
+    private consumeExpectedTextChange(
+        target: Text,
+        oldValue: string | null,
+        newValue: string,
+    ): boolean {
+        const changes = this.expectedTextChanges.get(target);
+        const expected = changes?.[0];
+        if (!changes || !expected || expected.oldValue !== oldValue || expected.text !== newValue) {
+            return false;
+        }
+        changes.shift();
+        if (changes.length === 0) {
+            this.expectedTextChanges.delete(target);
+        }
+        return true;
+    }
+
+    /**
+     * Captures page-authored text baselines from an ordered observer delivery.
+     *
+     * @param records - Mutation records to inspect.
+     * @param sources - Optional batch target collection to update.
+     */
+    private captureTextChanges(records: readonly MutationRecord[], sources?: Element[]): void {
+        const capture = this.input.capturePageOwnedTextChange ?? capturePageOwnedTextChange;
+        for (let index = 0; index < records.length; index += 1) {
+            const record = records[index];
+            if (record?.type !== "characterData" || record.target.nodeType !== 3) {
+                continue;
+            }
+            const target = record.target as Text;
+            const newValue = this.getCharacterDataNewValue(records, index, target);
+            if (this.consumeExpectedTextChange(target, record.oldValue, newValue)) {
+                continue;
+            }
+            const source = capture(target, newValue);
+            if (source && sources) {
+                addUnique(sources, source);
+            }
+        }
+    }
+
+    /**
      * Collects affected roots from observer records and schedules one flush.
      *
      * @param records - Mutation records delivered by the observer.
      */
     private handle(records: readonly MutationRecord[]): void {
         const addedRoots: Element[] = [];
-        const datetimeTargets: Element[] = [];
+        const sourceTargets: Element[] = [];
         const visibilityRoots: Element[] = [];
         const removedRoots: Element[] = [];
         const displacedOutputSources: Element[] = [];
 
+        this.captureTextChanges(records, sourceTargets);
         for (const record of records) {
+            if (record.type === "characterData") {
+                continue;
+            }
             if (record.type === "attributes") {
                 if (record.target.nodeType !== 1) {
                     continue;
@@ -358,8 +515,11 @@ export class DocumentMutationScheduler {
                 if (this.input.getOwnedSourceForOutput(target)) {
                     continue;
                 }
-                if (record.attributeName === "datetime") {
-                    addUnique(datetimeTargets, target);
+                if (
+                    record.attributeName
+                    && (TIMESTAMP_ATTRIBUTES as readonly string[]).includes(record.attributeName)
+                ) {
+                    addUnique(sourceTargets, target);
                 } else if (
                     record.attributeName &&
                     (VISIBILITY_ATTRIBUTES as readonly string[]).includes(record.attributeName)
@@ -404,6 +564,12 @@ export class DocumentMutationScheduler {
                     }
                 }
                 continue;
+            }
+
+            const containing = this.input.getOwnedTextSourcesContainingNode
+                ?? getOwnedTextSourcesContainingNode;
+            for (const source of containing(record.target)) {
+                addUnique(sourceTargets, source);
             }
 
             if (this.input.getOwnedSourceForOutput(record.target)) {
@@ -455,15 +621,16 @@ export class DocumentMutationScheduler {
 
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
-        const normalizedTargets = datetimeTargets.filter(
+        const isOwned = this.input.isOwnedSource ?? hasOwnedTimestampSource;
+        const normalizedTargets = sourceTargets.filter(
             (target, index) =>
-                !datetimeTargets.slice(0, index).includes(target) &&
-                !coveredBy(normalizedAdded, target),
+                !sourceTargets.slice(0, index).includes(target) &&
+                (!coveredBy(normalizedAdded, target) || isOwned(target)),
         );
         const uniqueVisibility = visibilityRoots.filter(
             (root, index) =>
                 !visibilityRoots.slice(0, index).includes(root) &&
-                !coveredBy(normalizedAdded, root),
+                (!coveredBy(normalizedAdded, root) || isOwned(root)),
         );
         const normalizedVisibility = collapseRoots(uniqueVisibility);
         const normalizedDisplaced = displacedOutputSources.filter(
@@ -475,6 +642,7 @@ export class DocumentMutationScheduler {
 
         this.suppressedRemovals.clear();
         this.expectedHiddenChanges.clear();
+        this.expectedTextChanges.clear();
         if (
             normalizedAdded.length === 0 &&
             normalizedTargets.length === 0 &&
@@ -486,7 +654,7 @@ export class DocumentMutationScheduler {
         }
         this.input.onBatch({
             addedRoots: normalizedAdded,
-            datetimeTargets: normalizedTargets,
+            sourceTargets: normalizedTargets,
             visibilityRoots: normalizedVisibility,
             removedRoots: normalizedRemoved,
             displacedOutputSources: normalizedDisplaced,

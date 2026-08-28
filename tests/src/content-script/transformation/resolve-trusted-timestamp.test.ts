@@ -5,9 +5,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    TIMESTAMP_PRESENTATION_KIND,
     type TimestampCandidate,
 } from "../../../../src/content-script/adapters/types";
 import {
@@ -21,6 +23,7 @@ describe("resolveTrustedTimestamp", () => {
             source: document.createElement("relative-time"),
             sourceKind: "relative-time",
             rawDatetime: "2026-08-23T10:15:00+03:00",
+            presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         });
@@ -36,6 +39,7 @@ describe("resolveTrustedTimestamp", () => {
                 source: document.createElement("relative-time"),
                 sourceKind: "relative-time",
                 rawDatetime: "2026-08-23T10:15:00",
+                presentation: ADJACENT_TIME_PRESENTATION,
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }),
@@ -51,9 +55,33 @@ describe("resolveTrustedTimestamp", () => {
             source: document.createElement("relative-time"),
             sourceKind: "relative-time" as const,
             rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
             ...(rule === null ? {} : { validationRule: rule }),
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;
+
+    it("carries only a presentation target that belongs to the source", () => {
+        const source = document.createElement("span");
+        const target = document.createTextNode("1 hour ago");
+        source.append(target);
+        const base = {
+            ruleId: "hacker-news",
+            source,
+            sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
+            rawDatetime: "2026-08-28T10:09:07.000000Z",
+            validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+        } as const;
+        const presentation = {
+            kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+            target,
+        } as const;
+        expect(resolveTrustedTimestamp({ ...base, presentation })?.presentation).toBe(
+            presentation,
+        );
+        target.remove();
+        expect(resolveTrustedTimestamp({ ...base, presentation })).toBeNull();
+    });
 
     it.each([
         ["2026-08-23T10:15Z", "2026-08-23T10:15:00.000Z"],
@@ -156,6 +184,7 @@ describe("resolveTrustedTimestamp", () => {
             source: document.createElement("time"),
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
             rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;

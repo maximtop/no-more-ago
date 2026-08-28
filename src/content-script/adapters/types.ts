@@ -18,7 +18,40 @@ export const TIMESTAMP_SOURCE_KIND = {
     TIME_AGO: "time-ago",
     TIME_UNTIL: "time-until",
     STANDARD_TIME: "time",
+    HACKER_NEWS_AGE: "hacker-news-age",
 } as const;
+
+/**
+ * Presentation strategies selected by trusted timestamp sources.
+ */
+export const TIMESTAMP_PRESENTATION_KIND = {
+    ADJACENT_TIME: "adjacent-time",
+    IN_PLACE_TEXT: "in-place-text",
+} as const;
+
+/**
+ * Shared presentation descriptor used by existing adjacent-output sources.
+ */
+export const ADJACENT_TIME_PRESENTATION = {
+    kind: TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME,
+} as const;
+
+/**
+ * Validated presentation strategy carried from adapter extraction to rendering.
+ */
+export type TimestampPresentation =
+    | typeof ADJACENT_TIME_PRESENTATION
+    | {
+        /**
+         * In-place strategy discriminant.
+         */
+        readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT;
+
+        /**
+         * Existing page-owned label node to update.
+         */
+        readonly target: Text;
+    };
 
 /**
  * Visibility handling requested by a timestamp source.
@@ -64,6 +97,11 @@ interface TimestampCandidateSource {
      * Unparsed datetime attribute supplied by the trusted source.
      */
     readonly rawDatetime: string;
+
+    /**
+     * DOM presentation strategy and existing target selected by the source rule.
+     */
+    readonly presentation: TimestampPresentation;
 }
 
 /**

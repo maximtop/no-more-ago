@@ -7,9 +7,11 @@ import { isValid, parseISO } from "date-fns";
 import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    TIMESTAMP_PRESENTATION_KIND,
     type TimestampValidationRule,
     type TimestampCandidate,
     type TimestampVisibilityPolicy,
+    type TimestampPresentation,
 } from "../adapters/types";
 import { parseHtmlGlobalDatetime } from "./parse-html-global-datetime";
 
@@ -20,6 +22,35 @@ const FRACTION = "(?:[.,]\\d+)";
 const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?`
     + `|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
 const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
+
+/**
+ * Validates that a presentation target belongs to its source document.
+ *
+ * @param source - Timestamp source selected by an adapter.
+ * @param presentation - Presentation strategy selected by the same adapter.
+ * @returns - Validated presentation, or null when its target is unsuitable.
+ */
+function resolvePresentation(
+    source: Element,
+    presentation: TimestampPresentation,
+): TimestampPresentation | null {
+    const kind: string = presentation.kind;
+    if (kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
+        return presentation;
+    }
+    if (
+        kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT
+        || !("target" in presentation)
+    ) {
+        return null;
+    }
+    const target = presentation.target;
+    return target.nodeType === 3
+        && target.ownerDocument === source.ownerDocument
+        && source.contains(target)
+        ? presentation
+        : null;
+}
 
 /**
  * Rejects invalid or ambiguous numeric UTC offsets before ISO parsing.
@@ -85,6 +116,11 @@ export interface ResolvedTimestamp {
      * Visibility policy selected by the source rule.
      */
     readonly visibilityPolicy: TimestampVisibilityPolicy;
+
+    /**
+     * Presentation strategy selected by the source rule.
+     */
+    readonly presentation: TimestampPresentation;
 }
 
 /**
@@ -97,6 +133,10 @@ export interface ResolvedTimestamp {
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate,
 ): ResolvedTimestamp | null {
+    const presentation = resolvePresentation(candidate.source, candidate.presentation);
+    if (!presentation) {
+        return null;
+    }
     const visibilityPolicy: unknown = candidate.visibilityPolicy;
     if (
         visibilityPolicy !== TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION
@@ -115,6 +155,7 @@ export function resolveTrustedTimestamp(
                 instant,
                 validationRule,
                 visibilityPolicy,
+                presentation,
             }
             : null;
     }
@@ -157,5 +198,6 @@ export function resolveTrustedTimestamp(
         instant,
         validationRule,
         visibilityPolicy,
+        presentation,
     };
 }

@@ -12,6 +12,10 @@ import {
     renderExactTime,
     restoreExactTime,
 } from "../../../../src/content-script/transformation/render-exact-time";
+import {
+    renderExactText,
+    restoreExactText,
+} from "../../../../src/content-script/transformation/render-exact-text";
 
 const flushMutations = async (): Promise<void> => {
     await Promise.resolve();
@@ -43,7 +47,7 @@ describe("DocumentMutationScheduler", () => {
 
         expect(batches).toHaveLength(1);
         expect(batches[0]?.addedRoots).toEqual([wrapper]);
-        expect(batches[0]?.datetimeTargets).toEqual([]);
+        expect(batches[0]?.sourceTargets).toEqual([]);
         expect(batches[0]?.removedRoots).toEqual([]);
         scheduler.stop();
     });
@@ -77,6 +81,15 @@ describe("DocumentMutationScheduler", () => {
              * Accepts disconnect requests without clearing captured callbacks.
              */
             disconnect(): void {}
+
+            /**
+             * Returns no pending records for this controllable observer.
+             *
+             * @returns - Empty pending record list.
+             */
+            takeRecords(): MutationRecord[] {
+                return [];
+            }
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
         try {
@@ -111,7 +124,7 @@ describe("DocumentMutationScheduler", () => {
             expect(batches).toHaveLength(1);
             expect(batches[0]?.addedRoots).toEqual([outer, sibling]);
             expect(batches[0]?.removedRoots).toEqual([removedOuter]);
-            expect(batches[0]?.datetimeTargets).toEqual([]);
+            expect(batches[0]?.sourceTargets).toEqual([]);
             expect(batches[0]?.displacedOutputSources).toEqual([]);
             scheduler.stop();
         } finally {
@@ -133,7 +146,15 @@ describe("DocumentMutationScheduler", () => {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["datetime", "hidden", "aria-hidden", "inert", "style", "class"],
+            attributeFilter: [
+                "datetime",
+                "title",
+                "hidden",
+                "aria-hidden",
+                "inert",
+                "style",
+                "class",
+            ],
             attributeOldValue: true,
         });
         scheduler.stop();
@@ -159,6 +180,60 @@ describe("DocumentMutationScheduler", () => {
         await flushMutations();
         expect(batches).toEqual([]);
         scheduler.stop();
+    });
+
+    it("observes page text only beneath an owned in-place source", async () => {
+        document.body.innerHTML = `<span id="age"><a>1 hour ago</a></span>
+            <p id="unrelated">unrelated</p>`;
+        const source = document.getElementById("age");
+        const target = source?.querySelector("a")?.firstChild;
+        const unrelated = document.getElementById("unrelated")?.firstChild;
+        if (!source || !(target instanceof Text) || !(unrelated instanceof Text)) {
+            throw new Error("Expected owned and unrelated text");
+        }
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        renderExactText(source, target, "2026", scheduler);
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        unrelated.data = "unrelated changed";
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        target.data = "page refreshed";
+        await flushMutations();
+        expect(batches).toHaveLength(1);
+        expect(batches[0]?.sourceTargets).toEqual([source]);
+        scheduler.stop();
+        restoreExactText(source);
+        expect(target.data).toBe("page refreshed");
+    });
+
+    it("captures an undelivered same-value page write before stopping", async () => {
+        const source = document.createElement("span");
+        const target = document.createTextNode("1 hour ago");
+        source.append(target);
+        document.body.append(source);
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: () => undefined,
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        renderExactText(source, target, "2026", scheduler);
+        await flushMutations();
+
+        target.data = "2026";
+        scheduler.stop();
+        restoreExactText(source);
+
+        expect(target.data).toBe("2026");
     });
 
     it("ignores unrelated class/style changes and detached tracked sources", async () => {
@@ -414,6 +489,15 @@ describe("DocumentMutationScheduler", () => {
              * Accepts disconnect requests while retaining stale callbacks for the test.
              */
             disconnect(): void {}
+
+            /**
+             * Returns no pending records for this controllable observer.
+             *
+             * @returns - Empty pending record list.
+             */
+            takeRecords(): MutationRecord[] {
+                return [];
+            }
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
         try {
@@ -473,6 +557,15 @@ describe("DocumentMutationScheduler", () => {
              * Accepts disconnect requests while retaining callbacks for the test.
              */
             disconnect(): void {}
+
+            /**
+             * Returns no pending records for this controllable observer.
+             *
+             * @returns - Empty pending record list.
+             */
+            takeRecords(): MutationRecord[] {
+                return [];
+            }
         }
         vi.stubGlobal("MutationObserver", ControllableObserver);
         try {

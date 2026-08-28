@@ -6,9 +6,11 @@ timestamps with localized date and time text while preserving the original
 page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
-pages. GitHub also has a specialized source for its relative-time widgets.
-Site markup support is best-effort and may change independently of the
-extension.
+pages. GitHub and Hacker News have specialized sources for their trusted
+timestamp widgets. Hacker News support applies to `span.age[title]` on the
+exact `news.ycombinator.com` hostname and updates the existing simple linked
+or no-link label in place so the timestamp link remains intact. Site markup
+support is best-effort and may change independently of the extension.
 
 ## Key Concepts
 
@@ -17,8 +19,8 @@ extension.
 - **Standard timestamp:** a `time[datetime]` value containing a complete date
   and time with an explicit, known UTC offset.
 - **Specialized source:** a site-specific rule for richer markup, such as
-  GitHub's relative-time widgets. Specialized rules take precedence over the
-  generic rule when both accept the same source.
+  GitHub's relative-time widgets or Hacker News age widgets. Specialized rules
+  take precedence over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -55,9 +57,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 5. Eligible timestamps are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
-become “Aug 27, 2026, 9:32 PM.” GitHub relative timestamps can also become
-exact dates. The result follows the selected format, browser locale, and
-time zone.
+become “Aug 27, 2026, 9:32 PM.” Trusted GitHub and Hacker News timestamps can
+also become exact dates. The result follows the selected format, browser
+locale, and time zone.
 
 ## Features
 
@@ -70,10 +72,13 @@ compact numeric offset. Date-only, local, malformed, impossible, and
 unknown-zone values remain unchanged. Visible text is never parsed as a
 fallback.
 
-GitHub's specialized rule continues to process its trusted relative-time
-widgets. It uses the same presentation, restoration, and dynamic-page
-behavior as generic timestamps. When a specialized and generic rule both
-accept the same source, the specialized rule wins.
+GitHub and Hacker News have specialized sources for their trusted timestamp
+widgets. Hacker News support applies to `span.age[title]` on the exact
+`news.ycombinator.com` hostname and updates the existing simple linked or
+no-link label in place so the timestamp link remains intact. Both sources use
+the shared presentation, restoration, and dynamic-page lifecycle. When a
+specialized and generic rule both accept the same source, the specialized rule
+wins.
 
 The extension watches relevant dynamic content in each reachable HTTP(S)
 document. Newly added or changed timestamps are processed without requiring a
@@ -191,7 +196,7 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible `time[datetime]` or trusted GitHub timestamp | The source is replaced with an exact date. |
+| Eligible `time[datetime]`, trusted GitHub timestamp, or Hacker News `span.age[title]` | The trusted instant is shown with the configured exact-date presentation. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
@@ -210,22 +215,26 @@ The extension requests:
   can verify each frame's revision acknowledgement.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
-No More Ago does not derive dates from visible relative text, page titles,
-ARIA labels, arbitrary `data-*` attributes, nearby text, or elapsed time. It
-does not modify those page-provided attributes. Standard processing is limited
-to ordinary light-DOM `time[datetime]` elements; Shadow DOM and additional
-source types are deferred.
+No More Ago does not derive dates from visible relative or absolute labels,
+link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
+specialized source trusts only the explicit zoned timestamp in its approved
+`span.age[title]` shape and does not modify that `title` or the link. Standard
+processing remains limited to ordinary light-DOM `time[datetime]` elements.
 
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
-  HTTP(S) pages; GitHub's richer relative-time markup remains specialized.
+  HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
+  registered specialized source accepts them.
+- GitHub and Hacker News are best-effort specialized integrations whose markup
+  can change independently of the extension.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.
 - Frames that are inaccessible or use a non-HTTP(S) scheme remain unchanged.
-- Shadow DOM, page labels, durations, date-only values, local date-times, and
-  other non-global timestamp forms are outside the current scope.
+- Shadow DOM, unregistered page labels, durations, date-only values, local
+  date-times, and other non-global timestamp forms are outside the current
+  scope.
 - Website markup can change at any time, so compatibility is best-effort and
   is not a promise about future markup.
 - The extension is not yet distributed through browser stores.

@@ -4,6 +4,7 @@
 
 import { genericTimeRule } from "./generic-time";
 import { githubAdapter } from "./github";
+import { hackerNewsAdapter } from "./hacker-news";
 import type { TimestampSourceRule } from "./types";
 
 /**
@@ -34,6 +35,9 @@ export class AdapterRegistry {
 }
 
 /**
- * Production registry with GitHub precedence and generic standard-time fallback.
+ * Production registry with specialized-source precedence and generic fallback.
  */
-export const defaultRegistry = new AdapterRegistry([githubAdapter], genericTimeRule);
+export const defaultRegistry = new AdapterRegistry(
+    [githubAdapter, hackerNewsAdapter],
+    genericTimeRule,
+);
