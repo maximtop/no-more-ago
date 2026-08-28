@@ -106,12 +106,17 @@ export class DocumentTransformationController {
             document: this.input.root,
             getOwnedSourceForOutput,
             onBatch: (batch) => {
-                if (this.diagnosticSink) {
+                if (
+                    this.diagnosticSink
+                    && (
+                        batch.datetimeTargets.length > 0
+                        || batch.visibilityRoots.length > 0
+                        || batch.displacedOutputSources.length > 0
+                    )
+                ) {
                     this.diagnosticSink({
                         category: DIAGNOSTIC_CATEGORY.MUTATION,
                         count:
-                            batch.addedRoots.length +
-                            batch.removedRoots.length +
                             batch.datetimeTargets.length +
                             batch.visibilityRoots.length +
                             batch.displacedOutputSources.length,

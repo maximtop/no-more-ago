@@ -19,20 +19,8 @@ import type {
 import {
     DOCUMENT_RUNTIME_REGISTRATION,
     DOCUMENT_RUNTIME_REGISTRATION_ID,
-    DOCUMENT_RUNTIME_REGISTRATION_IDS,
-    LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS,
     registrationMatches,
 } from "./register-documents";
-
-/**
- * Reconciliation trigger.
- */
-export const ACTIVATION_MODE = {
-    COLD_WORKER: "cold-worker",
-    ACTIVATION_SWEEP: "activation-sweep",
-    SETTINGS_CHANGE: "settings-change",
-    FAILED_CLOSED: "failed-closed",
-} as const;
 
 /**
  * Global activation policy values.
@@ -80,11 +68,6 @@ export const TAB_ACTION = {
     INJECT: "inject",
     TEARDOWN: "teardown",
 } as const;
-
-/**
- * Reconciliation trigger.
- */
-export type ActivationMode = (typeof ACTIVATION_MODE)[keyof typeof ACTIVATION_MODE];
 
 /**
  * Global activation policy.
@@ -150,11 +133,6 @@ export interface ActivationReconcileResult {
     readonly revision: number | null;
 
     /**
-     * Trigger that caused reconciliation.
-     */
-    readonly mode: ActivationMode;
-
-    /**
      * Global activation policy applied.
      */
     readonly policy: ActivationPolicy;
@@ -183,11 +161,6 @@ interface ReconcileOptions {
      * Settings revision associated with this operation.
      */
     readonly revision: number | null;
-
-    /**
-     * Trigger that caused this operation.
-     */
-    readonly mode: ActivationMode;
 
     /**
      * Global activation policy to apply.
@@ -294,7 +267,7 @@ async function registration(
     let current: RegisteredContentScriptReference | undefined;
     try {
         found = await scripting.getRegisteredContentScripts({
-            ids: [...DOCUMENT_RUNTIME_REGISTRATION_IDS],
+            ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
         });
         current = found.find((entry) => entry.id === DOCUMENT_RUNTIME_REGISTRATION_ID);
     } catch {
@@ -320,41 +293,16 @@ async function registration(
             return REGISTRATION_OUTCOME.FAILED;
         }
     }
-    const legacyIds = found
-        .map((entry) => entry.id)
-        .filter((id) => (LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS as readonly string[])
-            .includes(id));
-    let legacyRemoved = false;
-    let legacyCleanupFailed = false;
-    if (legacyIds.length > 0) {
-        try {
-            await scripting.unregisterContentScripts({ ids: legacyIds });
-            legacyRemoved = true;
-        } catch {
-            legacyCleanupFailed = true;
-            failures.push({
-                scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-                operation: REGISTRATION_OPERATION.UNREGISTER,
-            });
-        }
-    }
     if (current && registrationMatches(current, DOCUMENT_RUNTIME_REGISTRATION)) {
-        if (legacyCleanupFailed) {
-            return REGISTRATION_OUTCOME.FAILED;
-        }
-        return legacyRemoved ? REGISTRATION_OUTCOME.UPDATED : REGISTRATION_OUTCOME.UNCHANGED;
+        return REGISTRATION_OUTCOME.UNCHANGED;
     }
     try {
         if (current) {
             await scripting.updateContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-            return legacyCleanupFailed
-                ? REGISTRATION_OUTCOME.FAILED
-                : REGISTRATION_OUTCOME.UPDATED;
+            return REGISTRATION_OUTCOME.UPDATED;
         }
         await scripting.registerContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-        return legacyCleanupFailed
-            ? REGISTRATION_OUTCOME.FAILED
-            : REGISTRATION_OUTCOME.REGISTERED;
+        return REGISTRATION_OUTCOME.REGISTERED;
     } catch {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
@@ -521,7 +469,6 @@ export class DocumentActivationCoordinator {
         }));
         return {
             revision: input.revision,
-            mode: input.mode,
             policy: input.policy,
             failures,
             registration: registered,

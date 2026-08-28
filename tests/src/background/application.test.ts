@@ -13,7 +13,6 @@ import type {
     ActivationReconcileResult,
 } from "../../../src/background/runtime/document-activation";
 import {
-    ACTIVATION_MODE,
     ACTIVATION_POLICY,
     REGISTRATION_OUTCOME,
 } from "../../../src/background/runtime/document-activation";
@@ -40,11 +39,11 @@ function application(initial: Record<string, unknown> = {}): BackgroundApplicati
     };
     const tabs: TabsRuntime = {
         query: vi.fn(async () => []),
+        getAllFrames: vi.fn(async () => []),
         sendMessage: vi.fn(async () => undefined),
     };
     const result: ActivationReconcileResult = {
         revision: 0,
-        mode: ACTIVATION_MODE.COLD_WORKER,
         policy: ACTIVATION_POLICY.ENABLED,
         failures: [],
         registration: REGISTRATION_OUTCOME.UNCHANGED,
@@ -127,13 +126,13 @@ describe("BackgroundApplication document state", () => {
         };
         const tabs: TabsRuntime = {
             query: vi.fn(() => Promise.resolve([])),
+            getAllFrames: vi.fn(() => Promise.resolve([])),
             sendMessage: vi.fn(() => Promise.resolve(undefined)),
         };
         const reconcile = vi.fn((input: Parameters<
             BackgroundApplicationOptions["coordinator"]["reconcile"]
         >[0]) => Promise.resolve({
             revision: input.revision,
-            mode: input.mode,
             policy: input.policy,
             failures: [],
             registration: REGISTRATION_OUTCOME.UNCHANGED,
@@ -154,7 +153,6 @@ describe("BackgroundApplication document state", () => {
         expect(response.ok).toBe(true);
         expect(reconcile).toHaveBeenLastCalledWith({
             revision: 1,
-            mode: ACTIVATION_MODE.SETTINGS_CHANGE,
             policy: ACTIVATION_POLICY.ENABLED,
             sitePreferences: { "example.test": false },
             affectedHostnames: ["example.test"],

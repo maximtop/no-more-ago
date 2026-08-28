@@ -9,6 +9,7 @@ import { OWNED_OUTPUT_ATTRIBUTE } from "../../../../src/content-script/ownership
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
 describe("genericTimeRule", () => {
@@ -47,6 +48,7 @@ describe("genericTimeRule", () => {
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
             rawDatetime: "2026-08-23T10:15Z",
             validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
         });
         for (const id of ["empty", "title", "aria", "data"]) {
             const element = document.getElementById(id);
@@ -65,5 +67,12 @@ describe("genericTimeRule", () => {
         const shadow = host.attachShadow({ mode: "open" });
         shadow.innerHTML = '<time datetime="2026-08-23T10:15Z">shadow</time>';
         expect(genericTimeRule.discover(document)).toEqual([]);
+    });
+
+    it("ignores time elements outside the HTML namespace", () => {
+        document.body.innerHTML = '<svg><time datetime="2026-08-23T10:15Z">svg</time></svg>';
+        expect(genericTimeRule.discover(document)).toEqual([]);
+        const source = document.querySelector("svg time");
+        expect(source ? genericTimeRule.extract(source) : null).toBeNull();
     });
 });

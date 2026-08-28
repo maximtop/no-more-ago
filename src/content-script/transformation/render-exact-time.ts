@@ -71,6 +71,13 @@ export interface OwnedDomMutationSink {
      * @param hidden - Final hidden state authored by the extension.
      */
     beforeOwnedSourceHiddenChange(source: Element, hidden: boolean): void;
+
+    /**
+     * Registers a discovered source for efficient ancestor visibility tracking.
+     *
+     * @param source - Timestamp source discovered by an adapter.
+     */
+    trackSource?(source: Element): void;
 }
 
 const recordsByDocument = new WeakMap<Document, Map<Element, OwnedPairRecord>>();
@@ -205,18 +212,31 @@ export function clearSourceHiddenProvenance(source: Element): void {
 }
 
 /**
- * Reports whether a source's current hidden state is verified as extension-owned.
+ * Releases extension-owned hidden state before page visibility is evaluated.
  *
- * @param source - Source element to inspect.
- * @returns - Whether the exact ownership record still owns hidden state.
+ * The ownership record and output remain intact so a visible source can be re-rendered without
+ * replacing its output node. Suppressed sources are subsequently restored through the same owner.
+ *
+ * @param source - Source whose page-authored visibility must be evaluated.
+ * @param mutations - Optional sink for the renderer-authored hidden change.
  */
-export function isSourceHiddenByExtension(source: Element): boolean {
+export function releaseSourceHiddenForReconciliation(
+    source: Element,
+    mutations?: OwnedDomMutationSink,
+): void {
     const record = recordsByDocument.get(source.ownerDocument)?.get(source);
     if (!record || record.source !== source || !record.sourceHiddenByExtension) {
-        return false;
+        return;
     }
-    return source.getAttribute(OWNED_SOURCE_ATTRIBUTE) === expectedSourceMarker(record)
-        && record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
+    if (
+        source.getAttribute(OWNED_SOURCE_ATTRIBUTE) !== expectedSourceMarker(record)
+        || record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(record)
+    ) {
+        return;
+    }
+    mutations?.beforeOwnedSourceHiddenChange(source, false);
+    source.removeAttribute("hidden");
+    record.sourceHiddenByExtension = false;
 }
 
 /**

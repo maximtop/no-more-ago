@@ -6,14 +6,17 @@ import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
 import { formatDateWithPresentation } from "../../shared/date/format-default-date";
 import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
 import {
-    isSourceHiddenByExtension,
+    releaseSourceHiddenForReconciliation,
     renderExactTime,
     restoreExactTime,
     type OwnedDomMutationSink,
 } from "./render-exact-time";
 import { resolveTrustedTimestamp } from "./resolve-trusted-timestamp";
 import { isSourceSuppressed } from "./source-visibility";
-import { TIMESTAMP_VALIDATION_RULE, type TimestampCandidate } from "../adapters/types";
+import {
+    TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampCandidate,
+} from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
 import type { DiagnosticEventInput } from "../../shared/diagnostics/events";
 import {
@@ -25,6 +28,19 @@ import {
  * Receives bounded processing facts after page-derived data has been sanitized.
  */
 export type DocumentDiagnosticSink = (event: DiagnosticEventInput) => void;
+
+/**
+ * Emits one bounded skip event for a candidate that cannot be rendered.
+ *
+ * @param diagnosticSink - Optional diagnostic event sink.
+ */
+function emitCandidateSkipped(diagnosticSink: DocumentDiagnosticSink | undefined): void {
+    diagnosticSink?.({
+        category: DIAGNOSTIC_CATEGORY.SKIP,
+        reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
+        count: 1,
+    });
+}
 
 /**
  * Dependencies for a full document pass, including snapshots that may be refreshed through
@@ -153,14 +169,6 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         return [];
     }
     const started = diagnosticSink ? performance.now() : undefined;
-    if (diagnosticSink) {
-        diagnosticSink({
-            category: DIAGNOSTIC_CATEGORY.ADAPTER,
-            reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
-            count: 1,
-        });
-    }
-
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
@@ -168,6 +176,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         for (const element of rule.discover(root)) {
             const candidate = rule.extract(element);
             const source = candidate?.source ?? element;
+            ownedDomMutations?.trackSource?.(source);
             if (!discovered.has(source)) {
                 discovered.add(source);
                 discoveredSources.push(source);
@@ -178,6 +187,14 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 candidatesBySource.set(source, candidates);
             }
         }
+    }
+
+    if (diagnosticSink && discoveredSources.length > 0) {
+        diagnosticSink({
+            category: DIAGNOSTIC_CATEGORY.ADAPTER,
+            reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+            count: 1,
+        });
     }
 
     const outputs: HTMLTimeElement[] = [];
@@ -197,23 +214,13 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             continue;
         }
-        if (
-            resolved.validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL
-            && isSourceSuppressed(
-                source,
-                isSourceHiddenByExtension(source),
-                ownedDomMutations,
-            )
-        ) {
-            restoreExactTime(source, ownedDomMutations);
-            if (diagnosticSink) {
-                diagnosticSink({
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
-                    count: 1,
-                });
+        if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
+            releaseSourceHiddenForReconciliation(source, ownedDomMutations);
+            if (isSourceSuppressed(source)) {
+                restoreExactTime(source, ownedDomMutations);
+                emitCandidateSkipped(diagnosticSink);
+                continue;
             }
-            continue;
         }
         const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
@@ -225,24 +232,12 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                     count: 1,
                 });
             }
-            if (diagnosticSink) {
-                diagnosticSink({
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
-                    count: 1,
-                });
-            }
+            emitCandidateSkipped(diagnosticSink);
             continue;
         }
         if (presentation.error === INVALID_DATE_FORMAT_ERROR) {
             restoreExactTime(source, ownedDomMutations);
-            if (diagnosticSink) {
-                diagnosticSink({
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
-                    count: 1,
-                });
-            }
+            emitCandidateSkipped(diagnosticSink);
             continue;
         }
         const output = renderExactTime(
@@ -255,7 +250,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             outputs.push(output);
         }
     }
-    if (diagnosticSink && started !== undefined) {
+    if (diagnosticSink && started !== undefined && discoveredSources.length > 0) {
         diagnosticSink({
             category: DIAGNOSTIC_CATEGORY.TIMING,
             count: outputs.length,

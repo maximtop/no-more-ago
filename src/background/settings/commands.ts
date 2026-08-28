@@ -9,10 +9,7 @@ import type { DiagnosticsService } from "../diagnostics/service";
 import { deriveDisplayState } from "../projection/display-state";
 import type { DocumentRefresh } from "./document-refresh";
 import type { StateProjection } from "../projection/state-projection";
-import {
-    ACTIVATION_MODE,
-    ACTIVATION_POLICY,
-} from "../runtime/document-activation";
+import { ACTIVATION_POLICY } from "../runtime/document-activation";
 import {
     APPLICATION_PHASE,
     LIFECYCLE_REASON,
@@ -258,7 +255,6 @@ export class SettingsCommands {
             this.lifecycle.clearReconcileResult();
             if (previous?.globalEnabled) {
                 await this.lifecycle.reconcile(
-                    ACTIVATION_MODE.SETTINGS_CHANGE,
                     ACTIVATION_POLICY.DISABLED,
                     write.snapshot.revision,
                     previous.sitePreferences,
@@ -266,7 +262,6 @@ export class SettingsCommands {
             }
             await this.diagnostics.reset();
             await this.lifecycle.reconcile(
-                ACTIVATION_MODE.ACTIVATION_SWEEP,
                 write.snapshot.globalEnabled
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
@@ -319,7 +314,6 @@ export class SettingsCommands {
             this.lifecycle.adoptSnapshot(write.snapshot);
             acceptedRevision = write.snapshot.revision;
             await this.lifecycle.reconcile(
-                ACTIVATION_MODE.SETTINGS_CHANGE,
                 write.snapshot.globalEnabled
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
@@ -392,7 +386,6 @@ export class SettingsCommands {
             acceptedRevision = write.snapshot.revision;
             if (write.snapshot.globalEnabled && write.changed) {
                 await this.lifecycle.reconcile(
-                    ACTIVATION_MODE.SETTINGS_CHANGE,
                     ACTIVATION_POLICY.ENABLED,
                     write.snapshot.revision,
                     write.snapshot.sitePreferences,

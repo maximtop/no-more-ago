@@ -21,6 +21,14 @@ export const TIMESTAMP_SOURCE_KIND = {
 } as const;
 
 /**
+ * Visibility handling requested by a timestamp source.
+ */
+export const TIMESTAMP_VISIBILITY_POLICY = {
+    PRESERVE_PAGE_SUPPRESSION: "preserve-page-suppression",
+    IGNORE_PAGE_SUPPRESSION: "ignore-page-suppression",
+} as const;
+
+/**
  * Validation rule carried by a timestamp candidate.
  */
 export type TimestampValidationRule =
@@ -31,6 +39,12 @@ export type TimestampValidationRule =
  */
 export type TimestampSourceKind =
     (typeof TIMESTAMP_SOURCE_KIND)[keyof typeof TIMESTAMP_SOURCE_KIND];
+
+/**
+ * Visibility handling policy carried by a timestamp candidate.
+ */
+export type TimestampVisibilityPolicy =
+    (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
 
 /**
  * DOM element whose timestamp is being transformed.
@@ -65,6 +79,11 @@ export interface TimestampCandidate extends TimestampCandidateSource {
      * Rule proving that the raw datetime value is eligible.
      */
     readonly validationRule: TimestampValidationRule;
+
+    /**
+     * Visibility policy explicitly selected by the source rule.
+     */
+    readonly visibilityPolicy: TimestampVisibilityPolicy;
 }
 
 /**

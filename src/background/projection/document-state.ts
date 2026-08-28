@@ -25,7 +25,6 @@ export function deriveDocumentState(
     state: ApplicationStateView,
     sender: DiagnosticSender,
 ): DocumentState {
-    const displayState = deriveDisplayState(state);
     if (state.phase !== APPLICATION_PHASE.READY || !state.snapshot) {
         return {
             availability: STATE_AVAILABILITY.UNAVAILABLE,
@@ -36,6 +35,7 @@ export function deriveDocumentState(
             failure: state.failure ?? "settings-load",
         };
     }
+    const displayState = deriveDisplayState(state);
     const topLevelUrl = parseHttpUrl(sender.tab?.url);
     return {
         availability: STATE_AVAILABILITY.READY,
@@ -43,12 +43,8 @@ export function deriveDocumentState(
         enabled: state.snapshot.globalEnabled
             && topLevelUrl !== null
             && isSiteEnabled(state.snapshot.sitePreferences, topLevelUrl.hostname),
-        display: displayState.availability === STATE_AVAILABILITY.READY
-            ? displayState.display
-            : state.snapshot.display,
+        display: state.snapshot.display,
         debugEnabled: state.snapshot.debugEnabled,
-        ...(displayState.availability === STATE_AVAILABILITY.READY && "error" in displayState
-            ? { error: displayState.error }
-            : {}),
+        ...("error" in displayState ? { error: displayState.error } : {}),
     };
 }

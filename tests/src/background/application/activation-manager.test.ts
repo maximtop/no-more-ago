@@ -9,7 +9,6 @@ import type {
     ActivationReconcileResult,
 } from "../../../../src/background/runtime/document-activation";
 import {
-    ACTIVATION_MODE,
     ACTIVATION_POLICY,
     RECONCILE_FAILURE_SCOPE,
     REGISTRATION_OUTCOME,
@@ -21,7 +20,6 @@ describe("ActivationManager", () => {
         const results: readonly ActivationReconcileResult[] = [
             {
                 revision: 1,
-                mode: ACTIVATION_MODE.ACTIVATION_SWEEP,
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [{
                     scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -39,7 +37,6 @@ describe("ActivationManager", () => {
             },
             {
                 revision: 2,
-                mode: ACTIVATION_MODE.SETTINGS_CHANGE,
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
@@ -52,7 +49,6 @@ describe("ActivationManager", () => {
             },
             {
                 revision: 3,
-                mode: ACTIVATION_MODE.SETTINGS_CHANGE,
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
@@ -78,13 +74,11 @@ describe("ActivationManager", () => {
         const manager = new ActivationManager(coordinator);
 
         await manager.reconcile(
-            ACTIVATION_MODE.ACTIVATION_SWEEP,
             ACTIVATION_POLICY.ENABLED,
             1,
             {},
         );
         await manager.reconcile(
-            ACTIVATION_MODE.SETTINGS_CHANGE,
             ACTIVATION_POLICY.ENABLED,
             2,
             {},
@@ -99,7 +93,6 @@ describe("ActivationManager", () => {
         });
 
         await manager.reconcile(
-            ACTIVATION_MODE.SETTINGS_CHANGE,
             ACTIVATION_POLICY.ENABLED,
             3,
             {},
@@ -107,5 +100,56 @@ describe("ActivationManager", () => {
         );
 
         expect(manager.result?.failures).toEqual([]);
+    });
+
+    it("drops a scoped failure when its tab is no longer returned", async () => {
+        const results: readonly ActivationReconcileResult[] = [
+            {
+                revision: 1,
+                policy: ACTIVATION_POLICY.ENABLED,
+                failures: [{
+                    scope: RECONCILE_FAILURE_SCOPE.TAB,
+                    tabId: 2,
+                    hostname: "b.test",
+                    action: TAB_ACTION.INJECT,
+                }],
+                registration: REGISTRATION_OUTCOME.UNCHANGED,
+                tabs: [{
+                    tabId: 2,
+                    hostname: "b.test",
+                    action: TAB_ACTION.INJECT,
+                    ok: false,
+                }],
+            },
+            {
+                revision: 2,
+                policy: ACTIVATION_POLICY.ENABLED,
+                failures: [],
+                registration: REGISTRATION_OUTCOME.UNCHANGED,
+                tabs: [],
+            },
+        ];
+        let nextResult = 0;
+        const coordinator: ActivationCoordinator = {
+            reconcile: vi.fn(() => {
+                const result = results[nextResult];
+                nextResult += 1;
+                return result
+                    ? Promise.resolve(result)
+                    : Promise.reject(new Error("Unexpected reconciliation"));
+            }),
+        };
+        const manager = new ActivationManager(coordinator);
+
+        await manager.reconcile(ACTIVATION_POLICY.ENABLED, 1, {});
+        await manager.reconcile(
+            ACTIVATION_POLICY.ENABLED,
+            2,
+            {},
+            ["b.test"],
+        );
+
+        expect(manager.result?.failures).toEqual([]);
+        expect(manager.result?.tabs).toEqual([]);
     });
 });

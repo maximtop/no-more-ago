@@ -10,7 +10,7 @@ import {
 /**
  * Attribute names whose page-authored changes can affect generic visibility.
  */
-const VISIBILITY_ATTRIBUTES = ["hidden", "aria-hidden", "inert", "style"] as const;
+const VISIBILITY_ATTRIBUTES = ["hidden", "aria-hidden", "inert", "style", "class"] as const;
 
 /**
  * Complete observer attribute filter for timestamp and visibility changes.
@@ -142,6 +142,16 @@ export class DocumentMutationScheduler {
     >();
 
     /**
+     * Sources discovered by the active adapter pass, indexed by relevant ancestors.
+     */
+    private readonly sourcesByRelevantElement = new Map<Element, Set<Element>>();
+
+    /**
+     * Relevant source and ancestor elements retained for deterministic untracking.
+     */
+    private readonly relevantElementsBySource = new Map<Element, readonly Element[]>();
+
+    /**
      * Initializes mutation bookkeeping without observing the document until start() is called.
      *
      * @param input - Document, observer, callbacks, and scheduling dependencies.
@@ -192,6 +202,8 @@ export class DocumentMutationScheduler {
         this.generation += 1;
         this.suppressedRemovals.clear();
         this.expectedHiddenChanges.clear();
+        this.sourcesByRelevantElement.clear();
+        this.relevantElementsBySource.clear();
     }
 
     /**
@@ -226,6 +238,103 @@ export class DocumentMutationScheduler {
             oldValue: source.getAttribute("hidden"),
         });
         this.expectedHiddenChanges.set(source, changes);
+    }
+
+    /**
+     * Tracks a timestamp source and each ancestor whose visibility can affect it.
+     *
+     * @param source - Timestamp source discovered by an adapter.
+     */
+    trackSource(source: Element): void {
+        if (source.ownerDocument !== this.input.document) {
+            return;
+        }
+        const relevantElements: Element[] = [];
+        let current: Element | null = source;
+        while (current) {
+            relevantElements.push(current);
+            current = current.parentElement;
+        }
+        const previous = this.relevantElementsBySource.get(source);
+        if (
+            previous?.length === relevantElements.length
+            && previous.every((element, index) => element === relevantElements[index])
+        ) {
+            return;
+        }
+        this.untrackSource(source);
+        for (const element of relevantElements) {
+            const sources = this.sourcesByRelevantElement.get(element) ?? new Set<Element>();
+            sources.add(source);
+            this.sourcesByRelevantElement.set(element, sources);
+        }
+        this.relevantElementsBySource.set(source, relevantElements);
+    }
+
+    /**
+     * Removes one source from every retained visibility index.
+     *
+     * @param source - Timestamp source no longer tracked at its previous location.
+     */
+    private untrackSource(source: Element): void {
+        const relevantElements = this.relevantElementsBySource.get(source);
+        if (!relevantElements) {
+            return;
+        }
+        for (const element of relevantElements) {
+            const sources = this.sourcesByRelevantElement.get(element);
+            if (!sources) {
+                continue;
+            }
+            sources.delete(source);
+            if (sources.size === 0) {
+                this.sourcesByRelevantElement.delete(element);
+            }
+        }
+        this.relevantElementsBySource.delete(source);
+    }
+
+    /**
+     * Returns connected tracked sources affected by a visibility mutation.
+     *
+     * @param element - Mutated source or ancestor.
+     * @returns - Sources whose visibility policy may have changed.
+     */
+    private getAffectedSources(element: Element): readonly Element[] {
+        const sources = this.sourcesByRelevantElement.get(element);
+        if (!sources) {
+            return [];
+        }
+        const connected: Element[] = [];
+        for (const source of [...sources]) {
+            if (
+                source.ownerDocument === this.input.document
+                && source.isConnected
+                && (source === element || element.contains(source))
+            ) {
+                connected.push(source);
+            } else {
+                this.untrackSource(source);
+            }
+        }
+        return connected;
+    }
+
+    /**
+     * Removes visibility indexes for tracked sources inside a detached subtree.
+     *
+     * @param root - Subtree removed from the observed document.
+     */
+    private untrackRemovedRoot(root: Element): void {
+        const sources = this.sourcesByRelevantElement.get(root);
+        if (!sources) {
+            return;
+        }
+        for (const source of [...sources]) {
+            if (source === root || root.contains(source)) {
+                this.untrackSource(source);
+            }
+        }
     }
 
     /**
@@ -279,7 +388,19 @@ export class DocumentMutationScheduler {
                                 target,
                             );
                         }
-                        addUnique(visibilityRoots, target);
+                        const changesLocalStyle = record.attributeName === "class"
+                            || record.attributeName === "style";
+                        let affectedSources: readonly Element[];
+                        if (changesLocalStyle) {
+                            affectedSources = this.sourcesByRelevantElement.has(target)
+                                ? this.getAffectedSources(target)
+                                : [];
+                        } else {
+                            affectedSources = this.getAffectedSources(target);
+                        }
+                        for (const source of affectedSources) {
+                            addUnique(visibilityRoots, source);
+                        }
                     }
                 }
                 continue;
@@ -327,6 +448,7 @@ export class DocumentMutationScheduler {
                     }
                 } else {
                     addUnique(removedRoots, element);
+                    this.untrackRemovedRoot(element);
                 }
             }
         }

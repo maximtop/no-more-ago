@@ -7,8 +7,12 @@ import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
     REFRESH_FAILURE_REASON,
+    isDebugPolicyUpdateAcknowledgement,
+    isPresentationUpdateAcknowledgement,
     type DebugRefreshFailure,
     type DisplayRefreshFailure,
+    type DebugPolicyUpdateMessage,
+    type PresentationUpdateMessage,
 } from "../../shared/messages";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import {
@@ -19,7 +23,28 @@ import {
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 
 /**
- * Sends revisioned settings to every enabled HTTP(S) top-level document.
+ * Revisioned settings message sent to a document runtime.
+ */
+type RefreshMessage = DebugPolicyUpdateMessage | PresentationUpdateMessage;
+
+/**
+ * Checks an optional browser response against the revision sent to documents.
+ *
+ * @param response - Untrusted response returned by the browser.
+ * @param message - Revisioned update sent to the tab.
+ * @returns - Whether the response acknowledges the sent revision.
+ */
+function isRefreshAcknowledgement(
+    response: unknown,
+    message: RefreshMessage,
+): boolean {
+    return message.type === UPDATE_PRESENTATION_MESSAGE
+        ? isPresentationUpdateAcknowledgement(response, message.revision)
+        : isDebugPolicyUpdateAcknowledgement(response, message.revision);
+}
+
+/**
+ * Sends revisioned settings to every reachable frame in enabled HTTP(S) tabs.
  */
 export class DocumentRefresh {
     /**
@@ -31,7 +56,7 @@ export class DocumentRefresh {
     public constructor(private readonly tabs: TabsRuntime) {}
 
     /**
-     * Broadcasts a diagnostic-policy revision.
+     * Broadcasts a diagnostic-policy revision to every reachable frame in each matching tab.
      *
      * @param snapshot - Committed settings snapshot.
      * @param enabled - New diagnostic forwarding policy.
@@ -51,7 +76,7 @@ export class DocumentRefresh {
     }
 
     /**
-     * Broadcasts a display-settings revision.
+     * Broadcasts a display-settings revision to every reachable frame in each matching tab.
      *
      * @param snapshot - Committed settings snapshot.
      * @param display - New display settings.
@@ -71,7 +96,7 @@ export class DocumentRefresh {
     }
 
     /**
-     * Broadcasts one message to enabled HTTP(S) top-level tabs.
+     * Broadcasts one message to every reachable frame in enabled HTTP(S) tabs.
      *
      * @param snapshot - Committed settings snapshot.
      * @param message - Typed update message.
@@ -79,7 +104,7 @@ export class DocumentRefresh {
      */
     private async broadcast(
         snapshot: SettingsSnapshotV5,
-        message: unknown,
+        message: RefreshMessage,
     ): Promise<readonly DisplayRefreshFailure[]> {
         if (!snapshot.globalEnabled) {
             return [];
@@ -105,7 +130,16 @@ export class DocumentRefresh {
                 return;
             }
             try {
-                await this.tabs.sendMessage(tab.id, message);
+                const frames = await this.tabs.getAllFrames(tab.id);
+                if (frames.length === 0) {
+                    throw new Error("No reachable document frames");
+                }
+                await Promise.all(frames.map(async ({ frameId }) => {
+                    const response = await this.tabs.sendMessage(tab.id, message, { frameId });
+                    if (!isRefreshAcknowledgement(response, message)) {
+                        throw new Error("Invalid document refresh acknowledgement");
+                    }
+                }));
             } catch {
                 failures.push({
                     hostname: url.hostname,

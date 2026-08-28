@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampCandidate,
 } from "../../../../src/content-script/adapters/types";
 import {
@@ -21,6 +22,7 @@ describe("resolveTrustedTimestamp", () => {
             sourceKind: "relative-time",
             rawDatetime: "2026-08-23T10:15:00+03:00",
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         });
 
         expect(result?.instant.toISOString()).toBe("2026-08-23T07:15:00.000Z");
@@ -35,6 +37,7 @@ describe("resolveTrustedTimestamp", () => {
                 sourceKind: "relative-time",
                 rawDatetime: "2026-08-23T10:15:00",
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }),
         ).toBeNull();
     });
@@ -49,6 +52,7 @@ describe("resolveTrustedTimestamp", () => {
             sourceKind: "relative-time" as const,
             rawDatetime,
             ...(rule === null ? {} : { validationRule: rule }),
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;
 
     it.each([
@@ -153,6 +157,7 @@ describe("resolveTrustedTimestamp", () => {
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
             rawDatetime,
             validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;
 
     it.each([

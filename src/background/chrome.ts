@@ -35,6 +35,7 @@ import type { TabsRuntime } from "./runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 import { LIFECYCLE_REASON } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
+import { parseHttpUrl } from "../shared/url/http";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -53,6 +54,9 @@ function installApplication(): BackgroundApplication | undefined {
             readonly query?: TabsRuntime["query"];
             readonly sendMessage?: TabsRuntime["sendMessage"];
         };
+        readonly webNavigation?: {
+            readonly getAllFrames?: typeof chrome.webNavigation.getAllFrames;
+        };
         readonly scripting?: {
             readonly getRegisteredContentScripts?:
                 typeof chrome.scripting.getRegisteredContentScripts;
@@ -66,6 +70,7 @@ function installApplication(): BackgroundApplication | undefined {
         !candidate.storage?.local ||
         !candidate.tabs?.query ||
         !candidate.tabs.sendMessage ||
+        !candidate.webNavigation?.getAllFrames ||
         !candidate.scripting?.getRegisteredContentScripts ||
         !candidate.scripting.registerContentScripts ||
         !candidate.scripting.updateContentScripts ||
@@ -122,6 +127,11 @@ function installApplication(): BackgroundApplication | undefined {
         },
         sendMessage: (tabId, message, options) =>
             candidate.tabs?.sendMessage?.(tabId, message, options) as Promise<unknown>,
+        getAllFrames: async (tabId) => {
+            const frames = await candidate.webNavigation?.getAllFrames?.({ tabId });
+            return (frames ?? []).flatMap(({ frameId, url }) =>
+                parseHttpUrl(url) ? [{ frameId }] : []);
+        },
     };
     const coordinator = new DocumentActivationCoordinator({ scripting, tabs });
     const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;

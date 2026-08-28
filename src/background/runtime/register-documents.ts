@@ -16,19 +16,6 @@ import { HTTP_MATCH_PATTERNS } from "../../shared/url/http";
 export const DOCUMENT_RUNTIME_REGISTRATION_ID = "no-more-ago-documents" as const;
 
 /**
- * Persistent registration identifiers created by pre-universal development builds.
- */
-export const LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS = ["no-more-ago-github"] as const;
-
-/**
- * Every owned registration identifier inspected during reconciliation.
- */
-export const DOCUMENT_RUNTIME_REGISTRATION_IDS = [
-    DOCUMENT_RUNTIME_REGISTRATION_ID,
-    ...LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS,
-] as const;
-
-/**
  * Universal persistent registration specification.
  */
 export const DOCUMENT_RUNTIME_REGISTRATION: RegisteredContentScriptSpec = {

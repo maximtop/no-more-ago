@@ -133,7 +133,7 @@ describe("DocumentMutationScheduler", () => {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["datetime", "hidden", "aria-hidden", "inert", "style"],
+            attributeFilter: ["datetime", "hidden", "aria-hidden", "inert", "style", "class"],
             attributeOldValue: true,
         });
         scheduler.stop();
@@ -161,6 +161,35 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
     });
 
+    it("ignores unrelated class/style changes and detached tracked sources", async () => {
+        const wrapper = document.createElement("section");
+        const source = document.createElement("time");
+        const unrelated = document.createElement("aside");
+        wrapper.append(source, unrelated);
+        document.body.append(wrapper);
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.trackSource(source);
+        scheduler.start();
+        unrelated.classList.add("page-owned");
+        unrelated.style.display = "block";
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        source.remove();
+        await flushMutations();
+        batches.length = 0;
+        wrapper.classList.add("page-hidden");
+        wrapper.style.display = "block";
+        await flushMutations();
+        expect(batches).toEqual([]);
+        scheduler.stop();
+    });
+
     it("collapses nested visibility roots to their nearest common root", async () => {
         document.body.innerHTML = '<section><time datetime="2026-08-23T10:15Z">time</time>'
             + "</section>";
@@ -175,12 +204,13 @@ describe("DocumentMutationScheduler", () => {
             onBatch: (batch) => batches.push(batch),
             getOwnedSourceForOutput: () => null,
         });
+        scheduler.trackSource(source);
         scheduler.start();
         section.setAttribute("aria-hidden", "true");
         source.setAttribute("inert", "");
         await flushMutations();
         expect(batches).toHaveLength(1);
-        expect(batches[0]?.visibilityRoots).toEqual([section]);
+        expect(batches[0]?.visibilityRoots).toEqual([source]);
         scheduler.stop();
     });
 

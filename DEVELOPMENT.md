@@ -13,6 +13,7 @@
     - [Branches and Pull Requests](#branches-and-pull-requests)
     - [Development Builds](#development-builds)
     - [Quality Checks](#quality-checks)
+    - [Runtime Architecture](#runtime-architecture)
     - [Release Builds](#release-builds)
     - [Makefile Aliases](#makefile-aliases)
   - [Common Tasks](#common-tasks)

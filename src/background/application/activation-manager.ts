@@ -2,7 +2,6 @@
  * @file Caches universal document-runtime reconciliation within serialized application work.
  */
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
 } from "../runtime/document-activation";
@@ -18,17 +17,19 @@ import type { ActivationCoordinator } from "./contracts";
  *
  * @param previous - Previously cached reconciliation result.
  * @param current - Newly completed reconciliation result.
+ * @param affectedHostnames - Hostnames replaced by the scoped reconciliation.
  * @returns - Result containing current data and untouched tab data.
  */
 function mergeScopedResult(
     previous: ActivationReconcileResult,
     current: ActivationReconcileResult,
+    affectedHostnames: readonly string[],
 ): ActivationReconcileResult {
-    const reconciledTabIds = new Set(current.tabs.map(({ tabId }) => tabId));
+    const affected = new Set(affectedHostnames);
     const preservedFailures = previous.failures.filter((failure) =>
         failure.scope === RECONCILE_FAILURE_SCOPE.TAB
-        && !reconciledTabIds.has(failure.tabId));
-    const preservedTabs = previous.tabs.filter(({ tabId }) => !reconciledTabIds.has(tabId));
+        && !affected.has(failure.hostname));
+    const preservedTabs = previous.tabs.filter(({ hostname }) => !affected.has(hostname));
     return {
         ...current,
         failures: [...current.failures, ...preservedFailures],
@@ -65,7 +66,6 @@ export class ActivationManager {
     /**
      * Runs reconciliation and retains the newest revisioned result.
      *
-     * @param mode - Reconciliation trigger.
      * @param policy - Global activation policy.
      * @param revision - Settings revision associated with the operation.
      * @param sitePreferences - Effective per-host activation preferences.
@@ -73,7 +73,6 @@ export class ActivationManager {
      * @returns - The completed reconciliation result.
      */
     public async reconcile(
-        mode: ActivationMode,
         policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>>,
@@ -83,7 +82,6 @@ export class ActivationManager {
         try {
             result = await this.coordinator.reconcile({
                 revision,
-                mode,
                 policy,
                 sitePreferences,
                 ...(affectedHostnames === undefined ? {} : { affectedHostnames }),
@@ -91,7 +89,6 @@ export class ActivationManager {
         } catch {
             result = {
                 revision,
-                mode,
                 policy,
                 failures: [{
                     scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
@@ -109,7 +106,7 @@ export class ActivationManager {
         ) {
             this.lastResult = affectedHostnames === undefined || !this.lastResult
                 ? result
-                : mergeScopedResult(this.lastResult, result);
+                : mergeScopedResult(this.lastResult, result, affectedHostnames);
         }
         return result;
     }

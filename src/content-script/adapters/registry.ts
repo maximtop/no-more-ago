@@ -1,5 +1,5 @@
 /**
- * @file Site-adapter registry used to select a trusted parser for the current page.
+ * @file Source-rule registry for specialized rules and the generic fallback.
  */
 
 import { genericTimeRule } from "./generic-time";
@@ -24,7 +24,7 @@ export class AdapterRegistry {
     /**
      * Selects all rules whose URL matcher accepts the current page.
      *
-     * @param url - Page URL to match against registered adapters.
+     * @param url - Page URL to match against registered source rules.
      * @returns - Matching specialized rules followed by the generic fallback when applicable.
      */
     matching(url: URL): readonly TimestampSourceRule[] {

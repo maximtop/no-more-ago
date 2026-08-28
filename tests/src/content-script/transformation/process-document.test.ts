@@ -19,6 +19,7 @@ import { genericTimeRule } from "../../../../src/content-script/adapters/generic
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "../../../../src/content-script/adapters/types";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
@@ -384,6 +385,7 @@ describe("processDocument", () => {
                 sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
                 rawDatetime: specializedValid ? "2026-08-24T10:15Z" : "invalid",
                 validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
             }),
         };
         const registry = new AdapterRegistry([specialized], genericTimeRule);

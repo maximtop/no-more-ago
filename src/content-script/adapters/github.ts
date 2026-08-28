@@ -5,6 +5,7 @@
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
     type TimestampSourceKind,
 } from "./types";
@@ -51,6 +52,7 @@ export const githubAdapter: TimestampSourceRule = {
                 sourceKind,
                 rawDatetime,
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }
             : null;
     },

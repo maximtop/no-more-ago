@@ -1,7 +1,7 @@
 /**
- * Models the tab data and APIs used to locate HTTP(S) pages and message their frames.
+ * Defines the narrow browser boundary for locating tabs, enumerating frames, and messaging them.
  *
- * @file Models the tab data and APIs used to locate HTTP(S) pages and message their frames.
+ * @file Browser tab and frame capabilities used by background services.
  */
 export interface RuntimeTab {
     /**
@@ -13,6 +13,16 @@ export interface RuntimeTab {
      * Page URL when the browser exposes it for this tab.
      */
     readonly url?: string;
+}
+
+/**
+ * Identifies a reachable frame in a tab.
+ */
+export interface RuntimeFrame {
+    /**
+     * Numeric frame ID accepted by targeted sendMessage delivery.
+     */
+    readonly frameId: number;
 }
 
 /**
@@ -40,7 +50,15 @@ export interface TabsRuntime {
     }): Promise<readonly RuntimeTab[]>;
 
     /**
-     * Sends a message to every content frame unless a frame is explicitly targeted.
+     * Finds every currently reachable frame in a tab.
+     *
+     * @param tabId - Tab whose frames should be enumerated.
+     * @returns - Reachable frame identifiers, including the top-level frame.
+     */
+    getAllFrames(tabId: number): Promise<readonly RuntimeFrame[]>;
+
+    /**
+     * Sends a message to one frame when a frame ID is supplied, or every frame otherwise.
      */
     sendMessage(
         tabId: number,

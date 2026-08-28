@@ -142,6 +142,10 @@ report:
 Logs are stored locally and capped at 5,000,000 bytes. **Clear logs** removes
 the current entries. Disabling **Debug logs** also deletes retained logs.
 
+Downloaded diagnostic records may include the sender frame's hostname and
+whether the tab was incognito. They exclude URL paths, query strings,
+fragments, and page content.
+
 The extension does not submit diagnostic data automatically. Reporting opens a
 GitHub form for review and manual submission.
 
@@ -202,6 +206,8 @@ The extension requests:
   specialized sources.
 - **Scripting:** registers, updates, and removes one universal content runtime
   at document start for all frames.
+- **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
+  can verify each frame's revision acknowledgement.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative text, page titles,

@@ -12,7 +12,6 @@ import type {
     ActivationReconcileResult,
 } from "../../../../src/background/runtime/document-activation";
 import {
-    ACTIVATION_MODE,
     ACTIVATION_POLICY,
     RECONCILE_FAILURE_SCOPE,
     REGISTRATION_OUTCOME,
@@ -33,7 +32,6 @@ describe("StateProjection", () => {
     it("does not apply a stale failure after a tab navigates", async () => {
         const result: ActivationReconcileResult = {
             revision: 1,
-            mode: ACTIVATION_MODE.ACTIVATION_SWEEP,
             policy: ACTIVATION_POLICY.ENABLED,
             failures: [{
                 scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -54,7 +52,6 @@ describe("StateProjection", () => {
         };
         const activation = new ActivationManager(coordinator);
         await activation.reconcile(
-            ACTIVATION_MODE.ACTIVATION_SWEEP,
             ACTIVATION_POLICY.ENABLED,
             1,
             {},
@@ -63,6 +60,7 @@ describe("StateProjection", () => {
         let tabUrl = "https://a.test/page";
         const tabs: TabsRuntime = {
             query: vi.fn(() => Promise.resolve([{ id: 1, url: tabUrl }])),
+            getAllFrames: vi.fn(() => Promise.resolve([])),
             sendMessage: vi.fn(() => Promise.resolve({
                 type: DOCUMENT_STATUS_MESSAGE,
                 phase: DOCUMENT_PHASE.ACTIVE,

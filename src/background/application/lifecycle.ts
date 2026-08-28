@@ -3,12 +3,10 @@
  */
 
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
 } from "../runtime/document-activation";
 import {
-    ACTIVATION_MODE,
     ACTIVATION_POLICY,
 } from "../runtime/document-activation";
 import type { SettingsService } from "../settings/service";
@@ -193,7 +191,6 @@ export class ApplicationLifecycle {
         this.snapshotValue = undefined;
         this.failureValue = "settings-load";
         const cleanup = await this.reconcile(
-            ACTIVATION_MODE.FAILED_CLOSED,
             ACTIVATION_POLICY.UNKNOWN,
             null,
             {},
@@ -230,7 +227,6 @@ export class ApplicationLifecycle {
     /**
      * Reconciles the document runtime and updates cached popup state.
      *
-     * @param mode - Runtime reconciliation mode.
      * @param policy - Effective global policy.
      * @param revision - Associated settings revision.
      * @param sitePreferences - Canonical-host activation overrides.
@@ -238,7 +234,6 @@ export class ApplicationLifecycle {
      * @returns - Reconciliation result.
      */
     public async reconcile(
-        mode: ActivationMode,
         policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>> =
@@ -246,7 +241,6 @@ export class ApplicationLifecycle {
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         const result = await this.activation.reconcile(
-            mode,
             policy,
             revision,
             sitePreferences,
@@ -306,7 +300,6 @@ export class ApplicationLifecycle {
                     return;
                 }
                 await this.reconcile(
-                    ACTIVATION_MODE.ACTIVATION_SWEEP,
                     snapshot.globalEnabled
                         ? ACTIVATION_POLICY.ENABLED
                         : ACTIVATION_POLICY.DISABLED,
@@ -353,12 +346,8 @@ export class ApplicationLifecycle {
         if (loaded.snapshot.debugEnabled) {
             await this.diagnostics.setEnabled(true);
         }
-        const mode: ActivationMode = this.lifecycleReasons.size > 0
-            ? ACTIVATION_MODE.ACTIVATION_SWEEP
-            : ACTIVATION_MODE.COLD_WORKER;
         try {
             await this.reconcile(
-                mode,
                 loaded.snapshot.globalEnabled
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
@@ -375,7 +364,6 @@ export class ApplicationLifecycle {
         } catch {
             this.activation.clear();
             await this.reconcile(
-                mode,
                 loaded.snapshot.globalEnabled
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
@@ -410,7 +398,6 @@ export class ApplicationLifecycle {
             await this.diagnostics.setEnabled(true);
         }
         await this.reconcile(
-            ACTIVATION_MODE.ACTIVATION_SWEEP,
             loaded.snapshot.globalEnabled ? "enabled" : "disabled",
             loaded.snapshot.revision,
             loaded.snapshot.sitePreferences,

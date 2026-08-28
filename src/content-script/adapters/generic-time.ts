@@ -6,6 +6,7 @@ import { isHttpUrl } from "../../shared/url/http";
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
@@ -16,6 +17,22 @@ import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
 export const GENERIC_TIME_RULE_ID = "generic-time" as const;
 
 /**
+ * Namespace assigned to standard HTML elements in every document realm.
+ */
+const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
+
+/**
+ * Recognizes a standard HTML time element without relying on realm-specific constructors.
+ *
+ * @param element - Candidate element from the processed document.
+ * @returns - Whether the candidate is a standard HTML time element.
+ */
+function isStandardTimeElement(element: Element): boolean {
+    return element.namespaceURI === HTML_NAMESPACE
+        && element.localName === TIMESTAMP_SOURCE_KIND.STANDARD_TIME;
+}
+
+/**
  * Finds ordinary light-DOM time elements in a bounded root.
  *
  * @param root - Element or parent node to inspect.
@@ -23,13 +40,20 @@ export const GENERIC_TIME_RULE_ID = "generic-time" as const;
  */
 function discoverStandardTimes(root: ParentNode): readonly Element[] {
     const candidates: Element[] = [];
-    if (root instanceof Element && root.localName === TIMESTAMP_SOURCE_KIND.STANDARD_TIME) {
-        if (!root.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)) {
-            candidates.push(root);
+    if (root.nodeType === Node.ELEMENT_NODE) {
+        const element = root as Element;
+        if (
+            isStandardTimeElement(element)
+            && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
+        ) {
+            candidates.push(element);
         }
     }
     for (const element of root.querySelectorAll("time")) {
-        if (!element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)) {
+        if (
+            isStandardTimeElement(element)
+            && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
+        ) {
             candidates.push(element);
         }
     }
@@ -45,7 +69,7 @@ function discoverStandardTimes(root: ParentNode): readonly Element[] {
 function extractStandardTime(
     element: Element,
 ): ReturnType<TimestampSourceRule["extract"]> {
-    if (element.localName !== TIMESTAMP_SOURCE_KIND.STANDARD_TIME) {
+    if (!isStandardTimeElement(element)) {
         return null;
     }
     const rawDatetime = element.getAttribute("datetime");
@@ -58,6 +82,7 @@ function extractStandardTime(
         sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
         rawDatetime,
         validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
     };
 }
 

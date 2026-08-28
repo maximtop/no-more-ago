@@ -5,7 +5,6 @@
 import type { DiagnosticBrowserFamily } from "../../shared/diagnostics/events";
 import type { DiagnosticJournal } from "../diagnostics/journal";
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
 } from "../runtime/document-activation";
@@ -47,11 +46,6 @@ export interface ActivationCoordinator {
         readonly revision: number | null;
 
         /**
-         * Reason for the reconciliation run.
-         */
-        readonly mode: ActivationMode;
-
-        /**
          * Global activation policy to apply.
          */
         readonly policy: ActivationPolicy;
@@ -83,7 +77,7 @@ export interface BackgroundApplicationOptions {
     readonly coordinator: ActivationCoordinator;
 
     /**
-     * Browser tab query and messaging API.
+     * Browser tab query, frame enumeration, and messaging API.
      */
     readonly tabs: TabsRuntime;
 

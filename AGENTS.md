@@ -22,9 +22,9 @@
 
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized relative timestamps with exact, localized dates.
-It ships a generic `time[datetime]` source for HTTP(S) documents and a
-specialized GitHub adapter, while keeping site-specific extraction separate
-from shared timestamp validation and rendering.
+It ships a generic `time[datetime]` source for HTTP(S) documents and
+site-specific specialized sources such as GitHub, while keeping extraction
+separate from shared timestamp validation and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -46,7 +46,8 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Static checks:** ESLint with type-aware TypeScript and JSDoc rules.
 - **Browser targets:** Chrome, Firefox, and Edge.
 - **Permissions:** `<all_urls>` is intentional so the universal HTTP(S)
-  runtime can process standard timestamps and future specialized sources.
+  runtime can process standard timestamps and future specialized sources;
+  `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, and the production registry contains GitHub as a specialized
   source.
@@ -70,7 +71,7 @@ has an obvious, simpler standard-library replacement.
 │   │   ├── runtime/            # Script and tab integration
 │   │   └── settings/           # Validated settings storage
 │   ├── content-script/         # Page-side timestamp processing
-│   │   ├── adapters/           # Generic and site-specific timestamp sources
+│   │   ├── adapters/           # Generic fallback and site-specific sources
 │   │   └── transformation/     # Resolve, format, render, and restore
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
@@ -195,7 +196,7 @@ Apply these principles throughout the project:
 | Background composition | Adapt Chrome APIs and create the application | Application and browser APIs |
 | Application | Coordinate lifecycle, settings, activation, and projections | Focused background services |
 | Content script | Observe documents and apply transformations | Shared contracts and adapters |
-| Adapters | Recognize trusted, site-specific timestamp sources | Content adapter contracts |
+| Adapters | Apply generic fallback and site-specific sources | Content adapter contracts |
 | Shared | Own schemas, messages, values, settings, and date contracts | General-purpose libraries |
 | Build | Assemble manifests, bundles, and archives | Source contracts and build tooling |
 

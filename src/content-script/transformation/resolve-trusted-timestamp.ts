@@ -6,8 +6,10 @@ import { isValid, parseISO } from "date-fns";
 
 import {
     TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampValidationRule,
     type TimestampCandidate,
+    type TimestampVisibilityPolicy,
 } from "../adapters/types";
 import { parseHtmlGlobalDatetime } from "./parse-html-global-datetime";
 
@@ -78,6 +80,11 @@ export interface ResolvedTimestamp {
      * Validation rule accepted before the timestamp was parsed.
      */
     readonly validationRule: TimestampValidationRule;
+
+    /**
+     * Visibility policy selected by the source rule.
+     */
+    readonly visibilityPolicy: TimestampVisibilityPolicy;
 }
 
 /**
@@ -90,6 +97,13 @@ export interface ResolvedTimestamp {
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate,
 ): ResolvedTimestamp | null {
+    const visibilityPolicy: unknown = candidate.visibilityPolicy;
+    if (
+        visibilityPolicy !== TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION
+        && visibilityPolicy !== TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION
+    ) {
+        return null;
+    }
     const validationRule: unknown = candidate.validationRule;
     const rawDatetime = candidate.rawDatetime;
     if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
@@ -100,6 +114,7 @@ export function resolveTrustedTimestamp(
                 sourceDatetime: rawDatetime,
                 instant,
                 validationRule,
+                visibilityPolicy,
             }
             : null;
     }
@@ -141,5 +156,6 @@ export function resolveTrustedTimestamp(
         sourceDatetime: candidate.rawDatetime,
         instant,
         validationRule,
+        visibilityPolicy,
     };
 }

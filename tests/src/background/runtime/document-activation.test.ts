@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 import {
     DocumentActivationCoordinator,
-    ACTIVATION_MODE,
     ACTIVATION_POLICY,
     RECONCILE_FAILURE_SCOPE,
     REGISTRATION_OUTCOME,
@@ -16,7 +15,6 @@ import type { RegisteredContentScriptSpec } from "../../../../src/background/run
 import {
     DOCUMENT_RUNTIME_REGISTRATION,
     DOCUMENT_RUNTIME_REGISTRATION_ID,
-    LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS,
 } from "../../../../src/background/runtime/register-documents";
 import {
     REFRESH_DOCUMENT_POLICY_MESSAGE,
@@ -126,6 +124,7 @@ function fakes(urls: readonly string[]) {
     };
     const tabs = {
         query: vi.fn(async () => urls.map((url, index) => ({ id: index + 1, url }))),
+        getAllFrames: vi.fn(async () => [{ frameId: 0 }, { frameId: 1 }]),
         sendMessage: vi.fn(async (
             ...args: [number, unknown, { readonly frameId: number }?]
         ) => {
@@ -143,7 +142,6 @@ describe("DocumentActivationCoordinator", () => {
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
             revision: 1,
-            mode: ACTIVATION_MODE.COLD_WORKER,
             policy: ACTIVATION_POLICY.ENABLED,
             sitePreferences: { "example.test": true },
         });
@@ -164,7 +162,6 @@ describe("DocumentActivationCoordinator", () => {
         const coordinator = new DocumentActivationCoordinator(fake);
         await coordinator.reconcile({
             revision: 2,
-            mode: ACTIVATION_MODE.SETTINGS_CHANGE,
             policy: ACTIVATION_POLICY.ENABLED,
             sitePreferences: { "example.test": false },
         });
@@ -181,7 +178,6 @@ describe("DocumentActivationCoordinator", () => {
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
             revision: 3,
-            mode: ACTIVATION_MODE.FAILED_CLOSED,
             policy: ACTIVATION_POLICY.DISABLED,
         });
 
@@ -191,28 +187,6 @@ describe("DocumentActivationCoordinator", () => {
             { type: TEARDOWN_DOCUMENT_MESSAGE },
         );
         expect(fake.scripting.executeScript).not.toHaveBeenCalled();
-    });
-
-    it("removes the legacy GitHub registration while keeping the universal runtime", async () => {
-        const fake = fakes([]);
-        const legacyId = LEGACY_DOCUMENT_RUNTIME_REGISTRATION_IDS[0];
-        fake.scripting.getRegisteredContentScripts.mockResolvedValue([
-            DOCUMENT_RUNTIME_REGISTRATION,
-            { ...DOCUMENT_RUNTIME_REGISTRATION, id: legacyId },
-        ]);
-        const coordinator = new DocumentActivationCoordinator(fake);
-
-        const result = await coordinator.reconcile({
-            revision: 4,
-            mode: ACTIVATION_MODE.ACTIVATION_SWEEP,
-            policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: {},
-        });
-
-        expect(fake.scripting.unregisterContentScripts).toHaveBeenCalledWith({
-            ids: [legacyId],
-        });
-        expect(result.registration).toBe(REGISTRATION_OUTCOME.UPDATED);
     });
 
     it("retains sibling recovery when one tab ensure fails", async () => {
@@ -226,7 +200,6 @@ describe("DocumentActivationCoordinator", () => {
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
             revision: 4,
-            mode: ACTIVATION_MODE.ACTIVATION_SWEEP,
             policy: ACTIVATION_POLICY.ENABLED,
             sitePreferences: { "first.test": true, "second.test": true },
         });
@@ -262,7 +235,6 @@ describe("DocumentActivationCoordinator", () => {
 
         const result = await coordinator.reconcile({
             revision: 5,
-            mode: ACTIVATION_MODE.ACTIVATION_SWEEP,
             policy: ACTIVATION_POLICY.ENABLED,
             sitePreferences: {},
         });
@@ -304,7 +276,6 @@ describe("DocumentActivationCoordinator", () => {
                 siteEnabled = false;
                 const siteDisabled = await coordinator.reconcile({
                     revision: 3,
-                    mode: ACTIVATION_MODE.SETTINGS_CHANGE,
                     policy: ACTIVATION_POLICY.ENABLED,
                     sitePreferences: { "example.test": false },
                 });
@@ -320,7 +291,6 @@ describe("DocumentActivationCoordinator", () => {
                 rejectBroadcastResponse = false;
                 const siteEnabledResult = await coordinator.reconcile({
                     revision: 4,
-                    mode: ACTIVATION_MODE.SETTINGS_CHANGE,
                     policy: ACTIVATION_POLICY.ENABLED,
                     sitePreferences: { "example.test": true },
                 });
@@ -333,7 +303,6 @@ describe("DocumentActivationCoordinator", () => {
 
                 const globallyDisabled = await coordinator.reconcile({
                     revision: 5,
-                    mode: ACTIVATION_MODE.FAILED_CLOSED,
                     policy: ACTIVATION_POLICY.DISABLED,
                 });
                 expect(frames.map(hasOutput)).toEqual([false, false]);
