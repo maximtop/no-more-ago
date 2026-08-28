@@ -1,162 +1,119 @@
 /**
- * @file Broadcasts committed display and diagnostic policy changes to active documents.
+ * Broadcasts committed presentation and diagnostic policy to active documents.
+ *
+ * @file Settings refresh fanout for all enabled HTTP(S) tabs.
  */
-
-import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-    isDebugPolicyUpdateAcknowledgement,
-    isPresentationUpdateAcknowledgement,
+    REFRESH_FAILURE_REASON,
     type DebugRefreshFailure,
     type DisplayRefreshFailure,
 } from "../../shared/messages";
-import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
+import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import {
     isSiteEnabled,
     type DisplaySettings,
     type SettingsSnapshotV5,
 } from "../../shared/settings/snapshot";
+import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 
 /**
- * Parses a tab URL, returning null when it is absent or invalid.
- *
- * @param tab - Browser tab to inspect.
- * @returns - Parsed URL, or null for absent and malformed values.
- */
-function urlFromTab(tab: RuntimeTab): URL | null {
-    if (!tab.url) {
-        return null;
-    }
-    try {
-        return new URL(tab.url);
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Sends committed settings revisions to enabled top-frame documents.
+ * Sends revisioned settings to every enabled HTTP(S) top-level document.
  */
 export class DocumentRefresh {
     /**
-     * Browser tab query and messaging boundary.
-     */
-    private readonly tabs: TabsRuntime;
-
-    /**
-     * Immutable runtime adapter catalog.
-     */
-    private readonly adapters: readonly RuntimeAdapterDefinition[];
-
-    /**
-     * Creates a document settings broadcaster.
+     * Creates a refresh broadcaster.
      *
      * @param tabs - Browser tab query and messaging boundary.
-     * @param adapters - Runtime adapter catalog.
+     * @returns - A refresh broadcaster.
      */
-    public constructor(tabs: TabsRuntime, adapters: readonly RuntimeAdapterDefinition[]) {
-        this.tabs = tabs;
-        this.adapters = adapters;
-    }
+    public constructor(private readonly tabs: TabsRuntime) {}
 
     /**
-     * Notifies enabled-site tabs of a diagnostic-policy revision.
+     * Broadcasts a diagnostic-policy revision.
      *
-     * @param snapshot - Authoritative settings snapshot.
+     * @param snapshot - Committed settings snapshot.
      * @param enabled - New diagnostic forwarding policy.
-     * @param revision - Settings revision associated with the policy.
-     * @returns - Per-tab diagnostic-policy refresh failures.
+     * @param revision - Revision carried by the message.
+     * @returns - Refresh failures by tab.
      */
     public refreshDebugPolicy(
         snapshot: SettingsSnapshotV5,
         enabled: boolean,
         revision: number,
     ): Promise<readonly DebugRefreshFailure[]> {
-        return this.broadcast(
-            snapshot,
-            { type: UPDATE_DEBUG_POLICY_MESSAGE, revision, enabled },
-            (response) => isDebugPolicyUpdateAcknowledgement(response, revision),
-        );
+        return this.broadcast(snapshot, {
+            type: UPDATE_DEBUG_POLICY_MESSAGE,
+            revision,
+            enabled,
+        });
     }
 
     /**
-     * Notifies enabled-site tabs of a display-settings revision.
+     * Broadcasts a display-settings revision.
      *
-     * @param snapshot - Authoritative settings snapshot.
-     * @param display - Validated display settings.
-     * @param revision - Settings revision associated with the display settings.
-     * @returns - Per-tab display refresh failures.
+     * @param snapshot - Committed settings snapshot.
+     * @param display - New display settings.
+     * @param revision - Revision carried by the message.
+     * @returns - Refresh failures by tab.
      */
     public refreshDisplay(
         snapshot: SettingsSnapshotV5,
         display: DisplaySettings,
         revision: number,
     ): Promise<readonly DisplayRefreshFailure[]> {
-        return this.broadcast(
-            snapshot,
-            { type: UPDATE_PRESENTATION_MESSAGE, revision, display },
-            (response) => isPresentationUpdateAcknowledgement(response, revision),
-        );
+        return this.broadcast(snapshot, {
+            type: UPDATE_PRESENTATION_MESSAGE,
+            revision,
+            display,
+        });
     }
 
     /**
-     * Broadcasts one revisioned message to unique matching top-frame documents.
+     * Broadcasts one message to enabled HTTP(S) top-level tabs.
      *
-     * @param snapshot - Authoritative settings snapshot.
-     * @param message - Revisioned runtime message.
-     * @param acknowledges - Response validator for the message.
-     * @returns - Query and per-tab update failures.
+     * @param snapshot - Committed settings snapshot.
+     * @param message - Typed update message.
+     * @returns - Refresh failures by tab.
      */
     private async broadcast(
         snapshot: SettingsSnapshotV5,
         message: unknown,
-        acknowledges: (response: unknown) => boolean,
     ): Promise<readonly DisplayRefreshFailure[]> {
         if (!snapshot.globalEnabled) {
             return [];
         }
-        const failures: DisplayRefreshFailure[] = [];
-        for (const adapter of this.adapters) {
-            if (!isSiteEnabled(snapshot.sitePreferences, adapter.hostname)) {
-                continue;
-            }
-            let tabs: readonly RuntimeTab[];
-            try {
-                tabs = await this.tabs.query({ url: adapter.registration.matches });
-            } catch {
-                failures.push({ hostname: adapter.hostname, reason: "matching-tabs-query" });
-                continue;
-            }
-            const seen = new Set<number>();
-            for (const tab of tabs) {
-                const url = urlFromTab(tab);
-                if (!url || !adapter.matches(url) || seen.has(tab.id)) {
-                    continue;
-                }
-                seen.add(tab.id);
-                try {
-                    const response = await this.tabs.sendMessage(
-                        tab.id,
-                        message,
-                        { frameId: 0 },
-                    );
-                    if (!acknowledges(response)) {
-                        failures.push({
-                            hostname: adapter.hostname,
-                            tabId: tab.id,
-                            reason: "tab-update",
-                        });
-                    }
-                } catch {
-                    failures.push({
-                        hostname: adapter.hostname,
-                        tabId: tab.id,
-                        reason: "tab-update",
-                    });
-                }
-            }
+        let tabs: readonly RuntimeTab[];
+        try {
+            tabs = await this.tabs.query({ url: [...HTTP_MATCH_PATTERNS] });
+        } catch {
+            return [{
+                hostname: "*",
+                reason: REFRESH_FAILURE_REASON.MATCHING_TABS_QUERY,
+            }];
         }
+        const failures: DisplayRefreshFailure[] = [];
+        const seen = new Set<number>();
+        await Promise.all(tabs.map(async (tab) => {
+            if (seen.has(tab.id)) {
+                return;
+            }
+            seen.add(tab.id);
+            const url = parseHttpUrl(tab.url);
+            if (!url || !isSiteEnabled(snapshot.sitePreferences, url.hostname)) {
+                return;
+            }
+            try {
+                await this.tabs.sendMessage(tab.id, message);
+            } catch {
+                failures.push({
+                    hostname: url.hostname,
+                    tabId: tab.id,
+                    reason: REFRESH_FAILURE_REASON.TAB_UPDATE,
+                });
+            }
+        }));
         return failures;
     }
 }

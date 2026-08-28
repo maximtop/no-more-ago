@@ -6,17 +6,22 @@ import type { AdapterRegistry } from "./adapters/registry";
 import {
     DocumentTransformationController,
 } from "./transformation/document-transformation-controller";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
 import type { DocumentDiagnosticSink, ProcessInput } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
+    DOCUMENT_PHASE,
+    DOCUMENT_POLICY_REFRESHED_MESSAGE,
+    DOCUMENT_TORN_DOWN_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
     isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
-    isPresentationDisplay,
+    isRefreshDocumentPolicyMessage,
+    isSuspendAndRefreshDocumentPolicyMessage,
+    isDocumentState,
     isPresentationUpdateMessage,
     isTeardownDocumentMessage,
     PRESENTATION_UPDATED_MESSAGE,
+    STATE_AVAILABILITY,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
@@ -63,70 +68,6 @@ export interface ContentRuntimeHandle {
 }
 
 /**
- * Validated persisted display state returned during content-runtime startup.
- */
-interface DisplayStateLike {
-    /**
-     * Marks a response whose display state can be applied.
-     */
-    readonly availability: "ready";
-
-    /**
-     * Monotonic state revision used to ignore older updates.
-     */
-    readonly revision: number;
-
-    /**
-     * Settings passed to the document transformation controller.
-     */
-    readonly display: DisplaySettings;
-
-    /**
-     * Whether controller diagnostics are sent to the background context.
-     */
-    readonly debugEnabled: boolean;
-}
-
-/**
- * Recognizes non-negative safe-integer message revisions.
- *
- * @param value - Untrusted persisted-state revision.
- * @returns - Whether the value is a non-negative safe integer.
- */
-function isSafeRevision(value: unknown): value is number {
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
-
-/**
- * Recognizes a ready persisted-state response, including its optional time-zone warning.
- *
- * @param value - Untrusted persisted-state response.
- * @returns - Whether the value contains valid ready display state.
- */
-function isDisplayState(value: unknown): value is DisplayStateLike {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        return false;
-    }
-    const record = value as Record<string, unknown>;
-    const keys = Object.keys(record);
-    return (
-        (keys.length === 4 || keys.length === 5) &&
-        keys.every((key) =>
-            ["availability", "revision", "display", "debugEnabled", "error"].includes(key),
-        ) &&
-        Object.hasOwn(record, "availability") &&
-        Object.hasOwn(record, "revision") &&
-        Object.hasOwn(record, "display") &&
-        record.availability === "ready" &&
-        isSafeRevision(record.revision) &&
-        isPresentationDisplay(record.display) &&
-        Object.hasOwn(record, "debugEnabled") &&
-        typeof record.debugEnabled === "boolean" &&
-        (!Object.hasOwn(record, "error") || record.error === UNAVAILABLE_TIME_ZONE_ERROR)
-    );
-}
-
-/**
  * Per-document singleton retained on the Document while its content runtime exists.
  */
 interface RuntimeSlot {
@@ -161,11 +102,6 @@ interface RuntimeSlot {
     generation: number;
 
     /**
-     * DOMContentLoaded listener retained only while startup waits for the document.
-     */
-    pendingStart: EventListener | undefined;
-
-    /**
      * Persisted-state request retained until it settles or the runtime is stopped.
      */
     hydration: Promise<void> | undefined;
@@ -196,9 +132,9 @@ interface RuntimeSlot {
     reportDiagnostic: ((event: Record<string, unknown>) => Promise<unknown>) | undefined;
 
     /**
-     * Set after DOMContentLoaded or immediately for an already parsed document.
+     * Current background state loader used by policy-refresh messages.
      */
-    documentReady: boolean;
+    loadDocumentState: (() => Promise<unknown>) | undefined;
 
     /**
      * Controller input whose display field is populated after state hydration.
@@ -250,61 +186,41 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
 }
 
 /**
- * Starts the controller once both state hydration and document readiness succeed.
+ * Re-renders already-owned timestamps after a presentation change.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ */
+function reformatOwned(slot: RuntimeSlot): void {
+    (
+        slot.controller as DocumentTransformationController & { reformatOwned: () => void }
+    ).reformatOwned();
+}
+
+/**
+ * Starts the controller once state hydration succeeds.
  *
  * @param slot - Singleton runtime state for the current document.
  * @param generation - Activation generation allowed to start the controller.
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (
-        slot.phase !== "waiting" ||
+        slot.phase !== DOCUMENT_PHASE.WAITING ||
         slot.generation !== generation ||
-        !slot.documentReady ||
         slot.presentation === undefined
     ) {
         return;
     }
     try {
         slot.controller.start();
-        slot.phase = "active";
+        slot.phase = DOCUMENT_PHASE.ACTIVE;
     } catch (error) {
-        if (slot.pendingStart) {
-            slot.document.removeEventListener("DOMContentLoaded", slot.pendingStart);
-            slot.pendingStart = undefined;
-        }
         try {
             slot.controller.teardown();
         } finally {
-            slot.phase = "failed";
+            slot.phase = DOCUMENT_PHASE.FAILED;
         }
         throw error;
     }
-}
-
-/**
- * Waits for DOMContentLoaded when necessary before allowing controller startup.
- *
- * @param slot - Singleton runtime state for the current document.
- * @param generation - Activation generation waiting for document readiness.
- */
-function waitForDocument(slot: RuntimeSlot, generation: number): void {
-    if (slot.document.readyState !== "loading") {
-        slot.documentReady = true;
-        maybeStart(slot, generation);
-        return;
-    }
-    const callback: EventListener = () => {
-        if (slot.pendingStart === callback) {
-            slot.pendingStart = undefined;
-        }
-        if (slot.phase !== "waiting" || slot.generation !== generation) {
-            return;
-        }
-        slot.documentReady = true;
-        maybeStart(slot, generation);
-    };
-    slot.pendingStart = callback;
-    slot.document.addEventListener("DOMContentLoaded", callback, { once: true });
 }
 
 /**
@@ -313,63 +229,76 @@ function waitForDocument(slot: RuntimeSlot, generation: number): void {
  * @param slot - Singleton runtime state for the current document.
  * @param generation - Activation generation being hydrated.
  * @param loader - Optional persisted-state loader.
+ * @param failurePhase - Phase used when hydration fails.
  */
 function beginHydration(
     slot: RuntimeSlot,
     generation: number,
     loader: (() => Promise<unknown>) | undefined,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    >
+        = DOCUMENT_PHASE.FAILED,
 ): void {
     if (!loader) {
         applyPresentation(slot, DEFAULT_DISPLAY_SETTINGS, 0);
         applyDebugPolicy(slot, false, 0);
-        waitForDocument(slot, generation);
+        maybeStart(slot, generation);
         return;
     }
     let request: Promise<unknown>;
     try {
         request = loader();
     } catch {
-        slot.phase = "failed";
+        failHydration(slot, generation, failurePhase);
         return;
     }
     slot.hydration = Promise.resolve(request)
         .then(
             (response) => {
                 if (
-                    slot.phase !== "waiting" ||
-                    slot.generation !== generation ||
-                    !isDisplayState(response)
+                    (slot.phase !== DOCUMENT_PHASE.WAITING
+                        && slot.phase !== DOCUMENT_PHASE.ACTIVE)
+                    || slot.generation !== generation
                 ) {
-                    if (slot.generation === generation && slot.phase === "waiting") {
-                        slot.phase = "failed";
-                    }
+                    return;
+                }
+                if (
+                    !isDocumentState(response)
+                    || response.availability !== STATE_AVAILABILITY.READY
+                ) {
+                    failHydration(slot, generation, failurePhase);
                     return;
                 }
                 const previousRevision = Math.max(
                     slot.presentationRevision ?? -1,
                     slot.debugRevision ?? -1,
                 );
+                const previousPresentationRevision = slot.presentationRevision ?? -1;
                 if (
                     slot.presentationRevision === undefined ||
                     response.revision >= slot.presentationRevision
                 ) {
                     applyPresentation(slot, response.display, response.revision);
                 }
+                if (
+                    slot.phase === DOCUMENT_PHASE.ACTIVE &&
+                    response.revision > previousPresentationRevision
+                ) {
+                    reformatOwned(slot);
+                }
                 if (response.revision >= previousRevision) {
                     applyDebugPolicy(slot, response.debugEnabled, response.revision);
                 }
-                try {
-                    waitForDocument(slot, generation);
-                } catch {
-                    if (slot.generation === generation) {
-                        slot.phase = "failed";
-                    }
+                if (!response.enabled) {
+                    teardown(slot);
+                    return;
                 }
+                maybeStart(slot, generation);
             },
             () => {
-                if (slot.phase === "waiting" && slot.generation === generation) {
-                    slot.phase = "failed";
-                }
+                failHydration(slot, generation, failurePhase);
             },
         )
         .finally(() => {
@@ -380,26 +309,74 @@ function beginHydration(
 }
 
 /**
+ * Restores page-owned content when the current hydration generation cannot be trusted.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param generation - Hydration generation that failed.
+ * @param failurePhase - Stable phase exposed after fail-closed teardown.
+ */
+function failHydration(
+    slot: RuntimeSlot,
+    generation: number,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    >,
+): void {
+    if (
+        slot.generation !== generation
+        || (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE)
+    ) {
+        return;
+    }
+    teardown(slot);
+    slot.phase = failurePhase;
+}
+
+/**
  * Resets a stopped runtime and begins a new state-hydration generation.
  *
  * @param slot - Singleton runtime state for the current document.
  * @param loader - Optional persisted-state loader.
+ * @param failurePhase - Phase used when hydration fails.
  */
-function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefined): void {
-    if (slot.phase === "waiting" || slot.phase === "active") {
+function activate(
+    slot: RuntimeSlot,
+    loader: (() => Promise<unknown>) | undefined,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    >
+        = DOCUMENT_PHASE.FAILED,
+): void {
+    if (slot.phase === DOCUMENT_PHASE.WAITING || slot.phase === DOCUMENT_PHASE.ACTIVE) {
         return;
     }
     slot.generation += 1;
     const generation = slot.generation;
-    slot.phase = "waiting";
-    slot.documentReady = false;
+    slot.phase = DOCUMENT_PHASE.WAITING;
     slot.presentation = undefined;
     slot.presentationRevision = undefined;
     slot.debugEnabled = false;
     slot.debugRevision = undefined;
     slot.controller.setDiagnosticSink(undefined);
     slot.hydration = undefined;
-    beginHydration(slot, generation, loader);
+    slot.loadDocumentState = loader;
+    beginHydration(slot, generation, loader, failurePhase);
+}
+
+/**
+ * Starts a policy hydration generation without disrupting an active controller.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ */
+function refreshPolicy(slot: RuntimeSlot): void {
+    if (slot.phase !== DOCUMENT_PHASE.ACTIVE && slot.phase !== DOCUMENT_PHASE.WAITING) {
+        activate(slot, slot.loadDocumentState);
+        return;
+    }
+    slot.generation += 1;
+    beginHydration(slot, slot.generation, slot.loadDocumentState);
 }
 
 /**
@@ -409,13 +386,8 @@ function activate(slot: RuntimeSlot, loader: (() => Promise<unknown>) | undefine
  */
 function teardown(slot: RuntimeSlot): void {
     slot.generation += 1;
-    if (slot.pendingStart) {
-        slot.document.removeEventListener("DOMContentLoaded", slot.pendingStart);
-        slot.pendingStart = undefined;
-    }
     slot.controller.teardown();
-    slot.phase = "stopped";
-    slot.documentReady = false;
+    slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.presentation = undefined;
     slot.presentationRevision = undefined;
     slot.debugEnabled = false;
@@ -447,13 +419,13 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
 /**
  * Installs or reactivates the document's singleton content runtime.
  *
- * @param input - Document, adapter, presentation, and messaging dependencies.
+ * @param input - Document, presentation, and messaging dependencies.
  * @param input.document - Page document owned by this runtime.
  * @param input.url - Current page URL used for adapter selection.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
- * @param input.loadDisplayState - Background display-state loader.
+ * @param input.loadDocumentState - Background document-state loader.
  * @param input.reportDiagnostic - Background diagnostic event reporter.
  * @param input.messages - Runtime message event source.
  * @returns - Installed singleton runtime handle.
@@ -464,7 +436,7 @@ export function installContentRuntime(input: {
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
-    readonly loadDisplayState?: () => Promise<unknown>;
+    readonly loadDocumentState?: () => Promise<unknown>;
     readonly reportDiagnostic?: (event: Record<string, unknown>) => Promise<unknown>;
     readonly messages: ContentMessageRuntime;
 }): ContentRuntimeHandle {
@@ -474,7 +446,7 @@ export function installContentRuntime(input: {
         if (input.reportDiagnostic) {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
-        activate(existing, input.loadDisplayState);
+        activate(existing, input.loadDocumentState);
         return existing.handle;
     }
     const processInput = {
@@ -489,16 +461,15 @@ export function installContentRuntime(input: {
     slot.messages = input.messages;
     slot.processInput = processInput;
     slot.controller = new DocumentTransformationController(processInput);
-    slot.phase = "stopped";
+    slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.generation = 0;
-    slot.pendingStart = undefined;
     slot.hydration = undefined;
     slot.presentation = undefined;
     slot.presentationRevision = undefined;
     slot.debugEnabled = false;
     slot.debugRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
-    slot.documentReady = false;
+    slot.loadDocumentState = input.loadDocumentState;
     slot.handle = {
         teardown: () => {
             teardown(slot);
@@ -507,7 +478,22 @@ export function installContentRuntime(input: {
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
         if (isTeardownDocumentMessage(message)) {
             teardown(slot);
-            return undefined;
+            const response = { type: DOCUMENT_TORN_DOWN_MESSAGE };
+            sendResponse?.(response);
+            return response;
+        }
+        if (isRefreshDocumentPolicyMessage(message)) {
+            refreshPolicy(slot);
+            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
+            sendResponse?.(response);
+            return response;
+        }
+        if (isSuspendAndRefreshDocumentPolicyMessage(message)) {
+            teardown(slot);
+            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
+            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
+            sendResponse?.(response);
+            return response;
         }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
@@ -515,7 +501,7 @@ export function installContentRuntime(input: {
             return response;
         }
         if (isPresentationUpdateMessage(message)) {
-            if (slot.phase !== "waiting" && slot.phase !== "active") {
+            if (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE) {
                 return undefined;
             }
             if (
@@ -533,19 +519,15 @@ export function installContentRuntime(input: {
                 return response;
             }
             applyPresentation(slot, message.display, message.revision);
-            if (slot.phase === "active") {
-                (
-                    slot.controller as DocumentTransformationController & {
-                        reformatOwned: () => void;
-                    }
-                ).reformatOwned();
+            if (slot.phase === DOCUMENT_PHASE.ACTIVE) {
+                reformatOwned(slot);
             }
             const response = presentationAcknowledgement(message.revision);
             sendResponse?.(response);
             return response;
         }
         if (isDebugPolicyUpdateMessage(message)) {
-            if (slot.phase !== "waiting" && slot.phase !== "active") {
+            if (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE) {
                 return undefined;
             }
             const latestRevision = Math.max(
@@ -568,6 +550,6 @@ export function installContentRuntime(input: {
         return undefined;
     });
     runtimeDocument[DOCUMENT_RUNTIME_SLOT] = slot;
-    activate(slot, input.loadDisplayState);
+    activate(slot, input.loadDocumentState);
     return slot.handle;
 }

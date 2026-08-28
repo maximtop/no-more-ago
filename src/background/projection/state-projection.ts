@@ -1,129 +1,94 @@
 /**
  * @file Popup and sites-state projections derived from background runtime state.
  */
-
-import type { ReconcileFailure, RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import {
     DOCUMENT_STATUS_MESSAGE,
+    DOCUMENT_PHASE,
     isDocumentStatusResponse,
     POPUP_STATUS,
+    POPUP_RUNTIME_FAILURE,
+    STATE_AVAILABILITY,
     type PopupRuntimeFailure,
     type PopupState,
     type ReadyPopupStatus,
     type SitesState,
 } from "../../shared/messages";
-import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs";
+import { parseHttpUrl } from "../../shared/url/http";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
+import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs";
+import type { ReconcileFailure } from "../runtime/document-activation";
+import {
+    RECONCILE_FAILURE_SCOPE,
+    TAB_ACTION,
+} from "../runtime/document-activation";
 import type { ActivationManager } from "../application/activation-manager";
 import type { ApplicationStateView } from "../application/state";
+import { APPLICATION_PHASE } from "../application/contracts";
 
 /**
- * Maps a reconcile failure for an adapter and tab to a popup failure.
+ * Maps a reconciliation failure to the popup failure vocabulary.
  *
- * @param failures - Reconciliation failures to inspect.
- * @param adapterId - Adapter whose tab failure is requested.
- * @param tabId - Browser tab whose failure is requested.
- * @returns - Matching popup failure code, or undefined when none exists.
+ * @param failures - Failures observed during the latest reconciliation.
+ * @param tabId - Active tab identifier.
+ * @returns - Popup failure for the tab, when one exists.
  */
-function matchingTabFailure(
+function failureFor(
     failures: readonly ReconcileFailure[],
-    adapterId: string,
     tabId: number,
 ): PopupRuntimeFailure | undefined {
     for (const failure of failures) {
-        if (failure.scope === "registration" && failure.adapterId === adapterId) {
-            return "registration";
+        if (failure.scope === RECONCILE_FAILURE_SCOPE.REGISTRATION) {
+            return POPUP_RUNTIME_FAILURE.REGISTRATION;
         }
-        if (failure.scope === "matching-tabs-query" && failure.adapterId === adapterId) {
-            return "matching-tabs-query";
+        if (failure.scope === RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY) {
+            return POPUP_RUNTIME_FAILURE.MATCHING_TABS_QUERY;
         }
-        if (failure.scope === "tab" && failure.adapterId === adapterId && failure.tabId === tabId) {
-            if (failure.action === "inject") {
-                return "current-tab-inject";
-            }
-            if (failure.action === "teardown") {
-                return "current-tab-teardown";
-            }
-            return "document-status";
+        if (failure.tabId === tabId) {
+            return failure.action === TAB_ACTION.INJECT
+                ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_INJECT
+                : POPUP_RUNTIME_FAILURE.CURRENT_TAB_TEARDOWN;
         }
     }
     return undefined;
 }
 
 /**
- * Parses a tab URL, returning null when it is absent or invalid.
- *
- * @param tab - Browser tab, when one was returned.
- * @returns - Parsed tab URL, or null when absent or malformed.
- */
-function urlFromTab(tab: RuntimeTab | undefined): URL | null {
-    if (!tab?.url) {
-        return null;
-    }
-    try {
-        return new URL(tab.url);
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Owns active-tab and site-list projections plus the popup cache.
+ * Owns active-tab and site-list projections plus a popup cache.
  */
 export class StateProjection {
     /**
-     * Browser tab query and messaging boundary.
-     */
-    private readonly tabs: TabsRuntime;
-
-    /**
-     * Immutable runtime adapter catalog.
-     */
-    private readonly adapters: readonly RuntimeAdapterDefinition[];
-
-    /**
-     * Runtime reconciliation state used to map failures.
-     */
-    private readonly activation: ActivationManager;
-
-    /**
-     * Lazily seeded popup projection.
+     * Cached popup projection.
      */
     private popupCache: PopupState | undefined;
 
     /**
-     * Tab identity paired with the cached popup projection.
+     * Active tab identifier associated with the cache.
      */
     private popupTabId: number | undefined;
 
     /**
-     * Creates background state projections.
+     * Creates projections over tabs and activation state.
      *
      * @param tabs - Browser tab query and messaging boundary.
-     * @param adapters - Runtime adapter catalog.
-     * @param activation - Runtime reconciliation state.
+     * @param activation - Latest universal-runtime reconciliation.
+     * @returns - A new state projection.
      */
     public constructor(
-        tabs: TabsRuntime,
-        adapters: readonly RuntimeAdapterDefinition[],
-        activation: ActivationManager,
-    ) {
-        this.tabs = tabs;
-        this.adapters = adapters;
-        this.activation = activation;
-    }
+        private readonly tabs: TabsRuntime,
+        private readonly activation: ActivationManager,
+    ) {}
 
     /**
-     * Latest popup projection, when one has been derived.
+     * Latest popup projection, when derived.
      *
-     * @returns - Cached popup state.
+     * @returns - Cached popup state, when one has been derived.
      */
     public get cachedPopup(): PopupState | undefined {
         return this.popupCache;
     }
 
     /**
-     * Clears active-tab projection state.
+     * Clears cached active-tab state.
      */
     public clear(): void {
         this.popupCache = undefined;
@@ -131,23 +96,26 @@ export class StateProjection {
     }
 
     /**
-     * Initializes the popup cache once the application becomes ready.
+     * Seeds the popup cache after initialization.
      *
-     * @param state - Current lifecycle state.
-     * @returns - Promise settled after optional projection seeding.
+     * @param state - Current application state.
+     * @returns - Promise settled after the cache is seeded.
      */
     public async seed(state: ApplicationStateView): Promise<void> {
-        if (this.popupCache || state.phase !== "ready" || !state.snapshot) {
-            return;
+        if (
+            !this.popupCache
+            && state.phase === APPLICATION_PHASE.READY
+            && state.snapshot
+        ) {
+            this.popupCache = await this.derivePopup(state);
         }
-        this.popupCache = await this.derivePopup(state);
     }
 
     /**
-     * Derives and stores a fresh active-tab popup projection.
+     * Derives and caches popup state.
      *
-     * @param state - Current lifecycle state.
-     * @returns - Fresh popup state.
+     * @param state - Current application state.
+     * @returns - Derived popup state.
      */
     public async deriveAndCachePopup(state: ApplicationStateView): Promise<PopupState> {
         const popup = await this.derivePopup(state);
@@ -156,211 +124,185 @@ export class StateProjection {
     }
 
     /**
-     * Refreshes cached popup state without querying the active document.
+     * Updates cached policy fields after a settings transition.
      *
-     * @param state - Current lifecycle state.
+     * @param state - Current application state.
      */
     public refreshCachedPopup(state: ApplicationStateView): void {
         const cached = this.popupCache;
         const snapshot = state.snapshot;
-        if (!cached || cached.availability !== "ready" || !snapshot) {
+        if (!cached || cached.availability !== STATE_AVAILABILITY.READY || !snapshot) {
             return;
         }
-        const hostname = cached.hostname;
-        if (hostname === null) {
+        if (cached.hostname === null) {
             this.popupCache = {
                 ...cached,
                 revision: snapshot.revision,
                 globalEnabled: snapshot.globalEnabled,
                 siteEnabled: null,
-                hasAdapter: false,
             };
             return;
         }
-        const adapter = this.adapters.find((candidate) => candidate.hostname === hostname);
-        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, hostname);
-        const relevantFailure = adapter && this.popupTabId !== undefined
-            ? matchingTabFailure(
-                this.activation.result?.failures ?? [],
-                adapter.id,
-                this.popupTabId,
-            )
-            : undefined;
+        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, cached.hostname);
+        const failure = this.popupTabId === undefined
+            ? undefined
+            : failureFor(this.activation.result?.failures ?? [], this.popupTabId);
         let status: ReadyPopupStatus = cached.status;
-        let failure: PopupRuntimeFailure | undefined = cached.failure;
-        if (relevantFailure) {
+        if (failure) {
             status = POPUP_STATUS.RUNTIME_FAILED;
-            failure = relevantFailure;
         } else if (!snapshot.globalEnabled) {
             status = POPUP_STATUS.GLOBAL_DISABLED;
-            failure = undefined;
         } else if (!siteEnabled) {
             status = POPUP_STATUS.SITE_DISABLED;
-            failure = undefined;
-        } else if (!adapter) {
-            status = POPUP_STATUS.NO_RULES;
-            failure = undefined;
         } else if (
             status === POPUP_STATUS.GLOBAL_DISABLED
             || status === POPUP_STATUS.SITE_DISABLED
-            || status === POPUP_STATUS.NO_RULES
+            || status === POPUP_STATUS.RUNTIME_FAILED
         ) {
             status = POPUP_STATUS.ACTIVE;
-            failure = undefined;
         }
         this.popupCache = {
-            availability: "ready",
+            availability: STATE_AVAILABILITY.READY,
             revision: snapshot.revision,
             globalEnabled: snapshot.globalEnabled,
-            hostname,
+            hostname: cached.hostname,
             siteEnabled,
-            hasAdapter: adapter !== undefined,
             status,
-            ...(failure === undefined ? {} : { failure }),
+            ...(failure ? { failure } : {}),
         };
     }
 
     /**
-     * Derives popup state from the active tab, settings, and runtime status.
+     * Derives popup state from active tab, settings, and frame-zero status.
      *
-     * @param state - Current lifecycle state.
-     * @returns - Popup state derived from the current tab.
+     * @param state - Current application state.
+     * @returns - Derived popup state.
      */
     public async derivePopup(state: ApplicationStateView): Promise<PopupState> {
         const snapshot = state.snapshot;
-        if (state.phase !== "ready" || !snapshot) {
+        if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
             return this.unavailablePopup(state);
         }
         const current = await this.activeTab();
         this.popupTabId = current.tab?.id;
         if (current.error) {
             return {
-                availability: "ready",
+                availability: STATE_AVAILABILITY.READY,
                 revision: snapshot.revision,
                 globalEnabled: snapshot.globalEnabled,
                 hostname: null,
                 siteEnabled: null,
-                hasAdapter: false,
                 status: POPUP_STATUS.RUNTIME_FAILED,
-                failure: "current-tab-query",
+                failure: POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
             };
         }
-        const url = urlFromTab(current.tab);
-        if (!url || (url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname) {
+        const url = parseHttpUrl(current.tab?.url);
+        if (!url || !url.hostname) {
             return {
-                availability: "ready",
+                availability: STATE_AVAILABILITY.READY,
                 revision: snapshot.revision,
                 globalEnabled: snapshot.globalEnabled,
                 hostname: null,
                 siteEnabled: null,
-                hasAdapter: false,
                 status: POPUP_STATUS.INACCESSIBLE,
             };
         }
-        const hostname = url.hostname;
-        const adapter = this.adapters.find((candidate) => candidate.matches(url));
-        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, hostname);
-        const tabId = current.tab?.id;
-        if (adapter) {
-            const failure = tabId === undefined
-                ? "current-tab-query"
-                : matchingTabFailure(this.activation.result?.failures ?? [], adapter.id, tabId);
-            if (failure) {
-                return {
-                    availability: "ready",
-                    revision: snapshot.revision,
-                    globalEnabled: snapshot.globalEnabled,
-                    hostname,
-                    siteEnabled,
-                    hasAdapter: true,
+        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, url.hostname);
+        const failure = current.tab === undefined
+            ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY
+            : failureFor(this.activation.result?.failures ?? [], current.tab.id);
+        if (failure) {
+            return this.ready(
+                snapshot.revision,
+                snapshot.globalEnabled,
+                url.hostname,
+                siteEnabled,
+                {
                     status: POPUP_STATUS.RUNTIME_FAILED,
                     failure,
-                };
-            }
+                },
+            );
         }
         if (!snapshot.globalEnabled) {
-            return this.readyPopup(snapshot.revision, false, hostname, siteEnabled, adapter, {
+            return this.ready(snapshot.revision, false, url.hostname, siteEnabled, {
                 status: POPUP_STATUS.GLOBAL_DISABLED,
             });
         }
         if (!siteEnabled) {
-            return this.readyPopup(snapshot.revision, true, hostname, false, adapter, {
+            return this.ready(snapshot.revision, true, url.hostname, false, {
                 status: POPUP_STATUS.SITE_DISABLED,
             });
         }
-        if (!adapter) {
-            return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
-                status: POPUP_STATUS.NO_RULES,
-            });
-        }
-        if (tabId === undefined) {
-            return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
+        if (current.tab === undefined) {
+            return this.ready(snapshot.revision, true, url.hostname, true, {
                 status: POPUP_STATUS.RUNTIME_FAILED,
-                failure: "current-tab-query",
+                failure: POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
             });
         }
         try {
             const response = await this.tabs.sendMessage(
-                tabId,
+                current.tab.id,
                 { type: DOCUMENT_STATUS_MESSAGE },
                 { frameId: 0 },
             );
-            if (
-                !isDocumentStatusResponse(response)
-                || (response.phase !== "waiting" && response.phase !== "active")
-            ) {
-                return this.documentStatusFailure(snapshot.revision, hostname);
+            if (!isDocumentStatusResponse(response) ||
+                (response.phase !== DOCUMENT_PHASE.WAITING
+                    && response.phase !== DOCUMENT_PHASE.ACTIVE)) {
+                throw new Error("invalid status");
             }
         } catch {
-            return this.documentStatusFailure(snapshot.revision, hostname);
+            return this.ready(snapshot.revision, true, url.hostname, true, {
+                status: POPUP_STATUS.RUNTIME_FAILED,
+                failure: POPUP_RUNTIME_FAILURE.DOCUMENT_STATUS,
+            });
         }
-        return this.readyPopup(snapshot.revision, true, hostname, true, adapter, {
-            status: POPUP_STATUS.ACTIVE,
-        });
+        return this.ready(
+            snapshot.revision,
+            true,
+            url.hostname,
+            true,
+            { status: POPUP_STATUS.ACTIVE },
+        );
     }
 
     /**
-     * Builds the sorted site list from adapters and explicit preferences.
+     * Derives the explicit site-preference list.
      *
-     * @param state - Current lifecycle state.
-     * @returns - Sorted effective site-preferences state.
+     * @param state - Current application state.
+     * @returns - Derived sites state.
      */
     public deriveSites(state: ApplicationStateView): SitesState {
         const snapshot = state.snapshot;
-        if (state.phase !== "ready" || !snapshot) {
+        if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
             return this.unavailableSites(state);
         }
-        const adapterHostnames = this.adapters.map((adapter) => adapter.hostname);
-        const explicitHostnames = Object.keys(snapshot.sitePreferences);
-        const hostnames = [...new Set([...adapterHostnames, ...explicitHostnames])].sort(
-            (left, right) => (left < right ? -1 : left > right ? 1 : 0),
-        );
+        const sites = Object.keys(snapshot.sitePreferences).sort((left, right) =>
+            left < right ? -1 : left > right ? 1 : 0,
+        ).map((hostname) => ({
+            hostname,
+            enabled: isSiteEnabled(snapshot.sitePreferences, hostname),
+        }));
         return {
-            availability: "ready",
+            availability: STATE_AVAILABILITY.READY,
             revision: snapshot.revision,
             globalEnabled: snapshot.globalEnabled,
-            sites: hostnames.map((hostname) => ({
-                hostname,
-                enabled: isSiteEnabled(snapshot.sitePreferences, hostname),
-                hasAdapter: this.adapters.some((adapter) => adapter.hostname === hostname),
-            })),
+            sites,
         };
     }
 
     /**
-     * Builds a fail-closed popup projection.
+     * Builds an unavailable popup state.
      *
-     * @param state - Current lifecycle state.
+     * @param state - Current application state.
      * @returns - Unavailable popup state.
      */
     public unavailablePopup(state: ApplicationStateView): PopupState {
         return {
-            availability: "unavailable",
+            availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             globalEnabled: null,
             hostname: null,
             siteEnabled: null,
-            hasAdapter: false,
             status: state.failure === "fail-closed-cleanup"
                 ? POPUP_STATUS.RUNTIME_FAILED
                 : POPUP_STATUS.SETTINGS_UNAVAILABLE,
@@ -369,9 +311,9 @@ export class StateProjection {
     }
 
     /**
-     * Queries the active tab and distinguishes lookup failures from empty results.
+     * Queries the active tab using the narrow tabs capability.
      *
-     * @returns - Active tab result and a query-failure flag.
+     * @returns - Active runtime tab and whether the query failed.
      */
     private async activeTab(): Promise<{
         readonly tab: RuntimeTab | undefined;
@@ -386,14 +328,14 @@ export class StateProjection {
     }
 
     /**
-     * Builds a fail-closed sites projection.
+     * Builds an unavailable sites projection.
      *
-     * @param state - Current lifecycle state.
+     * @param state - Current application state.
      * @returns - Unavailable sites state.
      */
     private unavailableSites(state: ApplicationStateView): SitesState {
         return {
-            availability: "unavailable",
+            availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             globalEnabled: null,
             sites: [],
@@ -402,58 +344,32 @@ export class StateProjection {
     }
 
     /**
-     * Builds a ready popup projection with common fields.
+     * Builds a ready popup projection.
      *
-     * @param revision - Authoritative settings revision.
+     * @param revision - Settings revision.
      * @param globalEnabled - Global activation state.
-     * @param hostname - Active page hostname.
+     * @param hostname - Active tab hostname.
      * @param siteEnabled - Effective site activation state.
-     * @param adapter - Matching runtime adapter, when present.
-     * @param outcome - Runtime status and optional failure.
-     * @param outcome.status - Runtime status to expose.
-     * @param outcome.failure - Optional runtime failure to expose.
-     * @returns - Ready popup projection.
+     * @param outcome - Popup status and optional failure.
+     * @param outcome.status - Ready popup status.
+     * @param outcome.failure - Optional runtime failure.
+     * @returns - Ready popup state.
      */
-    private readyPopup(
+    private ready(
         revision: number,
         globalEnabled: boolean,
         hostname: string,
         siteEnabled: boolean,
-        adapter: RuntimeAdapterDefinition | undefined,
-        outcome: {
-            readonly status: ReadyPopupStatus;
-            readonly failure?: PopupRuntimeFailure;
-        },
+        outcome: { readonly status: ReadyPopupStatus; readonly failure?: PopupRuntimeFailure },
     ): PopupState {
         return {
-            availability: "ready",
+            availability: STATE_AVAILABILITY.READY,
             revision,
             globalEnabled,
             hostname,
             siteEnabled,
-            hasAdapter: adapter !== undefined,
             status: outcome.status,
-            ...(outcome.failure === undefined ? {} : { failure: outcome.failure }),
-        };
-    }
-
-    /**
-     * Builds a document-status failure projection for a supported site.
-     *
-     * @param revision - Authoritative settings revision.
-     * @param hostname - Active supported hostname.
-     * @returns - Runtime-failed popup state.
-     */
-    private documentStatusFailure(revision: number, hostname: string): PopupState {
-        return {
-            availability: "ready",
-            revision,
-            globalEnabled: true,
-            hostname,
-            siteEnabled: true,
-            hasAdapter: true,
-            status: POPUP_STATUS.RUNTIME_FAILED,
-            failure: "document-status",
+            ...(outcome.failure ? { failure: outcome.failure } : {}),
         };
     }
 }

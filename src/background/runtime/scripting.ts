@@ -1,7 +1,7 @@
 /**
- * Declares the Chrome Scripting API subset used for adapter registration and injection.
+ * Declares the Chrome Scripting API subset used for document registration and injection.
  *
- * @file Chrome Scripting API contracts for runtime adapters.
+ * @file Chrome Scripting API contracts for the universal document runtime.
  */
 export interface RegisteredContentScriptSpec {
     /**
@@ -71,7 +71,7 @@ export interface RegisteredContentScriptReference {
 }
 
 /**
- * Chrome Scripting API methods used to manage adapter registrations and inject files.
+ * Chrome Scripting API methods used to manage document registration and inject files.
  */
 export interface ScriptingRuntime {
     /**
@@ -95,37 +95,52 @@ export interface ScriptingRuntime {
     updateContentScripts(scripts: RegisteredContentScriptSpec[]): Promise<void>;
 
     /**
+     * Executes a content file in every frame of a tab.
+     */
+    executeScript(input: {
+        /**
+         * All frames in the tab are selected.
+         */
+        readonly target: {
+            /**
+             * Tab identifier receiving the injection.
+             */
+            readonly tabId: number;
+
+            /**
+             * Requires execution in every reachable frame.
+             */
+            readonly allFrames: true;
+        };
+
+        /**
+         * Extension-relative files to execute.
+         */
+        readonly files: string[];
+    }): Promise<readonly InjectionResult[]>;
+
+    /**
      * Removes dynamic registrations whose IDs are listed in the Chrome filter.
      */
-    unregisterContentScripts?(filter: {
+    unregisterContentScripts(filter: {
         /**
          * Registration IDs to remove.
          */
         ids: string[];
     }): Promise<void>;
+}
+
+/**
+ * Successful result returned by the browser's all-frame script execution.
+ */
+export interface InjectionResult {
+    /**
+     * Frame ID where the script ran.
+     */
+    readonly frameId: number;
 
     /**
-     * Injects extension files into the selected tab's top frame.
+     * Optional script result value.
      */
-    executeScript?(input: {
-        /**
-         * Chrome execution target, deliberately limited to one top frame.
-         */
-        readonly target: {
-            /**
-             * Tab receiving the injected files.
-             */
-            readonly tabId: number;
-
-            /**
-             * Prevents injection into child frames.
-             */
-            readonly allFrames: false;
-        };
-
-        /**
-         * Extension-relative JavaScript files to execute.
-         */
-        readonly files: string[];
-    }): Promise<unknown>;
+    readonly result?: unknown;
 }

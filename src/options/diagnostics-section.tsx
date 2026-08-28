@@ -4,6 +4,7 @@
 
 import { Alert, Box, Button, Stack, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
+import { STATE_AVAILABILITY } from "../shared/messages";
 import {
     DIAGNOSTICS_CLEARED_NOTICE,
     type DiagnosticsController,
@@ -48,12 +49,13 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                 </Alert>
             ) : null}
             {controller.loading ? <Text role="status">Loading debug settings…</Text> : null}
-            {!controller.loading && controller.state?.availability === "unavailable" ? (
-                <Text role="status">
-                    Debug logs are unavailable. Processing remains unchanged.
-                </Text>
-            ) : null}
-            {!controller.loading && controller.state?.availability === "ready" ? (
+            {!controller.loading
+                && controller.state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
+                    <Text role="status">
+                        Debug logs are unavailable. Processing remains unchanged.
+                    </Text>
+                ) : null}
+            {!controller.loading && controller.state?.availability === STATE_AVAILABILITY.READY ? (
                 <Stack gap="xs" mt="xs">
                     <Switch
                         label="Debug logs"

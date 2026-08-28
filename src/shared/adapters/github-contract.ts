@@ -13,19 +13,6 @@ export const GITHUB_ADAPTER_ID = "github" as const;
 export const GITHUB_HOSTNAME = "github.com" as const;
 
 /**
- * Browser match patterns used for persistent GitHub content-script registration.
- */
-export const GITHUB_MATCH_PATTERNS = [
-    `http://${GITHUB_HOSTNAME}/*`,
-    `https://${GITHUB_HOSTNAME}/*`,
-] as const;
-
-/**
- * Stable browser registration identifier for the GitHub content script.
- */
-export const GITHUB_REGISTRATION_ID = "no-more-ago-github" as const;
-
-/**
  * Checks whether a URL belongs to the supported HTTP(S) GitHub origin.
  *
  * @param url - URL considered for adapter selection or activation.

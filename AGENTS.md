@@ -20,10 +20,11 @@
 
 ## Project Overview
 
-No More Ago is a Manifest V3 browser extension that replaces trusted relative
-timestamps with exact, localized dates. It currently ships a GitHub adapter,
-while the architecture keeps site-specific extraction separate from shared
-timestamp validation and rendering.
+No More Ago is a Manifest V3 browser extension that replaces eligible standard
+HTML and trusted specialized relative timestamps with exact, localized dates.
+It ships a generic `time[datetime]` source for HTTP(S) documents and a
+specialized GitHub adapter, while keeping site-specific extraction separate
+from shared timestamp validation and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -44,9 +45,11 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Testing:** Vitest with JSDOM and offline HTML fixtures.
 - **Static checks:** ESLint with type-aware TypeScript and JSDoc rules.
 - **Browser targets:** Chrome, Firefox, and Edge.
-- **Permissions:** `<all_urls>` is intentional so future adapters can be
-  activated without changing the extension permission model.
-- **Current site support:** The production adapter registry contains GitHub.
+- **Permissions:** `<all_urls>` is intentional so the universal HTTP(S)
+  runtime can process standard timestamps and future specialized sources.
+- **Current site support:** Generic HTTP(S) `time[datetime]` processing is
+  available, and the production registry contains GitHub as a specialized
+  source.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -67,7 +70,7 @@ has an obvious, simpler standard-library replacement.
 │   │   ├── runtime/            # Script and tab integration
 │   │   └── settings/           # Validated settings storage
 │   ├── content-script/         # Page-side timestamp processing
-│   │   ├── adapters/           # Site-specific timestamp sources
+│   │   ├── adapters/           # Generic and site-specific timestamp sources
 │   │   └── transformation/     # Resolve, format, render, and restore
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
@@ -133,12 +136,19 @@ unpacked or temporary extension when manual browser verification is needed.
 ### System Design
 
 - Keep browser permissions no broader than the product contract. `<all_urls>`
-  is intentional, but only registered adapters may transform a site.
+  is intentional for the universal HTTP(S) runtime; only the generic source
+  and registered specialized rules may transform content.
+- Register one universal HTTP(S) document runtime at `document_start` with
+  `allFrames` enabled. Global policy controls registration; the top-level
+  hostname controls processing for every reachable frame in its tab. Hydrate
+  reachable frames on startup and policy refresh without duplicating runtimes.
 - Keep site knowledge in adapters. Shared timestamp validation, formatting,
   restoration, settings, and diagnostics must remain site-agnostic.
 - Keep the content script lightweight. Process matching mutations
   incrementally, avoid repeated whole-document scans, and release observers
   when the extension or domain is disabled.
+- Keep the content-side rule order explicit: specialized rules run before the
+  generic `time[datetime]` fallback, and the generic rule is always last.
 - Treat every extension context as independent. Coordinate popup, options,
   background, and content scripts through typed messages and durable state.
 - Assume the background service worker can stop between events. Do not rely on
@@ -218,9 +228,10 @@ Known architectural exclusions to improve when their area changes:
 - `src/shared/reporting/site-report.ts` contains both report composition and a
   browser implementation. Split the pure report model from browser execution
   when reporting behavior expands.
-- `process-document.ts` defaults to the production GitHub registry for
-  convenience. Continue supporting registry injection, and move composition to
-  the content-script entry point if more adapters make the default ambiguous.
+- Content processing keeps registry injection for tests and one content-side
+  production registry. Keep generic processing as the final fallback after
+  specialized rules so adding a source does not add site branches to shared
+  transformation code.
 
 ### Code Quality
 
@@ -263,6 +274,8 @@ Known architectural exclusions to improve when their area changes:
 - Test observable behavior through the closest public or runtime boundary.
 - Keep tests to the minimum set that protects important behavior, failure
   handling, persistence, message validation, and build output.
+- Prefer small behavior-level matrices and lifecycle tests at public
+  boundaries; do not add structural tests merely to cover every requirement.
 - Do not read implementation files as text to assert formatting, command
   spelling, private symbols, source layout, or implementation structure.
 - Use injected browser capabilities and focused doubles instead of reproducing

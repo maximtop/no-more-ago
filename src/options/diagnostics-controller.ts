@@ -8,6 +8,7 @@ import type {
     DiagnosticsClearError,
     DiagnosticsSnapshotError,
 } from "../shared/messages";
+import { STATE_AVAILABILITY } from "../shared/messages";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import {
     DiagnosticArchiveError,
@@ -136,7 +137,7 @@ export interface DiagnosticsController {
 }
 
 const UNAVAILABLE_DEBUG_STATE: DebugState = {
-    availability: "unavailable",
+    availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     enabled: null,
     failure: "settings-load",
@@ -233,7 +234,12 @@ export function useDiagnosticsController(
     }, [client, initialState]);
 
     const changeDebug = async (enabled: boolean): Promise<void> => {
-        if (!state || state.availability !== "ready" || saving || debugInFlight.current) {
+        if (
+            !state
+            || state.availability !== STATE_AVAILABILITY.READY
+            || saving
+            || debugInFlight.current
+        ) {
             return;
         }
         debugInFlight.current = true;
@@ -242,7 +248,7 @@ export function useDiagnosticsController(
         const result = await client.setDebugEnabled(enabled);
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             if (
-                result.response.state.availability !== "ready" ||
+                result.response.state.availability !== STATE_AVAILABILITY.READY ||
                 result.response.state.revision >= state.revision
             ) {
                 setState(result.response.state);
@@ -251,7 +257,10 @@ export function useDiagnosticsController(
                 onNoticeChange("debug-save-failed");
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+            if (
+                result.state.availability !== STATE_AVAILABILITY.READY
+                || result.state.revision >= state.revision
+            ) {
                 setState(result.state);
             }
             onNoticeChange("debug-interrupted");
@@ -266,7 +275,7 @@ export function useDiagnosticsController(
     const downloadDiagnostics = async (): Promise<void> => {
         if (
             !state ||
-            state.availability !== "ready" ||
+            state.availability !== STATE_AVAILABILITY.READY ||
             !state.enabled ||
             diagnosticsInFlight.current
         ) {
@@ -300,7 +309,7 @@ export function useDiagnosticsController(
     const clearDiagnostics = async (): Promise<void> => {
         if (
             !state ||
-            state.availability !== "ready" ||
+            state.availability !== STATE_AVAILABILITY.READY ||
             !state.enabled ||
             diagnosticsInFlight.current
         ) {

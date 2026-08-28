@@ -209,6 +209,7 @@ describe("renderExactTime", () => {
                 expect(source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
                 expect(output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(true);
             }),
+            beforeOwnedSourceHiddenChange: vi.fn(),
         };
         restoreExactTime(source, sink);
         expect(sink.beforeOwnedOutputRemoval).toHaveBeenCalledWith(output);
@@ -344,6 +345,7 @@ describe("renderExactTime", () => {
                 expect(output.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)).toBe(true);
                 expect(output.isConnected).toBe(true);
             }),
+            beforeOwnedSourceHiddenChange: vi.fn(),
         };
 
         restoreExactTimes(detachedScope, sink);
@@ -397,7 +399,10 @@ describe("renderExactTime", () => {
 
         const detachedScope = document.createElement("div");
         detachedScope.append(scope);
-        const sink = { beforeOwnedOutputRemoval: vi.fn() };
+        const sink = {
+            beforeOwnedOutputRemoval: vi.fn(),
+            beforeOwnedSourceHiddenChange: vi.fn(),
+        };
         restoreExactTimes(detachedScope, sink);
 
         expect(sink.beforeOwnedOutputRemoval).not.toHaveBeenCalled();

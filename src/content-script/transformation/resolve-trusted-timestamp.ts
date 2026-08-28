@@ -4,7 +4,12 @@
 
 import { isValid, parseISO } from "date-fns";
 
-import { EXPLICIT_ZONED_DATETIME_RULE, type TimestampCandidate } from "../adapters/types";
+import {
+    TIMESTAMP_VALIDATION_RULE,
+    type TimestampValidationRule,
+    type TimestampCandidate,
+} from "../adapters/types";
+import { parseHtmlGlobalDatetime } from "./parse-html-global-datetime";
 
 const ZONE = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/;
 const YEAR = "(?:\\d{4}|[+-]\\d{6})";
@@ -68,6 +73,11 @@ export interface ResolvedTimestamp {
      * Parsed absolute instant produced only after strict timestamp validation.
      */
     readonly instant: Date;
+
+    /**
+     * Validation rule accepted before the timestamp was parsed.
+     */
+    readonly validationRule: TimestampValidationRule;
 }
 
 /**
@@ -77,12 +87,27 @@ export interface ResolvedTimestamp {
  * @param candidate - Timestamp candidate extracted by a trusted adapter.
  * @returns - Valid resolved instant and source metadata, or null when rejected.
  */
-export function resolveTrustedTimestamp(candidate: TimestampCandidate): ResolvedTimestamp | null {
-    const timestampRule: unknown = candidate.timestampRule;
-    if (timestampRule !== EXPLICIT_ZONED_DATETIME_RULE) {
+export function resolveTrustedTimestamp(
+    candidate: TimestampCandidate,
+): ResolvedTimestamp | null {
+    const validationRule: unknown = candidate.validationRule;
+    const rawDatetime = candidate.rawDatetime;
+    if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
+        const instant = parseHtmlGlobalDatetime(rawDatetime);
+        return instant
+            ? {
+                source: candidate.source,
+                sourceDatetime: rawDatetime,
+                instant,
+                validationRule,
+            }
+            : null;
+    }
+    if (
+        validationRule !== TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
+    ) {
         return null;
     }
-    const rawDatetime = candidate.rawDatetime;
     if (
         rawDatetime.length === 0 ||
         rawDatetime !== rawDatetime.trim() ||
@@ -115,5 +140,6 @@ export function resolveTrustedTimestamp(candidate: TimestampCandidate): Resolved
         source: candidate.source,
         sourceDatetime: candidate.rawDatetime,
         instant,
+        validationRule,
     };
 }

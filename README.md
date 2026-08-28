@@ -1,19 +1,24 @@
 # No More Ago
 
 No More Ago is a browser extension for people who prefer exact dates to text
-such as “3 months ago.” It replaces trusted relative timestamps with
-localized date and time text while preserving the original page state for
-restoration.
+such as “3 months ago.” It replaces eligible standard and trusted specialized
+timestamps with localized date and time text while preserving the original
+page state for restoration.
 
-The current version processes GitHub. Support for additional sites may be
-added later.
+The current version processes standard HTML timestamps on accessible HTTP(S)
+pages. GitHub also has a specialized source for its relative-time widgets.
+Site markup support is best-effort and may change independently of the
+extension.
 
 ## Key Concepts
 
 - **Exact date:** the absolute date and time shown in place of a relative
   timestamp.
-- **Supported site:** a website with explicit rules for trustworthy
-  timestamps. GitHub is currently supported.
+- **Standard timestamp:** a `time[datetime]` value containing a complete date
+  and time with an explicit, known UTC offset.
+- **Specialized source:** a site-specific rule for richer markup, such as
+  GitHub's relative-time widgets. Specialized rules take precedence over the
+  generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -44,40 +49,52 @@ from source, follow the [development guide](DEVELOPMENT.md).
 ## Quick Start
 
 1. Install the artifact for your browser.
-2. Open any page on `github.com` that contains relative timestamps.
+2. Open any HTTP(S) page that contains standard `time[datetime]` timestamps.
 3. Open the No More Ago toolbar popup.
-4. Leave **Global enabled** and **Enabled on github.com** switched on.
-5. The supported relative timestamps are replaced with exact dates.
+4. Leave **Global enabled** and **Enabled on _hostname_** switched on.
+5. Eligible timestamps are replaced with exact dates.
 
-For example, a GitHub timestamp such as “3 months ago” may become
-“Aug 23, 2026, 2:37 PM.” The exact result follows the selected format,
-browser locale, and time zone.
+For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
+become “Aug 27, 2026, 9:32 PM.” GitHub relative timestamps can also become
+exact dates. The result follows the selected format, browser locale, and
+time zone.
 
 ## Features
 
 ### Exact Date Replacement
 
-No More Ago processes GitHub timestamps only when GitHub supplies an
-unambiguous machine-readable date and time. Ambiguous, incomplete, or invalid
-values remain unchanged.
+No More Ago processes standard `time[datetime]` values on accessible HTTP(S)
+pages when they contain an unambiguous global date and time. Accepted values
+have a complete date, a valid time, and `Z`, a colonized numeric offset, or a
+compact numeric offset. Date-only, local, malformed, impossible, and
+unknown-zone values remain unchanged. Visible text is never parsed as a
+fallback.
 
-The extension also watches supported dynamic GitHub content. Newly added
-timestamps are processed without requiring a full page reload.
+GitHub's specialized rule continues to process its trusted relative-time
+widgets. It uses the same presentation, restoration, and dynamic-page
+behavior as generic timestamps. When a specialized and generic rule both
+accept the same source, the specialized rule wins.
+
+The extension watches relevant dynamic content in each reachable HTTP(S)
+document. Newly added or changed timestamps are processed without requiring a
+full page reload.
 
 ### Global and Site Controls
 
 The toolbar popup shows the current hostname and processing status.
 
 - **Global enabled** controls the extension everywhere.
-- **Enabled on _hostname_** controls the exact current hostname.
+- **Enabled on _hostname_** controls the exact top-level hostname for the
+  whole tab, including reachable frames.
 - **Report this site** opens a prefilled GitHub issue for missing or broken
   support.
 
-Disabling the extension globally or for a site restores the original relative
-text immediately. Enabling it again immediately processes the current page.
+Disabling the extension globally or for a site restores the original page
+content immediately. Enabling it again immediately processes the current page.
 
-A site preference can be saved even when that site has no adapter. The setting
-will remain available, but the page will not change until support is added.
+The current top-level hostname controls every processed frame in the tab. A
+frame's own HTTP(S) URL determines which timestamp sources apply there.
+Browser-restricted and non-HTTP(S) documents remain unchanged.
 
 ### Display Settings
 
@@ -111,8 +128,9 @@ the browser allows it.
 
 ### Diagnostics and Reports
 
-Diagnostic collection is disabled by default. To collect information for a
-problem report:
+Diagnostic collection is disabled by default. To collect bounded local
+information about generic, specialized, or frame processing for a problem
+report:
 
 1. Open the options page.
 2. Enable **Debug logs**.
@@ -135,8 +153,8 @@ GitHub form for review and manual submission.
 2. Open the toolbar popup.
 3. Switch off **Enabled on _hostname_**.
 
-The preference is stored for that exact hostname and the original text is
-restored without reloading the page.
+The preference is stored for that exact hostname and the original page content
+is restored without reloading the page.
 
 ### Change the Date Presentation
 
@@ -169,33 +187,41 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Trusted GitHub timestamp with an explicit date and zone | Relative text is replaced with an exact date. |
-| Invalid or ambiguous timestamp | Page content remains unchanged. |
-| New supported timestamp added dynamically | It is processed using current settings. |
-| Global or site switch is disabled | Original relative text is restored. |
-| Format or time zone changes | Existing supported output is reformatted when reachable. |
+| Eligible `time[datetime]` or trusted GitHub timestamp | The source is replaced with an exact date. |
+| Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
+| New eligible timestamp added dynamically | It is processed using current settings. |
+| Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
+| Format or time zone changes | Existing output is reformatted when reachable. |
 
 ## Permissions and Privacy
 
 The extension requests:
 
-- **Access to all HTTP and HTTPS sites:** keeps the permission model stable as
-  supported sites are added and allows per-host preferences. Only explicitly
-  supported sites are transformed; currently that is GitHub.
-- **Scripting:** registers, updates, and removes the supported content script.
+- **Access to all HTTP and HTTPS sites:** allows standard timestamps on
+  accessible pages, keeps per-host preferences available, and supports future
+  specialized sources.
+- **Scripting:** registers, updates, and removes one universal content runtime
+  at document start for all frames.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative text, page titles,
-ARIA labels, or arbitrary `data-*` attributes. The rules for a supported site
-must explicitly accept the timestamp source.
+ARIA labels, arbitrary `data-*` attributes, nearby text, or elapsed time. It
+does not modify those page-provided attributes. Standard processing is limited
+to ordinary light-DOM `time[datetime]` elements; Shadow DOM and additional
+source types are deferred.
 
 ## Limitations
 
-- GitHub is the only supported site.
+- Generic support applies to eligible standard timestamps on accessible
+  HTTP(S) pages; GitHub's richer relative-time markup remains specialized.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.
-- Website markup can change at any time, so site compatibility is best-effort.
+- Frames that are inaccessible or use a non-HTTP(S) scheme remain unchanged.
+- Shadow DOM, page labels, durations, date-only values, local date-times, and
+  other non-global timestamp forms are outside the current scope.
+- Website markup can change at any time, so compatibility is best-effort and
+  is not a promise about future markup.
 - The extension is not yet distributed through browser stores.
 
 ## Documentation

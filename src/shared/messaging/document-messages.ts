@@ -14,6 +14,27 @@ import {
 export const TEARDOWN_DOCUMENT_MESSAGE = "no-more-ago:teardown";
 
 /**
+ * Requests a document runtime to refresh its top-level policy.
+ */
+export const REFRESH_DOCUMENT_POLICY_MESSAGE = "no-more-ago:refresh-document-policy";
+
+/**
+ * Requests a document runtime to synchronously suspend before refreshing policy.
+ */
+export const SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE =
+    "no-more-ago:suspend-and-refresh-document-policy";
+
+/**
+ * Acknowledges delivery of a document policy refresh command.
+ */
+export const DOCUMENT_POLICY_REFRESHED_MESSAGE = "no-more-ago:document-policy-refreshed";
+
+/**
+ * Acknowledges synchronous restoration and teardown of a document runtime.
+ */
+export const DOCUMENT_TORN_DOWN_MESSAGE = "no-more-ago:document-torn-down";
+
+/**
  * Requests the current lifecycle phase of a document runtime.
  */
 export const DOCUMENT_STATUS_MESSAGE = "no-more-ago:status";
@@ -46,7 +67,22 @@ export const DIAGNOSTIC_EVENT_MESSAGE = "no-more-ago:diagnostic-event";
 /**
  * Lifecycle phases returned by a content document runtime.
  */
-export const DOCUMENT_PHASES = ["waiting", "active", "stopped", "failed"] as const;
+export const DOCUMENT_PHASE = {
+    WAITING: "waiting",
+    ACTIVE: "active",
+    STOPPED: "stopped",
+    FAILED: "failed",
+} as const;
+
+/**
+ * Complete set of document runtime lifecycle phases.
+ */
+export const DOCUMENT_PHASES = [
+    DOCUMENT_PHASE.WAITING,
+    DOCUMENT_PHASE.ACTIVE,
+    DOCUMENT_PHASE.STOPPED,
+    DOCUMENT_PHASE.FAILED,
+] as const;
 
 const DIAGNOSTIC_CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
 const DIAGNOSTIC_EVENT_KEY_SET = new Set<string>(DIAGNOSTIC_EVENT_INPUT_KEYS);
@@ -60,6 +96,46 @@ export interface TeardownDocumentMessage {
      * Identifies this as the document-teardown command.
      */
     readonly type: typeof TEARDOWN_DOCUMENT_MESSAGE;
+}
+
+/**
+ * Command that refreshes the document's effective top-level policy.
+ */
+export interface RefreshDocumentPolicyMessage {
+    /**
+     * Identifies this as a policy-refresh command.
+     */
+    readonly type: typeof REFRESH_DOCUMENT_POLICY_MESSAGE;
+}
+
+/**
+ * Command that suspends the document before refreshing its effective policy.
+ */
+export interface SuspendAndRefreshDocumentPolicyMessage {
+    /**
+     * Identifies this as a suspend-and-refresh command.
+     */
+    readonly type: typeof SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE;
+}
+
+/**
+ * Synchronous acknowledgement for a policy-refresh command.
+ */
+export interface DocumentPolicyRefreshedMessage {
+    /**
+     * Identifies this as a policy-refresh acknowledgement.
+     */
+    readonly type: typeof DOCUMENT_POLICY_REFRESHED_MESSAGE;
+}
+
+/**
+ * Synchronous acknowledgement for a document teardown command.
+ */
+export interface DocumentTornDownMessage {
+    /**
+     * Identifies this as a teardown acknowledgement.
+     */
+    readonly type: typeof DOCUMENT_TORN_DOWN_MESSAGE;
 }
 
 /**
@@ -189,6 +265,34 @@ export function isTeardownDocumentMessage(value: unknown): value is TeardownDocu
     }
     const record = value as Record<string, unknown>;
     return Object.keys(record).length === 1 && record.type === TEARDOWN_DOCUMENT_MESSAGE;
+}
+
+/**
+ * Recognizes an exact policy-refresh command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is a policy-refresh command.
+ */
+export function isRefreshDocumentPolicyMessage(
+    value: unknown,
+): value is RefreshDocumentPolicyMessage {
+    return isRecord(value)
+        && Object.keys(value).length === 1
+        && value.type === REFRESH_DOCUMENT_POLICY_MESSAGE;
+}
+
+/**
+ * Recognizes an exact suspend-and-refresh command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is a suspend-and-refresh command.
+ */
+export function isSuspendAndRefreshDocumentPolicyMessage(
+    value: unknown,
+): value is SuspendAndRefreshDocumentPolicyMessage {
+    return isRecord(value)
+        && Object.keys(value).length === 1
+        && value.type === SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE;
 }
 
 /**

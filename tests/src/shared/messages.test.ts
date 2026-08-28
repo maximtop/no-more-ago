@@ -33,7 +33,6 @@ const readyPopup = {
     globalEnabled: true,
     hostname: "github.com",
     siteEnabled: true,
-    hasAdapter: true,
     status: "active",
 } as const;
 
@@ -82,7 +81,7 @@ describe("background message schemas", () => {
             availability: "ready",
             revision: 3,
             globalEnabled: true,
-            sites: [{ hostname: "github.com", enabled: true, hasAdapter: true }],
+            sites: [{ hostname: "github.com", enabled: true }],
         } as const;
         expect(v.is(sitesStateSchema, sites)).toBe(true);
         expect(v.is(resetAllSettingsResponseSchema, {

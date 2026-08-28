@@ -1,7 +1,7 @@
 /**
- * Models the tab data and APIs used to locate adapter pages and message their top frames.
+ * Models the tab data and APIs used to locate HTTP(S) pages and message their frames.
  *
- * @file Models the tab data and APIs used to locate adapter pages and message their top frames.
+ * @file Models the tab data and APIs used to locate HTTP(S) pages and message their frames.
  */
 export interface RuntimeTab {
     /**
@@ -40,16 +40,16 @@ export interface TabsRuntime {
     }): Promise<readonly RuntimeTab[]>;
 
     /**
-     * Sends a message to a specific tab's top-level content frame.
+     * Sends a message to every content frame unless a frame is explicitly targeted.
      */
     sendMessage(
         tabId: number,
         message: unknown,
-        options: {
+        options?: {
             /**
-             * Top-level frame target.
+             * Frame identifier for targeted delivery.
              */
-            readonly frameId: 0;
+            readonly frameId: number;
         },
     ): Promise<unknown>;
 }

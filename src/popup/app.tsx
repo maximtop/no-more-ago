@@ -17,7 +17,11 @@ import {
     Title,
 } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
-import { POPUP_STATUS, type PopupState } from "../shared/messages";
+import {
+    POPUP_STATUS,
+    STATE_AVAILABILITY,
+    type PopupState,
+} from "../shared/messages";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
@@ -59,7 +63,7 @@ type Notice = "save-failed" | "invalid-hostname" | "interrupted" | "unknown" | u
  * @returns A concise description of the extension's state on the current page.
  */
 function statusText(state: PopupState): string {
-    if (state.availability === "unavailable") {
+    if (state.availability === STATE_AVAILABILITY.UNAVAILABLE) {
         return state.failure === "fail-closed-cleanup"
             ? "Current processing state is unknown."
             : "Settings are unavailable. Processing is disabled.";
@@ -75,8 +79,6 @@ function statusText(state: PopupState): string {
             return "Cannot run on this page";
         case POPUP_STATUS.RUNTIME_FAILED:
             return "Could not process this page";
-        case POPUP_STATUS.NO_RULES:
-            return `Rules are not available for ${state.hostname ?? "this hostname"} yet`;
     }
 }
 
@@ -183,12 +185,11 @@ export function PopupApp({
                     return;
                 }
                 setState({
-                    availability: "unavailable",
+                    availability: STATE_AVAILABILITY.UNAVAILABLE,
                     revision: null,
                     globalEnabled: null,
                     hostname: null,
                     siteEnabled: null,
-                    hasAdapter: false,
                     status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                     failure: "settings-load",
                 });
@@ -204,13 +205,13 @@ export function PopupApp({
         if (!input) {
             return;
         }
-        const unavailable = state?.availability !== "ready";
+        const unavailable = state?.availability !== STATE_AVAILABILITY.READY;
         input.indeterminate = unavailable;
         input.setAttribute("aria-checked", unavailable ? "mixed" : String(state.globalEnabled));
     }, [state]);
 
     const onChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
-        if (!state || state.availability !== "ready" || saving || savingSite) {
+        if (!state || state.availability !== STATE_AVAILABILITY.READY || saving || savingSite) {
             return;
         }
         setSaving(true);
@@ -219,7 +220,7 @@ export function PopupApp({
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
-                responseState.availability !== "ready" ||
+                responseState.availability !== STATE_AVAILABILITY.READY ||
                 responseState.revision >= state.revision
             ) {
                 setState(responseState);
@@ -228,18 +229,20 @@ export function PopupApp({
                 setNotice(result.response.error === "save-failed" ? "save-failed" : "unknown");
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+            if (
+                result.state.availability !== STATE_AVAILABILITY.READY
+                || result.state.revision >= state.revision
+            ) {
                 setState(result.state);
             }
             setNotice("interrupted");
         } else {
             setState({
-                availability: "unavailable",
+                availability: STATE_AVAILABILITY.UNAVAILABLE,
                 revision: null,
                 globalEnabled: null,
                 hostname: state.hostname,
                 siteEnabled: null,
-                hasAdapter: false,
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "settings-load",
             });
@@ -251,7 +254,7 @@ export function PopupApp({
     const onSiteChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
         if (
             !state ||
-            state.availability !== "ready" ||
+            state.availability !== STATE_AVAILABILITY.READY ||
             state.hostname === null ||
             state.siteEnabled === null ||
             saving ||
@@ -265,7 +268,7 @@ export function PopupApp({
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
-                responseState.availability !== "ready" ||
+                responseState.availability !== STATE_AVAILABILITY.READY ||
                 responseState.revision >= state.revision
             ) {
                 setState(responseState);
@@ -280,18 +283,20 @@ export function PopupApp({
                 );
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+            if (
+                result.state.availability !== STATE_AVAILABILITY.READY
+                || result.state.revision >= state.revision
+            ) {
                 setState(result.state);
             }
             setNotice("interrupted");
         } else {
             setState({
-                availability: "unavailable",
+                availability: STATE_AVAILABILITY.UNAVAILABLE,
                 revision: null,
                 globalEnabled: null,
                 hostname: state.hostname,
                 siteEnabled: null,
-                hasAdapter: false,
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: "settings-load",
             });
@@ -303,7 +308,7 @@ export function PopupApp({
     const onReportSite = async (): Promise<void> => {
         if (
             !state ||
-            state.availability !== "ready" ||
+            state.availability !== STATE_AVAILABILITY.READY ||
             state.hostname === null ||
             reporting ||
             reportInFlight.current
@@ -316,7 +321,6 @@ export function PopupApp({
         try {
             const result = await reporter.openPopupReport({
                 hostname: state.hostname,
-                hasAdapter: state.hasAdapter,
             });
             if (!result.ok) {
                 setReportNotice(siteReportErrorText(result.error));
@@ -338,11 +342,13 @@ export function PopupApp({
             </MantineProvider>
         );
     }
-    const checked = state.availability === "ready" && state.globalEnabled;
-    const disabled = saving || savingSite || state.availability !== "ready";
+    const checked = state.availability === STATE_AVAILABILITY.READY && state.globalEnabled;
+    const disabled = saving || savingSite || state.availability !== STATE_AVAILABILITY.READY;
     const siteSwitchVisible =
-        state.availability === "ready" && state.hostname !== null && state.siteEnabled !== null;
-    const reportVisible = state.availability === "ready" && state.hostname !== null;
+        state.availability === STATE_AVAILABILITY.READY
+        && state.hostname !== null && state.siteEnabled !== null;
+    const reportVisible = state.availability === STATE_AVAILABILITY.READY
+        && state.hostname !== null;
     const noticeMessage = noticeText(notice);
     return (
         <MantineProvider>

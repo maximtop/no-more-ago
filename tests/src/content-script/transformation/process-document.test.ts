@@ -12,7 +12,15 @@ import {
 } from "../../../../src/content-script/transformation/process-document";
 import {
     OWNED_SOURCE_ATTRIBUTE,
+    restoreExactTimes,
 } from "../../../../src/content-script/transformation/render-exact-time";
+import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
+import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
+import {
+    TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_VALIDATION_RULE,
+    type TimestampSourceRule,
+} from "../../../../src/content-script/adapters/types";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
 
 describe("processDocument", () => {
@@ -146,7 +154,7 @@ describe("processDocument", () => {
         const unsupported = vi.fn();
         expect(
             processDocument({
-                url: new URL("https://unsupported.example/private"),
+                url: new URL("file:///unsupported.example/private"),
                 root: document,
                 locales: ["en-GB"],
                 diagnosticSink: unsupported,
@@ -191,7 +199,10 @@ describe("processDocument", () => {
         if (!output) {
             throw new Error("Expected output");
         }
-        const sink = { beforeOwnedOutputRemoval: vi.fn() };
+        const sink = {
+            beforeOwnedOutputRemoval: vi.fn(),
+            beforeOwnedSourceHiddenChange: vi.fn(),
+        };
 
         source.setAttribute("datetime", "2026-08-24T10:15:00Z");
         expect(
@@ -199,7 +210,7 @@ describe("processDocument", () => {
                 url: new URL("https://github.com/maximtop/no-more-ago/commit/abc"),
                 root: source,
                 locales: ["en-GB"],
-                ownedOutputMutations: sink,
+                ownedDomMutations: sink,
             }),
         ).toEqual([output]);
         expect(output.dateTime).toBe("2026-08-24T10:15:00Z");
@@ -210,7 +221,7 @@ describe("processDocument", () => {
                 url: new URL("https://github.com/maximtop/no-more-ago/commit/abc"),
                 root: source,
                 locales: ["en-GB"],
-                ownedOutputMutations: sink,
+                ownedDomMutations: sink,
             }),
         ).toEqual([]);
         expect(sink.beforeOwnedOutputRemoval).toHaveBeenCalledWith(output);
@@ -319,5 +330,81 @@ describe("processDocument", () => {
         expect(second.nextElementSibling).toBe(secondOutput);
         expect(secondOutput.isConnected).toBe(true);
         expect(secondOutput.textContent).toBe(secondText);
+    });
+
+    it("processes standard time markup without changing page attributes", () => {
+        document.body.innerHTML = '<a href="/post"><time datetime="2026-08-23T10:15Z" '
+            + 'aria-label="2 hours ago">2 hours ago</time></a>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const outputs = processDocument({
+            url: new URL("https://x.example/post"),
+            root: document,
+            locales: ["en-US"],
+        });
+        expect(outputs).toHaveLength(1);
+        expect(source.textContent).toBe("2 hours ago");
+        expect(source.getAttribute("aria-label")).toBe("2 hours ago");
+        expect(source.nextElementSibling).toBe(outputs[0]);
+        expect(source.parentElement?.tagName).toBe("A");
+        restoreExactTimes(document);
+    });
+
+    it.each([
+        ["hidden", '<time datetime="2026-08-23T10:15Z" hidden>hidden</time>'],
+        ["aria", '<time datetime="2026-08-23T10:15Z" aria-hidden="true">aria</time>'],
+        ["inert", '<time datetime="2026-08-23T10:15Z" inert>inert</time>'],
+        ["style", '<time datetime="2026-08-23T10:15Z" style="display: none">style</time>'],
+    ])("does not create output for a generic %s source", (_name, markup) => {
+        document.body.innerHTML = markup;
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        })).toEqual([]);
+        expect(document.querySelector("time")?.textContent).toBe(_name);
+    });
+
+    it("prefers a resolved specialized candidate but falls back when it fails", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">time</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected overlap source");
+        }
+        let specializedValid = true;
+        const specialized: TimestampSourceRule = {
+            id: "specialized",
+            matches: () => true,
+            discover: (root) => [...root.querySelectorAll("time")],
+            extract: (element) => ({
+                ruleId: "specialized",
+                source: element,
+                sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                rawDatetime: specializedValid ? "2026-08-24T10:15Z" : "invalid",
+                validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            }),
+        };
+        const registry = new AdapterRegistry([specialized], genericTimeRule);
+        const first = processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            registry,
+        });
+        expect(first).toHaveLength(1);
+        expect(first[0]?.dateTime).toBe("2026-08-24T10:15Z");
+        restoreExactTimes(document);
+        specializedValid = false;
+        const fallback = processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            registry,
+        });
+        expect(fallback).toHaveLength(1);
+        expect(fallback[0]?.dateTime).toBe("2026-08-23T10:15Z");
+        restoreExactTimes(document);
     });
 });

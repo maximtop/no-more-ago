@@ -5,20 +5,28 @@
 import { describe, expect, it } from "vitest";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
-import { EXPLICIT_ZONED_DATETIME_RULE } from "../../../../src/content-script/adapters/types";
+import { TIMESTAMP_VALIDATION_RULE } from "../../../../src/content-script/adapters/types";
 
 describe("GitHub adapter registry", () => {
     it("selects only exact GitHub HTTP(S) URLs", () => {
-        expect(defaultRegistry.select(new URL("https://github.com/org/repo"))?.id).toBe("github");
-        expect(defaultRegistry.select(new URL("http://github.com/org/repo"))?.id).toBe("github");
-        expect(defaultRegistry.select(new URL("https://gist.github.com/org/1"))).toBeNull();
-        expect(defaultRegistry.select(new URL("https://github.example/org/repo"))).toBeNull();
+        expect(defaultRegistry.matching(new URL("https://github.com/org/repo")).map((r) => r.id))
+            .toEqual(["github", "generic-time"]);
+        expect(defaultRegistry.matching(new URL("http://github.com/org/repo")).map((r) => r.id))
+            .toEqual(["github", "generic-time"]);
+        expect(
+            defaultRegistry.matching(new URL("https://gist.github.com/org/1")).map((r) => r.id),
+        )
+            .toEqual(["generic-time"]);
+        expect(
+            defaultRegistry.matching(new URL("https://github.example/org/repo")).map((r) => r.id),
+        )
+            .toEqual(["generic-time"]);
     });
 
     it("discovers and extracts a trusted source description", () => {
         document.body.innerHTML =
             '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
-        const adapter = defaultRegistry.select(new URL("https://github.com/org/repo"));
+        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
         expect(adapter).not.toBeNull();
         if (!adapter) {
             throw new Error("Expected the GitHub adapter");
@@ -31,10 +39,10 @@ describe("GitHub adapter registry", () => {
         }
 
         expect(adapter.extract(element)).toMatchObject({
-            adapterId: "github",
+            ruleId: "github",
             rawDatetime: "2026-08-23T10:15:00Z",
             sourceKind: "relative-time",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+            validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
         });
     });
 
@@ -42,7 +50,7 @@ describe("GitHub adapter registry", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
             + '<time-ago datetime="2026-08-24T10:15:00Z">nested</time-ago>'
             + "</relative-time>";
-        const adapter = defaultRegistry.select(new URL("https://github.com/org/repo"));
+        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
         const root = document.body.firstElementChild;
         if (!adapter || !root) {
             throw new Error("Expected adapter and root");
@@ -57,7 +65,7 @@ describe("GitHub adapter registry", () => {
         ["time-until", "time-until"],
     ] as const)("supports the approved %s source kind", (tagName, sourceKind) => {
         document.body.innerHTML = `<${tagName} datetime=" 2026-08-23T10:15Z ">visible</${tagName}>`;
-        const adapter = defaultRegistry.select(new URL("https://github.com/any/path"));
+        const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
         expect(adapter).not.toBeNull();
         const element = document.body.firstElementChild;
         expect(element).not.toBeNull();
@@ -66,11 +74,11 @@ describe("GitHub adapter registry", () => {
         }
         expect(adapter?.discover(document)).toEqual([element]);
         expect(adapter?.extract(element)).toEqual({
-            adapterId: "github",
+            ruleId: "github",
             source: element,
             sourceKind,
             rawDatetime: " 2026-08-23T10:15Z ",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+            validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
         });
     });
 
@@ -87,7 +95,7 @@ describe("GitHub adapter registry", () => {
     ])("does not extract unsafe or non-authoritative markup: %s", (markup) => {
         document.body.innerHTML = markup;
         const original = document.body.innerHTML;
-        const adapter = defaultRegistry.select(new URL("https://github.com/any/path"));
+        const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
         expect(adapter).not.toBeNull();
         for (const element of adapter?.discover(document) ?? []) {
             expect(adapter?.extract(element)).toBeNull();
@@ -102,6 +110,8 @@ describe("GitHub adapter registry", () => {
         "https://github.io/org/repo",
         "ftp://github.com/org/repo",
     ])("does not select %s", (url) => {
-        expect(defaultRegistry.select(new URL(url))).toBeNull();
+        expect(defaultRegistry.matching(new URL(url)).map((r) => r.id)).toEqual(
+            url.startsWith("ftp:") ? [] : ["generic-time"],
+        );
     });
 });

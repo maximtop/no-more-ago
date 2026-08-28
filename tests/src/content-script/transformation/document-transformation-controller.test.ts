@@ -6,8 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
-    EXPLICIT_ZONED_DATETIME_RULE,
-    type SiteAdapter,
+    TIMESTAMP_VALIDATION_RULE,
+    type TimestampSourceRule,
 } from "../../../../src/content-script/adapters/types";
 import {
     DocumentTransformationController,
@@ -51,6 +51,7 @@ describe("DocumentTransformationController", () => {
         expect(second).toHaveLength(1);
         expect(second[0]).not.toBe(first[0]);
         expect(document.querySelectorAll("time")).toHaveLength(1);
+        controller.teardown();
     });
 
     it("reformats only its existing owned sources when presentation changes", () => {
@@ -169,6 +170,29 @@ describe("DocumentTransformationController", () => {
         },
     );
 
+    it("does not restore a page-removed hidden state for an initially hidden source", async () => {
+        document.body.innerHTML = '<relative-time hidden datetime="2026-08-23T10:15:00Z">'
+            + "source</relative-time>";
+        const source = document.querySelector("relative-time");
+        if (!source) {
+            throw new Error("Expected source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://github.com/example/repo"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        source.removeAttribute("hidden");
+        await flushMutations();
+        source.removeAttribute("datetime");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
     it("moves owned subtrees and creates fresh pairs after reinsertion", async () => {
         document.body.innerHTML = '<main id="one">'
             + '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>'
@@ -246,7 +270,7 @@ describe("DocumentTransformationController", () => {
         }
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "combined-instrumented",
             matches: () => true,
             discover: (root) => {
@@ -261,11 +285,11 @@ describe("DocumentTransformationController", () => {
                     return null;
                 }
                 return {
-                    adapterId: "combined-instrumented",
+                    ruleId: "combined-instrumented",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 };
             },
         };
@@ -273,7 +297,12 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://github.com/example/repo"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], {
+                id: "unused-generic",
+                matches: () => false,
+                discover: () => [],
+                extract: () => null,
+            }),
         });
         controller.start();
         const movedOutput = moved.nextElementSibling;
@@ -353,7 +382,7 @@ describe("DocumentTransformationController", () => {
             throw new Error("Expected sources");
         }
         let shouldThrow = true;
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "test",
             matches: () => true,
             discover: (root) => [
@@ -365,11 +394,11 @@ describe("DocumentTransformationController", () => {
                     throw new Error("candidate extraction failed");
                 }
                 return {
-                    adapterId: "test",
+                    ruleId: "test",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 };
             },
         };
@@ -377,7 +406,12 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], {
+                id: "unused-generic",
+                matches: () => false,
+                discover: () => [],
+                extract: () => null,
+            }),
         });
 
         expect(() => controller.start()).toThrow("candidate extraction failed");
@@ -396,7 +430,7 @@ describe("DocumentTransformationController", () => {
             '<relative-time id="outside" datetime="2026-08-23T10:15:00Z">outside</relative-time>';
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "instrumented",
             matches: () => true,
             discover: (root) => {
@@ -407,11 +441,11 @@ describe("DocumentTransformationController", () => {
             extract: (element) => {
                 visits.push(element);
                 return {
-                    adapterId: "instrumented",
+                    ruleId: "instrumented",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 };
             },
         };
@@ -419,7 +453,12 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], {
+                id: "unused-generic",
+                matches: () => false,
+                discover: () => [],
+                extract: () => null,
+            }),
         });
         controller.start();
         roots.length = 0;
@@ -508,7 +547,7 @@ describe("DocumentTransformationController", () => {
             throw new Error("Expected source");
         }
         let visits = 0;
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "counting",
             matches: () => true,
             discover: (root) => [
@@ -522,11 +561,11 @@ describe("DocumentTransformationController", () => {
                     return null;
                 }
                 return {
-                    adapterId: "counting",
+                    ruleId: "counting",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 };
             },
         };
@@ -534,7 +573,12 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], {
+                id: "unused-generic",
+                matches: () => false,
+                discover: () => [],
+                extract: () => null,
+            }),
         });
         controller.start();
         visits = 0;
@@ -545,4 +589,164 @@ describe("DocumentTransformationController", () => {
         expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
         controller.teardown();
     });
+
+    it("reacquires extension-owned hidden state when a page removes it", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        const output = source.nextElementSibling;
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
+        const token = output.getAttribute("data-no-more-ago-output");
+        source.removeAttribute("hidden");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(true);
+        expect(source.nextElementSibling).toBe(output);
+        expect(output.getAttribute("data-no-more-ago-output")).toBe(token);
+        controller.teardown();
+    });
+
+    it("does not mistake extension-owned hidden styling for page suppression", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(
+            (element) => ({
+                display: element.hasAttribute("hidden") ? "none" : "inline",
+                visibility: "visible",
+            }) as CSSStyleDeclaration,
+        );
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        try {
+            controller.start();
+            const output = source.nextElementSibling;
+            if (!(output instanceof HTMLTimeElement)) {
+                throw new Error("Expected output");
+            }
+            source.setAttribute("datetime", "2026-08-24T10:15Z");
+            await flushMutations();
+            expect(source.nextElementSibling).toBe(output);
+            expect(output.dateTime).toBe("2026-08-24T10:15Z");
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
+    });
+
+    it("restores an owned source hidden by page CSS after its datetime changes", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(
+            (element) => ({
+                display: element.hasAttribute("hidden") || element.classList.contains("page-hidden")
+                    ? "none"
+                    : "inline",
+                visibility: "visible",
+            }) as CSSStyleDeclaration,
+        );
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        try {
+            controller.start();
+            source.classList.add("page-hidden");
+            source.setAttribute("datetime", "2026-08-24T10:15Z");
+            await flushMutations();
+            expect(source.hasAttribute("hidden")).toBe(false);
+            expect(source.textContent).toBe("relative");
+            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
+    });
+
+    it("preserves a page-owned hidden state added to an owned source", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        source.removeAttribute("hidden");
+        source.setAttribute("hidden", "");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(true);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
+    it.each([
+        ["aria-hidden", "true"],
+        ["inert", ""],
+        ["style", "display: none"],
+    ])("removes output while page suppresses generic source via %s", async (attribute, value) => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        source.setAttribute(attribute, value);
+        await flushMutations();
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        expect(source.getAttribute(attribute)).toBe(value);
+        controller.teardown();
+    });
+
+    it(
+        "reconciles generic sources when ancestor accessibility suppression changes",
+        async () => {
+            document.body.innerHTML = '<section><time datetime="2026-08-23T10:15Z">'
+                + "relative</time></section>";
+            const section = document.querySelector("section");
+            const source = document.querySelector("time");
+            if (!section || !source) {
+                throw new Error("Expected generic source and ancestor");
+            }
+            const controller = new DocumentTransformationController({
+                url: new URL("https://example.test/"),
+                root: document,
+                locales: ["en-US"],
+            });
+            controller.start();
+            section.setAttribute("aria-hidden", "true");
+            await flushMutations();
+            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+            section.removeAttribute("aria-hidden");
+            await flushMutations();
+            expect(document.querySelector("time[data-no-more-ago-output]")).not.toBeNull();
+            controller.teardown();
+        },
+    );
 });

@@ -12,6 +12,7 @@ import {
     GET_DEBUG_STATE_MESSAGE,
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_DISPLAY_STATE_MESSAGE,
+    GET_DOCUMENT_STATE_MESSAGE,
     GET_POPUP_STATE_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
@@ -22,16 +23,18 @@ import {
     backgroundMessageSchema,
     isDiagnosticEventMessage,
     POPUP_STATUS,
+    STATE_AVAILABILITY,
     SITE_SETTINGS_SURFACE,
 } from "../shared/messages";
 import { SettingsService, type SettingsStorage } from "./settings/service";
 import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
 import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
-import { AdapterActivationCoordinator } from "./runtime/adapter-activation";
-import { githubRuntimeDefinition } from "./runtime/register-github";
+import { DocumentActivationCoordinator } from "./runtime/document-activation";
 import type { ScriptingRuntime } from "./runtime/scripting";
 import type { TabsRuntime } from "./runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
+import { LIFECYCLE_REASON } from "./application/contracts";
+import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -103,7 +106,10 @@ function installApplication(): BackgroundApplication | undefined {
         executeScript: (input) =>
             candidate.scripting?.executeScript?.(
                 input as unknown as Parameters<typeof chrome.scripting.executeScript>[0],
-            ) ?? Promise.reject(new Error("Scripting is unavailable")),
+            ).then((results) => results.map((result) => ({
+                frameId: result.frameId,
+                result: result.result,
+            }))) ?? Promise.reject(new Error("Scripting is unavailable")),
     };
     const tabs: TabsRuntime = {
         query: async (query) => {
@@ -117,17 +123,13 @@ function installApplication(): BackgroundApplication | undefined {
         sendMessage: (tabId, message, options) =>
             candidate.tabs?.sendMessage?.(tabId, message, options) as Promise<unknown>,
     };
-    const coordinator = new AdapterActivationCoordinator({
-        adapters: [githubRuntimeDefinition],
-        scripting,
-        tabs,
-    });
+    const coordinator = new DocumentActivationCoordinator({ scripting, tabs });
     const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
     const browserFamily: DiagnosticBrowserFamily = /Firefox|FxiOS/iu.test(userAgent)
-        ? "firefox"
+        ? DIAGNOSTIC_BROWSER_FAMILY.FIREFOX
         : /Chrome|Chromium|Edg|OPR/iu.test(userAgent)
-            ? "chromium"
-            : "other";
+            ? DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM
+            : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
     let extensionVersion: unknown;
     try {
         extensionVersion = chrome.runtime?.getManifest?.().version;
@@ -142,7 +144,6 @@ function installApplication(): BackgroundApplication | undefined {
         settings: new SettingsService(storage),
         coordinator,
         tabs,
-        adapters: [githubRuntimeDefinition],
         journal: new DiagnosticJournal(storage),
         diagnosticEnvironment,
     });
@@ -223,16 +224,28 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .getPopupState()
                 .then(sendOnce, () =>
                     sendOnce({
-                        availability: "unavailable",
+                        availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         globalEnabled: null,
                         hostname: null,
                         siteEnabled: null,
-                        hasAdapter: false,
                         status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                         failure: "settings-load",
                     }),
                 );
+            return true;
+        }
+        if (request.type === GET_DOCUMENT_STATE_MESSAGE) {
+            void application
+                .getDocumentState(sender)
+                .then(sendOnce, () => sendOnce({
+                    availability: STATE_AVAILABILITY.UNAVAILABLE,
+                    revision: null,
+                    enabled: false,
+                    display: null,
+                    debugEnabled: false,
+                    failure: "settings-load",
+                }));
             return true;
         }
         if (request.type === GET_DISPLAY_STATE_MESSAGE) {
@@ -240,7 +253,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .getDisplayState()
                 .then(sendOnce, () =>
                     sendOnce({
-                        availability: "unavailable",
+                        availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         display: null,
                         failure: "settings-load",
@@ -253,7 +266,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .getDebugState()
                 .then(sendOnce, () =>
                     sendOnce({
-                        availability: "unavailable",
+                        availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         enabled: null,
                         failure: "settings-load",
@@ -269,7 +282,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         ok: false,
                         error: "settings-unavailable",
                         state: {
-                            availability: "unavailable",
+                            availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             enabled: null,
                             failure: "settings-load",
@@ -286,7 +299,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         ok: false,
                         error: "settings-unavailable",
                         state: {
-                            availability: "unavailable",
+                            availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             display: null,
                             failure: "settings-load",
@@ -303,12 +316,11 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         ok: false,
                         error: "settings-unavailable",
                         state: {
-                            availability: "unavailable",
+                            availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             globalEnabled: null,
                             hostname: null,
                             siteEnabled: null,
-                            hasAdapter: false,
                             status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                             failure: "settings-load",
                         },
@@ -321,7 +333,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                 .getSitesState()
                 .then(sendOnce, () =>
                     sendOnce({
-                        availability: "unavailable",
+                        availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         globalEnabled: null,
                         sites: [],
@@ -338,7 +350,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         ok: false,
                         error: "settings-unavailable",
                         state: {
-                            availability: "unavailable",
+                            availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             globalEnabled: null,
                             sites: [],
@@ -359,17 +371,16 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         state:
                             request.surface === SITE_SETTINGS_SURFACE.POPUP
                                 ? {
-                                    availability: "unavailable",
+                                    availability: STATE_AVAILABILITY.UNAVAILABLE,
                                     revision: null,
                                     globalEnabled: null,
                                     hostname: null,
                                     siteEnabled: null,
-                                    hasAdapter: false,
                                     status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
                                     failure: "settings-load",
                                 }
                                 : {
-                                    availability: "unavailable",
+                                    availability: STATE_AVAILABILITY.UNAVAILABLE,
                                     revision: null,
                                     globalEnabled: null,
                                     sites: [],
@@ -382,27 +393,12 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         return false;
     });
     chrome.runtime.onStartup?.addListener(() => {
-        void application.requestLifecycle("startup");
+        void application.requestLifecycle(LIFECYCLE_REASON.STARTUP);
     });
     chrome.runtime.onInstalled?.addListener(() => {
-        void application.requestLifecycle("installed");
+        void application.requestLifecycle(LIFECYCLE_REASON.INSTALLED);
     });
-    void application.ensureReady("cold-worker").catch((error: unknown) => {
+    void application.ensureReady(LIFECYCLE_REASON.COLD_WORKER).catch((error: unknown) => {
         console.error("Background initialization failed", error);
     });
-} else {
-    // Incomplete local API shims retain the validated registration smoke path.
-    void import("./runtime/register-github")
-        .then(({ ensureGitHubRuntime }) =>
-            ensureGitHubRuntime({
-                getRegisteredContentScripts: (filter) =>
-                    chrome.scripting.getRegisteredContentScripts(filter),
-                registerContentScripts: (scripts) =>
-                    chrome.scripting.registerContentScripts(scripts),
-                updateContentScripts: (scripts) => chrome.scripting.updateContentScripts(scripts),
-            }),
-        )
-        .catch((error: unknown) => {
-            console.error("Runtime registration failed", error);
-        });
 }

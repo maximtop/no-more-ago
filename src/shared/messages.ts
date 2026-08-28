@@ -3,6 +3,7 @@
  */
 
 export * from "./messaging/contracts";
+export * from "./messaging/document-state";
 export * from "./messaging/document-messages";
 export * from "./messaging/response-schemas";
 export * from "./messaging/view-state-schemas";

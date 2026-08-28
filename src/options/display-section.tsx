@@ -5,6 +5,7 @@
 import { Alert, Box, Button, Stack, Text, TextInput } from "@mantine/core";
 import type { ReactElement } from "react";
 import type { DisplayState } from "../shared/messages";
+import { STATE_AVAILABILITY } from "../shared/messages";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
 import type { DisplayController } from "./display-controller";
 import {
@@ -32,7 +33,7 @@ const CUSTOM_FORMAT_EXAMPLES = "Examples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy"
  * @returns The message displayed instead of the display controls.
  */
 function unavailableDisplayText(
-    state: Extract<DisplayState, { availability: "unavailable" }>,
+    state: Extract<DisplayState, { availability: typeof STATE_AVAILABILITY.UNAVAILABLE }>,
 ): string {
     return state.failure === "fail-closed-cleanup"
         ? "Current display settings are unavailable while processing state is being recovered."
@@ -61,10 +62,10 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                 Choose how dates are shown.
             </Text>
             {loading ? <Text role="status">Loading display settings…</Text> : null}
-            {!loading && state?.availability === "unavailable" ? (
+            {!loading && state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                 <Text role="status">{unavailableDisplayText(state)}</Text>
             ) : null}
-            {!loading && state?.availability === "ready" && draft ? (
+            {!loading && state?.availability === STATE_AVAILABILITY.READY && draft ? (
                 <Stack gap="sm" mt="sm">
                     <label className="options-field-label" htmlFor="date-format-select">
                         Date format

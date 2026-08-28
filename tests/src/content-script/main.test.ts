@@ -1,62 +1,39 @@
 /**
- * @file Verifies content-script bootstrap and persisted display-state requests.
+ * @file Verifies content-script bootstrap and document-state requests.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET_DISPLAY_STATE_MESSAGE } from "../../../src/shared/messages";
+/* eslint-disable @typescript-eslint/require-await */
 import { DOCUMENT_RUNTIME_SLOT } from "../../../src/content-script/runtime";
-
-
-/**
- * Overrides the JSDOM document readiness state for bootstrap tests.
- *
- * @param value - Readiness state exposed by the test document.
- */
-function setReadyState(value: DocumentReadyState): void {
-    Object.defineProperty(document, "readyState", { configurable: true, value });
-}
+import { GET_DOCUMENT_STATE_MESSAGE } from "../../../src/shared/messages";
 
 /**
- * Installs a minimal Chrome runtime mock and captures its content listener.
+ * Installs a minimal extension runtime mock.
  *
- * @param sendMessage - Optional background request implementation.
- * @returns - Runtime message mock and listener dispatch helper.
+ * @param sendMessage - Optional document-state request handler.
+ * @returns - Runtime message mock.
  */
 function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>) {
-    let listener: ((message: unknown) => void) | undefined;
     const messages = {
-        onMessage: {
-            addListener: vi.fn((next: (message: unknown) => void) => {
-                listener = next;
-            }),
-        },
+        onMessage: { addListener: vi.fn() },
+        ...(sendMessage === undefined ? {} : { sendMessage }),
     };
-    vi.stubGlobal("chrome", {
-        runtime: { ...messages, ...(sendMessage === undefined ? {} : { sendMessage }) },
-    });
-    return { messages, dispatch: (message: unknown) => listener?.(message) };
+    vi.stubGlobal("chrome", { runtime: messages });
+    return messages;
 }
 
 /**
- * Creates a ready display-state response for content bootstrap tests.
+ * Creates a ready document-state response.
  *
- * @param revision - Persisted display-settings revision.
- * @param mode - Effective time-zone selection mode.
- * @param identifier - IANA identifier used by named-zone mode.
- * @returns - Ready background display-state response.
+ * @param enabled - Effective top-level policy.
+ * @returns - Ready document state.
  */
-function displayState(
-    revision: number,
-    mode: "system" | "utc" | "iana",
-    identifier = "America/New_York",
-) {
+function state(enabled = true) {
     return {
         availability: "ready" as const,
-        revision,
-        display: {
-            formatMode: "system" as const,
-            timeZone: mode === "iana" ? { mode, identifier } : { mode },
-        },
+        revision: 2,
+        enabled,
+        display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
         debugEnabled: false,
     };
 }
@@ -65,105 +42,56 @@ describe("content entrypoint", () => {
     beforeEach(() => {
         vi.resetModules();
         vi.unstubAllGlobals();
-        const previous = (
-            document as unknown as Record<
-                symbol,
-                { readonly handle?: { teardown(): void } } | undefined
-            >
-        )[DOCUMENT_RUNTIME_SLOT];
-        previous?.handle?.teardown();
+        const current = (document as unknown as Record<symbol, {
+            handle?: { teardown(): void };
+        } | undefined>)[DOCUMENT_RUNTIME_SLOT];
+        current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
-        document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">relative</time>';
     });
 
-    it("installs the listener immediately while loading", async () => {
-        setReadyState("loading");
-        const chrome = installChromeMock();
-        vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        await import("../../../src/content-script/main");
-        expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
-        expect(document.querySelector("time")).toBeNull();
-        document.dispatchEvent(new Event("DOMContentLoaded"));
-        expect(document.querySelector("time")).not.toBeNull();
-    });
-
-    it("starts synchronously for a ready document", async () => {
-        setReadyState("complete");
-        const chrome = installChromeMock();
-        vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        await import("../../../src/content-script/main");
-        expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
-        expect(document.querySelector("time")).not.toBeNull();
-    });
-
-    it("hydrates display state before ownership and uses its zone", async () => {
-        setReadyState("complete");
-        const sendMessage = vi.fn((message: unknown) => {
-            expect(message).toEqual({ type: GET_DISPLAY_STATE_MESSAGE });
-            return Promise.resolve(displayState(3, "utc"));
-        });
+    it("starts immediately while the document is loading", async () => {
+        const sendMessage = vi.fn(async () => state());
         const chrome = installChromeMock(sendMessage);
-        vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
+        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
+
         await import("../../../src/content-script/main");
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        expect(document.querySelector("time[data-no-more-ago-output]")?.textContent).toBe(
-            new Intl.DateTimeFormat(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-                timeZone: "UTC",
-            }).format(new Date("2026-08-23T10:15:00Z")),
-        );
-        expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(sendMessage).toHaveBeenCalledWith({ type: GET_DOCUMENT_STATE_MESSAGE });
+        expect(chrome.onMessage.addListener).toHaveBeenCalledTimes(1);
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
     });
 
-    it("re-evaluates the loading entrypoint after a failed readiness start", async () => {
-        setReadyState("loading");
-        const chrome = installChromeMock();
-        vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        const error = new Error("entrypoint observer setup failed");
-        const observe = vi
-            .spyOn(MutationObserver.prototype, "observe")
-            .mockImplementationOnce(() => {
-                throw error;
-            });
-        const addEventListener = vi.spyOn(document, "addEventListener");
-        await import("../../../src/content-script/main");
-        const callback = addEventListener.mock.calls.find(
-            ([type]) => type === "DOMContentLoaded",
-        )?.[1];
-        if (typeof callback !== "function") {
-            throw new Error("Expected readiness callback");
-        }
-        expect(() => {
-            callback(new Event("DOMContentLoaded"));
-        }).toThrow(error);
-        observe.mockRestore();
+    it("does not process a disabled document", async () => {
+        const sendMessage = vi.fn(async () => state(false));
+        installChromeMock(sendMessage);
+        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
 
-        vi.resetModules();
-        setReadyState("complete");
         await import("../../../src/content-script/main");
-        expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
-        expect(document.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(1);
-        addEventListener.mockRestore();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
     });
 
-    it("re-evaluates the ready entrypoint after an initial-pass failure", async () => {
-        setReadyState("complete");
-        const chrome = installChromeMock();
-        vi.stubGlobal("window", { location: { href: "https://github.com/example/repo" } });
-        const error = new Error("entrypoint initial start failed");
-        const observe = vi
-            .spyOn(MutationObserver.prototype, "observe")
-            .mockImplementationOnce(() => {
-                throw error;
-            });
+    it("keeps page content unchanged when document state is unavailable", async () => {
+        const sendMessage = vi.fn(async () => ({
+            availability: "unavailable" as const,
+            revision: null,
+            enabled: false,
+            display: null,
+            debugEnabled: false,
+            failure: "settings-load" as const,
+        }));
+        installChromeMock(sendMessage);
+        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
 
-        await expect(import("../../../src/content-script/main")).rejects.toThrow(error);
-        observe.mockRestore();
-        vi.resetModules();
         await import("../../../src/content-script/main");
-        expect(chrome.messages.onMessage.addListener).toHaveBeenCalledTimes(1);
-        expect(document.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(1);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(document.querySelector("time")?.textContent).toBe("relative");
     });
 });

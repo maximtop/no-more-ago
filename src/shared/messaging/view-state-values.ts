@@ -11,7 +11,6 @@ export const POPUP_STATUS = {
     SITE_DISABLED: "site-disabled",
     INACCESSIBLE: "inaccessible",
     RUNTIME_FAILED: "runtime-failed",
-    NO_RULES: "no-rules",
     SETTINGS_UNAVAILABLE: "settings-unavailable",
 } as const;
 
@@ -21,6 +20,14 @@ export const POPUP_STATUS = {
 export const SITE_SETTINGS_SURFACE = {
     POPUP: "popup",
     SITES: "sites",
+} as const;
+
+/**
+ * Availability discriminants shared by all state projections.
+ */
+export const STATE_AVAILABILITY = {
+    READY: "ready",
+    UNAVAILABLE: "unavailable",
 } as const;
 
 /**
@@ -40,7 +47,6 @@ export const POPUP_READY_STATUSES = [
     POPUP_STATUS.SITE_DISABLED,
     POPUP_STATUS.INACCESSIBLE,
     POPUP_STATUS.RUNTIME_FAILED,
-    POPUP_STATUS.NO_RULES,
 ] as const;
 
 /**
@@ -52,15 +58,27 @@ export const POPUP_UNAVAILABLE_STATUSES = [
 ] as const;
 
 /**
- * Runtime failures that may accompany a ready popup projection.
+ * Named runtime failures that may accompany a ready popup projection.
+ */
+export const POPUP_RUNTIME_FAILURE = {
+    CURRENT_TAB_QUERY: "current-tab-query",
+    REGISTRATION: "registration",
+    MATCHING_TABS_QUERY: "matching-tabs-query",
+    CURRENT_TAB_INJECT: "current-tab-inject",
+    CURRENT_TAB_TEARDOWN: "current-tab-teardown",
+    DOCUMENT_STATUS: "document-status",
+} as const;
+
+/**
+ * Complete runtime failure set accepted by the popup schema.
  */
 export const POPUP_RUNTIME_FAILURES = [
-    "current-tab-query",
-    "registration",
-    "matching-tabs-query",
-    "current-tab-inject",
-    "current-tab-teardown",
-    "document-status",
+    POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
+    POPUP_RUNTIME_FAILURE.REGISTRATION,
+    POPUP_RUNTIME_FAILURE.MATCHING_TABS_QUERY,
+    POPUP_RUNTIME_FAILURE.CURRENT_TAB_INJECT,
+    POPUP_RUNTIME_FAILURE.CURRENT_TAB_TEARDOWN,
+    POPUP_RUNTIME_FAILURE.DOCUMENT_STATUS,
 ] as const;
 
 /**
@@ -92,9 +110,20 @@ export const DISPLAY_SETTINGS_ERRORS = [
 ] as const;
 
 /**
- * Failure reasons reported when a matching tab cannot be refreshed.
+ * Named failure reasons reported when a matching tab cannot be refreshed.
  */
-export const REFRESH_FAILURE_REASONS = ["matching-tabs-query", "tab-update"] as const;
+export const REFRESH_FAILURE_REASON = {
+    MATCHING_TABS_QUERY: "matching-tabs-query",
+    TAB_UPDATE: "tab-update",
+} as const;
+
+/**
+ * Complete failure reason set accepted by refresh response schemas.
+ */
+export const REFRESH_FAILURE_REASONS = [
+    REFRESH_FAILURE_REASON.MATCHING_TABS_QUERY,
+    REFRESH_FAILURE_REASON.TAB_UPDATE,
+] as const;
 
 /**
  * Popup status available after settings load successfully.
@@ -145,6 +174,11 @@ export type PopupStatus = ReadyPopupStatus | UnavailablePopupStatus;
  * UI surface whose site-setting projection is requested.
  */
 export type SiteSettingsSurface = (typeof SITE_SETTINGS_SURFACES)[number];
+
+/**
+ * Availability discriminant for a state projection.
+ */
+export type StateAvailability = (typeof STATE_AVAILABILITY)[keyof typeof STATE_AVAILABILITY];
 
 /**
  * Failure that prevents the popup from reporting normal active-tab status.

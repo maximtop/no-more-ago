@@ -33,10 +33,10 @@ const ready: SitesState = {
     revision: 4,
     globalEnabled: true,
     sites: [
-        { hostname: "github.com", enabled: true, hasAdapter: true },
-        { hostname: "example.test", enabled: false, hasAdapter: false },
-        { hostname: "example.test.", enabled: true, hasAdapter: false },
-        { hostname: "xn--bcher-kva.example", enabled: true, hasAdapter: false },
+        { hostname: "github.com", enabled: true },
+        { hostname: "example.test", enabled: false },
+        { hostname: "example.test.", enabled: true },
+        { hostname: "xn--bcher-kva.example", enabled: true },
     ],
 };
 
@@ -188,7 +188,7 @@ describe("Options Sites contract", () => {
             availability: "ready",
             revision: 0,
             globalEnabled: true,
-            sites: [{ hostname: "github.com", enabled: true, hasAdapter: true }],
+            sites: [{ hostname: "github.com", enabled: true }],
         };
         const resetDisplay: DisplayState = {
             availability: "ready",
@@ -487,7 +487,7 @@ describe("Options Sites contract", () => {
                                 revision: 0,
                                 globalEnabled: true,
                                 sites: [
-                                    { hostname: "github.com", enabled: true, hasAdapter: true },
+                                    { hostname: "github.com", enabled: true },
                                 ],
                             },
                         });

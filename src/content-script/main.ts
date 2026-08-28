@@ -5,7 +5,7 @@
 import { installContentRuntime } from "./runtime";
 import {
     DIAGNOSTIC_EVENT_MESSAGE,
-    GET_DISPLAY_STATE_MESSAGE,
+    GET_DOCUMENT_STATE_MESSAGE,
 } from "../shared/messages";
 
 installContentRuntime({
@@ -15,8 +15,8 @@ installContentRuntime({
     localesProvider: () => navigator.languages,
     ...(typeof chrome.runtime.sendMessage === "function"
         ? {
-            loadDisplayState: () =>
-                chrome.runtime.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE }),
+            loadDocumentState: () =>
+                chrome.runtime.sendMessage({ type: GET_DOCUMENT_STATE_MESSAGE }),
             reportDiagnostic: (event: Record<string, unknown>) =>
                 chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
         }

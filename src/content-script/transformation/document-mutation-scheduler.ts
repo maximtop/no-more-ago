@@ -2,7 +2,20 @@
  * @file Coalesces DOM mutation records into safe document-processing batches.
  */
 
-import { OWNED_OUTPUT_ATTRIBUTE } from "./render-exact-time";
+import {
+    clearSourceHiddenProvenance,
+    OWNED_OUTPUT_ATTRIBUTE,
+} from "./render-exact-time";
+
+/**
+ * Attribute names whose page-authored changes can affect generic visibility.
+ */
+const VISIBILITY_ATTRIBUTES = ["hidden", "aria-hidden", "inert", "style"] as const;
+
+/**
+ * Complete observer attribute filter for timestamp and visibility changes.
+ */
+const OBSERVED_ATTRIBUTES = ["datetime", ...VISIBILITY_ATTRIBUTES] as const;
 
 /**
  * Coalesced observer changes that can be processed once without revisiting overlapping DOM roots.
@@ -17,6 +30,11 @@ export interface AffectedMutationBatch {
      * Existing time elements whose datetime attribute changed in place.
      */
     readonly datetimeTargets: readonly Element[];
+
+    /**
+     * Source or ancestor roots whose visibility policy may have changed.
+     */
+    readonly visibilityRoots: readonly Element[];
 
     /**
      * Removed subtrees that may contain extension-owned output requiring restoration.
@@ -47,6 +65,11 @@ interface SchedulerInput {
      * Resolves an extension-owned output node back to its source, if ownership is still valid.
      */
     readonly getOwnedSourceForOutput: (node: Node) => Element | null;
+
+    /**
+     * Clears renderer hidden ownership when a page-authored mutation is observed.
+     */
+    readonly clearSourceHiddenProvenance?: (source: Element) => void;
 }
 
 /**
@@ -111,6 +134,14 @@ export class DocumentMutationScheduler {
     private readonly suppressedRemovals = new Map<Node, number>();
 
     /**
+     * Expected renderer-authored hidden changes awaiting their observer delivery.
+     */
+    private readonly expectedHiddenChanges = new Map<
+        Element,
+        { readonly hidden: boolean; readonly oldValue: string | null }[]
+    >();
+
+    /**
      * Initializes mutation bookkeeping without observing the document until start() is called.
      *
      * @param input - Document, observer, callbacks, and scheduling dependencies.
@@ -140,7 +171,8 @@ export class DocumentMutationScheduler {
                 childList: true,
                 subtree: true,
                 attributes: true,
-                attributeFilter: ["datetime"],
+                attributeFilter: [...OBSERVED_ATTRIBUTES],
+                attributeOldValue: true,
             });
         } catch (error) {
             observer.disconnect();
@@ -159,6 +191,7 @@ export class DocumentMutationScheduler {
         this.phase = "idle";
         this.generation += 1;
         this.suppressedRemovals.clear();
+        this.expectedHiddenChanges.clear();
     }
 
     /**
@@ -178,6 +211,24 @@ export class DocumentMutationScheduler {
     }
 
     /**
+     * Records an expected renderer-authored hidden mutation before it reaches the observer.
+     *
+     * @param source - Source element whose hidden state will change.
+     * @param hidden - Final hidden state authored by the renderer.
+     */
+    beforeOwnedSourceHiddenChange(source: Element, hidden: boolean): void {
+        if (source.ownerDocument !== this.input.document || !source.isConnected) {
+            return;
+        }
+        const changes = this.expectedHiddenChanges.get(source) ?? [];
+        changes.push({
+            hidden,
+            oldValue: source.getAttribute("hidden"),
+        });
+        this.expectedHiddenChanges.set(source, changes);
+    }
+
+    /**
      * Collects affected roots from observer records and schedules one flush.
      *
      * @param records - Mutation records delivered by the observer.
@@ -185,16 +236,51 @@ export class DocumentMutationScheduler {
     private handle(records: readonly MutationRecord[]): void {
         const addedRoots: Element[] = [];
         const datetimeTargets: Element[] = [];
+        const visibilityRoots: Element[] = [];
         const removedRoots: Element[] = [];
         const displacedOutputSources: Element[] = [];
 
         for (const record of records) {
             if (record.type === "attributes") {
-                if (
-                    record.target.nodeType === 1 &&
-                    !this.input.getOwnedSourceForOutput(record.target)
+                if (record.target.nodeType !== 1) {
+                    continue;
+                }
+                const target = record.target as Element;
+                if (this.input.getOwnedSourceForOutput(target)) {
+                    continue;
+                }
+                if (record.attributeName === "datetime") {
+                    addUnique(datetimeTargets, target);
+                } else if (
+                    record.attributeName &&
+                    (VISIBILITY_ATTRIBUTES as readonly string[]).includes(record.attributeName)
                 ) {
-                    addUnique(datetimeTargets, record.target as Element);
+                    const expected = this.expectedHiddenChanges.get(target);
+                    const expectedChange = expected?.[0];
+                    const followingChange = expected?.[1];
+                    const reachedExpectedState = expectedChange
+                        ? followingChange
+                            ? (followingChange.oldValue !== null) === expectedChange.hidden
+                            : target.hasAttribute("hidden") === expectedChange.hidden
+                        : false;
+                    if (
+                        record.attributeName === "hidden" &&
+                        expectedChange &&
+                        expectedChange.oldValue === record.oldValue &&
+                        reachedExpectedState
+                    ) {
+                        expected.shift();
+                        if (expected.length === 0) {
+                            this.expectedHiddenChanges.delete(target);
+                        }
+                    } else {
+                        if (record.attributeName === "hidden") {
+                            (this.input.clearSourceHiddenProvenance ?? clearSourceHiddenProvenance)(
+                                target,
+                            );
+                        }
+                        addUnique(visibilityRoots, target);
+                    }
                 }
                 continue;
             }
@@ -252,6 +338,12 @@ export class DocumentMutationScheduler {
                 !datetimeTargets.slice(0, index).includes(target) &&
                 !coveredBy(normalizedAdded, target),
         );
+        const uniqueVisibility = visibilityRoots.filter(
+            (root, index) =>
+                !visibilityRoots.slice(0, index).includes(root) &&
+                !coveredBy(normalizedAdded, root),
+        );
+        const normalizedVisibility = collapseRoots(uniqueVisibility);
         const normalizedDisplaced = displacedOutputSources.filter(
             (source, index) =>
                 !displacedOutputSources.slice(0, index).includes(source) &&
@@ -260,9 +352,11 @@ export class DocumentMutationScheduler {
         );
 
         this.suppressedRemovals.clear();
+        this.expectedHiddenChanges.clear();
         if (
             normalizedAdded.length === 0 &&
             normalizedTargets.length === 0 &&
+            normalizedVisibility.length === 0 &&
             normalizedRemoved.length === 0 &&
             normalizedDisplaced.length === 0
         ) {
@@ -271,6 +365,7 @@ export class DocumentMutationScheduler {
         this.input.onBatch({
             addedRoots: normalizedAdded,
             datetimeTargets: normalizedTargets,
+            visibilityRoots: normalizedVisibility,
             removedRoots: normalizedRemoved,
             displacedOutputSources: normalizedDisplaced,
         });

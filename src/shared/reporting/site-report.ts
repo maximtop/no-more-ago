@@ -55,7 +55,6 @@ const reportContextSchema = v.strictObject({
 });
 const popupStateSchema = v.strictObject({
     hostname: hostnameSchema,
-    hasAdapter: v.boolean(),
 });
 
 /**
@@ -377,9 +376,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 }
                 const reportUrl = composeSiteReportUrl({
                     ...env,
-                    reason: parsedState.output.hasAdapter
-                        ? SITE_REPORT_REASONS[1]
-                        : SITE_REPORT_REASONS[0],
+                    reason: SITE_REPORT_REASONS[1],
                     hostname: parsedState.output.hostname,
                     currentUrl: tab.url,
                 });

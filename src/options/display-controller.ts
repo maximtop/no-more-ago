@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { DisplayState } from "../shared/messages";
+import { STATE_AVAILABILITY, type DisplayState } from "../shared/messages";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import {
@@ -113,7 +113,7 @@ export interface DisplayController {
 }
 
 const UNAVAILABLE_DISPLAY_STATE: DisplayState = {
-    availability: "unavailable",
+    availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     display: null,
     failure: "settings-load",
@@ -134,7 +134,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
     const [state, setState] = useState<DisplayState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);
     const [draft, setDraft] = useState<DisplayDraft | undefined>(
-        initialState?.availability === "ready"
+        initialState?.availability === STATE_AVAILABILITY.READY
             ? draftFromDisplay(initialState.display)
             : undefined,
     );
@@ -154,7 +154,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
                     return;
                 }
                 setState(next);
-                if (next.availability === "ready") {
+                if (next.availability === STATE_AVAILABILITY.READY) {
                     setDraft(draftFromDisplay(next.display));
                 }
                 setLoading(false);
@@ -177,7 +177,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
     };
 
     const save = async (): Promise<void> => {
-        if (!state || state.availability !== "ready" || !draft || saving) {
+        if (!state || state.availability !== STATE_AVAILABILITY.READY || !draft || saving) {
             return;
         }
         if (draft.formatMode === "custom" && customPatternError(draft.pattern)) {
@@ -194,12 +194,12 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
-                responseState.availability !== "ready" ||
+                responseState.availability !== STATE_AVAILABILITY.READY ||
                 responseState.revision >= state.revision
             ) {
                 setState(responseState);
                 if (
-                    responseState.availability === "ready" &&
+                    responseState.availability === STATE_AVAILABILITY.READY &&
                     (result.response.ok || result.response.error !== "invalid-format")
                 ) {
                     setDraft(draftFromDisplay(responseState.display));
@@ -220,9 +220,12 @@ export function useDisplayController(options: DisplayControllerOptions): Display
                 setNotice("partial-refresh");
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+            if (
+                result.state.availability !== STATE_AVAILABILITY.READY
+                || result.state.revision >= state.revision
+            ) {
                 setState(result.state);
-                if (result.state.availability === "ready") {
+                if (result.state.availability === STATE_AVAILABILITY.READY) {
                     setDraft(draftFromDisplay(result.state.display));
                 }
             }
@@ -238,7 +241,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         try {
             const next = await client.getDisplayState();
             setState(next);
-            if (next.availability === "ready") {
+            if (next.availability === STATE_AVAILABILITY.READY) {
                 setDraft(draftFromDisplay(next.display));
             }
         } catch {

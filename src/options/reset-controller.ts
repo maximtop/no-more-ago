@@ -4,6 +4,7 @@
 
 import { useRef, useState } from "react";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
+import { STATE_AVAILABILITY, type StateAvailability } from "../shared/messages";
 import type { SitesClient } from "./client";
 import type { DiagnosticsController } from "./diagnostics-controller";
 import type { DisplayController } from "./display-controller";
@@ -17,7 +18,7 @@ export type ResetNotice = "save-failed" | "ambiguous" | undefined;
 /**
  * Availability state from which a reset was initiated.
  */
-export type ResetOrigin = "ready" | "unavailable";
+export type ResetOrigin = StateAvailability;
 
 /**
  * Controllers and client used by the reset coordinator.
@@ -82,7 +83,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
     const [resetting, setResetting] = useState(false);
     const [notice, setNotice] = useState<ResetNotice>();
     const [origin, setOrigin] = useState<ResetOrigin>(
-        sites.state?.availability ?? "unavailable",
+        sites.state?.availability ?? STATE_AVAILABILITY.UNAVAILABLE,
     );
     const inFlight = useRef(false);
 
@@ -105,7 +106,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
                 await display.reloadAfterReset();
                 await diagnostics.reloadAfterReset();
             } else {
-                if (nextOrigin === "unavailable") {
+                if (nextOrigin === STATE_AVAILABILITY.UNAVAILABLE) {
                     sites.applyState(result.response.state);
                 }
                 setNotice(
@@ -115,7 +116,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
         } else {
             // Do not retry: the reset may already have been committed before the
             // response was lost or rejected by the guard.
-            if (nextOrigin === "unavailable") {
+            if (nextOrigin === STATE_AVAILABILITY.UNAVAILABLE) {
                 sites.markUnavailable();
             }
             setNotice("ambiguous");

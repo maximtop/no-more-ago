@@ -2,15 +2,12 @@
  * @file Renders exact timestamps and records reversible ownership metadata on DOM nodes.
  */
 
-/**
- * Attribute linking a generated time node to the source it replaced.
- */
-export const OWNED_SOURCE_ATTRIBUTE = "data-no-more-ago-source";
+import {
+    OWNED_OUTPUT_ATTRIBUTE,
+    OWNED_SOURCE_ATTRIBUTE,
+} from "../ownership-markers";
 
-/**
- * Attribute marking nodes created and therefore safe to remove by this extension.
- */
-export const OWNED_OUTPUT_ATTRIBUTE = "data-no-more-ago-output";
+export { OWNED_OUTPUT_ATTRIBUTE, OWNED_SOURCE_ATTRIBUTE } from "../ownership-markers";
 
 /**
  * Private ownership record pairing one source element with its generated time node and marker
@@ -36,6 +33,11 @@ interface OwnedPairRecord {
      * Whether rendering hid the original source element.
      */
     readonly sourceWasHidden: boolean;
+
+    /**
+     * Whether the extension currently owns the source's hidden attribute.
+     */
+    sourceHiddenByExtension: boolean;
 }
 
 /**
@@ -56,11 +58,19 @@ export interface OwnedSourceEntry {
 /**
  * Records source state needed to restore a page when extension-owned output is removed.
  */
-export interface OwnedOutputMutationSink {
+export interface OwnedDomMutationSink {
     /**
      * Captures restoration data immediately before an owned output node is removed.
      */
     beforeOwnedOutputRemoval(output: HTMLTimeElement): void;
+
+    /**
+     * Captures an extension-authored hidden-attribute change before it is applied.
+     *
+     * @param source - Source element whose hidden state will change.
+     * @param hidden - Final hidden state authored by the extension.
+     */
+    beforeOwnedSourceHiddenChange(source: Element, hidden: boolean): void;
 }
 
 const recordsByDocument = new WeakMap<Document, Map<Element, OwnedPairRecord>>();
@@ -176,6 +186,40 @@ export function getOwnedSourceForOutput(node: Node): Element | null {
 }
 
 /**
+ * Clears hidden-attribute provenance after a page-authored source mutation.
+ *
+ * @param source - Source element whose hidden ownership may be relinquished.
+ */
+export function clearSourceHiddenProvenance(source: Element): void {
+    const record = recordsByDocument.get(source.ownerDocument)?.get(source);
+    if (!record || record.source !== source) {
+        return;
+    }
+    if (
+        source.getAttribute(OWNED_SOURCE_ATTRIBUTE) !== expectedSourceMarker(record)
+        || record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(record)
+    ) {
+        return;
+    }
+    record.sourceHiddenByExtension = false;
+}
+
+/**
+ * Reports whether a source's current hidden state is verified as extension-owned.
+ *
+ * @param source - Source element to inspect.
+ * @returns - Whether the exact ownership record still owns hidden state.
+ */
+export function isSourceHiddenByExtension(source: Element): boolean {
+    const record = recordsByDocument.get(source.ownerDocument)?.get(source);
+    if (!record || record.source !== source || !record.sourceHiddenByExtension) {
+        return false;
+    }
+    return source.getAttribute(OWNED_SOURCE_ATTRIBUTE) === expectedSourceMarker(record)
+        && record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
+}
+
+/**
  * Returns only connected, marker-verified sources already owned by this
  * document. It never scans the DOM and never discovers new candidates.
  *
@@ -192,7 +236,9 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
         if (!record.source.isConnected || !record.output.isConnected) {
             continue;
         }
-        if (parseSourceMarker(record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE)) === null) {
+        if (
+            record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE) !== expectedSourceMarker(record)
+        ) {
             continue;
         }
         if (record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(record)) {
@@ -210,12 +256,14 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
  * @param source - Page-owned time element selected by a trusted adapter.
  * @param datetime - Trusted source datetime to preserve on the generated node.
  * @param text - Exact formatted date text to display.
+ * @param mutations - Optional sink for renderer-authored DOM mutations.
  * @returns - Verified generated time element, or null on an ownership conflict.
  */
 export function renderExactTime(
     source: Element,
     datetime: string,
     text: string,
+    mutations?: OwnedDomMutationSink,
 ): HTMLTimeElement | null {
     const document = source.ownerDocument;
     const records = getRecords(document);
@@ -234,6 +282,11 @@ export function renderExactTime(
         if (!source.parentNode) {
             return null;
         }
+        if (!source.hasAttribute("hidden") && !existing.sourceWasHidden) {
+            mutations?.beforeOwnedSourceHiddenChange(source, true);
+            source.setAttribute("hidden", "");
+            existing.sourceHiddenByExtension = true;
+        }
         if (source.nextElementSibling !== existing.output) {
             source.after(existing.output);
         }
@@ -242,7 +295,6 @@ export function renderExactTime(
     }
 
     if (source.hasAttribute(OWNED_SOURCE_ATTRIBUTE)) {
-        parseSourceMarker(source.getAttribute(OWNED_SOURCE_ATTRIBUTE));
         return null;
     }
     const token = createToken(document);
@@ -250,17 +302,23 @@ export function renderExactTime(
         return null;
     }
 
+    const sourceWasHidden = source.hasAttribute("hidden");
     const record: OwnedPairRecord = {
         source,
         output: document.createElement("time"),
         token,
-        sourceWasHidden: source.hasAttribute("hidden"),
+        sourceWasHidden,
+        sourceHiddenByExtension: false,
     };
     updateOutput(record.output, datetime, text);
     record.output.setAttribute(OWNED_OUTPUT_ATTRIBUTE, expectedOutputMarker(record));
     source.after(record.output);
     source.setAttribute(OWNED_SOURCE_ATTRIBUTE, expectedSourceMarker(record));
-    source.setAttribute("hidden", "");
+    if (!sourceWasHidden) {
+        mutations?.beforeOwnedSourceHiddenChange(source, true);
+        source.setAttribute("hidden", "");
+        record.sourceHiddenByExtension = true;
+    }
     records.set(source, record);
     return record.output;
 }
@@ -272,7 +330,7 @@ export function renderExactTime(
  * @param record - Marker-verified source-output ownership record.
  * @param mutations - Optional sink notified before owned output removal.
  */
-function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationSink): void {
+function restoreRecord(record: OwnedPairRecord, mutations?: OwnedDomMutationSink): void {
     const { source, output } = record;
     const validOutput =
         output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
@@ -281,7 +339,10 @@ function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationS
     }
     if (source.getAttribute(OWNED_SOURCE_ATTRIBUTE) === expectedSourceMarker(record)) {
         source.removeAttribute(OWNED_SOURCE_ATTRIBUTE);
-        source.toggleAttribute("hidden", record.sourceWasHidden);
+        if (record.sourceHiddenByExtension) {
+            mutations?.beforeOwnedSourceHiddenChange(source, false);
+            source.removeAttribute("hidden");
+        }
     }
     if (validOutput) {
         output.removeAttribute(OWNED_OUTPUT_ATTRIBUTE);
@@ -296,7 +357,7 @@ function restoreRecord(record: OwnedPairRecord, mutations?: OwnedOutputMutationS
  * @param source - Page-owned source element to restore.
  * @param mutations - Optional sink notified before owned output removal.
  */
-export function restoreExactTime(source: Element, mutations?: OwnedOutputMutationSink): void {
+export function restoreExactTime(source: Element, mutations?: OwnedDomMutationSink): void {
     const records = recordsByDocument.get(source.ownerDocument);
     const record = records?.get(source);
     if (!record) {
@@ -313,7 +374,7 @@ export function restoreExactTime(source: Element, mutations?: OwnedOutputMutatio
  * @param root - Document or element subtree whose owned pairs are restored.
  * @param mutations - Optional sink notified before each owned output removal.
  */
-export function restoreExactTimes(root: ParentNode, mutations?: OwnedOutputMutationSink): void {
+export function restoreExactTimes(root: ParentNode, mutations?: OwnedDomMutationSink): void {
     const rootNode = root as Node;
     const document = rootNode.nodeType === 9 ? (rootNode as Document) : rootNode.ownerDocument;
     if (!document) {

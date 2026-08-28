@@ -19,11 +19,17 @@ import type {
     SetSiteEnabledResponse,
     SitesState,
 } from "./view-state";
+import type { DocumentState } from "./document-state";
 
 /**
  * Requests popup state for the active tab.
  */
 export const GET_POPUP_STATE_MESSAGE = "no-more-ago:get-popup-state" as const;
+
+/**
+ * Requests the current document runtime state.
+ */
+export const GET_DOCUMENT_STATE_MESSAGE = "no-more-ago:get-document-state" as const;
 
 /**
  * Changes the global activation setting.
@@ -100,6 +106,13 @@ export const DIAGNOSTICS_CLEAR_ERRORS = [
  */
 export const getPopupStateMessageSchema = strictMessageObject({
     type: v.literal(GET_POPUP_STATE_MESSAGE),
+});
+
+/**
+ * Exact request for document runtime state.
+ */
+export const getDocumentStateMessageSchema = strictMessageObject({
+    type: v.literal(GET_DOCUMENT_STATE_MESSAGE),
 });
 
 /**
@@ -183,6 +196,7 @@ export const clearDiagnosticsMessageSchema = strictMessageObject({
  */
 export const backgroundMessageSchema = v.union([
     getPopupStateMessageSchema,
+    getDocumentStateMessageSchema,
     setGlobalEnabledMessageSchema,
     getSitesStateMessageSchema,
     setSiteEnabledMessageSchema,
@@ -244,6 +258,11 @@ export type BackgroundMessage = v.InferOutput<typeof backgroundMessageSchema>;
  * Popup-state request inferred from its schema.
  */
 export type GetPopupStateMessage = v.InferOutput<typeof getPopupStateMessageSchema>;
+
+/**
+ * Document-state request inferred from its schema.
+ */
+export type GetDocumentStateMessage = v.InferOutput<typeof getDocumentStateMessageSchema>;
 
 /**
  * Global activation request inferred from its schema.
@@ -334,6 +353,7 @@ export type DiagnosticsClearError = (typeof DIAGNOSTICS_CLEAR_ERRORS)[number];
  */
 export type BackgroundResponse =
     | PopupState
+    | DocumentState
     | SitesState
     | DisplayState
     | DebugState

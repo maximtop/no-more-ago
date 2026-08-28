@@ -3,14 +3,15 @@
  */
 
 import type { DiagnosticSender } from "../../shared/diagnostics/events";
-import type { ActivationReconcileResult } from "../runtime/adapter-activation";
+import type { ActivationReconcileResult } from "../runtime/document-activation";
 import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
 import { ActivationManager } from "./activation-manager";
 import { ApplicationLifecycle } from "./lifecycle";
-import type {
-    ApplicationPhase,
-    BackgroundApplicationOptions,
-    LifecycleReason,
+import {
+    LIFECYCLE_REASON,
+    type ApplicationPhase,
+    type BackgroundApplicationOptions,
+    type LifecycleReason,
 } from "./contracts";
 import { DiagnosticsService } from "../diagnostics/service";
 import { deriveDisplayState } from "../projection/display-state";
@@ -31,6 +32,8 @@ import type {
 } from "../../shared/messages";
 import { SettingsCommands } from "../settings/commands";
 import { StateProjection } from "../projection/state-projection";
+import { deriveDocumentState } from "../projection/document-state";
+import type { DocumentState } from "../../shared/messages";
 
 export type {
     ActivationCoordinator,
@@ -67,14 +70,13 @@ export class BackgroundApplication {
     /**
      * Creates an application facade from browser and persistence dependencies.
      *
-     * @param options - Settings, activation, tab, diagnostics, and adapter dependencies.
+     * @param options - Settings, activation, tab, and diagnostics dependencies.
      */
     public constructor(options: BackgroundApplicationOptions) {
-        const activation = new ActivationManager(options.coordinator, options.adapters);
-        this.projection = new StateProjection(options.tabs, options.adapters, activation);
+        const activation = new ActivationManager(options.coordinator);
+        this.projection = new StateProjection(options.tabs, activation);
         this.diagnostics = new DiagnosticsService(
             options.journal,
-            options.adapters,
             options.diagnosticEnvironment,
         );
         this.lifecycle = new ApplicationLifecycle(
@@ -83,14 +85,13 @@ export class BackgroundApplication {
             this.projection,
             this.diagnostics,
         );
-        const documentRefresh = new DocumentRefresh(options.tabs, options.adapters);
+        const documentRefresh = new DocumentRefresh(options.tabs);
         this.commands = new SettingsCommands(
             options.settings,
             this.lifecycle,
             this.projection,
             this.diagnostics,
             documentRefresh,
-            options.adapters,
         );
     }
 
@@ -113,7 +114,7 @@ export class BackgroundApplication {
     }
 
     /**
-     * Most recent adapter reconciliation result.
+     * Most recent document-runtime reconciliation result.
      *
      * @returns - Latest activation result, when available.
      */
@@ -127,7 +128,7 @@ export class BackgroundApplication {
      * @param reason - Lifecycle event requiring initialized state.
      * @returns - Promise settled after initialization and reconciliation.
      */
-    public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
+    public ensureReady(reason: LifecycleReason = LIFECYCLE_REASON.COLD_WORKER): Promise<void> {
         return this.lifecycle.ensureReady(reason);
     }
 
@@ -137,7 +138,9 @@ export class BackgroundApplication {
      * @param reason - Browser lifecycle event to reconcile.
      * @returns - Promise settled after the event is processed.
      */
-    public requestLifecycle(reason: Exclude<LifecycleReason, "cold-worker">): Promise<void> {
+    public requestLifecycle(
+        reason: Exclude<LifecycleReason, typeof LIFECYCLE_REASON.COLD_WORKER>,
+    ): Promise<void> {
         return this.lifecycle.requestLifecycle(reason);
     }
 
@@ -198,7 +201,7 @@ export class BackgroundApplication {
     }
 
     /**
-     * Validates and records one top-frame document diagnostic event.
+     * Validates and records one document-frame diagnostic event.
      *
      * @param input - Untrusted document diagnostic payload.
      * @param sender - WebExtension sender metadata.
@@ -209,6 +212,19 @@ export class BackgroundApplication {
         sender: DiagnosticSender & { readonly frameId?: unknown },
     ): Promise<boolean> {
         return this.diagnostics.record(input, sender, this.lifecycle.state);
+    }
+
+    /**
+     * Returns top-level policy and presentation state for one document frame.
+     *
+     * @param sender - Browser sender metadata, including the top-level tab URL.
+     * @returns Fail-closed or ready document state.
+     */
+    public async getDocumentState(sender: DiagnosticSender): Promise<DocumentState> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() =>
+            Promise.resolve(deriveDocumentState(this.lifecycle.state, sender)),
+        );
     }
 
     /**
@@ -253,7 +269,7 @@ export class BackgroundApplication {
     }
 
     /**
-     * Persists global activation and reconciles runtime adapters.
+     * Persists global activation and reconciles the document runtime.
      *
      * @param enabled - Requested global activation state.
      * @returns - Persisted global state and popup projection.
@@ -263,7 +279,7 @@ export class BackgroundApplication {
     }
 
     /**
-     * Persists one hostname preference and reconciles affected adapters.
+     * Persists one hostname preference and reconciles affected documents.
      *
      * @param hostname - Canonical hostname whose preference is changing.
      * @param enabled - Requested site activation state.
@@ -282,7 +298,7 @@ export class BackgroundApplication {
      * Initializes the application and drains queued lifecycle work before a query.
      */
     private async prepareQuery(): Promise<void> {
-        await this.lifecycle.ensureReady("cold-worker");
+        await this.lifecycle.ensureReady(LIFECYCLE_REASON.COLD_WORKER);
         await this.lifecycle.drainLifecycle();
     }
 }
