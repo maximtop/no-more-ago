@@ -6,14 +6,16 @@
 import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-    REFRESH_FAILURE_REASON,
     isDebugPolicyUpdateAcknowledgement,
     isPresentationUpdateAcknowledgement,
-    type DebugRefreshFailure,
-    type DisplayRefreshFailure,
     type DebugPolicyUpdateMessage,
     type PresentationUpdateMessage,
-} from "../../shared/messages";
+} from "../../shared/messaging/document-messages";
+import { REFRESH_FAILURE_REASON } from "../../shared/messaging/view-state-values";
+import type {
+    RefreshFailure as DebugRefreshFailure,
+    RefreshFailure as DisplayRefreshFailure,
+} from "../../shared/messaging/view-state-schemas";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import {
     isSiteEnabled,

@@ -8,7 +8,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { PopupApp } from "../../../src/popup/app";
 import { PopupClient, type PopupTransport } from "../../../src/popup/client";
-import type { PopupState } from "../../../src/shared/messages";
+import type { PopupState } from "../../../src/shared/messaging/view-state-schemas";
 
 const active: PopupState = {
     availability: "ready",

@@ -2,11 +2,10 @@
  * @file Defines the messages exchanged between background and document runtimes.
  */
 
+import * as v from "valibot";
+import { diagnosticEventInputSchema } from "../diagnostics/events";
 import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
-import {
-    DIAGNOSTIC_CATEGORIES,
-    DIAGNOSTIC_EVENT_INPUT_KEYS,
-} from "../diagnostics/contracts";
+import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 
 /**
  * Requests that a document runtime stop and release its controller.
@@ -84,174 +83,151 @@ export const DOCUMENT_PHASES = [
     DOCUMENT_PHASE.FAILED,
 ] as const;
 
-const DIAGNOSTIC_CATEGORY_SET = new Set<string>(DIAGNOSTIC_CATEGORIES);
-const DIAGNOSTIC_EVENT_KEY_SET = new Set<string>(DIAGNOSTIC_EVENT_INPUT_KEYS);
-const DOCUMENT_PHASE_SET = new Set<string>(DOCUMENT_PHASES);
+const presentationDisplaySchema = v.custom<DisplaySettings>(isDisplaySettings);
+
+/**
+ * Schema for a command that stops a document runtime.
+ */
+const teardownDocumentMessageSchema = v.strictObject({
+    type: v.literal(TEARDOWN_DOCUMENT_MESSAGE),
+});
+
+/**
+ * Schema for a command that refreshes the document policy.
+ */
+const refreshDocumentPolicyMessageSchema = v.strictObject({
+    type: v.literal(REFRESH_DOCUMENT_POLICY_MESSAGE),
+});
+
+/**
+ * Schema for a command that suspends and refreshes the document policy.
+ */
+const suspendAndRefreshDocumentPolicyMessageSchema = v.strictObject({
+    type: v.literal(SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE),
+});
+
+/**
+ * Schema for a command requesting document runtime status.
+ */
+const documentStatusMessageSchema = v.strictObject({
+    type: v.literal(DOCUMENT_STATUS_MESSAGE),
+});
+
+/**
+ * Schema for the lifecycle phase returned by a document runtime.
+ */
+const documentPhaseSchema = v.picklist(DOCUMENT_PHASES);
+
+/**
+ * Schema for a document status response.
+ */
+const documentStatusResponseSchema = v.strictObject({
+    type: v.literal(DOCUMENT_STATUS_MESSAGE),
+    phase: documentPhaseSchema,
+});
+
+/**
+ * Schema for a display-settings update command.
+ */
+const presentationUpdateMessageSchema = v.strictObject({
+    type: v.literal(UPDATE_PRESENTATION_MESSAGE),
+    revision: nonNegativeSafeIntegerSchema,
+    display: presentationDisplaySchema,
+});
+
+/**
+ * Schema for a presentation update acknowledgement.
+ */
+const presentationUpdateAcknowledgementSchema = v.strictObject({
+    type: v.literal(PRESENTATION_UPDATED_MESSAGE),
+    revision: nonNegativeSafeIntegerSchema,
+});
+
+/**
+ * Schema for a diagnostic-policy update command.
+ */
+const debugPolicyUpdateMessageSchema = v.strictObject({
+    type: v.literal(UPDATE_DEBUG_POLICY_MESSAGE),
+    revision: nonNegativeSafeIntegerSchema,
+    enabled: v.boolean(),
+});
+
+/**
+ * Schema for a diagnostic-policy update acknowledgement.
+ */
+const debugPolicyUpdateAcknowledgementSchema = v.strictObject({
+    type: v.literal(DEBUG_POLICY_UPDATED_MESSAGE),
+    revision: nonNegativeSafeIntegerSchema,
+});
+
+/**
+ * Schema for a diagnostic event sent by a document runtime.
+ */
+const diagnosticEventMessageSchema = v.strictObject({
+    type: v.literal(DIAGNOSTIC_EVENT_MESSAGE),
+    event: diagnosticEventInputSchema,
+});
 
 /**
  * Command that stops a document runtime.
  */
-export interface TeardownDocumentMessage {
-    /**
-     * Identifies this as the document-teardown command.
-     */
-    readonly type: typeof TEARDOWN_DOCUMENT_MESSAGE;
-}
+type TeardownDocumentMessage = v.InferOutput<typeof teardownDocumentMessageSchema>;
 
 /**
  * Command that refreshes the document's effective top-level policy.
  */
-export interface RefreshDocumentPolicyMessage {
-    /**
-     * Identifies this as a policy-refresh command.
-     */
-    readonly type: typeof REFRESH_DOCUMENT_POLICY_MESSAGE;
-}
+type RefreshDocumentPolicyMessage = v.InferOutput<typeof refreshDocumentPolicyMessageSchema>;
 
 /**
  * Command that suspends the document before refreshing its effective policy.
  */
-export interface SuspendAndRefreshDocumentPolicyMessage {
-    /**
-     * Identifies this as a suspend-and-refresh command.
-     */
-    readonly type: typeof SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE;
-}
-
-/**
- * Synchronous acknowledgement for a policy-refresh command.
- */
-export interface DocumentPolicyRefreshedMessage {
-    /**
-     * Identifies this as a policy-refresh acknowledgement.
-     */
-    readonly type: typeof DOCUMENT_POLICY_REFRESHED_MESSAGE;
-}
-
-/**
- * Synchronous acknowledgement for a document teardown command.
- */
-export interface DocumentTornDownMessage {
-    /**
-     * Identifies this as a teardown acknowledgement.
-     */
-    readonly type: typeof DOCUMENT_TORN_DOWN_MESSAGE;
-}
+type SuspendAndRefreshDocumentPolicyMessage = v.InferOutput<
+    typeof suspendAndRefreshDocumentPolicyMessageSchema
+>;
 
 /**
  * Command that requests a document runtime's lifecycle state.
  */
-export interface DocumentStatusMessage {
-    /**
-     * Identifies this as the document-status command.
-     */
-    readonly type: typeof DOCUMENT_STATUS_MESSAGE;
-}
+type DocumentStatusMessage = v.InferOutput<typeof documentStatusMessageSchema>;
 
 /**
  * Command that updates display settings in a document runtime.
  */
-export interface PresentationUpdateMessage {
-    /**
-     * Identifies this as the presentation-update command.
-     */
-    readonly type: typeof UPDATE_PRESENTATION_MESSAGE;
-
-    /**
-     * Monotonic revision; updates older than the applied revision are ignored.
-     */
-    readonly revision: number;
-
-    /**
-     * Complete display settings to apply or use for subsequent startup.
-     */
-    readonly display: DisplaySettings;
-}
+export type PresentationUpdateMessage = v.InferOutput<typeof presentationUpdateMessageSchema>;
 
 /**
  * Reply confirming a presentation update was accepted.
  */
-export interface PresentationUpdateAcknowledgement {
-    /**
-     * Identifies this as the presentation-update acknowledgement.
-     */
-    readonly type: typeof PRESENTATION_UPDATED_MESSAGE;
-
-    /**
-     * Echoes the accepted presentation revision.
-     */
-    readonly revision: number;
-}
+export type PresentationUpdateAcknowledgement = v.InferOutput<
+    typeof presentationUpdateAcknowledgementSchema
+>;
 
 /**
  * Command that updates diagnostic forwarding in a document runtime.
  */
-export interface DebugPolicyUpdateMessage {
-    /**
-     * Identifies this as the diagnostic-policy update command.
-     */
-    readonly type: typeof UPDATE_DEBUG_POLICY_MESSAGE;
-
-    /**
-     * Monotonic revision shared with presentation updates to reject stale policy changes.
-     */
-    readonly revision: number;
-
-    /**
-     * Enables or disables forwarding controller diagnostics to the background context.
-     */
-    readonly enabled: boolean;
-}
+export type DebugPolicyUpdateMessage = v.InferOutput<typeof debugPolicyUpdateMessageSchema>;
 
 /**
  * Reply confirming a diagnostic-policy update was accepted.
  */
-export interface DebugPolicyUpdateAcknowledgement {
-    /**
-     * Identifies this as the diagnostic-policy update acknowledgement.
-     */
-    readonly type: typeof DEBUG_POLICY_UPDATED_MESSAGE;
-
-    /**
-     * Echoes the accepted diagnostic-policy revision.
-     */
-    readonly revision: number;
-}
+export type DebugPolicyUpdateAcknowledgement = v.InferOutput<
+    typeof debugPolicyUpdateAcknowledgementSchema
+>;
 
 /**
  * Event sent by a document runtime when diagnostic forwarding is enabled.
  */
-export interface DiagnosticEventMessage {
-    /**
-     * Identifies this as a diagnostic-event message.
-     */
-    readonly type: typeof DIAGNOSTIC_EVENT_MESSAGE;
-
-    /**
-     * Structured diagnostic payload restricted to the supported telemetry fields.
-     */
-    readonly event: Record<string, unknown>;
-}
+type DiagnosticEventMessage = v.InferOutput<typeof diagnosticEventMessageSchema>;
 
 /**
  * Lifecycle state returned by a document runtime.
  */
-export type DocumentPhase = (typeof DOCUMENT_PHASES)[number];
+export type DocumentPhase = v.InferOutput<typeof documentPhaseSchema>;
 
 /**
  * Reply to a document-status command.
  */
-export interface DocumentStatusResponse {
-    /**
-     * Identifies this as the document-status reply.
-     */
-    readonly type: typeof DOCUMENT_STATUS_MESSAGE;
-
-    /**
-     * Runtime state at the time the command was handled.
-     */
-    readonly phase: DocumentPhase;
-}
+type DocumentStatusResponse = v.InferOutput<typeof documentStatusResponseSchema>;
 
 /**
  * Recognizes an object containing only the document-teardown command.
@@ -260,11 +236,7 @@ export interface DocumentStatusResponse {
  * @returns - Whether the value is an exact teardown command.
  */
 export function isTeardownDocumentMessage(value: unknown): value is TeardownDocumentMessage {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        return false;
-    }
-    const record = value as Record<string, unknown>;
-    return Object.keys(record).length === 1 && record.type === TEARDOWN_DOCUMENT_MESSAGE;
+    return v.safeParse(teardownDocumentMessageSchema, value).success;
 }
 
 /**
@@ -276,9 +248,7 @@ export function isTeardownDocumentMessage(value: unknown): value is TeardownDocu
 export function isRefreshDocumentPolicyMessage(
     value: unknown,
 ): value is RefreshDocumentPolicyMessage {
-    return isRecord(value)
-        && Object.keys(value).length === 1
-        && value.type === REFRESH_DOCUMENT_POLICY_MESSAGE;
+    return v.safeParse(refreshDocumentPolicyMessageSchema, value).success;
 }
 
 /**
@@ -290,9 +260,7 @@ export function isRefreshDocumentPolicyMessage(
 export function isSuspendAndRefreshDocumentPolicyMessage(
     value: unknown,
 ): value is SuspendAndRefreshDocumentPolicyMessage {
-    return isRecord(value)
-        && Object.keys(value).length === 1
-        && value.type === SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE;
+    return v.safeParse(suspendAndRefreshDocumentPolicyMessageSchema, value).success;
 }
 
 /**
@@ -302,11 +270,7 @@ export function isSuspendAndRefreshDocumentPolicyMessage(
  * @returns - Whether the value is an exact status command.
  */
 export function isDocumentStatusMessage(value: unknown): value is DocumentStatusMessage {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        return false;
-    }
-    const record = value as Record<string, unknown>;
-    return Object.keys(record).length === 1 && record.type === DOCUMENT_STATUS_MESSAGE;
+    return v.safeParse(documentStatusMessageSchema, value).success;
 }
 
 /**
@@ -316,45 +280,7 @@ export function isDocumentStatusMessage(value: unknown): value is DocumentStatus
  * @returns - Whether the value is a valid document status response.
  */
 export function isDocumentStatusResponse(value: unknown): value is DocumentStatusResponse {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        return false;
-    }
-    const record = value as Record<string, unknown>;
-    return (
-        Object.keys(record).length === 2 &&
-        record.type === DOCUMENT_STATUS_MESSAGE &&
-        DOCUMENT_PHASE_SET.has(String(record.phase))
-    );
-}
-
-/**
- * Recognizes non-array object values used as message records.
- *
- * @param value - Untrusted value to inspect.
- * @returns - Whether the value is a non-array object record.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
- * Recognizes non-negative safe-integer message revisions.
- *
- * @param value - Untrusted revision value.
- * @returns - Whether the value is a non-negative safe integer.
- */
-function isSafeRevision(value: unknown): value is number {
-    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
-
-/**
- * Recognizes display settings accepted by the settings snapshot validator.
- *
- * @param value - Untrusted display-settings value.
- * @returns - Whether the value is a valid presentation display.
- */
-export function isPresentationDisplay(value: unknown): value is DisplaySettings {
-    return isDisplaySettings(value);
+    return v.safeParse(documentStatusResponseSchema, value).success;
 }
 
 /**
@@ -364,16 +290,7 @@ export function isPresentationDisplay(value: unknown): value is DisplaySettings 
  * @returns - Whether the value is a valid presentation update command.
  */
 export function isPresentationUpdateMessage(value: unknown): value is PresentationUpdateMessage {
-    return (
-        isRecord(value) &&
-        Object.keys(value).length === 3 &&
-        Object.hasOwn(value, "type") &&
-        Object.hasOwn(value, "revision") &&
-        Object.hasOwn(value, "display") &&
-        value.type === UPDATE_PRESENTATION_MESSAGE &&
-        isSafeRevision(value.revision) &&
-        isPresentationDisplay(value.display)
-    );
+    return v.safeParse(presentationUpdateMessageSchema, value).success;
 }
 
 /**
@@ -387,17 +304,9 @@ export function isPresentationUpdateAcknowledgement(
     value: unknown,
     expectedRevision?: number,
 ): value is PresentationUpdateAcknowledgement {
-    if (
-        !isRecord(value) ||
-        Object.keys(value).length !== 2 ||
-        !Object.hasOwn(value, "type") ||
-        !Object.hasOwn(value, "revision") ||
-        value.type !== PRESENTATION_UPDATED_MESSAGE ||
-        !isSafeRevision(value.revision)
-    ) {
-        return false;
-    }
-    return expectedRevision === undefined || value.revision === expectedRevision;
+    const parsed = v.safeParse(presentationUpdateAcknowledgementSchema, value);
+    return parsed.success
+        && (expectedRevision === undefined || parsed.output.revision === expectedRevision);
 }
 
 /**
@@ -407,16 +316,7 @@ export function isPresentationUpdateAcknowledgement(
  * @returns - Whether the value is a valid diagnostic-policy update command.
  */
 export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicyUpdateMessage {
-    return (
-        isRecord(value) &&
-        Object.keys(value).length === 3 &&
-        Object.hasOwn(value, "type") &&
-        Object.hasOwn(value, "revision") &&
-        Object.hasOwn(value, "enabled") &&
-        value.type === UPDATE_DEBUG_POLICY_MESSAGE &&
-        isSafeRevision(value.revision) &&
-        typeof value.enabled === "boolean"
-    );
+    return v.safeParse(debugPolicyUpdateMessageSchema, value).success;
 }
 
 /**
@@ -430,17 +330,9 @@ export function isDebugPolicyUpdateAcknowledgement(
     value: unknown,
     expectedRevision?: number,
 ): value is DebugPolicyUpdateAcknowledgement {
-    if (
-        !isRecord(value) ||
-        Object.keys(value).length !== 2 ||
-        !Object.hasOwn(value, "type") ||
-        !Object.hasOwn(value, "revision") ||
-        value.type !== DEBUG_POLICY_UPDATED_MESSAGE ||
-        !isSafeRevision(value.revision)
-    ) {
-        return false;
-    }
-    return expectedRevision === undefined || value.revision === expectedRevision;
+    const parsed = v.safeParse(debugPolicyUpdateAcknowledgementSchema, value);
+    return parsed.success
+        && (expectedRevision === undefined || parsed.output.revision === expectedRevision);
 }
 
 /**
@@ -450,29 +342,5 @@ export function isDebugPolicyUpdateAcknowledgement(
  * @returns - Whether the value is a valid bounded diagnostic event message.
  */
 export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEventMessage {
-    if (
-        !isRecord(value) ||
-        Object.keys(value).length !== 2 ||
-        !Object.hasOwn(value, "type") ||
-        !Object.hasOwn(value, "event") ||
-        value.type !== DIAGNOSTIC_EVENT_MESSAGE ||
-        !isRecord(value.event)
-    ) {
-        return false;
-    }
-    const event = value.event;
-    if (Object.keys(event).some((key) => !DIAGNOSTIC_EVENT_KEY_SET.has(key))) {
-        return false;
-    }
-    if (
-        DIAGNOSTIC_EVENT_INPUT_KEYS.some(
-            (key) => key in event && !Object.hasOwn(event, key),
-        )
-    ) {
-        return false;
-    }
-    return (
-        Object.hasOwn(event, "category")
-        && DIAGNOSTIC_CATEGORY_SET.has(String(event.category))
-    );
+    return v.safeParse(diagnosticEventMessageSchema, value).success;
 }

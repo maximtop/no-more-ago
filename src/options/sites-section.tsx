@@ -4,8 +4,11 @@
 
 import { Alert, Box, Stack, Switch, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { SitesState } from "../shared/messages";
-import { STATE_AVAILABILITY } from "../shared/messages";
+import type { SitesState } from "../shared/messaging/view-state-schemas";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import type { OptionsNotice } from "./options-notice";
 import { optionsNoticeText } from "./options-notice";
 import type { SitesController } from "./sites-controller";
@@ -34,7 +37,7 @@ export interface SitesSectionProps {
 function unavailableText(
     state: Extract<SitesState, { availability: typeof STATE_AVAILABILITY.UNAVAILABLE }>,
 ): string {
-    return state.failure === "fail-closed-cleanup"
+    return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
         ? "Current processing state is unknown. Site controls are unavailable."
         : "Sites settings are unavailable. Processing is disabled.";
 }

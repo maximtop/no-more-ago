@@ -3,7 +3,7 @@
  */
 
 import * as fflate from "fflate";
-import type { DiagnosticsSnapshot } from "../../shared/messages";
+import type { DiagnosticsSnapshot } from "../../shared/messaging/contracts";
 
 /**
  * JSON member stored inside a diagnostic archive.

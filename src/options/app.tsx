@@ -6,10 +6,12 @@ import { MantineProvider, Paper, Stack, Text } from "@mantine/core";
 import { useMemo, useState, type ReactElement } from "react";
 import {
     STATE_AVAILABILITY,
-    type DebugState,
-    type DisplayState,
-    type SitesState,
-} from "../shared/messages";
+} from "../shared/messaging/view-state-values";
+import type {
+    DebugState,
+    DisplayState,
+    SitesState,
+} from "../shared/messaging/view-state-schemas";
 import type { DownloadRuntime } from "./diagnostics/archive";
 import {
     createDefaultSiteReportReporter,

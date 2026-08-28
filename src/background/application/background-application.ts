@@ -18,22 +18,26 @@ import { deriveDisplayState } from "../projection/display-state";
 import { DocumentRefresh } from "../settings/document-refresh";
 import type {
     ClearDiagnosticsResponse,
+    GetDiagnosticsSnapshotResponse,
+} from "../../shared/messaging/contracts";
+import type {
     DebugState,
     DisplayState,
-    GetDiagnosticsSnapshotResponse,
     PopupState,
+    SitesState,
+} from "../../shared/messaging/view-state-schemas";
+import type {
     ResetAllSettingsResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
-    SitesState,
-    SiteSettingsSurface,
-} from "../../shared/messages";
+} from "../../shared/messaging/response-schemas";
+import type { SiteSettingsSurface } from "../../shared/messaging/view-state-values";
 import { SettingsCommands } from "../settings/commands";
 import { StateProjection } from "../projection/state-projection";
 import { deriveDocumentState } from "../projection/document-state";
-import type { DocumentState } from "../../shared/messages";
+import type { DocumentState } from "../../shared/messaging/document-state";
 
 export type {
     ActivationCoordinator,

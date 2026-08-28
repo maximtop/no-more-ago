@@ -4,10 +4,11 @@
 
 import type { ApplicationStateView } from "../application/state";
 import {
+    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
-    UNAVAILABLE_TIME_ZONE_ERROR,
-    type DisplayState,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-errors";
+import type { DisplayState } from "../../shared/messaging/view-state-schemas";
 import { APPLICATION_PHASE } from "../application/contracts";
 
 /**
@@ -38,9 +39,9 @@ export function deriveDisplayState(state: ApplicationStateView): DisplayState {
             availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             display: null,
-            failure: state.failure === "fail-closed-cleanup"
-                ? "fail-closed-cleanup"
-                : "settings-load",
+            failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
     const display = snapshot.display;

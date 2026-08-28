@@ -19,9 +19,10 @@ import {
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react";
 import {
     POPUP_STATUS,
+    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
-    type PopupState,
-} from "../shared/messages";
+} from "../shared/messaging/view-state-values";
+import type { PopupState } from "../shared/messaging/view-state-schemas";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
@@ -64,7 +65,7 @@ type Notice = "save-failed" | "invalid-hostname" | "interrupted" | "unknown" | u
  */
 function statusText(state: PopupState): string {
     if (state.availability === STATE_AVAILABILITY.UNAVAILABLE) {
-        return state.failure === "fail-closed-cleanup"
+        return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
             ? "Current processing state is unknown."
             : "Settings are unavailable. Processing is disabled.";
     }
@@ -191,7 +192,7 @@ export function PopupApp({
                     hostname: null,
                     siteEnabled: null,
                     status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                    failure: "settings-load",
+                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                 });
                 setLoading(false);
             });
@@ -244,7 +245,7 @@ export function PopupApp({
                 hostname: state.hostname,
                 siteEnabled: null,
                 status: POPUP_STATUS.RUNTIME_FAILED,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             });
             setNotice("unknown");
         }
@@ -298,7 +299,7 @@ export function PopupApp({
                 hostname: state.hostname,
                 siteEnabled: null,
                 status: POPUP_STATUS.RUNTIME_FAILED,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             });
             setNotice("unknown");
         }

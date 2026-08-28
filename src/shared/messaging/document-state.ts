@@ -6,14 +6,13 @@ import * as v from "valibot";
 
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
-import { strictMessageObject } from "./schema-utils";
 import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 import {
     SETTINGS_STATE_FAILURES,
     STATE_AVAILABILITY,
 } from "./view-state-values";
 
-const readyDocumentStateSchema = strictMessageObject({
+const readyDocumentStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: nonNegativeSafeIntegerSchema,
     enabled: v.boolean(),
@@ -22,7 +21,7 @@ const readyDocumentStateSchema = strictMessageObject({
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
 
-const unavailableDocumentStateSchema = strictMessageObject({
+const unavailableDocumentStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     enabled: v.literal(false),

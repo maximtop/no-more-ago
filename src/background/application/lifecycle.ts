@@ -26,6 +26,7 @@ import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from "../../shared/diagnostics/contracts";
+import { SETTINGS_STATE_FAILURE } from "../../shared/messaging/view-state-values";
 
 /**
  * Owns authoritative application state and serialized lifecycle transitions.
@@ -189,14 +190,14 @@ export class ApplicationLifecycle {
      */
     public async enterFailedClosed(inspectCleanup = false): Promise<void> {
         this.snapshotValue = undefined;
-        this.failureValue = "settings-load";
+        this.failureValue = SETTINGS_STATE_FAILURE.SETTINGS_LOAD;
         const cleanup = await this.reconcile(
             ACTIVATION_POLICY.UNKNOWN,
             null,
             {},
         );
         if (inspectCleanup && cleanup.failures.length > 0) {
-            this.failureValue = "fail-closed-cleanup";
+            this.failureValue = SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP;
         }
         this.phaseValue = APPLICATION_PHASE.FAILED_CLOSED;
     }

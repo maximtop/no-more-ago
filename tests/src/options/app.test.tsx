@@ -16,13 +16,14 @@ import {
     SET_DEBUG_ENABLED_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
-} from "../../../src/shared/messages";
+} from "../../../src/shared/messaging/contracts";
 import type {
     DebugState,
-    DisplaySettings,
     DisplayState,
     SitesState,
-} from "../../../src/shared/messages";
+} from "../../../src/shared/messaging/view-state-schemas";
+import type { DisplaySettings } from "../../../src/shared/settings/snapshot";
+import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
 import { OptionsApp } from "../../../src/options/app";
 import { SitesClient, type SitesTransport } from "../../../src/options/client";
 import type { DownloadRuntime } from "../../../src/options/diagnostics/archive";
@@ -142,7 +143,7 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const rendered = await renderOptions(
             unavailable,
@@ -151,7 +152,7 @@ describe("Options Sites contract", () => {
                 availability: "unavailable",
                 revision: null,
                 display: null,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
         );
         try {
@@ -453,19 +454,19 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const unavailableDisplay: DisplayState = {
             availability: "unavailable",
             revision: null,
             display: null,
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const unavailableDebug: DebugState = {
             availability: "unavailable",
             revision: null,
             enabled: null,
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const messages: unknown[] = [];
         const rendered = await renderOptions(
@@ -578,7 +579,7 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const rendered = await renderOptions(
             unavailable,
@@ -595,7 +596,7 @@ describe("Options Sites contract", () => {
                 availability: "unavailable",
                 revision: null,
                 display: null,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
         );
         try {
@@ -623,7 +624,7 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         let resetCalls = 0;
         let reads = 0;
@@ -648,7 +649,7 @@ describe("Options Sites contract", () => {
                 availability: "unavailable",
                 revision: null,
                 display: null,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
         );
         try {
@@ -675,7 +676,7 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "settings-load",
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         let release: ((value: unknown) => void) | undefined;
         const pending = new Promise<unknown>((resolve) => {
@@ -702,7 +703,7 @@ describe("Options Sites contract", () => {
                 availability: "unavailable",
                 revision: null,
                 display: null,
-                failure: "settings-load",
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
         );
         try {
@@ -877,7 +878,7 @@ describe("Options Sites contract", () => {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: "fail-closed-cleanup",
+            failure: SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP,
         };
         const rendered = await renderOptions(unavailable);
         try {

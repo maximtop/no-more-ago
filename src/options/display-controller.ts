@@ -3,7 +3,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { STATE_AVAILABILITY, type DisplayState } from "../shared/messages";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
+import type { DisplayState } from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import {
@@ -116,7 +120,7 @@ const UNAVAILABLE_DISPLAY_STATE: DisplayState = {
     availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     display: null,
-    failure: "settings-load",
+    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 };
 const DEFAULT_DISPLAY_DRAFT = draftFromDisplay({
     formatMode: "system",

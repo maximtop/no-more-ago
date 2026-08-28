@@ -4,7 +4,8 @@
 
 import { useRef, useState } from "react";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import { STATE_AVAILABILITY, type StateAvailability } from "../shared/messages";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import type { StateAvailability } from "../shared/messaging/view-state-values";
 import type { SitesClient } from "./client";
 import type { DiagnosticsController } from "./diagnostics-controller";
 import type { DisplayController } from "./display-controller";

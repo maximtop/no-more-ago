@@ -21,11 +21,14 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     backgroundMessageSchema,
-    isDiagnosticEventMessage,
+} from "../shared/messaging/contracts";
+import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
+import {
     POPUP_STATUS,
-    STATE_AVAILABILITY,
+    SETTINGS_STATE_FAILURE,
     SITE_SETTINGS_SURFACE,
-} from "../shared/messages";
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import { SettingsService, type SettingsStorage } from "./settings/service";
 import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
 import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
@@ -240,7 +243,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         hostname: null,
                         siteEnabled: null,
                         status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                        failure: "settings-load",
+                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
             return true;
@@ -254,7 +257,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                     enabled: false,
                     display: null,
                     debugEnabled: false,
-                    failure: "settings-load",
+                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                 }));
             return true;
         }
@@ -266,7 +269,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         display: null,
-                        failure: "settings-load",
+                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
             return true;
@@ -279,7 +282,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         enabled: null,
-                        failure: "settings-load",
+                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
             return true;
@@ -295,7 +298,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             enabled: null,
-                            failure: "settings-load",
+                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
                 );
@@ -312,7 +315,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             display: null,
-                            failure: "settings-load",
+                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
                 );
@@ -332,7 +335,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             hostname: null,
                             siteEnabled: null,
                             status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                            failure: "settings-load",
+                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
                 );
@@ -347,7 +350,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         revision: null,
                         globalEnabled: null,
                         sites: [],
-                        failure: "settings-load",
+                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
             return true;
@@ -364,7 +367,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             revision: null,
                             globalEnabled: null,
                             sites: [],
-                            failure: "settings-load",
+                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
                 );
@@ -387,14 +390,14 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                                     hostname: null,
                                     siteEnabled: null,
                                     status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                                    failure: "settings-load",
+                                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                                 }
                                 : {
                                     availability: STATE_AVAILABILITY.UNAVAILABLE,
                                     revision: null,
                                     globalEnabled: null,
                                     sites: [],
-                                    failure: "settings-load",
+                                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                                 },
                     }),
                 );

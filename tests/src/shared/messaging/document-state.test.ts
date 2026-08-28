@@ -9,6 +9,7 @@ import {
     documentStateSchema,
     isDocumentState,
 } from "../../../../src/shared/messaging/document-state";
+import { SETTINGS_STATE_FAILURE } from "../../../../src/shared/messaging/view-state-values";
 
 const readyState = {
     availability: "ready",
@@ -24,7 +25,7 @@ const unavailableState = {
     enabled: false,
     display: null,
     debugEnabled: false,
-    failure: "settings-load",
+    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 } as const;
 
 describe("document-state schema", () => {

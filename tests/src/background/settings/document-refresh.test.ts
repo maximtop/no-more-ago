@@ -7,11 +7,11 @@ import { describe, expect, it, vi } from "vitest";
 import { DocumentRefresh } from "../../../../src/background/settings/document-refresh";
 import { HTTP_MATCH_PATTERNS } from "../../../../src/shared/url/http";
 import {
-    REFRESH_FAILURE_REASON,
     DEBUG_POLICY_UPDATED_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-} from "../../../../src/shared/messages";
+} from "../../../../src/shared/messaging/document-messages";
+import { REFRESH_FAILURE_REASON } from "../../../../src/shared/messaging/view-state-values";
 import { createSettingsSnapshot } from "../../../../src/shared/settings/snapshot";
 
 describe("DocumentRefresh", () => {

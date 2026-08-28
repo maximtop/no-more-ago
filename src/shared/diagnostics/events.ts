@@ -31,7 +31,10 @@ const contextSchema = v.strictObject({
     incognito: v.boolean(),
 });
 
-const eventInputSchema = v.strictObject({
+/**
+ * Canonical schema for diagnostic fields received from document runtimes.
+ */
+export const diagnosticEventInputSchema = v.strictObject({
     category: v.picklist(DIAGNOSTIC_CATEGORIES),
     count: v.exactOptional(v.unknown()),
     durationMs: v.exactOptional(v.unknown()),
@@ -77,7 +80,7 @@ export type DiagnosticContext = v.InferOutput<typeof contextSchema>;
 /**
  * Caller-supplied event fields accepted before normalization.
  */
-export type DiagnosticEventInput = v.InferInput<typeof eventInputSchema>;
+export type DiagnosticEventInput = v.InferInput<typeof diagnosticEventInputSchema>;
 
 /**
  * Canonical persisted diagnostic event.
@@ -220,7 +223,7 @@ export function sanitizeDiagnosticEvent(
     context: DiagnosticContext,
     now = Date.now(),
 ): DiagnosticEvent | null {
-    const parsedInput = v.safeParse(eventInputSchema, input);
+    const parsedInput = v.safeParse(diagnosticEventInputSchema, input);
     const parsedContext = v.safeParse(contextSchema, context);
     if (!parsedInput.success || !parsedContext.success || !Number.isSafeInteger(now) || now < 0) {
         return null;

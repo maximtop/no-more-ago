@@ -5,7 +5,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 import { DOCUMENT_RUNTIME_SLOT } from "../../../src/content-script/runtime";
-import { GET_DOCUMENT_STATE_MESSAGE } from "../../../src/shared/messages";
+import { GET_DOCUMENT_STATE_MESSAGE } from "../../../src/shared/messaging/contracts";
+import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
 
 /**
  * Installs a minimal extension runtime mock.
@@ -83,7 +84,7 @@ describe("content entrypoint", () => {
             enabled: false,
             display: null,
             debugEnabled: false,
-            failure: "settings-load" as const,
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         }));
         installChromeMock(sendMessage);
         vi.stubGlobal("window", { location: { href: "https://example.test/page" } });

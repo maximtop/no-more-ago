@@ -5,14 +5,19 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASE,
     isDocumentStatusResponse,
-    POPUP_STATUS,
+} from "../../shared/messaging/document-messages";
+import {
     POPUP_RUNTIME_FAILURE,
+    POPUP_STATUS,
+    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
     type PopupRuntimeFailure,
-    type PopupState,
     type ReadyPopupStatus,
-    type SitesState,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
+import type {
+    PopupState,
+    SitesState,
+} from "../../shared/messaging/view-state-schemas";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs";
@@ -305,10 +310,10 @@ export class StateProjection {
             globalEnabled: null,
             hostname: null,
             siteEnabled: null,
-            status: state.failure === "fail-closed-cleanup"
+            status: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
                 ? POPUP_STATUS.RUNTIME_FAILED
                 : POPUP_STATUS.SETTINGS_UNAVAILABLE,
-            failure: state.failure ?? "settings-load",
+            failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
 
@@ -341,7 +346,7 @@ export class StateProjection {
             revision: null,
             globalEnabled: null,
             sites: [],
-            failure: state.failure ?? "settings-load",
+            failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
 

@@ -20,7 +20,7 @@ import type { TabsRuntime } from "../../../src/background/runtime/tabs";
 import {
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
-} from "../../../src/shared/messages";
+} from "../../../src/shared/messaging/view-state-values";
 import {
     createSettingsSnapshot,
     SETTINGS_STORAGE_KEY,

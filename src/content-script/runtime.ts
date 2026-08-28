@@ -17,15 +17,15 @@ import {
     isDocumentStatusMessage,
     isRefreshDocumentPolicyMessage,
     isSuspendAndRefreshDocumentPolicyMessage,
-    isDocumentState,
     isPresentationUpdateMessage,
     isTeardownDocumentMessage,
     PRESENTATION_UPDATED_MESSAGE,
-    STATE_AVAILABILITY,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
-} from "../shared/messages";
+} from "../shared/messaging/document-messages";
+import { isDocumentState } from "../shared/messaging/document-state";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     DEFAULT_DISPLAY_SETTINGS,
     type DisplaySettings,
@@ -175,7 +175,7 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
             return;
         }
         try {
-            void Promise.resolve(report(event as unknown as Record<string, unknown>)).catch(
+            void Promise.resolve(report(event)).catch(
                 () => undefined,
             );
         } catch {

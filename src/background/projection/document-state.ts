@@ -5,9 +5,10 @@
  */
 import type { DiagnosticSender } from "../../shared/diagnostics/events";
 import {
+    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
-    type DocumentState,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
+import type { DocumentState } from "../../shared/messaging/document-state";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import type { ApplicationStateView } from "../application/state";
@@ -32,7 +33,7 @@ export function deriveDocumentState(
             enabled: false,
             display: null,
             debugEnabled: false,
-            failure: state.failure ?? "settings-load",
+            failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
     const displayState = deriveDisplayState(state);

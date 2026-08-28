@@ -5,7 +5,6 @@
 import * as v from "valibot";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
-import { strictMessageObject } from "./schema-utils";
 import {
     POPUP_READY_STATUSES,
     POPUP_RUNTIME_FAILURES,
@@ -19,7 +18,7 @@ const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
 const settingsFailureSchema = v.picklist(SETTINGS_STATE_FAILURES);
 const popupStatusSchema = v.picklist(POPUP_READY_STATUSES);
 const popupFailureSchema = v.picklist(POPUP_RUNTIME_FAILURES);
-const readyPopupStateSchema = strictMessageObject({
+const readyPopupStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
@@ -28,7 +27,7 @@ const readyPopupStateSchema = strictMessageObject({
     status: popupStatusSchema,
     failure: v.optional(popupFailureSchema),
 });
-const unavailablePopupStateSchema = strictMessageObject({
+const unavailablePopupStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     globalEnabled: v.null(),
@@ -37,7 +36,7 @@ const unavailablePopupStateSchema = strictMessageObject({
     status: v.picklist(POPUP_UNAVAILABLE_STATUSES),
     failure: settingsFailureSchema,
 });
-const siteListEntrySchema = strictMessageObject({
+const siteListEntrySchema = v.strictObject({
     hostname: v.string(),
     enabled: v.boolean(),
 });
@@ -45,39 +44,39 @@ const siteListEntrySchema = strictMessageObject({
 /**
  * Complete ready site-preferences state accepted after a successful reset.
  */
-export const readySitesStateSchema = strictMessageObject({
+export const readySitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
     sites: v.array(siteListEntrySchema),
 });
 
-const unavailableSitesStateSchema = strictMessageObject({
+const unavailableSitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     globalEnabled: v.null(),
     sites: v.tuple([]),
     failure: settingsFailureSchema,
 });
-const readyDisplayStateSchema = strictMessageObject({
+const readyDisplayStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     display: v.custom<DisplaySettings>(isDisplaySettings),
     debugEnabled: v.boolean(),
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
-const unavailableDisplayStateSchema = strictMessageObject({
+const unavailableDisplayStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     display: v.null(),
     failure: settingsFailureSchema,
 });
-const readyDebugStateSchema = strictMessageObject({
+const readyDebugStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     enabled: v.boolean(),
 });
-const unavailableDebugStateSchema = strictMessageObject({
+const unavailableDebugStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     enabled: v.null(),
@@ -124,7 +123,7 @@ export const debugStateSchema = v.union([
 /**
  * Exact tab-refresh failure reported after a settings update.
  */
-export const refreshFailureSchema = strictMessageObject({
+export const refreshFailureSchema = v.strictObject({
     hostname: v.string(),
     tabId: v.optional(nonNegativeSafeIntegerSchema),
     reason: v.picklist(REFRESH_FAILURE_REASONS),

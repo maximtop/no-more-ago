@@ -5,10 +5,15 @@
 import { useEffect, useRef, useState } from "react";
 import type {
     DebugState,
+} from "../shared/messaging/view-state-schemas";
+import type {
     DiagnosticsClearError,
     DiagnosticsSnapshotError,
-} from "../shared/messages";
-import { STATE_AVAILABILITY } from "../shared/messages";
+} from "../shared/messaging/contracts";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import {
     DiagnosticArchiveError,
@@ -140,7 +145,7 @@ const UNAVAILABLE_DEBUG_STATE: DebugState = {
     availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     enabled: null,
-    failure: "settings-load",
+    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 };
 
 /**

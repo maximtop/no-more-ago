@@ -4,7 +4,7 @@
 
 import { Alert, Box, Button, Stack, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
-import { STATE_AVAILABILITY } from "../shared/messages";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     DIAGNOSTICS_CLEARED_NOTICE,
     type DiagnosticsController,

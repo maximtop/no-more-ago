@@ -84,7 +84,18 @@ export const POPUP_RUNTIME_FAILURES = [
 /**
  * Settings failures shared by unavailable view projections.
  */
-export const SETTINGS_STATE_FAILURES = ["settings-load", "fail-closed-cleanup"] as const;
+export const SETTINGS_STATE_FAILURE = {
+    SETTINGS_LOAD: "settings-load",
+    FAIL_CLOSED_CLEANUP: "fail-closed-cleanup",
+} as const;
+
+/**
+ * Complete settings failure set accepted by unavailable view projections.
+ */
+export const SETTINGS_STATE_FAILURES = [
+    SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+    SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP,
+] as const;
 
 /**
  * Errors shared by settings persistence commands.

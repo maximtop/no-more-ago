@@ -247,6 +247,8 @@ Known architectural exclusions to improve when their area changes:
   operational limits.
 - Declare each shared value once as a named constant in the module that owns
   the contract, then import and reuse it in production code and tests.
+- Prefer precise imports and exports from owning modules; avoid export-star
+  barrels that obscure a contract's source.
 - Keep related finite value sets in readonly `as const` collections and derive
   their TypeScript unions and validators from those collections when practical.
 - Do not inline discriminants that cross a module boundary. Use the owning

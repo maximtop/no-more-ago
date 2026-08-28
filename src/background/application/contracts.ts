@@ -10,7 +10,7 @@ import type {
 } from "../runtime/document-activation";
 import type { TabsRuntime } from "../runtime/tabs";
 import type { SettingsService } from "../settings/service";
-import type { SettingsStateFailure } from "../../shared/messages";
+import type { SettingsStateFailure } from "../../shared/messaging/view-state-values";
 
 /**
  * Lifecycle states of the background application.

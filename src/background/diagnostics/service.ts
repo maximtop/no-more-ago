@@ -24,14 +24,15 @@ import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
 import {
+    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
 import type {
     ClearDiagnosticsResponse,
     DiagnosticsEnvironment,
     GetDiagnosticsSnapshotResponse,
-    DebugState,
-} from "../../shared/messages";
+} from "../../shared/messaging/contracts";
+import type { DebugState } from "../../shared/messaging/view-state-schemas";
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
@@ -75,9 +76,9 @@ export class DiagnosticsService {
                 availability: STATE_AVAILABILITY.UNAVAILABLE,
                 revision: null,
                 enabled: null,
-                failure: state.failure === "fail-closed-cleanup"
-                    ? "fail-closed-cleanup"
-                    : "settings-load",
+                failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                    ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                    : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             };
         }
         return {

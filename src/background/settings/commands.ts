@@ -15,19 +15,23 @@ import {
     LIFECYCLE_REASON,
 } from "../application/contracts";
 import {
-    type DebugRefreshFailure,
-    type DisplayRefreshFailure,
-    type PopupState,
-    type ResetAllSettingsResponse,
-    type SetDebugEnabledResponse,
-    type SetDisplaySettingsResponse,
-    type SetGlobalEnabledResponse,
-    type SetSiteEnabledResponse,
-    type SitesState,
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
     type SiteSettingsSurface,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
+import type {
+    RefreshFailure as DebugRefreshFailure,
+    RefreshFailure as DisplayRefreshFailure,
+    PopupState,
+    SitesState,
+} from "../../shared/messaging/view-state-schemas";
+import type {
+    ResetAllSettingsResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+} from "../../shared/messaging/response-schemas";
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,

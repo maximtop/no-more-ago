@@ -4,8 +4,11 @@
 
 import { Alert, Box, Button, Stack, Text, TextInput } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { DisplayState } from "../shared/messages";
-import { STATE_AVAILABILITY } from "../shared/messages";
+import type { DisplayState } from "../shared/messaging/view-state-schemas";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
 import type { DisplayController } from "./display-controller";
 import {
@@ -35,7 +38,7 @@ const CUSTOM_FORMAT_EXAMPLES = "Examples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy"
 function unavailableDisplayText(
     state: Extract<DisplayState, { availability: typeof STATE_AVAILABILITY.UNAVAILABLE }>,
 ): string {
-    return state.failure === "fail-closed-cleanup"
+    return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
         ? "Current display settings are unavailable while processing state is being recovered."
         : "Display settings are unavailable. Processing is disabled.";
 }

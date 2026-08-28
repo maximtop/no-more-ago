@@ -3,7 +3,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { STATE_AVAILABILITY, type SitesState } from "../shared/messages";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
+import type { SitesState } from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
@@ -79,7 +83,7 @@ const UNAVAILABLE_SITES_STATE: SitesState = {
     revision: null,
     globalEnabled: null,
     sites: [],
-    failure: "settings-load",
+    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 };
 
 /**
