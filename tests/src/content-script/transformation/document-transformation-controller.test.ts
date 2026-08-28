@@ -6,14 +6,61 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
-    EXPLICIT_ZONED_DATETIME_RULE,
-    type SiteAdapter,
+    TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampSourceRule,
 } from "../../../../src/content-script/adapters/types";
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
+
+const noMatchRule: TimestampSourceRule = {
+    id: "no-match",
+    matches: () => false,
+    discover: () => [],
+    extract: () => null,
+};
+
+/**
+ * Generic timestamp fixture shared by visibility lifecycle tests.
+ */
+interface GenericControllerFixture {
+    /**
+     * Generic source in the fixture document.
+     */
+    readonly source: HTMLTimeElement;
+
+    /**
+     * Controller attached to the fixture document.
+     */
+    readonly controller: DocumentTransformationController;
+}
+
+/**
+ * Creates a generic source and controller for a visibility behavior test.
+ *
+ * @param markup - Body markup containing one generic HTML time source.
+ * @returns - Source and controller sharing the fixture document.
+ */
+function createGenericControllerFixture(
+    markup = '<time datetime="2026-08-23T10:15Z">relative</time>',
+): GenericControllerFixture {
+    document.body.innerHTML = markup;
+    const source = document.querySelector("time");
+    if (!(source instanceof HTMLTimeElement)) {
+        throw new Error("Expected generic source");
+    }
+    return {
+        source,
+        controller: new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        }),
+    };
+}
 
 describe("DocumentTransformationController", () => {
     const flushMutations = async (): Promise<void> => {
@@ -51,6 +98,7 @@ describe("DocumentTransformationController", () => {
         expect(second).toHaveLength(1);
         expect(second[0]).not.toBe(first[0]);
         expect(document.querySelectorAll("time")).toHaveLength(1);
+        controller.teardown();
     });
 
     it("reformats only its existing owned sources when presentation changes", () => {
@@ -134,6 +182,29 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
+    it("does not diagnose ordinary non-time additions and removals", async () => {
+        document.body.innerHTML = "<main></main>";
+        const diagnosticSink = vi.fn();
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            diagnosticSink,
+        });
+        controller.start();
+        diagnosticSink.mockClear();
+
+        const ordinary = document.createElement("section");
+        ordinary.textContent = "page content";
+        document.body.append(ordinary);
+        await flushMutations();
+        ordinary.remove();
+        await flushMutations();
+
+        expect(diagnosticSink).not.toHaveBeenCalled();
+        controller.teardown();
+    });
+
     it.each([false, true])(
         "repairs moved outputs and preserves original hidden state (%s)",
         async (initiallyHidden) => {
@@ -168,6 +239,29 @@ describe("DocumentTransformationController", () => {
             expect(output.isConnected).toBe(false);
         },
     );
+
+    it("does not restore a page-removed hidden state for an initially hidden source", async () => {
+        document.body.innerHTML = '<relative-time hidden datetime="2026-08-23T10:15:00Z">'
+            + "source</relative-time>";
+        const source = document.querySelector("relative-time");
+        if (!source) {
+            throw new Error("Expected source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://github.com/example/repo"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        source.removeAttribute("hidden");
+        await flushMutations();
+        source.removeAttribute("datetime");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
 
     it("moves owned subtrees and creates fresh pairs after reinsertion", async () => {
         document.body.innerHTML = '<main id="one">'
@@ -246,7 +340,7 @@ describe("DocumentTransformationController", () => {
         }
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "combined-instrumented",
             matches: () => true,
             discover: (root) => {
@@ -261,11 +355,12 @@ describe("DocumentTransformationController", () => {
                     return null;
                 }
                 return {
-                    adapterId: "combined-instrumented",
+                    ruleId: "combined-instrumented",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
             },
         };
@@ -273,7 +368,7 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://github.com/example/repo"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], noMatchRule),
         });
         controller.start();
         const movedOutput = moved.nextElementSibling;
@@ -353,7 +448,7 @@ describe("DocumentTransformationController", () => {
             throw new Error("Expected sources");
         }
         let shouldThrow = true;
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "test",
             matches: () => true,
             discover: (root) => [
@@ -365,11 +460,12 @@ describe("DocumentTransformationController", () => {
                     throw new Error("candidate extraction failed");
                 }
                 return {
-                    adapterId: "test",
+                    ruleId: "test",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
             },
         };
@@ -377,7 +473,7 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], noMatchRule),
         });
 
         expect(() => controller.start()).toThrow("candidate extraction failed");
@@ -396,7 +492,7 @@ describe("DocumentTransformationController", () => {
             '<relative-time id="outside" datetime="2026-08-23T10:15:00Z">outside</relative-time>';
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "instrumented",
             matches: () => true,
             discover: (root) => {
@@ -407,11 +503,12 @@ describe("DocumentTransformationController", () => {
             extract: (element) => {
                 visits.push(element);
                 return {
-                    adapterId: "instrumented",
+                    ruleId: "instrumented",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: element.getAttribute("datetime") ?? "",
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
             },
         };
@@ -419,7 +516,7 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], noMatchRule),
         });
         controller.start();
         roots.length = 0;
@@ -508,7 +605,7 @@ describe("DocumentTransformationController", () => {
             throw new Error("Expected source");
         }
         let visits = 0;
-        const adapter: SiteAdapter = {
+        const adapter: TimestampSourceRule = {
             id: "counting",
             matches: () => true,
             discover: (root) => [
@@ -522,11 +619,12 @@ describe("DocumentTransformationController", () => {
                     return null;
                 }
                 return {
-                    adapterId: "counting",
+                    ruleId: "counting",
                     source: element,
                     sourceKind: "relative-time",
                     rawDatetime: datetime,
-                    timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
                 };
             },
         };
@@ -534,7 +632,7 @@ describe("DocumentTransformationController", () => {
             url: new URL("https://example.test/"),
             root: document,
             locales: ["en-US"],
-            registry: new AdapterRegistry([adapter]),
+            registry: new AdapterRegistry([adapter], noMatchRule),
         });
         controller.start();
         visits = 0;
@@ -544,5 +642,187 @@ describe("DocumentTransformationController", () => {
         expect(visits).toBe(1);
         expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
         controller.teardown();
+    });
+
+    it("reacquires extension-owned hidden state when a page removes it", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected generic source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+        controller.start();
+        const output = source.nextElementSibling;
+        if (!(output instanceof HTMLTimeElement)) {
+            throw new Error("Expected output");
+        }
+        const token = output.getAttribute("data-no-more-ago-output");
+        source.removeAttribute("hidden");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(true);
+        expect(source.nextElementSibling).toBe(output);
+        expect(output.getAttribute("data-no-more-ago-output")).toBe(token);
+        controller.teardown();
+    });
+
+    it("does not mistake extension-owned hidden styling for page suppression", async () => {
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(
+            (element) => ({
+                display: element.hasAttribute("hidden") ? "none" : "inline",
+                visibility: "visible",
+            }) as CSSStyleDeclaration,
+        );
+        const { source, controller } = createGenericControllerFixture();
+        try {
+            controller.start();
+            const output = source.nextElementSibling;
+            if (!(output instanceof HTMLTimeElement)) {
+                throw new Error("Expected output");
+            }
+            source.setAttribute("datetime", "2026-08-24T10:15Z");
+            await flushMutations();
+            expect(source.nextElementSibling).toBe(output);
+            expect(output.dateTime).toBe("2026-08-24T10:15Z");
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
+    });
+
+    it("restores an owned source hidden by page CSS after its datetime changes", async () => {
+        const { source, controller } = createGenericControllerFixture();
+        const inspected: Element[] = [];
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+            inspected.push(element);
+            return {
+                display: element.hasAttribute("hidden") || element.classList.contains("page-hidden")
+                    ? "none"
+                    : "inline",
+                visibility: "visible",
+            } as CSSStyleDeclaration;
+        });
+        try {
+            controller.start();
+            inspected.length = 0;
+            source.classList.add("page-hidden");
+            source.setAttribute("datetime", "2026-08-24T10:15Z");
+            await flushMutations();
+            expect(inspected).toContain(source);
+            expect(inspected.some((element) =>
+                element === source && element.isConnected && !element.hasAttribute("hidden")
+            )).toBe(true);
+            expect(inspected.every((element) => element === source)).toBe(true);
+            expect(source.hasAttribute("hidden")).toBe(false);
+            expect(source.textContent).toBe("relative");
+            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
+    });
+
+    it("preserves a page-owned hidden state added to an owned source", async () => {
+        const { source, controller } = createGenericControllerFixture();
+        controller.start();
+        source.removeAttribute("hidden");
+        source.setAttribute("hidden", "");
+        await flushMutations();
+        expect(source.hasAttribute("hidden")).toBe(true);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
+    it.each([
+        ["aria-hidden", "true"],
+        ["inert", ""],
+        ["style", "display: none"],
+    ])("removes output while page suppresses generic source via %s", async (attribute, value) => {
+        const { source, controller } = createGenericControllerFixture();
+        controller.start();
+        source.setAttribute(attribute, value);
+        await flushMutations();
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        expect(source.getAttribute(attribute)).toBe(value);
+        controller.teardown();
+    });
+
+    it(
+        "reconciles generic sources when ancestor accessibility suppression changes",
+        async () => {
+            const { controller } = createGenericControllerFixture(
+                '<section><time datetime="2026-08-23T10:15Z">relative</time></section>',
+            );
+            const section = document.querySelector("section");
+            if (!section) {
+                throw new Error("Expected generic source and ancestor");
+            }
+            controller.start();
+            section.setAttribute("aria-hidden", "true");
+            await flushMutations();
+            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+            section.removeAttribute("aria-hidden");
+            await flushMutations();
+            expect(document.querySelector("time[data-no-more-ago-output]")).not.toBeNull();
+            controller.teardown();
+        },
+    );
+
+    it("reconciles generic sources when a visibility class is added or removed", async () => {
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(
+            (element) => ({
+                display: element.classList.contains("page-hidden") ? "none" : "inline",
+                visibility: "visible",
+            }) as CSSStyleDeclaration,
+        );
+        const { source, controller } = createGenericControllerFixture(
+            '<time class="page-hidden" datetime="2026-08-23T10:15Z">relative</time>',
+        );
+        try {
+            controller.start();
+            expect(source.nextElementSibling).toBeNull();
+            source.classList.remove("page-hidden");
+            await flushMutations();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+            source.classList.add("page-hidden");
+            await flushMutations();
+            expect(source.nextElementSibling).toBeNull();
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
+    });
+
+    it("reconciles generic sources when an ancestor visibility class changes", async () => {
+        const computedStyle = vi.spyOn(window, "getComputedStyle").mockImplementation(
+            (element) => ({
+                display: element.classList.contains("page-hidden") ? "none" : "block",
+                visibility: "visible",
+            }) as CSSStyleDeclaration,
+        );
+        const { source, controller } = createGenericControllerFixture(
+            '<section class="page-hidden"><time datetime="2026-08-23T10:15Z">'
+            + "relative</time></section>",
+        );
+        const section = source.parentElement;
+        if (!section) {
+            throw new Error("Expected source ancestor");
+        }
+        try {
+            controller.start();
+            expect(source.nextElementSibling).toBeNull();
+            section.classList.remove("page-hidden");
+            await flushMutations();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+            section.classList.add("page-hidden");
+            await flushMutations();
+            expect(source.nextElementSibling).toBeNull();
+        } finally {
+            controller.teardown();
+            computedStyle.mockRestore();
+        }
     });
 });

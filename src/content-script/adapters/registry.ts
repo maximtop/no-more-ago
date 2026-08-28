@@ -1,35 +1,39 @@
 /**
- * @file Site-adapter registry used to select a trusted parser for the current page.
+ * @file Source-rule registry for specialized rules and the generic fallback.
  */
 
+import { genericTimeRule } from "./generic-time";
 import { githubAdapter } from "./github";
-import type { SiteAdapter } from "./types";
+import type { TimestampSourceRule } from "./types";
 
 /**
- * Provides deterministic URL-to-adapter selection; the first matching trusted adapter wins.
- *
+ * Provides deterministic source-rule selection with specialized rules before the generic fallback.
  */
 export class AdapterRegistry {
     /**
-     * Retains the ordered trusted adapters; selection later stops at the first URL match.
+     * Retains the ordered specialized rules and the final generic fallback.
      *
-     * @param adapters - Trusted adapters in selection priority order.
+     * @param specialized - Trusted specialized rules in selection priority order.
+     * @param generic - Generic fallback rule evaluated after specialized rules.
      */
-    constructor(private readonly adapters: readonly SiteAdapter[]) {}
+    constructor(
+        private readonly specialized: readonly TimestampSourceRule[],
+        private readonly generic: TimestampSourceRule,
+    ) {}
 
     /**
-     * Selects the first adapter whose URL matcher accepts the current page.
+     * Selects all rules whose URL matcher accepts the current page.
      *
-     * @param url - Page URL to match against registered adapters.
-     * @returns - First matching adapter, or null when none accepts the URL.
+     * @param url - Page URL to match against registered source rules.
+     * @returns - Matching specialized rules followed by the generic fallback when applicable.
      */
-    select(url: URL): SiteAdapter | null {
-        return this.adapters.find((adapter) => adapter.matches(url)) ?? null;
+    matching(url: URL): readonly TimestampSourceRule[] {
+        const specialized = this.specialized.filter((rule) => rule.matches(url));
+        return this.generic.matches(url) ? [...specialized, this.generic] : specialized;
     }
 }
 
 /**
- * Production adapter registry; GitHub is the only site currently granted timestamp extraction
- * trust.
+ * Production registry with GitHub precedence and generic standard-time fallback.
  */
-export const defaultRegistry = new AdapterRegistry([githubAdapter]);
+export const defaultRegistry = new AdapterRegistry([githubAdapter], genericTimeRule);

@@ -158,7 +158,7 @@ describe("offline GitHub source fixtures", () => {
                 if (!source) {
                     throw new Error(`Missing source in ${name}`);
                 }
-                const adapter = defaultRegistry.select(new URL(url));
+                const adapter = defaultRegistry.matching(new URL(url))[0];
                 expect(adapter).not.toBeNull();
                 expect(adapter?.extract(source)).toMatchObject({
                     source,

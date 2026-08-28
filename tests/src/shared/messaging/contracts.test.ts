@@ -1,5 +1,5 @@
 /**
- * @file Verifies runtime schemas at the background messaging boundary.
+ * @file Verifies background request and diagnostic response contracts.
  */
 
 import * as v from "valibot";
@@ -9,6 +9,7 @@ import {
     GET_DEBUG_STATE_MESSAGE,
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_DISPLAY_STATE_MESSAGE,
+    GET_DOCUMENT_STATE_MESSAGE,
     GET_POPUP_STATE_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
@@ -19,35 +20,21 @@ import {
     backgroundMessageSchema,
     clearDiagnosticsResponseSchema,
     diagnosticsSnapshotSchema,
-    displayStateSchema,
-    popupStateSchema,
-    resetAllSettingsResponseSchema,
-    setDebugEnabledResponseSchema,
-    setDisplaySettingsResponseSchema,
-    sitesStateSchema,
-} from "../../../src/shared/messages";
+} from "../../../../src/shared/messaging/contracts";
+import { SITE_SETTINGS_SURFACE } from "../../../../src/shared/messaging/view-state-values";
 
-const readyPopup = {
-    availability: "ready",
-    revision: 3,
-    globalEnabled: true,
-    hostname: "github.com",
-    siteEnabled: true,
-    hasAdapter: true,
-    status: "active",
-} as const;
-
-describe("background message schemas", () => {
+describe("background message contracts", () => {
     it("accepts every request shape used by extension views", () => {
         const messages = [
             { type: GET_POPUP_STATE_MESSAGE },
+            { type: GET_DOCUMENT_STATE_MESSAGE },
             { type: SET_GLOBAL_ENABLED_MESSAGE, enabled: false },
             { type: GET_SITES_STATE_MESSAGE },
             {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname: "github.com",
                 enabled: false,
-                surface: "popup",
+                surface: SITE_SETTINGS_SURFACE.POPUP,
             },
             { type: GET_DISPLAY_STATE_MESSAGE },
             {
@@ -74,50 +61,7 @@ describe("background message schemas", () => {
         })).toBe(false);
     });
 
-    it("validates popup and sites projections", () => {
-        expect(v.is(popupStateSchema, readyPopup)).toBe(true);
-        expect(v.is(popupStateSchema, { ...readyPopup, status: "unknown" })).toBe(false);
-
-        const sites = {
-            availability: "ready",
-            revision: 3,
-            globalEnabled: true,
-            sites: [{ hostname: "github.com", enabled: true, hasAdapter: true }],
-        } as const;
-        expect(v.is(sitesStateSchema, sites)).toBe(true);
-        expect(v.is(resetAllSettingsResponseSchema, {
-            ok: true,
-            acceptedRevision: 3,
-            state: sites,
-        })).toBe(true);
-        expect(v.is(sitesStateSchema, {
-            ...sites,
-            sites: [{ ...sites.sites[0], extra: true }],
-        })).toBe(false);
-    });
-
-    it("validates display and diagnostic-setting responses", () => {
-        const displayState = {
-            availability: "ready",
-            revision: 3,
-            display: { formatMode: "system", timeZone: { mode: "system" } },
-            debugEnabled: false,
-        } as const;
-        expect(v.is(displayStateSchema, displayState)).toBe(true);
-        expect(v.is(setDisplaySettingsResponseSchema, {
-            ok: true,
-            acceptedRevision: 4,
-            state: displayState,
-            refreshFailures: [],
-        })).toBe(true);
-        expect(v.is(setDebugEnabledResponseSchema, {
-            ok: true,
-            acceptedRevision: 4,
-            state: { availability: "ready", revision: 4, enabled: true },
-        })).toBe(true);
-    });
-
-    it("validates the snapshot once at the diagnostic response boundary", () => {
+    it("validates the diagnostic snapshot and clear response boundaries", () => {
         const snapshot = {
             entries: [{
                 category: "lifecycle",

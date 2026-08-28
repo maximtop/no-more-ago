@@ -3,7 +3,11 @@
  */
 
 import { useEffect, useState } from "react";
-import type { SitesState } from "../shared/messages";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
+import type { SitesState } from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
@@ -75,11 +79,11 @@ export interface SitesController {
 }
 
 const UNAVAILABLE_SITES_STATE: SitesState = {
-    availability: "unavailable",
+    availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     globalEnabled: null,
     sites: [],
-    failure: "settings-load",
+    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 };
 
 /**
@@ -121,7 +125,11 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
     }, [client, initialState]);
 
     const changeSite = async (hostname: string, enabled: boolean): Promise<void> => {
-        if (!state || state.availability !== "ready" || savingHostname !== undefined) {
+        if (
+            !state
+            || state.availability !== STATE_AVAILABILITY.READY
+            || savingHostname !== undefined
+        ) {
             return;
         }
         setSavingHostname(hostname);
@@ -130,7 +138,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
             if (
-                responseState.availability !== "ready" ||
+                responseState.availability !== STATE_AVAILABILITY.READY ||
                 responseState.revision >= state.revision
             ) {
                 setState(responseState);
@@ -145,7 +153,10 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
                 );
             }
         } else if (result.state) {
-            if (result.state.availability !== "ready" || result.state.revision >= state.revision) {
+            if (
+                result.state.availability !== STATE_AVAILABILITY.READY
+                || result.state.revision >= state.revision
+            ) {
                 setState(result.state);
             }
             onNoticeChange("interrupted");

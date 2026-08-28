@@ -5,7 +5,7 @@
 import type { DatePresentationResult } from "../shared/date/format-default-date";
 import { formatDateWithPresentation } from "../shared/date/format-default-date";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
-import type { DisplaySettings } from "../shared/messages";
+import type { DisplaySettings } from "../shared/settings/snapshot";
 import {
     CUSTOM_FORMAT_MAX_LENGTH,
     CUSTOM_FORMAT_ERROR,

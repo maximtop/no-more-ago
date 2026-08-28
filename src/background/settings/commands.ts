@@ -2,27 +2,40 @@
  * @file Serialized settings mutations and their runtime side effects.
  */
 
-import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import type { SettingsService } from "./service";
-import { isCanonicalHostname, isSiteEnabled } from "../../shared/settings/snapshot";
+import { isCanonicalHostname } from "../../shared/settings/snapshot";
 import type { ApplicationLifecycle } from "../application/lifecycle";
 import type { DiagnosticsService } from "../diagnostics/service";
 import { deriveDisplayState } from "../projection/display-state";
 import type { DocumentRefresh } from "./document-refresh";
 import type { StateProjection } from "../projection/state-projection";
+import { ACTIVATION_POLICY } from "../runtime/document-activation";
 import {
-    type DebugRefreshFailure,
-    type DisplayRefreshFailure,
-    type PopupState,
-    type ResetAllSettingsResponse,
-    type SetDebugEnabledResponse,
-    type SetDisplaySettingsResponse,
-    type SetGlobalEnabledResponse,
-    type SetSiteEnabledResponse,
-    type SitesState,
+    APPLICATION_PHASE,
+    LIFECYCLE_REASON,
+} from "../application/contracts";
+import {
     SITE_SETTINGS_SURFACE,
+    STATE_AVAILABILITY,
     type SiteSettingsSurface,
-} from "../../shared/messages";
+} from "../../shared/messaging/view-state-values";
+import type {
+    RefreshFailure as DebugRefreshFailure,
+    RefreshFailure as DisplayRefreshFailure,
+    PopupState,
+    SitesState,
+} from "../../shared/messaging/view-state-schemas";
+import type {
+    ResetAllSettingsResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+} from "../../shared/messaging/response-schemas";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../shared/diagnostics/contracts";
 
 /**
  * Applies persisted settings changes and coordinates their runtime effects.
@@ -54,11 +67,6 @@ export class SettingsCommands {
     private readonly documentRefresh: DocumentRefresh;
 
     /**
-     * Immutable runtime adapter catalog.
-     */
-    private readonly adapters: readonly RuntimeAdapterDefinition[];
-
-    /**
      * Creates the settings command handler.
      *
      * @param settings - Settings persistence boundary.
@@ -66,7 +74,6 @@ export class SettingsCommands {
      * @param projection - Popup and sites-state projections.
      * @param diagnostics - Diagnostic journal service.
      * @param documentRefresh - Active-document settings broadcaster.
-     * @param adapters - Runtime adapter catalog.
      */
     public constructor(
         settings: SettingsService,
@@ -74,14 +81,12 @@ export class SettingsCommands {
         projection: StateProjection,
         diagnostics: DiagnosticsService,
         documentRefresh: DocumentRefresh,
-        adapters: readonly RuntimeAdapterDefinition[],
     ) {
         this.settings = settings;
         this.lifecycle = lifecycle;
         this.projection = projection;
         this.diagnostics = diagnostics;
         this.documentRefresh = documentRefresh;
-        this.adapters = adapters;
     }
 
     /**
@@ -97,7 +102,7 @@ export class SettingsCommands {
         let error: "save-failed" | "settings-unavailable" | undefined;
         await this.lifecycle.enqueue(async () => {
             const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== "ready" || !snapshot) {
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
                 error = "settings-unavailable";
                 return;
             }
@@ -118,7 +123,11 @@ export class SettingsCommands {
             if (enabled) {
                 await this.diagnostics.setEnabled(true);
                 this.diagnostics.log(
-                    { category: "settings", reason: "settings-updated", count: 1 },
+                    {
+                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
+                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
+                        count: 1,
+                    },
                     this.lifecycle.state,
                 );
             }
@@ -168,7 +177,7 @@ export class SettingsCommands {
             | undefined;
         await this.lifecycle.enqueue(async () => {
             const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== "ready" || !snapshot) {
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
                 error = "settings-unavailable";
                 return;
             }
@@ -197,7 +206,11 @@ export class SettingsCommands {
                     acceptedRevision,
                 );
                 this.diagnostics.log(
-                    { category: "settings", reason: "settings-updated", count: 1 },
+                    {
+                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
+                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
+                        count: 1,
+                    },
                     this.lifecycle.state,
                 );
             }
@@ -225,13 +238,16 @@ export class SettingsCommands {
         let acceptedRevision: number | undefined;
         const outcome: { value: "accepted" | "save-failed" } = { value: "accepted" };
         await this.lifecycle.enqueue(async () => {
-            const previous = this.lifecycle.phase === "ready"
+            const previous = this.lifecycle.phase === APPLICATION_PHASE.READY
                 ? this.lifecycle.snapshot
                 : undefined;
             const write = await this.settings.resetAll();
             if (!write.ok) {
                 outcome.value = "save-failed";
-                if (this.lifecycle.phase === "ready" && this.lifecycle.snapshot) {
+                if (
+                    this.lifecycle.phase === APPLICATION_PHASE.READY
+                    && this.lifecycle.snapshot
+                ) {
                     return;
                 }
                 await this.lifecycle.enterFailedClosed(true);
@@ -243,16 +259,16 @@ export class SettingsCommands {
             this.lifecycle.clearReconcileResult();
             if (previous?.globalEnabled) {
                 await this.lifecycle.reconcile(
-                    "settings-change",
-                    "disabled",
+                    ACTIVATION_POLICY.DISABLED,
                     write.snapshot.revision,
                     previous.sitePreferences,
                 );
             }
             await this.diagnostics.reset();
             await this.lifecycle.reconcile(
-                "activation-sweep",
-                write.snapshot.globalEnabled ? "enabled" : "disabled",
+                write.snapshot.globalEnabled
+                    ? ACTIVATION_POLICY.ENABLED
+                    : ACTIVATION_POLICY.DISABLED,
                 write.snapshot.revision,
                 write.snapshot.sitePreferences,
             );
@@ -263,7 +279,7 @@ export class SettingsCommands {
         const state = await this.lifecycle.enqueue(() =>
             Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
         );
-        if (acceptedRevision !== undefined && state.availability === "ready") {
+        if (acceptedRevision !== undefined && state.availability === STATE_AVAILABILITY.READY) {
             return { ok: true, acceptedRevision, state };
         }
         return {
@@ -274,7 +290,7 @@ export class SettingsCommands {
     }
 
     /**
-     * Persists global activation and reconciles every runtime adapter.
+     * Persists global activation and reconciles the universal document runtime.
      *
      * @param enabled - Requested global activation state.
      * @returns - Persisted global state and popup projection.
@@ -285,7 +301,7 @@ export class SettingsCommands {
         let error: "save-failed" | "settings-unavailable" | undefined;
         await this.lifecycle.enqueue(async () => {
             const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== "ready" || !snapshot) {
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
                 error = "settings-unavailable";
                 return;
             }
@@ -302,14 +318,19 @@ export class SettingsCommands {
             this.lifecycle.adoptSnapshot(write.snapshot);
             acceptedRevision = write.snapshot.revision;
             await this.lifecycle.reconcile(
-                "settings-change",
-                write.snapshot.globalEnabled ? "enabled" : "disabled",
+                write.snapshot.globalEnabled
+                    ? ACTIVATION_POLICY.ENABLED
+                    : ACTIVATION_POLICY.DISABLED,
                 write.snapshot.revision,
                 write.snapshot.sitePreferences,
             );
             if (write.changed) {
                 this.diagnostics.log(
-                    { category: "settings", reason: "settings-updated", count: 1 },
+                    {
+                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
+                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
+                        count: 1,
+                    },
                     this.lifecycle.state,
                 );
             }
@@ -324,7 +345,7 @@ export class SettingsCommands {
     }
 
     /**
-     * Persists one hostname preference and reconciles affected adapters.
+     * Persists one hostname preference and reconciles affected documents.
      *
      * @param hostname - Canonical hostname whose override is changing.
      * @param enabled - Requested site activation state.
@@ -345,7 +366,7 @@ export class SettingsCommands {
             | undefined;
         await this.lifecycle.enqueue(async () => {
             const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== "ready" || !snapshot) {
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
                 error = "settings-unavailable";
                 return;
             }
@@ -367,28 +388,12 @@ export class SettingsCommands {
             }
             this.lifecycle.adoptSnapshot(write.snapshot);
             acceptedRevision = write.snapshot.revision;
-            const affected = this.adapters
-                .filter((adapter) => adapter.hostname === hostname)
-                .filter((adapter) => {
-                    const before = isSiteEnabled(snapshot.sitePreferences, adapter.hostname);
-                    const after = isSiteEnabled(
-                        write.snapshot.sitePreferences,
-                        adapter.hostname,
-                    );
-                    return before !== after
-                        || (
-                            write.snapshot.globalEnabled
-                            && this.lifecycle.hasAdapterFailure(adapter.id)
-                        );
-                })
-                .map((adapter) => adapter.hostname);
-            if (write.snapshot.globalEnabled && affected.length > 0) {
+            if (write.snapshot.globalEnabled && write.changed) {
                 await this.lifecycle.reconcile(
-                    "settings-change",
-                    "enabled",
+                    ACTIVATION_POLICY.ENABLED,
                     write.snapshot.revision,
                     write.snapshot.sitePreferences,
-                    affected,
+                    [hostname],
                 );
             } else {
                 this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
@@ -396,7 +401,11 @@ export class SettingsCommands {
             this.projection.refreshCachedPopup(this.lifecycle.state);
             if (write.changed) {
                 this.diagnostics.log(
-                    { category: "settings", reason: "settings-updated", count: 1 },
+                    {
+                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
+                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
+                        count: 1,
+                    },
                     this.lifecycle.state,
                 );
             }
@@ -430,7 +439,7 @@ export class SettingsCommands {
      * Initializes the application and drains pending lifecycle work before a command.
      */
     private async prepare(): Promise<void> {
-        await this.lifecycle.ensureReady("cold-worker");
+        await this.lifecycle.ensureReady(LIFECYCLE_REASON.COLD_WORKER);
         await this.lifecycle.drainLifecycle();
     }
 }

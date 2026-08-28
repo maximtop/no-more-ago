@@ -1,84 +1,102 @@
 /**
- * @file Runtime adapter reconciliation state and scoped-result merging.
+ * @file Caches universal document-runtime reconciliation within serialized application work.
  */
-
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
-    RegistrationOutcome,
-    RuntimeAdapterDefinition,
-} from "../runtime/adapter-activation";
+} from "../runtime/document-activation";
+import {
+    RECONCILE_FAILURE_SCOPE,
+    REGISTRATION_OPERATION,
+    REGISTRATION_OUTCOME,
+} from "../runtime/document-activation";
 import type { ActivationCoordinator } from "./contracts";
 
 /**
- * Owns runtime reconciliation and the latest authoritative result.
+ * Merges a host-scoped reconciliation into the cached complete result.
+ *
+ * @param previous - Previously cached reconciliation result.
+ * @param current - Newly completed reconciliation result.
+ * @param affectedHostnames - Hostnames replaced by the scoped reconciliation.
+ * @returns - Result containing current data and untouched tab data.
+ */
+function mergeScopedResult(
+    previous: ActivationReconcileResult,
+    current: ActivationReconcileResult,
+    affectedHostnames: readonly string[],
+): ActivationReconcileResult {
+    const affected = new Set(affectedHostnames);
+    const preservedFailures = previous.failures.filter((failure) =>
+        failure.scope === RECONCILE_FAILURE_SCOPE.TAB
+        && !affected.has(failure.hostname));
+    const preservedTabs = previous.tabs.filter(({ hostname }) => !affected.has(hostname));
+    return {
+        ...current,
+        failures: [...current.failures, ...preservedFailures],
+        tabs: [...current.tabs, ...preservedTabs],
+    };
+}
+
+/**
+ * Owns the latest non-stale universal-runtime reconciliation result.
  */
 export class ActivationManager {
     /**
-     * Runtime reconciliation boundary.
-     */
-    private readonly coordinator: ActivationCoordinator;
-
-    /**
-     * Immutable adapter catalog used to scope and merge results.
-     */
-    private readonly adapters: readonly RuntimeAdapterDefinition[];
-
-    /**
-     * Most recent non-stale reconciliation result.
+     * Last successful or failed reconciliation retained by this manager.
      */
     private lastResult: ActivationReconcileResult | undefined;
 
     /**
-     * Creates a reconciliation manager.
+     * Creates a manager over a runtime coordinator.
      *
-     * @param coordinator - Runtime registration and tab reconciler.
-     * @param adapters - Runtime adapter catalog.
+     * @param coordinator - Runtime coordinator used to perform reconciliation.
+     * @returns - A new activation manager.
      */
-    public constructor(
-        coordinator: ActivationCoordinator,
-        adapters: readonly RuntimeAdapterDefinition[],
-    ) {
-        this.coordinator = coordinator;
-        this.adapters = adapters;
-    }
+    public constructor(private readonly coordinator: ActivationCoordinator) {}
 
     /**
-     * Most recent adapter reconciliation result.
+     * Latest reconciliation result, when available.
      *
-     * @returns - Latest result, when reconciliation has completed.
+     * @returns - The newest retained result, if reconciliation has run.
      */
     public get result(): ActivationReconcileResult | undefined {
         return this.lastResult;
     }
 
     /**
-     * Reconciles runtime adapters and retains the newest non-stale result.
+     * Runs reconciliation and retains the newest revisioned result.
      *
-     * @param mode - Activation reconciliation mode.
-     * @param policy - Effective global settings policy.
-     * @param revision - Settings revision associated with the request.
-     * @param sitePreferences - Canonical-host activation overrides.
-     * @param affectedHostnames - Optional hostnames to limit document updates.
-     * @returns - Latest non-stale activation reconciliation result.
+     * @param policy - Global activation policy.
+     * @param revision - Settings revision associated with the operation.
+     * @param sitePreferences - Effective per-host activation preferences.
+     * @param affectedHostnames - Optional subset of hosts to reconcile.
+     * @returns - The completed reconciliation result.
      */
     public async reconcile(
-        mode: ActivationMode,
         policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>>,
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
-        let result = await this.run(
-            mode,
-            policy,
-            revision,
-            sitePreferences,
-            affectedHostnames,
-        );
-        if (affectedHostnames !== undefined && this.lastResult) {
-            result = this.mergeScopedResult(result, affectedHostnames);
+        let result: ActivationReconcileResult;
+        try {
+            result = await this.coordinator.reconcile({
+                revision,
+                policy,
+                sitePreferences,
+                ...(affectedHostnames === undefined ? {} : { affectedHostnames }),
+            });
+        } catch {
+            result = {
+                revision,
+                policy,
+                failures: [{
+                    scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
+                    operation: REGISTRATION_OPERATION.GET,
+                }],
+                registration: REGISTRATION_OUTCOME.FAILED,
+                tabs: [],
+            };
         }
         if (
             !this.lastResult
@@ -86,15 +104,17 @@ export class ActivationManager {
             || this.lastResult.revision === null
             || result.revision >= this.lastResult.revision
         ) {
-            this.lastResult = result;
+            this.lastResult = affectedHostnames === undefined || !this.lastResult
+                ? result
+                : mergeScopedResult(this.lastResult, result, affectedHostnames);
         }
         return result;
     }
 
     /**
-     * Updates the cached reconciliation revision after a no-op settings write.
+     * Advances the cached revision after a no-op settings write.
      *
-     * @param revision - New settings revision for the cached result.
+     * @param revision - New settings revision to cache.
      */
     public advanceRevision(revision: number): void {
         if (this.lastResult) {
@@ -103,108 +123,9 @@ export class ActivationManager {
     }
 
     /**
-     * Clears the retained result before a complete runtime rebuild.
+     * Clears the cached result before a complete runtime rebuild.
      */
     public clear(): void {
         this.lastResult = undefined;
-    }
-
-    /**
-     * Reports whether the retained result contains a failure for an adapter.
-     *
-     * @param adapterId - Adapter identifier to inspect.
-     * @returns - Whether the latest reconciliation records its failure.
-     */
-    public hasFailure(adapterId: string): boolean {
-        return (this.lastResult?.failures ?? []).some(
-            (failure) => failure.adapterId === adapterId,
-        );
-    }
-
-    /**
-     * Runs the coordinator and converts thrown failures into adapter-scoped failures.
-     *
-     * @param mode - Activation reconciliation mode.
-     * @param policy - Effective global policy.
-     * @param revision - Settings revision for the reconciliation.
-     * @param sitePreferences - Effective per-host preferences.
-     * @param affectedHostnames - Optional hostnames limiting the operation.
-     * @returns - Coordinator result or a contained failure result.
-     */
-    private async run(
-        mode: ActivationMode,
-        policy: ActivationPolicy,
-        revision: number | null,
-        sitePreferences: Readonly<Record<string, boolean>>,
-        affectedHostnames?: readonly string[],
-    ): Promise<ActivationReconcileResult> {
-        try {
-            return await this.coordinator.reconcile({
-                revision,
-                mode,
-                policy,
-                sitePreferences,
-                ...(affectedHostnames === undefined ? {} : { affectedHostnames }),
-            });
-        } catch {
-            return {
-                revision,
-                mode,
-                policy,
-                failures: this.adapters
-                    .filter(
-                        (adapter) =>
-                            affectedHostnames === undefined
-                            || affectedHostnames.includes(adapter.hostname),
-                    )
-                    .map((adapter) => ({
-                        scope: "registration" as const,
-                        adapterId: adapter.id,
-                        operation: "get" as const,
-                    })),
-                registration: {},
-                tabs: [],
-            };
-        }
-    }
-
-    /**
-     * Replaces only affected adapters in an existing authoritative result.
-     *
-     * @param result - Scoped coordinator result.
-     * @param affectedHostnames - Hostnames included in the scoped operation.
-     * @returns - Result merged with retained state for unrelated adapters.
-     */
-    private mergeScopedResult(
-        result: ActivationReconcileResult,
-        affectedHostnames: readonly string[],
-    ): ActivationReconcileResult {
-        const previous = this.lastResult;
-        if (!previous) {
-            return result;
-        }
-        const affectedIds = new Set(
-            this.adapters
-                .filter((adapter) => affectedHostnames.includes(adapter.hostname))
-                .map((adapter) => adapter.id),
-        );
-        const failures = [
-            ...previous.failures.filter((failure) => !affectedIds.has(failure.adapterId)),
-            ...result.failures,
-        ];
-        const registration: Record<string, RegistrationOutcome> = {};
-        for (const [id, value] of Object.entries(previous.registration)) {
-            if (!affectedIds.has(id)) {
-                registration[id] = value;
-            }
-        }
-        for (const [id, value] of Object.entries(result.registration)) {
-            registration[id] = value;
-        }
-        const tabs = [
-            ...previous.tabs.filter((record) => !affectedIds.has(record.adapterId)),
-            ...result.tabs,
-        ];
-        return { ...result, failures, registration, tabs };
     }
 }

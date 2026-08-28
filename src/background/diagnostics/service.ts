@@ -11,20 +11,28 @@ import {
     type DiagnosticSender,
 } from "../../shared/diagnostics/events";
 import {
+    DIAGNOSTIC_BROWSER_FAMILY,
     DIAGNOSTIC_BROWSER_FAMILIES,
+    DIAGNOSTIC_INTERNAL_HOSTNAME,
+    DIAGNOSTIC_PAGE_CATEGORY,
 } from "../../shared/diagnostics/contracts";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
 import type { DiagnosticJournal } from "../diagnostics/journal";
-import type { RuntimeAdapterDefinition } from "../runtime/adapter-activation";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
+import { parseHttpUrl } from "../../shared/url/http";
 import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
+import { APPLICATION_PHASE } from "../application/contracts";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../../shared/messaging/view-state-values";
 import type {
     ClearDiagnosticsResponse,
     DiagnosticsEnvironment,
     GetDiagnosticsSnapshotResponse,
-    DebugState,
-} from "../../shared/messages";
+} from "../../shared/messaging/contracts";
+import type { DebugState } from "../../shared/messaging/view-state-schemas";
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
@@ -38,11 +46,6 @@ export class DiagnosticsService {
     private readonly journal: DiagnosticJournal | undefined;
 
     /**
-     * Runtime adapters accepted as document-event sources.
-     */
-    private readonly adapters: readonly RuntimeAdapterDefinition[];
-
-    /**
      * Trusted browser and extension metadata.
      */
     private readonly environment: BackgroundApplicationOptions["diagnosticEnvironment"];
@@ -51,16 +54,13 @@ export class DiagnosticsService {
      * Creates a diagnostics service.
      *
      * @param journal - Optional persistent diagnostic journal.
-     * @param adapters - Runtime adapter catalog.
      * @param environment - Trusted browser and extension metadata.
      */
     public constructor(
         journal: DiagnosticJournal | undefined,
-        adapters: readonly RuntimeAdapterDefinition[],
         environment: BackgroundApplicationOptions["diagnosticEnvironment"],
     ) {
         this.journal = journal;
-        this.adapters = adapters;
         this.environment = environment;
     }
 
@@ -71,18 +71,18 @@ export class DiagnosticsService {
      * @returns - Diagnostic logging state.
      */
     public debugState(state: ApplicationStateView): DebugState {
-        if (state.phase !== "ready" || !state.snapshot) {
+        if (state.phase !== APPLICATION_PHASE.READY || !state.snapshot) {
             return {
-                availability: "unavailable",
+                availability: STATE_AVAILABILITY.UNAVAILABLE,
                 revision: null,
                 enabled: null,
-                failure: state.failure === "fail-closed-cleanup"
-                    ? "fail-closed-cleanup"
-                    : "settings-load",
+                failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                    ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                    : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             };
         }
         return {
-            availability: "ready",
+            availability: STATE_AVAILABILITY.READY,
             revision: state.snapshot.revision,
             enabled: state.snapshot.debugEnabled,
         };
@@ -97,7 +97,11 @@ export class DiagnosticsService {
     public async readSnapshot(
         state: ApplicationStateView,
     ): Promise<GetDiagnosticsSnapshotResponse> {
-        if (state.phase !== "ready" || !state.snapshot || !this.journal) {
+        if (
+            state.phase !== APPLICATION_PHASE.READY
+            || !state.snapshot
+            || !this.journal
+        ) {
             return { ok: false, error: "unavailable" };
         }
         if (!state.snapshot.debugEnabled) {
@@ -120,7 +124,11 @@ export class DiagnosticsService {
      * @returns - Clear result or a contained availability error.
      */
     public async clearEntries(state: ApplicationStateView): Promise<ClearDiagnosticsResponse> {
-        if (state.phase !== "ready" || !state.snapshot || !this.journal) {
+        if (
+            state.phase !== APPLICATION_PHASE.READY
+            || !state.snapshot
+            || !this.journal
+        ) {
             return { ok: false, error: "unavailable" };
         }
         if (!state.snapshot.debugEnabled) {
@@ -166,13 +174,9 @@ export class DiagnosticsService {
         if (!state.snapshot?.debugEnabled || !this.journal) {
             return;
         }
-        const hostname = this.adapters[0]?.hostname;
-        if (!hostname) {
-            return;
-        }
         const event = sanitizeDiagnosticEvent(input, {
-            hostname,
-            pageCategory: "other",
+            hostname: DIAGNOSTIC_INTERNAL_HOSTNAME,
+            pageCategory: DIAGNOSTIC_PAGE_CATEGORY.OTHER,
             incognito: false,
         });
         if (event) {
@@ -181,12 +185,12 @@ export class DiagnosticsService {
     }
 
     /**
-     * Validates and records a top-frame event for an enabled adapter.
+     * Validates and records a document-frame event for an enabled top-level site.
      *
      * @param input - Untrusted document diagnostic payload.
      * @param sender - WebExtension sender metadata.
      * @param state - Current lifecycle state.
-     * @returns - Whether a valid enabled top-frame event was accepted.
+     * @returns - Whether a valid event from an enabled top-level site was accepted.
      */
     public async record(
         input: unknown,
@@ -195,21 +199,19 @@ export class DiagnosticsService {
     ): Promise<boolean> {
         const snapshot = state.snapshot;
         if (
-            state.phase !== "ready"
+            state.phase !== APPLICATION_PHASE.READY
             || !snapshot?.debugEnabled
             || !snapshot.globalEnabled
             || !this.journal
         ) {
             return false;
         }
-        if (sender.frameId !== undefined && sender.frameId !== 0) {
+        const topLevelUrl = parseHttpUrl(sender.tab?.url);
+        if (!topLevelUrl || !isSiteEnabled(snapshot.sitePreferences, topLevelUrl.hostname)) {
             return false;
         }
         const event = createDiagnosticEvent(input, sender);
-        if (!event || !isSiteEnabled(snapshot.sitePreferences, event.hostname)) {
-            return false;
-        }
-        if (!this.adapters.some((adapter) => adapter.hostname === event.hostname)) {
+        if (!event) {
             return false;
         }
         try {
@@ -252,7 +254,7 @@ export class DiagnosticsService {
         const browserFamily: DiagnosticBrowserFamily =
             typeof family === "string" && BROWSER_FAMILY_SET.has(family)
                 ? family
-                : "other";
+                : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
         const version = this.environment?.extensionVersion;
         return {
             browserFamily,

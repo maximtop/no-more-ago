@@ -3,7 +3,13 @@
  */
 
 import type { ApplicationStateView } from "../application/state";
-import { UNAVAILABLE_TIME_ZONE_ERROR, type DisplayState } from "../../shared/messages";
+import {
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+} from "../../shared/messaging/view-state-values";
+import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-errors";
+import type { DisplayState } from "../../shared/messaging/view-state-schemas";
+import { APPLICATION_PHASE } from "../application/contracts";
 
 /**
  * Checks whether the runtime supports an IANA time-zone identifier.
@@ -28,21 +34,21 @@ function isZoneAvailable(identifier: string): boolean {
  */
 export function deriveDisplayState(state: ApplicationStateView): DisplayState {
     const snapshot = state.snapshot;
-    if (state.phase !== "ready" || !snapshot) {
+    if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
         return {
-            availability: "unavailable",
+            availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             display: null,
-            failure: state.failure === "fail-closed-cleanup"
-                ? "fail-closed-cleanup"
-                : "settings-load",
+            failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+                : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
     const display = snapshot.display;
     const unavailable = display.timeZone.mode === "iana"
         && !isZoneAvailable(display.timeZone.identifier);
     return {
-        availability: "ready",
+        availability: STATE_AVAILABILITY.READY,
         revision: snapshot.revision,
         display,
         debugEnabled: snapshot.debugEnabled,

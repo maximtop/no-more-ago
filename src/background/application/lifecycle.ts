@@ -3,21 +3,30 @@
  */
 
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
-} from "../runtime/adapter-activation";
+} from "../runtime/document-activation";
+import {
+    ACTIVATION_POLICY,
+} from "../runtime/document-activation";
 import type { SettingsService } from "../settings/service";
 import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
 import type { ActivationManager } from "./activation-manager";
-import type {
-    ApplicationFailure,
-    ApplicationPhase,
-    LifecycleReason,
+import {
+    APPLICATION_PHASE,
+    LIFECYCLE_REASON,
+    type ApplicationFailure,
+    type ApplicationPhase,
+    type LifecycleReason,
 } from "./contracts";
 import type { ApplicationStateView } from "./state";
 import type { DiagnosticsService } from "../diagnostics/service";
 import type { StateProjection } from "../projection/state-projection";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../shared/diagnostics/contracts";
+import { SETTINGS_STATE_FAILURE } from "../../shared/messaging/view-state-values";
 
 /**
  * Owns authoritative application state and serialized lifecycle transitions.
@@ -46,7 +55,7 @@ export class ApplicationLifecycle {
     /**
      * Current lifecycle phase.
      */
-    private phaseValue: ApplicationPhase = "cold";
+    private phaseValue: ApplicationPhase = APPLICATION_PHASE.COLD;
 
     /**
      * Last successfully loaded authoritative settings.
@@ -170,7 +179,7 @@ export class ApplicationLifecycle {
     public markReady(snapshot: SettingsSnapshotV5): void {
         this.snapshotValue = snapshot;
         this.failureValue = undefined;
-        this.phaseValue = "ready";
+        this.phaseValue = APPLICATION_PHASE.READY;
     }
 
     /**
@@ -181,12 +190,16 @@ export class ApplicationLifecycle {
      */
     public async enterFailedClosed(inspectCleanup = false): Promise<void> {
         this.snapshotValue = undefined;
-        this.failureValue = "settings-load";
-        const cleanup = await this.reconcile("failed-closed", "unknown", null, {});
+        this.failureValue = SETTINGS_STATE_FAILURE.SETTINGS_LOAD;
+        const cleanup = await this.reconcile(
+            ACTIVATION_POLICY.UNKNOWN,
+            null,
+            {},
+        );
         if (inspectCleanup && cleanup.failures.length > 0) {
-            this.failureValue = "fail-closed-cleanup";
+            this.failureValue = SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP;
         }
-        this.phaseValue = "failed-closed";
+        this.phaseValue = APPLICATION_PHASE.FAILED_CLOSED;
     }
 
     /**
@@ -213,19 +226,8 @@ export class ApplicationLifecycle {
     }
 
     /**
-     * Reports whether an adapter has a retained runtime failure.
+     * Reconciles the document runtime and updates cached popup state.
      *
-     * @param adapterId - Adapter identifier to inspect.
-     * @returns - Whether the latest reconciliation records its failure.
-     */
-    public hasAdapterFailure(adapterId: string): boolean {
-        return this.activation.hasFailure(adapterId);
-    }
-
-    /**
-     * Reconciles adapters and updates cached popup state.
-     *
-     * @param mode - Runtime reconciliation mode.
      * @param policy - Effective global policy.
      * @param revision - Associated settings revision.
      * @param sitePreferences - Canonical-host activation overrides.
@@ -233,7 +235,6 @@ export class ApplicationLifecycle {
      * @returns - Reconciliation result.
      */
     public async reconcile(
-        mode: ActivationMode,
         policy: ActivationPolicy,
         revision: number | null,
         sitePreferences: Readonly<Record<string, boolean>> =
@@ -241,7 +242,6 @@ export class ApplicationLifecycle {
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         const result = await this.activation.reconcile(
-            mode,
             policy,
             revision,
             sitePreferences,
@@ -257,14 +257,17 @@ export class ApplicationLifecycle {
      * @param reason - Lifecycle event requiring initialized state.
      * @returns - Promise settled after settings and activation are ready.
      */
-    public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
-        if (reason !== "cold-worker") {
+    public ensureReady(reason: LifecycleReason = LIFECYCLE_REASON.COLD_WORKER): Promise<void> {
+        if (reason !== LIFECYCLE_REASON.COLD_WORKER) {
             this.lifecycleReasons.add(reason);
         }
-        if (this.phaseValue === "ready") {
+        if (this.phaseValue === APPLICATION_PHASE.READY) {
             return this.drainLifecycle();
         }
-        if (this.phaseValue === "failed-closed" && this.readinessFlight === undefined) {
+        if (
+            this.phaseValue === APPLICATION_PHASE.FAILED_CLOSED
+            && this.readinessFlight === undefined
+        ) {
             this.readinessFlight = this.enqueue(() => this.recover()).finally(() => {
                 this.readinessFlight = undefined;
             });
@@ -294,17 +297,21 @@ export class ApplicationLifecycle {
         this.lifecycleFlight = this.enqueue(async () => {
             while (this.lifecycleReasons.size > 0) {
                 const snapshot = this.snapshotValue;
-                if (this.phaseValue !== "ready" || !snapshot) {
+                if (this.phaseValue !== APPLICATION_PHASE.READY || !snapshot) {
                     return;
                 }
                 await this.reconcile(
-                    "activation-sweep",
-                    snapshot.globalEnabled ? "enabled" : "disabled",
+                    snapshot.globalEnabled
+                        ? ACTIVATION_POLICY.ENABLED
+                        : ACTIVATION_POLICY.DISABLED,
                     snapshot.revision,
                     snapshot.sitePreferences,
                 );
                 this.lifecycleReasons.clear();
-                this.diagnostics.log({ category: "lifecycle", count: 1 }, this.state);
+                this.diagnostics.log({
+                    category: DIAGNOSTIC_CATEGORY.LIFECYCLE,
+                    count: 1,
+                }, this.state);
             }
         }).finally(() => {
             this.lifecycleFlight = undefined;
@@ -318,16 +325,18 @@ export class ApplicationLifecycle {
      * @param reason - Browser lifecycle event to reconcile.
      * @returns - Promise settled when the event has been processed.
      */
-    public requestLifecycle(reason: Exclude<LifecycleReason, "cold-worker">): Promise<void> {
+    public requestLifecycle(
+        reason: Exclude<LifecycleReason, typeof LIFECYCLE_REASON.COLD_WORKER>,
+    ): Promise<void> {
         this.lifecycleReasons.add(reason);
         return this.ensureReady(reason);
     }
 
     /**
-     * Loads settings and reconciles adapters for a cold application.
+     * Loads settings and reconciles the document runtime for a cold application.
      */
     private async initialize(): Promise<void> {
-        this.phaseValue = "initializing";
+        this.phaseValue = APPLICATION_PHASE.INITIALIZING;
         const loaded = await this.settings.load();
         if (!loaded.ok) {
             await this.enterFailedClosed(true);
@@ -338,32 +347,38 @@ export class ApplicationLifecycle {
         if (loaded.snapshot.debugEnabled) {
             await this.diagnostics.setEnabled(true);
         }
-        const mode: ActivationMode = this.lifecycleReasons.size > 0
-            ? "activation-sweep"
-            : "cold-worker";
         try {
             await this.reconcile(
-                mode,
-                loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+                loaded.snapshot.globalEnabled
+                    ? ACTIVATION_POLICY.ENABLED
+                    : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
                 loaded.snapshot.sitePreferences,
             );
             this.lifecycleReasons.clear();
-            this.phaseValue = "ready";
+            this.phaseValue = APPLICATION_PHASE.READY;
             await this.projection.seed(this.state);
-            this.diagnostics.log({ category: "lifecycle", count: 1 }, this.state);
+            this.diagnostics.log({
+                category: DIAGNOSTIC_CATEGORY.LIFECYCLE,
+                count: 1,
+            }, this.state);
         } catch {
             this.activation.clear();
             await this.reconcile(
-                mode,
-                loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+                loaded.snapshot.globalEnabled
+                    ? ACTIVATION_POLICY.ENABLED
+                    : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
                 loaded.snapshot.sitePreferences,
             );
             this.lifecycleReasons.clear();
-            this.phaseValue = "ready";
+            this.phaseValue = APPLICATION_PHASE.READY;
             this.diagnostics.log(
-                { category: "error", reason: "processing-failed", count: 1 },
+                {
+                    category: DIAGNOSTIC_CATEGORY.ERROR,
+                    reason: DIAGNOSTIC_REASON.PROCESSING_FAILED,
+                    count: 1,
+                },
                 this.state,
             );
         }
@@ -384,12 +399,11 @@ export class ApplicationLifecycle {
             await this.diagnostics.setEnabled(true);
         }
         await this.reconcile(
-            "activation-sweep",
             loaded.snapshot.globalEnabled ? "enabled" : "disabled",
             loaded.snapshot.revision,
             loaded.snapshot.sitePreferences,
         );
-        this.phaseValue = "ready";
+        this.phaseValue = APPLICATION_PHASE.READY;
         await this.projection.seed(this.state);
     }
 }

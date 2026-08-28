@@ -5,19 +5,27 @@
 import type { DiagnosticBrowserFamily } from "../../shared/diagnostics/events";
 import type { DiagnosticJournal } from "../diagnostics/journal";
 import type {
-    ActivationMode,
     ActivationPolicy,
     ActivationReconcileResult,
-    RuntimeAdapterDefinition,
-} from "../runtime/adapter-activation";
+} from "../runtime/document-activation";
 import type { TabsRuntime } from "../runtime/tabs";
 import type { SettingsService } from "../settings/service";
-import type { SettingsStateFailure } from "../../shared/messages";
+import type { SettingsStateFailure } from "../../shared/messaging/view-state-values";
+
+/**
+ * Lifecycle states of the background application.
+ */
+export const APPLICATION_PHASE = {
+    COLD: "cold",
+    INITIALIZING: "initializing",
+    READY: "ready",
+    FAILED_CLOSED: "failed-closed",
+} as const;
 
 /**
  * Lifecycle state of the background application.
  */
-export type ApplicationPhase = "cold" | "initializing" | "ready" | "failed-closed";
+export type ApplicationPhase = (typeof APPLICATION_PHASE)[keyof typeof APPLICATION_PHASE];
 
 /**
  * Failure retained while the application is unavailable.
@@ -38,22 +46,17 @@ export interface ActivationCoordinator {
         readonly revision: number | null;
 
         /**
-         * Reason for the reconciliation run.
-         */
-        readonly mode: ActivationMode;
-
-        /**
          * Global activation policy to apply.
          */
         readonly policy: ActivationPolicy;
 
         /**
-         * Per-host activation overrides used by adapters.
+         * Per-host activation overrides used by the document runtime.
          */
         readonly sitePreferences?: Readonly<Record<string, boolean>>;
 
         /**
-         * Limits reconciliation to adapters for these hostnames when provided.
+         * Limits reconciliation to these top-level hostnames when provided.
          */
         readonly affectedHostnames?: readonly string[];
     }): Promise<ActivationReconcileResult>;
@@ -74,14 +77,9 @@ export interface BackgroundApplicationOptions {
     readonly coordinator: ActivationCoordinator;
 
     /**
-     * Browser tab query and messaging API.
+     * Browser tab query, frame enumeration, and messaging API.
      */
     readonly tabs: TabsRuntime;
-
-    /**
-     * Runtime adapters that define supported sites and scripts.
-     */
-    readonly adapters: readonly RuntimeAdapterDefinition[];
 
     /**
      * Optional persistent diagnostic-event journal.
@@ -105,6 +103,16 @@ export interface BackgroundApplicationOptions {
 }
 
 /**
+ * Events that trigger background initialization or reconciliation.
+ */
+export const LIFECYCLE_REASON = {
+    STARTUP: "startup",
+    INSTALLED: "installed",
+    UPDATED: "updated",
+    COLD_WORKER: "cold-worker",
+} as const;
+
+/**
  * Event that triggered background initialization or reconciliation.
  */
-export type LifecycleReason = "startup" | "installed" | "updated" | "cold-worker";
+export type LifecycleReason = (typeof LIFECYCLE_REASON)[keyof typeof LIFECYCLE_REASON];

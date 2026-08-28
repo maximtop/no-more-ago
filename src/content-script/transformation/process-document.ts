@@ -6,18 +6,41 @@ import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
 import { formatDateWithPresentation } from "../../shared/date/format-default-date";
 import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
 import {
+    releaseSourceHiddenForReconciliation,
     renderExactTime,
     restoreExactTime,
-    type OwnedOutputMutationSink,
+    type OwnedDomMutationSink,
 } from "./render-exact-time";
 import { resolveTrustedTimestamp } from "./resolve-trusted-timestamp";
+import { isSourceSuppressed } from "./source-visibility";
+import {
+    TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampCandidate,
+} from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
 import type { DiagnosticEventInput } from "../../shared/diagnostics/events";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../shared/diagnostics/contracts";
 
 /**
  * Receives bounded processing facts after page-derived data has been sanitized.
  */
 export type DocumentDiagnosticSink = (event: DiagnosticEventInput) => void;
+
+/**
+ * Emits one bounded skip event for a candidate that cannot be rendered.
+ *
+ * @param diagnosticSink - Optional diagnostic event sink.
+ */
+function emitCandidateSkipped(diagnosticSink: DocumentDiagnosticSink | undefined): void {
+    diagnosticSink?.({
+        category: DIAGNOSTIC_CATEGORY.SKIP,
+        reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
+        count: 1,
+    });
+}
 
 /**
  * Dependencies for a full document pass, including snapshots that may be refreshed through
@@ -63,6 +86,11 @@ export interface ProcessInput {
      * Optional sink for bounded document-processing diagnostics.
      */
     readonly diagnosticSink?: DocumentDiagnosticSink;
+
+    /**
+     * Sink for renderer-authored DOM mutations during an initial document pass.
+     */
+    readonly ownedDomMutations?: OwnedDomMutationSink;
 }
 
 /**
@@ -107,7 +135,7 @@ export interface ReconcileInput {
     /**
      * Sink that records reversible changes to extension-owned output nodes.
      */
-    readonly ownedOutputMutations?: OwnedOutputMutationSink;
+    readonly ownedDomMutations?: OwnedDomMutationSink;
 
     /**
      * Optional sink for bounded document-processing diagnostics.
@@ -126,58 +154,105 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const { url, root, registry = defaultRegistry } = input;
     const locales = input.localesProvider?.() ?? input.locales ?? [];
     const display = input.displayProvider?.() ?? input.display;
-    const ownedOutputMutations =
-        "ownedOutputMutations" in input ? input.ownedOutputMutations : undefined;
+    const ownedDomMutations =
+        "ownedDomMutations" in input ? input.ownedDomMutations : undefined;
     const diagnosticSink = input.diagnosticSink;
-    const adapter = registry.select(url);
-    if (!adapter) {
+    const rules = registry.matching(url);
+    if (rules.length === 0) {
         if (diagnosticSink) {
-            diagnosticSink({ category: "skip", reason: "adapter-missing", count: 1 });
+            diagnosticSink({
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                reason: DIAGNOSTIC_REASON.ADAPTER_MISSING,
+                count: 1,
+            });
         }
         return [];
     }
     const started = diagnosticSink ? performance.now() : undefined;
-    if (diagnosticSink) {
-        diagnosticSink({ category: "adapter", reason: "adapter-matched", count: 1 });
+    const candidatesBySource = new Map<Element, TimestampCandidate[]>();
+    const discoveredSources: Element[] = [];
+    const discovered = new Set<Element>();
+    for (const rule of rules) {
+        for (const element of rule.discover(root)) {
+            const candidate = rule.extract(element);
+            const source = candidate?.source ?? element;
+            ownedDomMutations?.trackSource?.(source);
+            if (!discovered.has(source)) {
+                discovered.add(source);
+                discoveredSources.push(source);
+            }
+            if (candidate) {
+                const candidates = candidatesBySource.get(source) ?? [];
+                candidates.push(candidate);
+                candidatesBySource.set(source, candidates);
+            }
+        }
+    }
+
+    if (diagnosticSink && discoveredSources.length > 0) {
+        diagnosticSink({
+            category: DIAGNOSTIC_CATEGORY.ADAPTER,
+            reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+            count: 1,
+        });
     }
 
     const outputs: HTMLTimeElement[] = [];
-    for (const element of adapter.discover(root)) {
-        const candidate = adapter.extract(element);
-        const resolved = candidate ? resolveTrustedTimestamp(candidate) : null;
+    for (const source of discoveredSources) {
+        const resolved = candidatesBySource
+            .get(source)
+            ?.map(resolveTrustedTimestamp)
+            .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
-            restoreExactTime(element, ownedOutputMutations);
+            restoreExactTime(source, ownedDomMutations);
             if (diagnosticSink) {
-                diagnosticSink({ category: "skip", reason: "invalid-timestamp", count: 1 });
+                diagnosticSink({
+                    category: DIAGNOSTIC_CATEGORY.SKIP,
+                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                    count: 1,
+                });
             }
             continue;
+        }
+        if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
+            releaseSourceHiddenForReconciliation(source, ownedDomMutations);
+            if (isSourceSuppressed(source)) {
+                restoreExactTime(source, ownedDomMutations);
+                emitCandidateSkipped(diagnosticSink);
+                continue;
+            }
         }
         const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
-            restoreExactTime(element, ownedOutputMutations);
+            restoreExactTime(source, ownedDomMutations);
             if (diagnosticSink && presentation.error === INVALID_DATE_FORMAT_ERROR) {
-                diagnosticSink({ category: "error", reason: "processing-failed", count: 1 });
+                diagnosticSink({
+                    category: DIAGNOSTIC_CATEGORY.ERROR,
+                    reason: DIAGNOSTIC_REASON.PROCESSING_FAILED,
+                    count: 1,
+                });
             }
-            if (diagnosticSink) {
-                diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
-            }
+            emitCandidateSkipped(diagnosticSink);
             continue;
         }
         if (presentation.error === INVALID_DATE_FORMAT_ERROR) {
-            restoreExactTime(element, ownedOutputMutations);
-            if (diagnosticSink) {
-                diagnosticSink({ category: "skip", reason: "candidate-skipped", count: 1 });
-            }
+            restoreExactTime(source, ownedDomMutations);
+            emitCandidateSkipped(diagnosticSink);
             continue;
         }
-        const output = renderExactTime(resolved.source, resolved.sourceDatetime, presentation.text);
+        const output = renderExactTime(
+            resolved.source,
+            resolved.sourceDatetime,
+            presentation.text,
+            ownedDomMutations,
+        );
         if (output) {
             outputs.push(output);
         }
     }
-    if (diagnosticSink && started !== undefined) {
+    if (diagnosticSink && started !== undefined && discoveredSources.length > 0) {
         diagnosticSink({
-            category: "timing",
+            category: DIAGNOSTIC_CATEGORY.TIMING,
             count: outputs.length,
             durationMs: Math.max(0, performance.now() - started),
         });
@@ -197,6 +272,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
  * @param input.display - Static validated display settings.
  * @param input.displayProvider - Dynamic source of display settings.
  * @param input.diagnosticSink - Optional bounded processing event sink.
+ * @param input.ownedDomMutations - Optional renderer mutation sink.
  * @param input.registry - Trusted adapter registry.
  * @returns - Extension-owned time elements generated by the pass.
  */
@@ -208,6 +284,7 @@ export function processDocument({
     display,
     displayProvider,
     diagnosticSink,
+    ownedDomMutations,
     registry = defaultRegistry,
 }: ProcessInput): readonly HTMLTimeElement[] {
     return processRegion({
@@ -219,6 +296,7 @@ export function processDocument({
         ...(display === undefined ? {} : { display }),
         ...(displayProvider === undefined ? {} : { displayProvider }),
         ...(diagnosticSink === undefined ? {} : { diagnosticSink }),
+        ...(ownedDomMutations === undefined ? {} : { ownedDomMutations }),
     });
 }
 

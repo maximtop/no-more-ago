@@ -13,6 +13,7 @@
     - [Branches and Pull Requests](#branches-and-pull-requests)
     - [Development Builds](#development-builds)
     - [Quality Checks](#quality-checks)
+    - [Runtime Architecture](#runtime-architecture)
     - [Release Builds](#release-builds)
     - [Makefile Aliases](#makefile-aliases)
   - [Common Tasks](#common-tasks)
@@ -152,6 +153,29 @@ written to `dist/dev/<browser>.zip`.
 Tests live under `tests/src` and `tests/scripts`, mirroring `src` and
 `scripts`. Site fixtures live under
 `tests/src/content-script/fixtures`.
+Keep tests minimal and behavior-level: prefer focused matrices and lifecycle
+checks at public boundaries over tests of source structure or implementation
+details.
+
+### Runtime Architecture
+
+The background registers one universal content runtime for HTTP and HTTPS
+documents at `document_start`, with `allFrames` enabled. It is controlled by
+global processing policy; a per-site preference affects the current
+top-level hostname and all reachable frames in that tab. Each frame uses its
+own URL to select applicable content rules.
+
+Generic processing is the final rule in the content-side source precedence.
+It discovers ordinary light-DOM `time[datetime]` elements and accepts only
+complete global date-times with explicit known offsets. Specialized sources,
+including GitHub's relative-time widgets, remain content-side rules and take
+precedence when they accept the same source. Adding or changing a specialized
+source should not require background adapter registration or site-policy
+logic.
+
+Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
+frames, Shadow DOM, page labels, and unsupported timestamp forms remain
+outside the current scope.
 
 ### Release Builds
 
@@ -202,15 +226,16 @@ change.
 
 ### Add or Update a Site Adapter
 
-To add support for another site:
+To add or update a specialized source:
 
-1. Add or update the adapter under `src/content-script/adapters`.
-2. Register its content-side definition in the adapter registry.
-3. Add the matching runtime activation contract under `src/background/runtime`
-   when the hostname or script registration changes.
-4. Add an offline fixture under `tests/src/content-script/fixtures`.
-5. Test trusted timestamp resolution, restoration, and dynamic page updates.
-6. Run `pnpm check` and a development build for the affected browser.
+1. Add or update its content-side rule under `src/content-script/adapters`.
+2. Register it in the content-side precedence list before the generic rule.
+3. Add an offline fixture under `tests/src/content-script/fixtures`.
+4. Test trusted timestamp resolution, restoration, and dynamic page updates.
+5. Run `pnpm check` and a development build for the affected browser.
+
+Do not add site-specific background activation or registration. The universal
+runtime already reaches every accessible HTTP(S) document and frame.
 
 Follow the adapter and shared-contract rules in [AGENTS.md](AGENTS.md).
 
@@ -244,9 +269,10 @@ missing diagnostic event does not by itself mean the content script failed.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A GitHub timestamp is no longer replaced:** check the page with Debug logs
-  enabled and update the GitHub fixture and adapter if GitHub changed its
-  markup.
+- **A standard or GitHub timestamp is no longer replaced:** check the page
+  with Debug logs enabled. For GitHub markup changes, update the GitHub
+  fixture and specialized content rule; generic processing accepts only
+  standard `time[datetime]` values.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

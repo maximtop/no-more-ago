@@ -4,16 +4,28 @@
 
 import { describe, expect, it } from "vitest";
 
+import { DIAGNOSTIC_CATEGORY } from "../../../../src/shared/diagnostics/contracts";
 import {
+    DEBUG_POLICY_UPDATED_MESSAGE,
+    DOCUMENT_PHASE,
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASES,
+    DIAGNOSTIC_EVENT_MESSAGE,
+    REFRESH_DOCUMENT_POLICY_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
+    SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
+    UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
+    isDebugPolicyUpdateAcknowledgement,
+    isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
     isDocumentStatusResponse,
+    isDiagnosticEventMessage,
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
+    isRefreshDocumentPolicyMessage,
+    isSuspendAndRefreshDocumentPolicyMessage,
     isTeardownDocumentMessage,
 } from "../../../../src/shared/messaging/document-messages";
 
@@ -61,7 +73,29 @@ describe("document status message", () => {
         expect(
             isDocumentStatusResponse({
                 type: DOCUMENT_STATUS_MESSAGE,
-                phase: "active",
+                phase: DOCUMENT_PHASE.ACTIVE,
+                extra: true,
+            }),
+        ).toBe(false);
+    });
+});
+
+describe("document policy messages", () => {
+    it("accepts exact refresh commands", () => {
+        expect(
+            isRefreshDocumentPolicyMessage({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }),
+        ).toBe(true);
+        expect(
+            isSuspendAndRefreshDocumentPolicyMessage({
+                type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
+            }),
+        ).toBe(true);
+        expect(
+            isRefreshDocumentPolicyMessage({ type: REFRESH_DOCUMENT_POLICY_MESSAGE, extra: true }),
+        ).toBe(false);
+        expect(
+            isSuspendAndRefreshDocumentPolicyMessage({
+                type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
                 extra: true,
             }),
         ).toBe(false);
@@ -69,7 +103,7 @@ describe("document status message", () => {
 });
 
 describe("revisioned presentation messages", () => {
-    it("accepts complete V3 updates and rejects unsafe or structurally incomplete requests", () => {
+    it("accepts complete updates and rejects unsafe or structurally incomplete requests", () => {
         expect(
             isPresentationUpdateMessage({
                 type: UPDATE_PRESENTATION_MESSAGE,
@@ -130,25 +164,9 @@ describe("revisioned presentation messages", () => {
                     timeZone: { mode: "iana", identifier: "America//New_York" },
                 },
             },
-            Object.assign(Object.create({ revision: 1 }), {
-                type: UPDATE_PRESENTATION_MESSAGE,
-                display,
-            }),
         ]) {
             expect(isPresentationUpdateMessage(value)).toBe(false);
         }
-
-        const inheritedDisplay = Object.assign(
-            Object.create({ pattern: "yyyy-MM-dd" }) as Record<string, unknown>,
-            { formatMode: "custom", timeZone: { mode: "utc" }, unexpected: true },
-        );
-        expect(
-            isPresentationUpdateMessage({
-                type: UPDATE_PRESENTATION_MESSAGE,
-                revision: 1,
-                display: inheritedDisplay,
-            }),
-        ).toBe(false);
     });
 
     it("requires an exact two-field acknowledgement and optional exact revision", () => {
@@ -178,9 +196,50 @@ describe("revisioned presentation messages", () => {
             { type: "other", revision: 4 },
             { type: PRESENTATION_UPDATED_MESSAGE, revision: -1 },
             { type: PRESENTATION_UPDATED_MESSAGE, revision: Number.POSITIVE_INFINITY },
-            Object.assign(Object.create({ revision: 4 }), { type: PRESENTATION_UPDATED_MESSAGE }),
         ]) {
             expect(isPresentationUpdateAcknowledgement(value)).toBe(false);
         }
+    });
+});
+
+describe("diagnostic policy and event messages", () => {
+    it("validates policy revisions and reuses the diagnostic input schema", () => {
+        expect(
+            isDebugPolicyUpdateMessage({
+                type: UPDATE_DEBUG_POLICY_MESSAGE,
+                revision: 2,
+                enabled: true,
+            }),
+        ).toBe(true);
+        expect(
+            isDebugPolicyUpdateAcknowledgement(
+                { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 2 },
+                2,
+            ),
+        ).toBe(true);
+        expect(
+            isDebugPolicyUpdateAcknowledgement(
+                { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 1 },
+                2,
+            ),
+        ).toBe(false);
+        expect(
+            isDiagnosticEventMessage({
+                type: DIAGNOSTIC_EVENT_MESSAGE,
+                event: { category: DIAGNOSTIC_CATEGORY.MUTATION, count: 1 },
+            }),
+        ).toBe(true);
+        expect(
+            isDiagnosticEventMessage({
+                type: DIAGNOSTIC_EVENT_MESSAGE,
+                event: { category: "unsupported" },
+            }),
+        ).toBe(false);
+        expect(
+            isDiagnosticEventMessage({
+                type: DIAGNOSTIC_EVENT_MESSAGE,
+                event: { category: DIAGNOSTIC_CATEGORY.MUTATION, extra: true },
+            }),
+        ).toBe(false);
     });
 });

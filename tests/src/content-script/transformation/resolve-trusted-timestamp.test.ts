@@ -5,7 +5,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-    EXPLICIT_ZONED_DATETIME_RULE,
+    TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
     type TimestampCandidate,
 } from "../../../../src/content-script/adapters/types";
 import {
@@ -15,11 +17,12 @@ import {
 describe("resolveTrustedTimestamp", () => {
     it("normalizes an explicitly zoned timestamp to its instant", () => {
         const result = resolveTrustedTimestamp({
-            adapterId: "github",
+            ruleId: "github",
             source: document.createElement("relative-time"),
             sourceKind: "relative-time",
             rawDatetime: "2026-08-23T10:15:00+03:00",
-            timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+            validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         });
 
         expect(result?.instant.toISOString()).toBe("2026-08-23T07:15:00.000Z");
@@ -29,22 +32,27 @@ describe("resolveTrustedTimestamp", () => {
     it("rejects a timestamp without an explicit time zone", () => {
         expect(
             resolveTrustedTimestamp({
-                adapterId: "github",
+                ruleId: "github",
                 source: document.createElement("relative-time"),
                 sourceKind: "relative-time",
                 rawDatetime: "2026-08-23T10:15:00",
-                timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }),
         ).toBeNull();
     });
 
-    const candidate = (rawDatetime: string, rule: unknown = EXPLICIT_ZONED_DATETIME_RULE) =>
+    const candidate = (
+        rawDatetime: string,
+        rule: unknown = TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+    ) =>
         ({
-            adapterId: "github",
+            ruleId: "github",
             source: document.createElement("relative-time"),
             sourceKind: "relative-time" as const,
             rawDatetime,
-            ...(rule === null ? {} : { timestampRule: rule }),
+            ...(rule === null ? {} : { validationRule: rule }),
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;
 
     it.each([
@@ -140,6 +148,52 @@ describe("resolveTrustedTimestamp", () => {
         const result = resolveTrustedTimestamp({ ...candidate(rawDatetime), source });
         expect(result).toBeNull();
         expect(source.textContent).toBe("3 months ago");
+    });
+
+    const htmlCandidate = (rawDatetime: string) =>
+        ({
+            ruleId: "generic-time",
+            source: document.createElement("time"),
+            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+            rawDatetime,
+            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        }) as unknown as TimestampCandidate;
+
+    it.each([
+        ["2026-08-23T10:15Z", "2026-08-23T10:15:00.000Z"],
+        ["2026-08-23 10:15+03:00", "2026-08-23T07:15:00.000Z"],
+        ["2026-08-23T10:15+0300", "2026-08-23T07:15:00.000Z"],
+        ["2026-08-23T10:15:30Z", "2026-08-23T10:15:30.000Z"],
+        ["2026-08-23T10:15:30.1Z", "2026-08-23T10:15:30.100Z"],
+        ["2026-08-23T10:15:30.123Z", "2026-08-23T10:15:30.123Z"],
+        ["10000-01-01T00:00Z", "+010000-01-01T00:00:00.000Z"],
+    ])("accepts HTML global date-time %s", (rawDatetime, expected) => {
+        const result = resolveTrustedTimestamp(htmlCandidate(rawDatetime));
+
+        expect(result?.instant.toISOString()).toBe(expected);
+        expect(result?.validationRule).toBe(TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL);
+    });
+
+    it.each([
+        "2026-08-23",
+        "2026-08-23T10:15",
+        " 2026-08-23T10:15Z",
+        "2026-08-23T10:15Z ",
+        "2026-08-23T10:15\nZ",
+        "2026-02-30T10:15Z",
+        "0000-08-23T10:15Z",
+        "2026-08-23T25:15Z",
+        "2026-08-23T10:15z",
+        "2026-08-23T10:15+03",
+        "2026-08-23T10:15-00:00",
+        "2026-08-23T10:15:60Z",
+        "2026-08-23T10:15Zjunk",
+        "2026-08-23T10:15+24:00",
+        "P1D",
+        "100000000000000000000000-08-23T10:15Z",
+    ])("rejects ineligible HTML global date-time %j", (rawDatetime) => {
+        expect(resolveTrustedTimestamp(htmlCandidate(rawDatetime))).toBeNull();
     });
 
     it.each([null, "other:rule"])("rejects rule %j", (rule) => {

@@ -9,14 +9,22 @@ import {
     GET_POPUP_STATE_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
-    popupStateSchema,
+} from "../shared/messaging/contracts";
+import { popupStateSchema } from "../shared/messaging/view-state-schemas";
+import {
     setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
+} from "../shared/messaging/response-schemas";
+import {
     SITE_SETTINGS_SURFACE,
-    type PopupState,
-    type SetGlobalEnabledResponse,
-    type SetSiteEnabledResponse,
-} from "../shared/messages";
+} from "../shared/messaging/view-state-values";
+import type {
+    PopupState,
+} from "../shared/messaging/view-state-schemas";
+import type {
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+} from "../shared/messaging/response-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 
 /**

@@ -17,26 +17,36 @@ import {
     SET_SITE_ENABLED_MESSAGE,
     clearDiagnosticsResponseSchema,
     getDiagnosticsSnapshotResponseSchema,
+} from "../shared/messaging/contracts";
+import {
     debugStateSchema,
     displayStateSchema,
+    sitesStateSchema,
+} from "../shared/messaging/view-state-schemas";
+import {
     resetAllSettingsResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
     setSiteEnabledResponseSchema,
-    sitesStateSchema,
-    SITE_SETTINGS_SURFACE,
-    type DebugState,
-    type DisplaySettings,
-    type DisplayState,
-    type ResetAllSettingsResponse,
-    type SetDebugEnabledResponse,
-    type SetDisplaySettingsResponse,
-    type SetSiteEnabledResponse,
-    type SitesState,
-    type DiagnosticsClearError,
-    type DiagnosticsSnapshot,
-    type DiagnosticsSnapshotError,
-} from "../shared/messages";
+} from "../shared/messaging/response-schemas";
+import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
+import type {
+    DebugState,
+    DisplayState,
+    SitesState,
+} from "../shared/messaging/view-state-schemas";
+import type {
+    ResetAllSettingsResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetSiteEnabledResponse,
+} from "../shared/messaging/response-schemas";
+import type { DisplaySettings } from "../shared/settings/snapshot";
+import type {
+    DiagnosticsClearError,
+    DiagnosticsSnapshot,
+    DiagnosticsSnapshotError,
+} from "../shared/messaging/contracts";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 
 /**

@@ -6,24 +6,31 @@ import * as v from "valibot";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
 import { DIAGNOSTIC_BROWSER_FAMILIES } from "../diagnostics/contracts";
 import { diagnosticEventSchema } from "../diagnostics/events";
-import { strictMessageObject } from "./schema-utils";
 import { SITE_SETTINGS_SURFACES } from "./view-state-values";
 import type {
     DebugState,
     DisplayState,
     PopupState,
+    SitesState,
+} from "./view-state-schemas";
+import type {
     ResetAllSettingsResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
-    SitesState,
-} from "./view-state";
+} from "./response-schemas";
+import type { DocumentState } from "./document-state";
 
 /**
  * Requests popup state for the active tab.
  */
 export const GET_POPUP_STATE_MESSAGE = "no-more-ago:get-popup-state" as const;
+
+/**
+ * Requests the current document runtime state.
+ */
+export const GET_DOCUMENT_STATE_MESSAGE = "no-more-ago:get-document-state" as const;
 
 /**
  * Changes the global activation setting.
@@ -98,14 +105,21 @@ export const DIAGNOSTICS_CLEAR_ERRORS = [
 /**
  * Exact request for popup state.
  */
-export const getPopupStateMessageSchema = strictMessageObject({
+export const getPopupStateMessageSchema = v.strictObject({
     type: v.literal(GET_POPUP_STATE_MESSAGE),
+});
+
+/**
+ * Exact request for document runtime state.
+ */
+export const getDocumentStateMessageSchema = v.strictObject({
+    type: v.literal(GET_DOCUMENT_STATE_MESSAGE),
 });
 
 /**
  * Exact request for a global activation change.
  */
-export const setGlobalEnabledMessageSchema = strictMessageObject({
+export const setGlobalEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_GLOBAL_ENABLED_MESSAGE),
     enabled: v.boolean(),
 });
@@ -113,14 +127,14 @@ export const setGlobalEnabledMessageSchema = strictMessageObject({
 /**
  * Exact request for site-preferences state.
  */
-export const getSitesStateMessageSchema = strictMessageObject({
+export const getSitesStateMessageSchema = v.strictObject({
     type: v.literal(GET_SITES_STATE_MESSAGE),
 });
 
 /**
  * Exact request for a site activation change.
  */
-export const setSiteEnabledMessageSchema = strictMessageObject({
+export const setSiteEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_SITE_ENABLED_MESSAGE),
     hostname: v.string(),
     enabled: v.boolean(),
@@ -130,14 +144,14 @@ export const setSiteEnabledMessageSchema = strictMessageObject({
 /**
  * Exact request for display state.
  */
-export const getDisplayStateMessageSchema = strictMessageObject({
+export const getDisplayStateMessageSchema = v.strictObject({
     type: v.literal(GET_DISPLAY_STATE_MESSAGE),
 });
 
 /**
  * Exact request for a display-settings change.
  */
-export const setDisplaySettingsMessageSchema = strictMessageObject({
+export const setDisplaySettingsMessageSchema = v.strictObject({
     type: v.literal(SET_DISPLAY_SETTINGS_MESSAGE),
     display: v.unknown(),
 });
@@ -145,21 +159,21 @@ export const setDisplaySettingsMessageSchema = strictMessageObject({
 /**
  * Exact request to reset all settings.
  */
-export const resetAllSettingsMessageSchema = strictMessageObject({
+export const resetAllSettingsMessageSchema = v.strictObject({
     type: v.literal(RESET_ALL_SETTINGS_MESSAGE),
 });
 
 /**
  * Exact request for diagnostic logging state.
  */
-export const getDebugStateMessageSchema = strictMessageObject({
+export const getDebugStateMessageSchema = v.strictObject({
     type: v.literal(GET_DEBUG_STATE_MESSAGE),
 });
 
 /**
  * Exact request for a diagnostic logging change.
  */
-export const setDebugEnabledMessageSchema = strictMessageObject({
+export const setDebugEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_DEBUG_ENABLED_MESSAGE),
     enabled: v.boolean(),
 });
@@ -167,14 +181,14 @@ export const setDebugEnabledMessageSchema = strictMessageObject({
 /**
  * Exact request for stored diagnostics.
  */
-export const getDiagnosticsSnapshotMessageSchema = strictMessageObject({
+export const getDiagnosticsSnapshotMessageSchema = v.strictObject({
     type: v.literal(GET_DIAGNOSTICS_SNAPSHOT_MESSAGE),
 });
 
 /**
  * Exact request to clear stored diagnostics.
  */
-export const clearDiagnosticsMessageSchema = strictMessageObject({
+export const clearDiagnosticsMessageSchema = v.strictObject({
     type: v.literal(CLEAR_DIAGNOSTICS_MESSAGE),
 });
 
@@ -183,6 +197,7 @@ export const clearDiagnosticsMessageSchema = strictMessageObject({
  */
 export const backgroundMessageSchema = v.union([
     getPopupStateMessageSchema,
+    getDocumentStateMessageSchema,
     setGlobalEnabledMessageSchema,
     getSitesStateMessageSchema,
     setSiteEnabledMessageSchema,
@@ -195,7 +210,7 @@ export const backgroundMessageSchema = v.union([
     clearDiagnosticsMessageSchema,
 ]);
 
-const diagnosticsEnvironmentSchema = strictMessageObject({
+const diagnosticsEnvironmentSchema = v.strictObject({
     browserFamily: v.picklist(DIAGNOSTIC_BROWSER_FAMILIES),
     extensionVersion: v.exactOptional(
         v.pipe(v.string(), v.regex(SAFE_EXTENSION_VERSION_PATTERN)),
@@ -205,7 +220,7 @@ const diagnosticsEnvironmentSchema = strictMessageObject({
 /**
  * Diagnostic snapshot returned to the options page.
  */
-export const diagnosticsSnapshotSchema = strictMessageObject({
+export const diagnosticsSnapshotSchema = v.strictObject({
     entries: v.pipe(v.array(diagnosticEventSchema), v.readonly()),
     environment: diagnosticsEnvironmentSchema,
 });
@@ -214,11 +229,11 @@ export const diagnosticsSnapshotSchema = strictMessageObject({
  * Result of reading stored diagnostics.
  */
 export const getDiagnosticsSnapshotResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         snapshot: diagnosticsSnapshotSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: v.picklist(DIAGNOSTICS_SNAPSHOT_ERRORS),
     }),
@@ -228,8 +243,8 @@ export const getDiagnosticsSnapshotResponseSchema = v.union([
  * Result of clearing stored diagnostics.
  */
 export const clearDiagnosticsResponseSchema = v.union([
-    strictMessageObject({ ok: v.literal(true) }),
-    strictMessageObject({
+    v.strictObject({ ok: v.literal(true) }),
+    v.strictObject({
         ok: v.literal(false),
         error: v.picklist(DIAGNOSTICS_CLEAR_ERRORS),
     }),
@@ -244,6 +259,11 @@ export type BackgroundMessage = v.InferOutput<typeof backgroundMessageSchema>;
  * Popup-state request inferred from its schema.
  */
 export type GetPopupStateMessage = v.InferOutput<typeof getPopupStateMessageSchema>;
+
+/**
+ * Document-state request inferred from its schema.
+ */
+export type GetDocumentStateMessage = v.InferOutput<typeof getDocumentStateMessageSchema>;
 
 /**
  * Global activation request inferred from its schema.
@@ -334,6 +354,7 @@ export type DiagnosticsClearError = (typeof DIAGNOSTICS_CLEAR_ERRORS)[number];
  */
 export type BackgroundResponse =
     | PopupState
+    | DocumentState
     | SitesState
     | DisplayState
     | DebugState

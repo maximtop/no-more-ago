@@ -13,6 +13,7 @@ import {
     DIAGNOSTIC_MAX_DURATION_MS,
     DIAGNOSTIC_MAX_STACK_FRAMES,
     DIAGNOSTIC_PAGE_CATEGORIES,
+    DIAGNOSTIC_PAGE_CATEGORY,
     DIAGNOSTIC_REASONS,
     DIAGNOSTIC_STACK_FRAME_PATTERN,
     type DiagnosticPageCategory,
@@ -30,7 +31,10 @@ const contextSchema = v.strictObject({
     incognito: v.boolean(),
 });
 
-const eventInputSchema = v.strictObject({
+/**
+ * Canonical schema for diagnostic fields received from document runtimes.
+ */
+export const diagnosticEventInputSchema = v.strictObject({
     category: v.picklist(DIAGNOSTIC_CATEGORIES),
     count: v.exactOptional(v.unknown()),
     durationMs: v.exactOptional(v.unknown()),
@@ -76,7 +80,7 @@ export type DiagnosticContext = v.InferOutput<typeof contextSchema>;
 /**
  * Caller-supplied event fields accepted before normalization.
  */
-export type DiagnosticEventInput = v.InferInput<typeof eventInputSchema>;
+export type DiagnosticEventInput = v.InferInput<typeof diagnosticEventInputSchema>;
 
 /**
  * Canonical persisted diagnostic event.
@@ -97,6 +101,11 @@ export interface DiagnosticSender {
      */
     readonly tab?: {
         /**
+         * Top-level tab URL used for policy authorization.
+         */
+        readonly url?: unknown;
+
+        /**
          * Private-window flag supplied by the browser.
          */
         readonly incognito?: unknown;
@@ -104,11 +113,11 @@ export interface DiagnosticSender {
 }
 
 const PAGE_PATHS: readonly [RegExp, DiagnosticPageCategory][] = [
-    [/^\/[^/]+\/[^/]+\/issues\/\d+(?:\/|$)/u, "issue"],
-    [/^\/[^/]+\/[^/]+\/pull\/\d+(?:\/|$)/u, "pull-request"],
-    [/^\/[^/]+\/[^/]+\/actions(?:\/|$)/u, "actions"],
-    [/^\/[^/]+\/[^/]+(?:\/|$)/u, "repository"],
-    [/^\/settings(?:\/|$)/u, "settings"],
+    [/^\/[^/]+\/[^/]+\/issues\/\d+(?:\/|$)/u, DIAGNOSTIC_PAGE_CATEGORY.ISSUE],
+    [/^\/[^/]+\/[^/]+\/pull\/\d+(?:\/|$)/u, DIAGNOSTIC_PAGE_CATEGORY.PULL_REQUEST],
+    [/^\/[^/]+\/[^/]+\/actions(?:\/|$)/u, DIAGNOSTIC_PAGE_CATEGORY.ACTIONS],
+    [/^\/[^/]+\/[^/]+(?:\/|$)/u, DIAGNOSTIC_PAGE_CATEGORY.REPOSITORY],
+    [/^\/settings(?:\/|$)/u, DIAGNOSTIC_PAGE_CATEGORY.SETTINGS],
 ];
 
 /**
@@ -118,7 +127,8 @@ const PAGE_PATHS: readonly [RegExp, DiagnosticPageCategory][] = [
  * @returns - Finite diagnostic page category.
  */
 export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
-    return PAGE_PATHS.find(([pattern]) => pattern.test(pathname))?.[1] ?? "other";
+    return PAGE_PATHS.find(([pattern]) => pattern.test(pathname))?.[1]
+        ?? DIAGNOSTIC_PAGE_CATEGORY.OTHER;
 }
 
 /**
@@ -142,7 +152,9 @@ export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticCon
         return {
             hostname: url.hostname,
             pageCategory:
-                url.hostname === GITHUB_HOSTNAME ? pageCategoryFromPath(url.pathname) : "other",
+                url.hostname === GITHUB_HOSTNAME
+                    ? pageCategoryFromPath(url.pathname)
+                    : DIAGNOSTIC_PAGE_CATEGORY.OTHER,
             incognito: sender.tab?.incognito === true,
         };
     } catch {
@@ -211,7 +223,7 @@ export function sanitizeDiagnosticEvent(
     context: DiagnosticContext,
     now = Date.now(),
 ): DiagnosticEvent | null {
-    const parsedInput = v.safeParse(eventInputSchema, input);
+    const parsedInput = v.safeParse(diagnosticEventInputSchema, input);
     const parsedContext = v.safeParse(contextSchema, context);
     if (!parsedInput.success || !parsedContext.success || !Number.isSafeInteger(now) || now < 0) {
         return null;

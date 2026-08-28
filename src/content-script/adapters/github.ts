@@ -2,16 +2,26 @@
  * @file GitHub adapter that discovers and extracts trusted timestamp candidates.
  */
 
-import { EXPLICIT_ZONED_DATETIME_RULE, type SiteAdapter, type TimestampSourceKind } from "./types";
+import {
+    TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_VALIDATION_RULE,
+    TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampSourceRule,
+    type TimestampSourceKind,
+} from "./types";
 import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "../../shared/adapters/github-contract";
 
-const APPROVED_KINDS = new Set<TimestampSourceKind>(["relative-time", "time-ago", "time-until"]);
+const APPROVED_KINDS = new Set<TimestampSourceKind>([
+    TIMESTAMP_SOURCE_KIND.RELATIVE_TIME,
+    TIMESTAMP_SOURCE_KIND.TIME_AGO,
+    TIMESTAMP_SOURCE_KIND.TIME_UNTIL,
+]);
 
 /**
  * GitHub-specific adapter that accepts only explicit-zone datetime attributes on supported time
  * widgets.
  */
-export const githubAdapter: SiteAdapter = {
+export const githubAdapter: TimestampSourceRule = {
     id: GITHUB_ADAPTER_ID,
     matches: matchesGitHubUrl,
     discover: (root) => {
@@ -37,11 +47,12 @@ export const githubAdapter: SiteAdapter = {
         }
         return rawDatetime
             ? {
-                adapterId: GITHUB_ADAPTER_ID,
+                ruleId: GITHUB_ADAPTER_ID,
                 source: element,
                 sourceKind,
                 rawDatetime,
-                timestampRule: EXPLICIT_ZONED_DATETIME_RULE,
+                validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }
             : null;
     },

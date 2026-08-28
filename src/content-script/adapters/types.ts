@@ -3,62 +3,105 @@
  */
 
 /**
- * Marker required before a raw adapter attribute may be parsed as an absolute instant.
+ * Validation rules proving that a candidate carries an eligible timestamp value.
  */
-export const EXPLICIT_ZONED_DATETIME_RULE = "datetime:iso8601-explicit-zone" as const;
+export const TIMESTAMP_VALIDATION_RULE = {
+    EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
+    HTML_GLOBAL: "datetime:html-global",
+} as const;
 
 /**
- * Element names the GitHub adapter recognizes as relative-time widgets.
+ * Source kinds recognized by timestamp extraction rules.
  */
-export type TimestampSourceKind = "relative-time" | "time-ago" | "time-until";
+export const TIMESTAMP_SOURCE_KIND = {
+    RELATIVE_TIME: "relative-time",
+    TIME_AGO: "time-ago",
+    TIME_UNTIL: "time-until",
+    STANDARD_TIME: "time",
+} as const;
 
 /**
- * Trusted adapter output passed to timestamp validation; page markup itself is never trusted here.
+ * Visibility handling requested by a timestamp source.
  */
-export interface TimestampCandidate {
-    /**
-     * Identifier of the adapter that accepted the timestamp source.
-     */
-    readonly adapterId: string;
+export const TIMESTAMP_VISIBILITY_POLICY = {
+    PRESERVE_PAGE_SUPPRESSION: "preserve-page-suppression",
+    IGNORE_PAGE_SUPPRESSION: "ignore-page-suppression",
+} as const;
 
+/**
+ * Validation rule carried by a timestamp candidate.
+ */
+export type TimestampValidationRule =
+    (typeof TIMESTAMP_VALIDATION_RULE)[keyof typeof TIMESTAMP_VALIDATION_RULE];
+
+/**
+ * Source kind carried by a timestamp candidate.
+ */
+export type TimestampSourceKind =
+    (typeof TIMESTAMP_SOURCE_KIND)[keyof typeof TIMESTAMP_SOURCE_KIND];
+
+/**
+ * Visibility handling policy carried by a timestamp candidate.
+ */
+export type TimestampVisibilityPolicy =
+    (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
+
+/**
+ * DOM element whose timestamp is being transformed.
+ */
+interface TimestampCandidateSource {
     /**
      * DOM element whose timestamp is being transformed.
      */
     readonly source: Element;
 
     /**
-     * Tag name used to select the adapter extraction rule.
+     * Kind of source element recognized by the source rule.
      */
     readonly sourceKind: TimestampSourceKind;
 
     /**
-     * Unparsed datetime attribute supplied by the trusted adapter.
+     * Unparsed datetime attribute supplied by the trusted source.
      */
     readonly rawDatetime: string;
-
-    /**
-     * Rule proving that the adapter supplied an explicit zone.
-     */
-    readonly timestampRule: typeof EXPLICIT_ZONED_DATETIME_RULE;
 }
 
 /**
- * Site-specific discovery and extraction boundary; adapters identify candidates but never render
- * them.
+ * Canonical timestamp candidate emitted by a source rule.
  */
-export interface SiteAdapter {
+export interface TimestampCandidate extends TimestampCandidateSource {
     /**
-     * Stable adapter identifier used in diagnostics and activation state.
+     * Identifier of the source rule that accepted the timestamp source.
+     */
+    readonly ruleId: string;
+
+    /**
+     * Rule proving that the raw datetime value is eligible.
+     */
+    readonly validationRule: TimestampValidationRule;
+
+    /**
+     * Visibility policy explicitly selected by the source rule.
+     */
+    readonly visibilityPolicy: TimestampVisibilityPolicy;
+}
+
+/**
+ * Generic or site-specific source rule for discovering trusted timestamp candidates.
+ */
+export interface TimestampSourceRule {
+    /**
+     * Stable source-rule identifier used in diagnostics and processing.
      */
     readonly id: string;
 
     /**
-     * Determines whether the adapter owns the page URL.
+     * Determines whether the source rule applies to the page URL.
      */
     matches(url: URL): boolean;
 
     /**
-     * Finds candidate timestamp elements without mutating the document.
+     * Finds timestamp elements without mutating the document.
      */
     discover(root: ParentNode): readonly Element[];
 

@@ -3,17 +3,35 @@
  */
 
 /**
+ * Named event categories accepted across diagnostic boundaries.
+ */
+export const DIAGNOSTIC_CATEGORY = {
+    LIFECYCLE: "lifecycle",
+    ADAPTER: "adapter",
+    MUTATION: "mutation",
+    TIMING: "timing",
+    SETTINGS: "settings",
+    SKIP: "skip",
+    ERROR: "error",
+} as const;
+
+/**
  * Event categories accepted across the content, background, journal, and export boundaries.
  */
 export const DIAGNOSTIC_CATEGORIES = [
-    "lifecycle",
-    "adapter",
-    "mutation",
-    "timing",
-    "settings",
-    "skip",
-    "error",
+    DIAGNOSTIC_CATEGORY.LIFECYCLE,
+    DIAGNOSTIC_CATEGORY.ADAPTER,
+    DIAGNOSTIC_CATEGORY.MUTATION,
+    DIAGNOSTIC_CATEGORY.TIMING,
+    DIAGNOSTIC_CATEGORY.SETTINGS,
+    DIAGNOSTIC_CATEGORY.SKIP,
+    DIAGNOSTIC_CATEGORY.ERROR,
 ] as const;
+
+/**
+ * Hostname used for background-only diagnostic events.
+ */
+export const DIAGNOSTIC_INTERNAL_HOSTNAME = "no-more-ago.invalid" as const;
 
 /**
  * Finite diagnostic event category.
@@ -21,15 +39,27 @@ export const DIAGNOSTIC_CATEGORIES = [
 export type DiagnosticCategory = (typeof DIAGNOSTIC_CATEGORIES)[number];
 
 /**
+ * Named page groups retained without recording complete paths.
+ */
+export const DIAGNOSTIC_PAGE_CATEGORY = {
+    REPOSITORY: "repository",
+    ISSUE: "issue",
+    PULL_REQUEST: "pull-request",
+    ACTIONS: "actions",
+    SETTINGS: "settings",
+    OTHER: "other",
+} as const;
+
+/**
  * Page groups retained without recording complete paths.
  */
 export const DIAGNOSTIC_PAGE_CATEGORIES = [
-    "repository",
-    "issue",
-    "pull-request",
-    "actions",
-    "settings",
-    "other",
+    DIAGNOSTIC_PAGE_CATEGORY.REPOSITORY,
+    DIAGNOSTIC_PAGE_CATEGORY.ISSUE,
+    DIAGNOSTIC_PAGE_CATEGORY.PULL_REQUEST,
+    DIAGNOSTIC_PAGE_CATEGORY.ACTIONS,
+    DIAGNOSTIC_PAGE_CATEGORY.SETTINGS,
+    DIAGNOSTIC_PAGE_CATEGORY.OTHER,
 ] as const;
 
 /**
@@ -38,9 +68,22 @@ export const DIAGNOSTIC_PAGE_CATEGORIES = [
 export type DiagnosticPageCategory = (typeof DIAGNOSTIC_PAGE_CATEGORIES)[number];
 
 /**
+ * Named coarse browser families permitted in diagnostics.
+ */
+export const DIAGNOSTIC_BROWSER_FAMILY = {
+    CHROMIUM: "chromium",
+    FIREFOX: "firefox",
+    OTHER: "other",
+} as const;
+
+/**
  * Coarse browser families permitted in diagnostics.
  */
-export const DIAGNOSTIC_BROWSER_FAMILIES = ["chromium", "firefox", "other"] as const;
+export const DIAGNOSTIC_BROWSER_FAMILIES = [
+    DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM,
+    DIAGNOSTIC_BROWSER_FAMILY.FIREFOX,
+    DIAGNOSTIC_BROWSER_FAMILY.OTHER,
+] as const;
 
 /**
  * Coarse browser family that avoids recording a user agent.
@@ -48,18 +91,33 @@ export const DIAGNOSTIC_BROWSER_FAMILIES = ["chromium", "firefox", "other"] as c
 export type DiagnosticBrowserFamily = (typeof DIAGNOSTIC_BROWSER_FAMILIES)[number];
 
 /**
+ * Named allow-listed explanations that diagnostic producers may persist.
+ */
+export const DIAGNOSTIC_REASON = {
+    ADAPTER_MATCHED: "adapter-matched",
+    ADAPTER_MISSING: "adapter-missing",
+    CANDIDATE_SKIPPED: "candidate-skipped",
+    INVALID_TIMESTAMP: "invalid-timestamp",
+    ALREADY_OWNED: "already-owned",
+    UNSUPPORTED: "unsupported",
+    PROCESSING_FAILED: "processing-failed",
+    STORAGE_FAILED: "storage-failed",
+    SETTINGS_UPDATED: "settings-updated",
+} as const;
+
+/**
  * Allow-listed explanations that diagnostic producers may persist.
  */
 export const DIAGNOSTIC_REASONS = [
-    "adapter-matched",
-    "adapter-missing",
-    "candidate-skipped",
-    "invalid-timestamp",
-    "already-owned",
-    "unsupported",
-    "processing-failed",
-    "storage-failed",
-    "settings-updated",
+    DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+    DIAGNOSTIC_REASON.ADAPTER_MISSING,
+    DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
+    DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+    DIAGNOSTIC_REASON.ALREADY_OWNED,
+    DIAGNOSTIC_REASON.UNSUPPORTED,
+    DIAGNOSTIC_REASON.PROCESSING_FAILED,
+    DIAGNOSTIC_REASON.STORAGE_FAILED,
+    DIAGNOSTIC_REASON.SETTINGS_UPDATED,
 ] as const;
 
 /**

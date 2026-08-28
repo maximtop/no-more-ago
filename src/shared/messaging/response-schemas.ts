@@ -3,7 +3,6 @@
  */
 
 import * as v from "valibot";
-import { strictMessageObject } from "./schema-utils";
 import {
     debugStateSchema,
     displayStateSchema,
@@ -27,12 +26,12 @@ const sitePersistenceErrorSchema = v.picklist(SITE_SETTINGS_ERRORS);
  * Result of changing global activation.
  */
 export const setGlobalEnabledResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: popupStateSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: persistenceErrorSchema,
         state: popupStateSchema,
@@ -43,25 +42,25 @@ export const setGlobalEnabledResponseSchema = v.union([
  * Result of changing one site's activation on either supported UI surface.
  */
 export const setSiteEnabledResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
         state: popupStateSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
         state: sitesStateSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: sitePersistenceErrorSchema,
         surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
         state: popupStateSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: sitePersistenceErrorSchema,
         surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
@@ -73,13 +72,13 @@ export const setSiteEnabledResponseSchema = v.union([
  * Result of changing display settings and refreshing matching tabs.
  */
 export const setDisplaySettingsResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: displayStateSchema,
         refreshFailures: refreshFailuresSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: v.picklist(DISPLAY_SETTINGS_ERRORS),
         state: displayStateSchema,
@@ -90,12 +89,12 @@ export const setDisplaySettingsResponseSchema = v.union([
  * Result of restoring all settings to their defaults.
  */
 export const resetAllSettingsResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: readySitesStateSchema,
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: persistenceErrorSchema,
         state: sitesStateSchema,
@@ -106,13 +105,13 @@ export const resetAllSettingsResponseSchema = v.union([
  * Result of changing diagnostic logging and refreshing matching tabs.
  */
 export const setDebugEnabledResponseSchema = v.union([
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
         state: debugStateSchema,
         refreshFailures: v.exactOptional(refreshFailuresSchema),
     }),
-    strictMessageObject({
+    v.strictObject({
         ok: v.literal(false),
         error: persistenceErrorSchema,
         state: debugStateSchema,

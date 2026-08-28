@@ -4,7 +4,14 @@
 
 import { MantineProvider, Paper, Stack, Text } from "@mantine/core";
 import { useMemo, useState, type ReactElement } from "react";
-import type { DebugState, DisplayState, SitesState } from "../shared/messages";
+import {
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
+import type {
+    DebugState,
+    DisplayState,
+    SitesState,
+} from "../shared/messaging/view-state-schemas";
 import type { DownloadRuntime } from "./diagnostics/archive";
 import {
     createDefaultSiteReportReporter,
@@ -114,7 +121,7 @@ export function OptionsApp({
                     <Stack gap="md">
                         <SitesSection controller={sites} notice={notice} />
                         <DisplaySection controller={display} />
-                        {sites.state.availability === "ready" ? (
+                        {sites.state.availability === STATE_AVAILABILITY.READY ? (
                             <DiagnosticsSection controller={diagnostics} />
                         ) : null}
                         <ResetControl controller={reset} />

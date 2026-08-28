@@ -110,7 +110,7 @@ describe("site report composer", () => {
 });
 
 describe("site report browser boundary", () => {
-    it("does no tab work before an explicit report call and opens the adapter reason", async () => {
+    it("does no tab work before an explicit report call", async () => {
         const browser = runtime({
             url: "https://github.com/acme/repo",
             incognito: false,
@@ -119,7 +119,7 @@ describe("site report browser boundary", () => {
         const reporter = createSiteReportReporter(browser);
         expect(browser.queries).toBe(0);
         expect(browser.creates).toHaveLength(0);
-        const result = await reporter.openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const result = await reporter.openPopupReport({ hostname: "github.com" });
         expect(result.ok).toBe(true);
         expect(browser.queries).toBe(1);
         expect(browser.creates).toHaveLength(1);
@@ -129,15 +129,14 @@ describe("site report browser boundary", () => {
         expect(browser.creates[0]?.windowId).toBeUndefined();
     });
 
-    it("selects the add-support reason for a no-adapter site", async () => {
+    it("selects the generic malfunction reason for an HTTP site", async () => {
         const browser = runtime({ url: "http://example.test/path", incognito: false });
         const result = await createSiteReportReporter(browser).openPopupReport({
             hostname: "example.test",
-            hasAdapter: false,
         });
         expect(result.ok).toBe(true);
         expect(new URL(String(browser.creates[0]?.url)).searchParams.get("reason")).toBe(
-            "Add support for this site",
+            "Dates are not working correctly",
         );
     });
 
@@ -149,7 +148,6 @@ describe("site report browser boundary", () => {
         });
         const result = await createSiteReportReporter(browser).openPopupReport({
             hostname: "github.com",
-            hasAdapter: true,
         });
         expect(result.ok).toBe(true);
         expect(browser.creates[0]?.windowId).toBe(42);
@@ -164,7 +162,6 @@ describe("site report browser boundary", () => {
         const browser = runtime(tab);
         const result = await createSiteReportReporter(browser).openPopupReport({
             hostname: "github.com",
-            hasAdapter: true,
         });
         expect(result).toEqual({ ok: false, error });
         expect(browser.creates).toHaveLength(0);
@@ -191,10 +188,9 @@ describe("site report browser boundary", () => {
             { create: () => pending },
         );
         const reporter = createSiteReportReporter(browser);
-        const first = reporter.openPopupReport({ hostname: "github.com", hasAdapter: true });
+        const first = reporter.openPopupReport({ hostname: "github.com" });
         const duplicate = await reporter.openPopupReport({
             hostname: "github.com",
-            hasAdapter: true,
         });
         expect(duplicate).toEqual({ ok: false, error: "busy" });
         release?.();
@@ -207,7 +203,6 @@ describe("site report browser boundary", () => {
         );
         const failed = await createSiteReportReporter(failedBrowser).openPopupReport({
             hostname: "github.com",
-            hasAdapter: true,
         });
         expect(failed).toEqual({ ok: false, error: "open-failed" });
         expect(failedBrowser.creates).toHaveLength(1);
@@ -220,7 +215,6 @@ describe("site report browser boundary", () => {
         );
         const result = await createSiteReportReporter(browser).openPopupReport({
             hostname: "github.com",
-            hasAdapter: true,
         });
         expect(result).toEqual({ ok: false, error: "invalid-context" });
         expect(browser.creates).toHaveLength(0);

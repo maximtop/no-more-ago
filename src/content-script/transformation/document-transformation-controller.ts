@@ -17,6 +17,7 @@ import {
     getOwnedSourceForOutput,
     restoreExactTimes,
 } from "./render-exact-time";
+import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -105,13 +106,19 @@ export class DocumentTransformationController {
             document: this.input.root,
             getOwnedSourceForOutput,
             onBatch: (batch) => {
-                if (this.diagnosticSink) {
+                if (
+                    this.diagnosticSink
+                    && (
+                        batch.datetimeTargets.length > 0
+                        || batch.visibilityRoots.length > 0
+                        || batch.displacedOutputSources.length > 0
+                    )
+                ) {
                     this.diagnosticSink({
-                        category: "mutation",
+                        category: DIAGNOSTIC_CATEGORY.MUTATION,
                         count:
-                            batch.addedRoots.length +
-                            batch.removedRoots.length +
                             batch.datetimeTargets.length +
+                            batch.visibilityRoots.length +
                             batch.displacedOutputSources.length,
                     });
                 }
@@ -121,7 +128,7 @@ export class DocumentTransformationController {
         this.scheduler = scheduler;
         try {
             scheduler.start();
-            this.outputs = processDocument(this.input);
+            this.outputs = processDocument({ ...this.input, ownedDomMutations: scheduler });
             this.phase = "active";
             return this.outputs;
         } catch (error) {
@@ -167,7 +174,7 @@ export class DocumentTransformationController {
                 ...reconcileDocumentRegion({
                     ...this.input,
                     root: source,
-                    ownedOutputMutations: scheduler,
+                    ownedDomMutations: scheduler,
                 }),
             );
         }
@@ -190,19 +197,33 @@ export class DocumentTransformationController {
 
         for (const root of batch.addedRoots) {
             if (isConnectedToDocument(root, this.input.root)) {
-                reconcileDocumentRegion({ ...this.input, root, ownedOutputMutations: scheduler });
+                reconcileDocumentRegion({ ...this.input, root, ownedDomMutations: scheduler });
             }
         }
 
         for (const target of batch.datetimeTargets) {
             if (
                 isConnectedToDocument(target, this.input.root) &&
-                !coveredBy(batch.addedRoots, target)
+                !coveredBy(batch.addedRoots, target) &&
+                !coveredBy(batch.visibilityRoots, target)
             ) {
                 reconcileDocumentRegion({
                     ...this.input,
                     root: target,
-                    ownedOutputMutations: scheduler,
+                    ownedDomMutations: scheduler,
+                });
+            }
+        }
+
+        for (const root of batch.visibilityRoots) {
+            if (
+                isConnectedToDocument(root, this.input.root) &&
+                !coveredBy(batch.addedRoots, root)
+            ) {
+                reconcileDocumentRegion({
+                    ...this.input,
+                    root,
+                    ownedDomMutations: scheduler,
                 });
             }
         }
@@ -211,12 +232,13 @@ export class DocumentTransformationController {
             if (
                 isConnectedToDocument(source, this.input.root) &&
                 !coveredBy(batch.addedRoots, source) &&
-                !batch.datetimeTargets.includes(source)
+                !batch.datetimeTargets.includes(source) &&
+                !coveredBy(batch.visibilityRoots, source)
             ) {
                 reconcileDocumentRegion({
                     ...this.input,
                     root: source,
-                    ownedOutputMutations: scheduler,
+                    ownedDomMutations: scheduler,
                 });
             }
         }
