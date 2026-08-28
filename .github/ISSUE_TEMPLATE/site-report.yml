@@ -1,0 +1,44 @@
+name: Site report
+description: Report missing or broken date support
+title: "[Site report] "
+body:
+  - type: dropdown
+    id: reason
+    attributes:
+      label: Reason
+      description: Choose the closest description of the problem.
+      options:
+        - Add support for this site
+        - Dates are not working correctly
+    validations:
+      required: true
+  - type: input
+    id: hostname
+    attributes:
+      label: Hostname
+      description: The hostname where the problem was observed.
+  - type: input
+    id: current_url
+    attributes:
+      label: Current URL
+      description: The full URL where the problem was observed.
+  - type: input
+    id: extension_version
+    attributes:
+      label: Extension version
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened?
+      placeholder: Describe what you saw.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected result.

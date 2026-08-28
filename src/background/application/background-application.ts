@@ -1,0 +1,288 @@
+/**
+ * @file Public background application facade.
+ */
+
+import type { DiagnosticSender } from "../../shared/diagnostics/events";
+import type { ActivationReconcileResult } from "../runtime/adapter-activation";
+import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
+import { ActivationManager } from "./activation-manager";
+import { ApplicationLifecycle } from "./lifecycle";
+import type {
+    ApplicationPhase,
+    BackgroundApplicationOptions,
+    LifecycleReason,
+} from "./contracts";
+import { DiagnosticsService } from "../diagnostics/service";
+import { deriveDisplayState } from "../projection/display-state";
+import { DocumentRefresh } from "../settings/document-refresh";
+import type {
+    ClearDiagnosticsResponse,
+    DebugState,
+    DisplayState,
+    GetDiagnosticsSnapshotResponse,
+    PopupState,
+    ResetAllSettingsResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+    SitesState,
+    SiteSettingsSurface,
+} from "../../shared/messages";
+import { SettingsCommands } from "../settings/commands";
+import { StateProjection } from "../projection/state-projection";
+
+export type {
+    ActivationCoordinator,
+    ApplicationFailure,
+    ApplicationPhase,
+    BackgroundApplicationOptions,
+    LifecycleReason,
+} from "./contracts";
+
+/**
+ * Stable public facade coordinating focused background services.
+ */
+export class BackgroundApplication {
+    /**
+     * Authoritative initialization and lifecycle coordinator.
+     */
+    private readonly lifecycle: ApplicationLifecycle;
+
+    /**
+     * Popup and sites-state projection service.
+     */
+    private readonly projection: StateProjection;
+
+    /**
+     * Diagnostic policy and journal service.
+     */
+    private readonly diagnostics: DiagnosticsService;
+
+    /**
+     * Serialized settings command handler.
+     */
+    private readonly commands: SettingsCommands;
+
+    /**
+     * Creates an application facade from browser and persistence dependencies.
+     *
+     * @param options - Settings, activation, tab, diagnostics, and adapter dependencies.
+     */
+    public constructor(options: BackgroundApplicationOptions) {
+        const activation = new ActivationManager(options.coordinator, options.adapters);
+        this.projection = new StateProjection(options.tabs, options.adapters, activation);
+        this.diagnostics = new DiagnosticsService(
+            options.journal,
+            options.adapters,
+            options.diagnosticEnvironment,
+        );
+        this.lifecycle = new ApplicationLifecycle(
+            options.settings,
+            activation,
+            this.projection,
+            this.diagnostics,
+        );
+        const documentRefresh = new DocumentRefresh(options.tabs, options.adapters);
+        this.commands = new SettingsCommands(
+            options.settings,
+            this.lifecycle,
+            this.projection,
+            this.diagnostics,
+            documentRefresh,
+            options.adapters,
+        );
+    }
+
+    /**
+     * Current lifecycle phase.
+     *
+     * @returns - Current background application phase.
+     */
+    public get phase(): ApplicationPhase {
+        return this.lifecycle.phase;
+    }
+
+    /**
+     * Most recently loaded settings snapshot.
+     *
+     * @returns - Current snapshot, when settings are available.
+     */
+    public get currentSnapshot(): SettingsSnapshotV5 | undefined {
+        return this.lifecycle.snapshot;
+    }
+
+    /**
+     * Most recent adapter reconciliation result.
+     *
+     * @returns - Latest activation result, when available.
+     */
+    public get reconcileResult(): ActivationReconcileResult | undefined {
+        return this.lifecycle.reconcileResult;
+    }
+
+    /**
+     * Ensures settings and runtime activation are ready.
+     *
+     * @param reason - Lifecycle event requiring initialized state.
+     * @returns - Promise settled after initialization and reconciliation.
+     */
+    public ensureReady(reason: LifecycleReason = "cold-worker"): Promise<void> {
+        return this.lifecycle.ensureReady(reason);
+    }
+
+    /**
+     * Queues a browser lifecycle event and reconciles it.
+     *
+     * @param reason - Browser lifecycle event to reconcile.
+     * @returns - Promise settled after the event is processed.
+     */
+    public requestLifecycle(reason: Exclude<LifecycleReason, "cold-worker">): Promise<void> {
+        return this.lifecycle.requestLifecycle(reason);
+    }
+
+    /**
+     * Returns active-tab popup state after lifecycle reconciliation.
+     *
+     * @returns - Current popup state.
+     */
+    public async getPopupState(): Promise<PopupState> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() =>
+            this.projection.deriveAndCachePopup(this.lifecycle.state),
+        );
+    }
+
+    /**
+     * Returns site preferences after lifecycle reconciliation.
+     *
+     * @returns - Current sites state.
+     */
+    public async getSitesState(): Promise<SitesState> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() =>
+            Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
+        );
+    }
+
+    /**
+     * Returns diagnostic logging state after lifecycle reconciliation.
+     *
+     * @returns - Current debug logging state.
+     */
+    public async getDebugState(): Promise<DebugState> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() =>
+            Promise.resolve(this.diagnostics.debugState(this.lifecycle.state)),
+        );
+    }
+
+    /**
+     * Reads persisted diagnostics when collection is enabled.
+     *
+     * @returns - Persisted diagnostics or a contained availability error.
+     */
+    public async getDiagnosticsSnapshot(): Promise<GetDiagnosticsSnapshotResponse> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() => this.diagnostics.readSnapshot(this.lifecycle.state));
+    }
+
+    /**
+     * Clears persisted diagnostics while collection remains enabled.
+     *
+     * @returns - Clear result or a contained availability error.
+     */
+    public async clearDiagnostics(): Promise<ClearDiagnosticsResponse> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() => this.diagnostics.clearEntries(this.lifecycle.state));
+    }
+
+    /**
+     * Validates and records one top-frame document diagnostic event.
+     *
+     * @param input - Untrusted document diagnostic payload.
+     * @param sender - WebExtension sender metadata.
+     * @returns - Whether a valid enabled event was accepted.
+     */
+    public recordDocumentEvent(
+        input: unknown,
+        sender: DiagnosticSender & { readonly frameId?: unknown },
+    ): Promise<boolean> {
+        return this.diagnostics.record(input, sender, this.lifecycle.state);
+    }
+
+    /**
+     * Returns display settings after lifecycle reconciliation.
+     *
+     * @returns - Current display state.
+     */
+    public async getDisplayState(): Promise<DisplayState> {
+        await this.prepareQuery();
+        return this.lifecycle.enqueue(() =>
+            Promise.resolve(deriveDisplayState(this.lifecycle.state)),
+        );
+    }
+
+    /**
+     * Persists diagnostic logging and refreshes enabled documents.
+     *
+     * @param enabled - Requested diagnostic logging state.
+     * @returns - Persisted state and refresh failures.
+     */
+    public setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
+        return this.commands.setDebugEnabled(enabled);
+    }
+
+    /**
+     * Validates and persists display settings.
+     *
+     * @param display - Untrusted display settings payload.
+     * @returns - Persisted display state and refresh failures.
+     */
+    public setDisplaySettings(display: unknown): Promise<SetDisplaySettingsResponse> {
+        return this.commands.setDisplaySettings(display);
+    }
+
+    /**
+     * Restores every setting and runtime surface to defaults.
+     *
+     * @returns - Reset result and default sites state.
+     */
+    public resetAllSettings(): Promise<ResetAllSettingsResponse> {
+        return this.commands.resetAllSettings();
+    }
+
+    /**
+     * Persists global activation and reconciles runtime adapters.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Persisted global state and popup projection.
+     */
+    public setGlobalEnabled(enabled: boolean): Promise<SetGlobalEnabledResponse> {
+        return this.commands.setGlobalEnabled(enabled);
+    }
+
+    /**
+     * Persists one hostname preference and reconciles affected adapters.
+     *
+     * @param hostname - Canonical hostname whose preference is changing.
+     * @param enabled - Requested site activation state.
+     * @param surface - Response projection requested by the caller.
+     * @returns - Persisted update and popup or sites projection.
+     */
+    public setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        surface: SiteSettingsSurface,
+    ): Promise<SetSiteEnabledResponse> {
+        return this.commands.setSiteEnabled(hostname, enabled, surface);
+    }
+
+    /**
+     * Initializes the application and drains queued lifecycle work before a query.
+     */
+    private async prepareQuery(): Promise<void> {
+        await this.lifecycle.ensureReady("cold-worker");
+        await this.lifecycle.drainLifecycle();
+    }
+}

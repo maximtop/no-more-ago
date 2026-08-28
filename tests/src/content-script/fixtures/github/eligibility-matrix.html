@@ -1,0 +1,17 @@
+<!doctype html>
+<main>
+  <relative-time datetime="2026-08-23T10:15Z">relative</relative-time>
+  <time-ago datetime="2026-08-23T10:15Z">ago</time-ago>
+  <time-until datetime="2026-08-23T10:15Z">until</time-until>
+  <relative-time>missing</relative-time>
+  <relative-time datetime="">empty</relative-time>
+  <relative-time datetime="   ">whitespace</relative-time>
+  <relative-time datetime=" 2026-08-23T10:15Z ">padded</relative-time>
+  <relative-time datetime="not a timestamp">malformed</relative-time>
+  <relative-time datetime="2026-08-23">date only</relative-time>
+  <relative-time datetime="2026-08-23T10:15">zone-less</relative-time>
+  <relative-time title="2026-08-23T10:15Z" aria-label="2026-08-23T10:15Z" data-date="2026-08-23T10:15Z">prose</relative-time>
+  <local-time datetime="2026-08-23T10:15Z">local</local-time>
+  <relative-time datetime="2026-08-23T10:15Z" format="datetime">absolute</relative-time>
+  <generic-time datetime="2026-08-23T10:15Z">unsupported</generic-time>
+</main>
