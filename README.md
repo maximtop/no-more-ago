@@ -6,11 +6,11 @@ timestamps with localized date and time text while preserving the original
 page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
-pages. GitHub and Hacker News have specialized sources for their trusted
-timestamp widgets. Hacker News support applies to `span.age[title]` on the
-exact `news.ycombinator.com` hostname and updates the existing simple linked
-or no-link label in place so the timestamp link remains intact. Site markup
-support is best-effort and may change independently of the extension.
+pages. GitHub, Hacker News, and supported Stack Exchange Q&A sites have
+specialized sources for trusted timestamp widgets. These integrations preserve
+page-owned elements and links while updating simple labels in place when
+needed. Site markup support is best-effort and may change independently of the
+extension.
 
 ## Key Concepts
 
@@ -19,8 +19,9 @@ support is best-effort and may change independently of the extension.
 - **Standard timestamp:** a `time[datetime]` value containing a complete date
   and time with an explicit, known UTC offset.
 - **Specialized source:** a site-specific rule for richer markup, such as
-  GitHub's relative-time widgets or Hacker News age widgets. Specialized rules
-  take precedence over the generic rule when both accept the same source.
+  GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
+  Exchange title timestamps. Specialized rules take precedence over the
+  generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -57,9 +58,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 5. Eligible timestamps are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
-become “Aug 27, 2026, 9:32 PM.” Trusted GitHub and Hacker News timestamps can
-also become exact dates. The result follows the selected format, browser
-locale, and time zone.
+become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, and Stack Exchange
+timestamps can also become exact dates. The result follows the selected format,
+browser locale, and time zone.
 
 ## Features
 
@@ -72,13 +73,20 @@ compact numeric offset. Date-only, local, malformed, impossible, and
 unknown-zone values remain unchanged. Visible text is never parsed as a
 fallback.
 
-GitHub and Hacker News have specialized sources for their trusted timestamp
-widgets. Hacker News support applies to `span.age[title]` on the exact
-`news.ycombinator.com` hostname and updates the existing simple linked or
-no-link label in place so the timestamp link remains intact. Both sources use
-the shared presentation, restoration, and dynamic-page lifecycle. When a
-specialized and generic rule both accept the same source, the specialized rule
-wins.
+GitHub, Hacker News, and supported Stack Exchange Q&A sites have specialized
+sources for their trusted timestamp widgets. Hacker News support applies to
+`span.age[title]` on the exact `news.ycombinator.com` hostname. Stack Exchange
+support applies to `*.stackexchange.com` and the Q&A roots
+`stackoverflow.com`, `serverfault.com`, `superuser.com`, `askubuntu.com`,
+`mathoverflow.net`, and `stackapps.com`, including their Q&A subdomains.
+
+The Stack Exchange adapter accepts only simple labels from these approved
+shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,
+`time.s-user-card--time[title]` without `datetime`, and the exact
+`a[href="?lastactivity"][title]` link. Standard `time[datetime]` elements keep
+using the generic fallback. All sources share presentation, restoration, and
+dynamic-page lifecycle behavior. When a specialized and generic rule both
+accept the same source, the specialized rule wins.
 
 The extension watches relevant dynamic content in each reachable HTTP(S)
 document. Newly added or changed timestamps are processed without requiring a
@@ -196,7 +204,7 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible `time[datetime]`, trusted GitHub timestamp, or Hacker News `span.age[title]` | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible standard, GitHub, Hacker News, or Stack Exchange timestamp | The trusted instant is shown with the configured exact-date presentation. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
@@ -218,18 +226,20 @@ The extension requests:
 No More Ago does not derive dates from visible relative or absolute labels,
 link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
 specialized source trusts only the explicit zoned timestamp in its approved
-`span.age[title]` shape. It changes only the simple label text: the `title`,
-link destination, element identity, attributes, and event listeners remain
-intact. Standard processing remains limited to ordinary light-DOM
-`time[datetime]` elements.
+`span.age[title]` shape. The Stack Exchange source reads `title` only from its
+listed timestamp widgets and accepts only strict explicit-zone values plus the
+known comment-license suffix. In-place sources change only their simple label
+text: the `title`, link destination, element identity, attributes, and event
+listeners remain intact. Standard processing remains limited to ordinary
+light-DOM `time[datetime]` elements.
 
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub and Hacker News are best-effort specialized integrations whose markup
-  can change independently of the extension.
+- GitHub, Hacker News, and Stack Exchange are best-effort specialized
+  integrations whose markup can change independently of the extension.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.

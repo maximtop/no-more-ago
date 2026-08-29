@@ -10,6 +10,7 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
+import { findSimpleTextTarget } from "./simple-text-target";
 
 const AGE_SELECTOR = "span.age[title]" as const;
 const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
@@ -53,22 +54,6 @@ function isHackerNewsAgeElement(element: Element): boolean {
 }
 
 /**
- * Finds the only meaningful text node in a container without element children.
- *
- * @param container - Link or no-link age widget whose label is inspected.
- * @returns - One unambiguous text target, or null for complex content.
- */
-function findSimpleText(container: Element): Text | null {
-    if (container.children.length > 0) {
-        return null;
-    }
-    const targets = Array.from(container.childNodes).filter(
-        (node): node is Text => node.nodeType === 3 && (node as Text).data.trim() !== "",
-    );
-    return targets.length === 1 ? targets[0] ?? null : null;
-}
-
-/**
  * Selects a simple linked or no-link label without replacing page-owned DOM.
  *
  * @param source - Hacker News age widget.
@@ -77,7 +62,7 @@ function findSimpleText(container: Element): Text | null {
 function findPresentationTarget(source: Element): Text | null {
     const children = Array.from(source.children);
     if (children.length === 0) {
-        return findSimpleText(source);
+        return findSimpleTextTarget(source);
     }
     const link = children[0];
     if (
@@ -91,7 +76,7 @@ function findPresentationTarget(source: Element): Text | null {
     const outsideLabel = Array.from(source.childNodes).some(
         (node) => node.nodeType === 3 && (node as Text).data.trim() !== "",
     );
-    return outsideLabel ? null : findSimpleText(link);
+    return outsideLabel ? null : findSimpleTextTarget(link);
 }
 
 /**
