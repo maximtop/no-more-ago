@@ -104,7 +104,10 @@ describe("DocumentTransformationController", () => {
     it("reformats only its existing owned sources when presentation changes", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
             + 'relative</relative-time><span id="foreign">foreign</span>';
-        let display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } };
+        let display: DisplaySettings = {
+            formatMode: "system",
+            timeZone: { mode: "iana", identifier: "America/New_York" },
+        };
         const source = document.querySelector("relative-time");
         const foreign = document.getElementById("foreign");
         if (!source || !foreign) {
