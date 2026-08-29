@@ -1,16 +1,14 @@
 /**
- * @file Loads, migrates, and serializes extension settings with failure-safe persistence.
+ * @file Loads and serializes typed extension settings with failure-safe persistence.
  */
 
 import {
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
-    SETTINGS_SCHEMA_VERSION,
     SETTINGS_STORAGE_KEY,
     createSettingsSnapshot,
     isCanonicalHostname,
     parseDisplaySettings,
-    parseSettingsSnapshot,
     type DisplaySettings,
     type SettingsLoadResult,
     type SettingsSnapshotV5,
@@ -26,12 +24,12 @@ export interface SettingsStorage {
      */
     get(
         keys?: string | readonly string[] | Record<string, unknown>,
-    ): Promise<Record<string, unknown>>;
+    ): Promise<Readonly<Record<string, SettingsSnapshotV5 | undefined>>>;
 
     /**
      * Persists a complete record of key-value updates.
      */
-    set(items: Record<string, unknown>): Promise<void>;
+    set(items: Readonly<Record<string, SettingsSnapshotV5>>): Promise<void>;
 }
 
 /**
@@ -68,8 +66,7 @@ export type SettingsWriteResult =
               | "invalid-hostname"
               | "invalid-time-zone"
               | "invalid-format"
-              | "invalid-display-settings"
-              | "invalid-debug";
+              | "invalid-display-settings";
 
         /**
          * Last authoritative settings snapshot retained after the failure.
@@ -127,7 +124,7 @@ function sameDisplay(a: DisplaySettings, b: DisplaySettings): boolean {
  */
 export class SettingsService {
     /**
-     * Last validated snapshot, used to project settings while storage remains available.
+     * Last loaded snapshot, used to project settings while storage remains available.
      */
     private current: SettingsSnapshotV5 | undefined;
 
@@ -155,12 +152,12 @@ export class SettingsService {
     ) {}
 
     /**
-     * Loads a valid current or recovery snapshot and records the unavailable reason on failure.
+     * Loads the current or recovery snapshot and records the unavailable reason on failure.
      *
      * @returns - Loaded settings snapshot or a contained load failure.
      */
     public async load(): Promise<SettingsLoadResult> {
-        let values: Record<string, unknown>;
+        let values: Readonly<Record<string, SettingsSnapshotV5 | undefined>>;
         try {
             values = await this.storage.get([this.key, SETTINGS_PREVIOUS_STORAGE_KEY]);
         } catch {
@@ -168,46 +165,29 @@ export class SettingsService {
             return { ok: false, error: "load-failed" };
         }
 
-        const hasCurrent = Object.hasOwn(values, this.key);
-        const hasPrevious = Object.hasOwn(values, SETTINGS_PREVIOUS_STORAGE_KEY);
-        if (!hasCurrent && !hasPrevious) {
+        const current = values[this.key];
+        const storedPrevious = values[SETTINGS_PREVIOUS_STORAGE_KEY];
+        if (current !== undefined) {
+            this.loadError = undefined;
+            this.current = current;
+            return { ok: true, snapshot: current, source: "stored" };
+        }
+
+        if (storedPrevious === undefined) {
             this.loadError = undefined;
             this.current = DEFAULT_SETTINGS_SNAPSHOT;
             return { ok: true, snapshot: this.current, source: "default" };
         }
 
-        const snapshot = hasCurrent ? parseSettingsSnapshot(values[this.key]) : null;
-        if (snapshot) {
-            this.loadError = undefined;
-            this.current = snapshot;
-            return { ok: true, snapshot, source: "stored" };
-        }
-
-        // A newer schema must never be replaced by an older backup. It may contain
-        // fields this unpublished build does not understand, so fail closed.
-        const rawCurrent = hasCurrent ? values[this.key] : undefined;
-        if (isUnknownFutureSnapshot(rawCurrent)) {
-            this.loadError = "invalid-settings";
-            return { ok: false, error: "invalid-settings" };
-        }
-
-        const previous = hasPrevious
-            ? parseSettingsSnapshot(values[SETTINGS_PREVIOUS_STORAGE_KEY])
-            : null;
-        if (!previous) {
-            this.loadError = "invalid-settings";
-            return { ok: false, error: "invalid-settings" };
-        }
-
         try {
-            await this.storage.set(this.pair(previous, previous));
+            await this.storage.set(this.pair(storedPrevious, storedPrevious));
         } catch {
             this.loadError = "invalid-settings";
             return { ok: false, error: "invalid-settings" };
         }
         this.loadError = undefined;
-        this.current = previous;
-        return { ok: true, snapshot: previous, source: "recovered" };
+        this.current = storedPrevious;
+        return { ok: true, snapshot: storedPrevious, source: "recovered" };
     }
 
     /**
@@ -247,7 +227,7 @@ export class SettingsService {
     private pair(
         current: SettingsSnapshotV5,
         previous: SettingsSnapshotV5,
-    ): Record<string, unknown> {
+    ): Readonly<Record<string, SettingsSnapshotV5>> {
         return { [this.key]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
     }
 
@@ -276,23 +256,14 @@ export class SettingsService {
                 result = { ok: true, changed: false, snapshot: loaded.snapshot };
                 return;
             }
-            const parsedCandidate = parseSettingsSnapshot(candidate);
-            if (parsedCandidate === null) {
-                result = {
-                    ok: false,
-                    error: "invalid-display-settings",
-                    snapshot: loaded.snapshot,
-                };
-                return;
-            }
             try {
-                await this.storage.set(this.pair(parsedCandidate, loaded.snapshot));
+                await this.storage.set(this.pair(candidate, loaded.snapshot));
             } catch {
                 result = { ok: false, error: "persistence-failed", snapshot: loaded.snapshot };
                 return;
             }
-            this.current = parsedCandidate;
-            result = { ok: true, changed: true, snapshot: parsedCandidate };
+            this.current = candidate;
+            result = { ok: true, changed: true, snapshot: candidate };
         });
         this.mutationTail = run.then(
             () => undefined,
@@ -315,9 +286,6 @@ export class SettingsService {
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
-        if (typeof enabled !== "boolean") {
-            return { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
-        }
         return this.mutate((current) =>
             current.globalEnabled === enabled
                 ? null
@@ -339,7 +307,7 @@ export class SettingsService {
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
-        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") {
+        if (!isCanonicalHostname(hostname)) {
             return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
         }
         return this.mutate((current) => {
@@ -369,23 +337,18 @@ export class SettingsService {
     /**
      * Persists validated presentation choices and refreshes the derived display projection.
      *
-     * @param display - Untrusted display settings to validate and persist.
+     * @param display - Typed display settings to validate and persist.
      * @returns - Persisted write result with the effective snapshot.
      */
-    public async setDisplaySettings(display: unknown): Promise<SettingsWriteResult> {
-        if (
-            typeof display === "object" &&
-            display !== null &&
-            Object.hasOwn(display, "formatMode") &&
-            (display as { formatMode?: unknown }).formatMode === "custom"
-        ) {
-            const pattern = (display as { pattern?: unknown }).pattern;
-            if (!validateCustomFormatPattern(pattern).ok) {
-                return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
-            }
-        }
+    public async setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult> {
         const parsed = parseDisplaySettings(display);
         if (parsed === null) {
+            if (
+                display.formatMode === "custom"
+                && !validateCustomFormatPattern(display.pattern).ok
+            ) {
+                return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
+            }
             return {
                 ok: false,
                 error: "invalid-display-settings",
@@ -418,9 +381,6 @@ export class SettingsService {
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
-        if (typeof enabled !== "boolean") {
-            return { ok: false, error: "invalid-debug", snapshot: this.fallbackSnapshot() };
-        }
         return this.mutate((current) =>
             current.debugEnabled === enabled
                 ? null
@@ -472,28 +432,11 @@ export class SettingsService {
     }
 
     /**
-     * Reloads the newest valid stored snapshot after an ambiguous write response.
+     * Reloads the newest stored snapshot after an ambiguous write response.
      *
      * @returns - Latest valid snapshot or a contained load failure.
      */
     public async readLatest(): Promise<SettingsLoadResult> {
         return this.load();
     }
-}
-
-/**
- * Detects a newer schema marker so it is never overwritten by an older extension build.
- *
- * @param value - Untrusted stored settings value.
- * @returns - Whether the value declares a schema newer than this build supports.
- */
-function isUnknownFutureSnapshot(value: unknown): boolean {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value) &&
-        Object.hasOwn(value, "schemaVersion") &&
-        typeof (value as { schemaVersion?: unknown }).schemaVersion === "number" &&
-        (value as { schemaVersion: number }).schemaVersion > SETTINGS_SCHEMA_VERSION
-    );
 }

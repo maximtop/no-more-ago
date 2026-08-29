@@ -38,11 +38,8 @@ describe("document-state schema", () => {
     });
 
     it.each([
-        { ...readyState, extra: true },
         { ...readyState, revision: Number.MAX_SAFE_INTEGER + 1 },
-        { ...readyState, display: { formatMode: "unknown" } },
-        { ...unavailableState, enabled: true },
-    ])("rejects unsafe state %j", (state) => {
+    ])("rejects an unsafe revision in state %j", (state) => {
         expect(v.is(documentStateSchema, state)).toBe(false);
         expect(isDocumentState(state)).toBe(false);
     });

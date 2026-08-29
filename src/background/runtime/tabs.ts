@@ -71,20 +71,3 @@ export interface TabsRuntime {
         },
     ): Promise<unknown>;
 }
-
-/**
- * Recognizes browser tab records with a safe numeric ID and optional string URL.
- *
- * @param value - Untrusted browser tab value.
- * @returns - Whether the value is a usable runtime tab record.
- */
-export function isRuntimeTab(value: unknown): value is RuntimeTab {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        return false;
-    }
-    const record = value as Record<string, unknown>;
-    return (
-        Number.isSafeInteger(record.id) &&
-        (record.url === undefined || typeof record.url === "string")
-    );
-}

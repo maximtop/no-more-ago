@@ -20,7 +20,7 @@ import type {
 } from "../../shared/messaging/view-state-schemas";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
-import { isRuntimeTab, type RuntimeTab, type TabsRuntime } from "../runtime/tabs";
+import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import type { ReconcileFailure } from "../runtime/document-activation";
 import {
     RECONCILE_FAILURE_SCOPE,
@@ -328,7 +328,7 @@ export class StateProjection {
     }> {
         try {
             const tabs = await this.tabs.query({ active: true, currentWindow: true });
-            return { tab: tabs.find(isRuntimeTab), error: false };
+            return { tab: tabs[0], error: false };
         } catch {
             return { tab: undefined, error: true };
         }

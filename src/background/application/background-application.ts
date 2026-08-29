@@ -4,7 +4,10 @@
 
 import type { DiagnosticSender } from "../../shared/diagnostics/events";
 import type { ActivationReconcileResult } from "../runtime/document-activation";
-import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
+import type {
+    DisplaySettings,
+    SettingsSnapshotV5,
+} from "../../shared/settings/snapshot";
 import { ActivationManager } from "./activation-manager";
 import { ApplicationLifecycle } from "./lifecycle";
 import {
@@ -256,10 +259,10 @@ export class BackgroundApplication {
     /**
      * Validates and persists display settings.
      *
-     * @param display - Untrusted display settings payload.
+     * @param display - Typed display settings payload.
      * @returns - Persisted display state and refresh failures.
      */
-    public setDisplaySettings(display: unknown): Promise<SetDisplaySettingsResponse> {
+    public setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
         return this.commands.setDisplaySettings(display);
     }
 

@@ -304,10 +304,11 @@ export class SitesClient {
      */
     public async getDisplayState(): Promise<DisplayState> {
         const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
-        if (!v.is(displayStateSchema, response)) {
+        const parsed = v.safeParse(displayStateSchema, response);
+        if (!parsed.success) {
             throw new Error("Invalid Display state response");
         }
-        return response;
+        return parsed.output;
     }
 
     /**
@@ -401,8 +402,9 @@ export class SitesClient {
         } catch {
             return this.rereadDisplayAfterAmbiguousResponse();
         }
-        if (v.is(setDisplaySettingsResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
+        const parsed = v.safeParse(setDisplaySettingsResponseSchema, response);
+        if (parsed.success) {
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: parsed.output };
         }
         return this.rereadDisplayAfterAmbiguousResponse();
     }

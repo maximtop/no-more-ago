@@ -24,6 +24,7 @@ import {
 import {
     createSettingsSnapshot,
     SETTINGS_STORAGE_KEY,
+    type SettingsSnapshotV5,
 } from "../../../src/shared/settings/snapshot";
 
 /**
@@ -32,7 +33,9 @@ import {
  * @param initial - Values returned by the settings store.
  * @returns - Configured application facade.
  */
-function application(initial: Record<string, unknown> = {}): BackgroundApplication {
+function application(
+    initial: Record<string, SettingsSnapshotV5 | undefined> = {},
+): BackgroundApplication {
     const storage = {
         get: vi.fn(async () => initial),
         set: vi.fn(async () => undefined),
@@ -116,10 +119,10 @@ describe("BackgroundApplication document state", () => {
     );
 
     it("routes a site disable through affected-host document reconciliation", async () => {
-        let stored: Record<string, unknown> = {};
+        let stored: Record<string, SettingsSnapshotV5 | undefined> = {};
         const storage = {
             get: vi.fn(() => Promise.resolve(stored)),
-            set: vi.fn((items: Record<string, unknown>) => {
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV5>>) => {
                 stored = { ...stored, ...items };
                 return Promise.resolve();
             }),

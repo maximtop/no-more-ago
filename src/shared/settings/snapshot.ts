@@ -1,11 +1,11 @@
 /**
- * @file Canonical settings schema, validation, migration, and default values.
+ * @file Canonical settings types, domain validation, and default values.
  */
 
 import { validateCustomFormatPattern } from "./custom-format";
 
 /**
- * Current schema version accepted by the settings parser.
+ * Current schema version written with extension settings.
  */
 export const SETTINGS_SCHEMA_VERSION = 5 as const;
 
@@ -171,23 +171,13 @@ export type SettingsLoadResult =
     };
 
 /**
- * Accepts plain JSON-like records before schema validation.
- *
- * @param value - Untrusted value to inspect.
- * @returns - Whether the value is a non-array object record.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
  * A site key is the canonical URL.hostname, never a URL or URL.host.
  *
  * @param hostname - Candidate hostname to use as a site-preference key.
  * @returns - Whether the string is an exact canonical hostname.
  */
 export function isCanonicalHostname(hostname: string): boolean {
-    if (typeof hostname !== "string" || hostname.length === 0 || hostname.trim() !== hostname) {
+    if (hostname.length === 0 || hostname.trim() !== hostname) {
         return false;
     }
     if (hostname.endsWith("..") || hostname.includes("*")) {
@@ -211,19 +201,18 @@ export function isCanonicalHostname(hostname: string): boolean {
 }
 
 /**
- * Rejects non-records and invalid host overrides, then freezes a copied preference map so callers
- * cannot mutate a validated settings snapshot through its input object.
+ * Rejects noncanonical host overrides and freezes a copied preference map so callers cannot
+ * mutate a settings snapshot through its input object.
  *
- * @param value - Untrusted site-preferences value.
+ * @param value - Typed site-preferences value.
  * @returns - Frozen validated preference map, or null when invalid.
  */
-function copySitePreferences(value: unknown): Readonly<Record<string, boolean>> | null {
-    if (!isRecord(value)) {
-        return null;
-    }
+function copySitePreferences(
+    value: Readonly<Record<string, boolean>>,
+): Readonly<Record<string, boolean>> | null {
     const entries: [string, boolean][] = [];
     for (const [hostname, enabled] of Object.entries(value)) {
-        if (!isCanonicalHostname(hostname) || typeof enabled !== "boolean") {
+        if (!isCanonicalHostname(hostname)) {
             return null;
         }
         entries.push([hostname, enabled]);
@@ -236,15 +225,11 @@ const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
 /**
  * Rejects whitespace, control characters, traversal segments, and invalid IANA name components.
  *
- * @param identifier - Untrusted IANA time-zone identifier.
+ * @param identifier - IANA time-zone identifier supplied by the user.
  * @returns - Whether the value has a safe, structurally valid identifier shape.
  */
-export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): identifier is string {
-    if (
-        typeof identifier !== "string" ||
-        identifier.length === 0 ||
-        identifier.trim() !== identifier
-    ) {
+export function isStructurallyValidTimeZoneIdentifier(identifier: string): boolean {
+    if (identifier.length === 0 || identifier.trim() !== identifier) {
         return false;
     }
     if (identifier.includes("\\") || /\s/u.test(identifier)) {
@@ -267,33 +252,25 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: unknown): iden
 }
 
 /**
- * Accepts only complete system, UTC, or structurally valid named-zone selections.
+ * Checks domain constraints for a typed time-zone selection.
  *
- * @param value - Untrusted time-zone selection.
- * @returns - Whether the value is a complete supported selection.
+ * @param value - Typed time-zone selection.
+ * @returns - Whether the selection satisfies its domain constraints.
  */
-export function isTimeZoneSelection(value: unknown): value is TimeZoneSelection {
-    if (!isRecord(value) || !Object.hasOwn(value, "mode")) {
-        return false;
-    }
+export function isTimeZoneSelection(value: TimeZoneSelection): boolean {
     if (value.mode === "system" || value.mode === "utc") {
-        return Object.keys(value).length === 1;
+        return true;
     }
-    return (
-        value.mode === "iana" &&
-        Object.keys(value).length === 2 &&
-        Object.hasOwn(value, "identifier") &&
-        isStructurallyValidTimeZoneIdentifier(value.identifier)
-    );
+    return isStructurallyValidTimeZoneIdentifier(value.identifier);
 }
 
 /**
- * Returns an immutable time-zone selection or null without coercing untrusted input.
+ * Returns an immutable time-zone selection after checking user-authored domain values.
  *
- * @param value - Untrusted time-zone selection.
+ * @param value - Typed time-zone selection.
  * @returns - Immutable validated selection, or null when invalid.
  */
-export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null {
+export function parseTimeZoneSelection(value: TimeZoneSelection): TimeZoneSelection | null {
     if (!isTimeZoneSelection(value)) {
         return null;
     }
@@ -303,45 +280,22 @@ export function parseTimeZoneSelection(value: unknown): TimeZoneSelection | null
 }
 
 /**
- * Verifies the exact key set and validates custom patterns before accepting display choices.
+ * Validates user-authored domain values inside typed display choices.
  *
- * @param value - Untrusted display-settings value.
- * @returns - Whether the value has the exact valid display-settings shape.
+ * @param value - Typed display settings.
+ * @returns - Whether the settings satisfy their domain constraints.
  */
-export function isDisplaySettings(value: unknown): value is DisplaySettings {
-    if (
-        !isRecord(value) ||
-        !Object.hasOwn(value, "formatMode") ||
-        !Object.hasOwn(value, "timeZone")
-    ) {
-        return false;
-    }
-    const timeZone = parseTimeZoneSelection(value.timeZone);
-    if (timeZone === null) {
-        return false;
-    }
-    if (value.formatMode === "system") {
-        return Object.keys(value).length === 2;
-    }
-    return (
-        value.formatMode === "custom" &&
-        Object.keys(value).length === 3 &&
-        Object.hasOwn(value, "pattern") &&
-        typeof value.pattern === "string" &&
-        validateCustomFormatPattern(value.pattern).ok
-    );
+export function isDisplaySettings(value: DisplaySettings): boolean {
+    return parseDisplaySettings(value) !== null;
 }
 
 /**
  * Copies validated display choices into an immutable representation, or returns null.
  *
- * @param value - Untrusted display-settings value.
+ * @param value - Typed display settings.
  * @returns - Immutable validated display settings, or null when invalid.
  */
-export function parseDisplaySettings(value: unknown): DisplaySettings | null {
-    if (!isDisplaySettings(value)) {
-        return null;
-    }
+export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | null {
     const timeZone = parseTimeZoneSelection(value.timeZone);
     if (timeZone === null) {
         return null;
@@ -354,65 +308,6 @@ export function parseDisplaySettings(value: unknown): DisplaySettings | null {
         return null;
     }
     return Object.freeze({ formatMode: "custom", pattern: checked.pattern, timeZone });
-}
-
-/**
- * Enforces the exact V5 schema and validates every nested settings value.
- *
- * @param value - Untrusted persisted settings value.
- * @returns - Whether the value satisfies the complete V5 schema.
- */
-export function isSettingsSnapshotV5(value: unknown): value is SettingsSnapshotV5 {
-    if (!isRecord(value)) {
-        return false;
-    }
-    const keys = Object.keys(value);
-    if (
-        keys.length !== 6 ||
-        !Object.hasOwn(value, "schemaVersion") ||
-        !Object.hasOwn(value, "revision") ||
-        !Object.hasOwn(value, "globalEnabled") ||
-        !Object.hasOwn(value, "sitePreferences") ||
-        !Object.hasOwn(value, "display") ||
-        !Object.hasOwn(value, "debugEnabled")
-    ) {
-        return false;
-    }
-    return (
-        value.schemaVersion === SETTINGS_SCHEMA_VERSION &&
-        typeof value.revision === "number" &&
-        Number.isSafeInteger(value.revision) &&
-        value.revision >= 0 &&
-        typeof value.globalEnabled === "boolean" &&
-        copySitePreferences(value.sitePreferences) !== null &&
-        isDisplaySettings(value.display) &&
-        typeof value.debugEnabled === "boolean"
-    );
-}
-
-/**
- * Produces an immutable V5 snapshot only from a fully validated storage record.
- *
- * @param value - Untrusted persisted settings value.
- * @returns - Immutable V5 snapshot, or null when validation fails.
- */
-export function parseSettingsSnapshot(value: unknown): SettingsSnapshotV5 | null {
-    if (!isSettingsSnapshotV5(value)) {
-        return null;
-    }
-    const sitePreferences = copySitePreferences(value.sitePreferences);
-    const display = parseDisplaySettings(value.display);
-    if (sitePreferences === null || display === null) {
-        return null;
-    }
-    return Object.freeze({
-        schemaVersion: SETTINGS_SCHEMA_VERSION,
-        revision: value.revision,
-        globalEnabled: value.globalEnabled,
-        sitePreferences,
-        display,
-        debugEnabled: value.debugEnabled,
-    });
 }
 
 /**
@@ -432,7 +327,7 @@ export function createSettingsSnapshot(
     display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
     debugEnabled = false,
 ): SettingsSnapshotV5 {
-    if (!Number.isSafeInteger(revision) || revision < 0 || typeof globalEnabled !== "boolean") {
+    if (!Number.isSafeInteger(revision) || revision < 0) {
         throw new TypeError("Invalid V5 settings snapshot");
     }
     const copied = copySitePreferences(sitePreferences);
@@ -442,9 +337,6 @@ export function createSettingsSnapshot(
     }
     if (parsedDisplay === null) {
         throw new TypeError("Invalid V5 display settings");
-    }
-    if (typeof debugEnabled !== "boolean") {
-        throw new TypeError("Invalid V5 debug setting");
     }
     return Object.freeze({
         schemaVersion: SETTINGS_SCHEMA_VERSION,
