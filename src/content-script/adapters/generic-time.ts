@@ -5,8 +5,10 @@
 import { isHttpUrl } from "../../shared/url/http";
 import {
     TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    ADJACENT_TIME_PRESENTATION,
     type TimestampSourceRule,
 } from "./types";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
@@ -33,6 +35,16 @@ function isStandardTimeElement(element: Element): boolean {
 }
 
 /**
+ * Recognizes a page-owned generic timestamp source rather than generated output.
+ *
+ * @param element - Candidate source element.
+ * @returns - Whether the element can be processed by the generic rule.
+ */
+function isGenericTimeSource(element: Element): boolean {
+    return isStandardTimeElement(element) && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE);
+}
+
+/**
  * Finds ordinary light-DOM time elements in a bounded root.
  *
  * @param root - Element or parent node to inspect.
@@ -43,16 +55,14 @@ function discoverStandardTimes(root: ParentNode): readonly Element[] {
     if (root.nodeType === Node.ELEMENT_NODE) {
         const element = root as Element;
         if (
-            isStandardTimeElement(element)
-            && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
+            isGenericTimeSource(element)
         ) {
             candidates.push(element);
         }
     }
     for (const element of root.querySelectorAll("time")) {
         if (
-            isStandardTimeElement(element)
-            && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE)
+            isGenericTimeSource(element)
         ) {
             candidates.push(element);
         }
@@ -81,6 +91,7 @@ function extractStandardTime(
         source: element,
         sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
         rawDatetime,
+        presentation: ADJACENT_TIME_PRESENTATION,
         validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
         visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
     };
@@ -91,7 +102,9 @@ function extractStandardTime(
  */
 export const genericTimeRule: TimestampSourceRule = {
     id: GENERIC_TIME_RULE_ID,
+    mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
     matches: isHttpUrl,
+    matchesElement: isGenericTimeSource,
     discover: discoverStandardTimes,
     extract: extractStandardTime,
 };

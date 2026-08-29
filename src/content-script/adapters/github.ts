@@ -4,8 +4,10 @@
 
 import {
     TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    ADJACENT_TIME_PRESENTATION,
     type TimestampSourceRule,
     type TimestampSourceKind,
 } from "./types";
@@ -18,15 +20,30 @@ const APPROVED_KINDS = new Set<TimestampSourceKind>([
 ]);
 
 /**
+ * Checks whether an element has one of GitHub's approved timestamp source shapes.
+ *
+ * @param element - Candidate GitHub timestamp element.
+ * @returns - Whether the element can be extracted by this adapter.
+ */
+function isGitHubTimestampElement(element: Element): boolean {
+    return APPROVED_KINDS.has(element.localName as TimestampSourceKind);
+}
+
+/**
  * GitHub-specific adapter that accepts only explicit-zone datetime attributes on supported time
  * widgets.
  */
 export const githubAdapter: TimestampSourceRule = {
     id: GITHUB_ADAPTER_ID,
+    mutationAttributes: [
+        TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
+        TIMESTAMP_SOURCE_ATTRIBUTE.FORMAT,
+    ],
     matches: matchesGitHubUrl,
+    matchesElement: isGitHubTimestampElement,
     discover: (root) => {
         const candidates: Element[] = [];
-        if (root instanceof Element && APPROVED_KINDS.has(root.localName as TimestampSourceKind)) {
+        if (root instanceof Element && isGitHubTimestampElement(root)) {
             candidates.push(root);
         }
         candidates.push(...root.querySelectorAll("relative-time, time-ago, time-until"));
@@ -51,6 +68,7 @@ export const githubAdapter: TimestampSourceRule = {
                 source: element,
                 sourceKind,
                 rawDatetime,
+                presentation: ADJACENT_TIME_PRESENTATION,
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             }

@@ -116,17 +116,27 @@ export interface SiteReportTab {
     /**
      * Current page URL.
      */
-    readonly url?: unknown;
+    readonly url?: string | undefined;
 
     /**
      * Whether the tab belongs to a private window.
      */
-    readonly incognito?: unknown;
+    readonly incognito?: boolean | undefined;
 
     /**
      * Window in which a private report must be opened.
      */
-    readonly windowId?: unknown;
+    readonly windowId?: number | undefined;
+}
+
+/**
+ * Manifest fields used in a site report.
+ */
+export interface SiteReportManifest {
+    /**
+     * Current extension version.
+     */
+    readonly version: string;
 }
 
 /**
@@ -175,7 +185,7 @@ export interface SiteReportBrowserRuntime {
         /**
          * Returns the current extension manifest.
          */
-        getManifest(): unknown;
+        getManifest(): SiteReportManifest;
     };
 
     /**
@@ -185,7 +195,7 @@ export interface SiteReportBrowserRuntime {
         /**
          * Current browser user-agent string.
          */
-        readonly userAgent?: unknown;
+        readonly userAgent?: string | undefined;
     };
 }
 
@@ -269,8 +279,8 @@ export function composeSiteReportUrl(context: unknown): string | null {
  * @param userAgent - Browser user-agent value.
  * @returns - Supported browser label.
  */
-export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrowser {
-    if (typeof userAgent !== "string") {
+export function browserContextFromUserAgent(userAgent: string | undefined): SiteReportBrowser {
+    if (userAgent === undefined) {
         return "Other";
     }
     if (/Firefox\//u.test(userAgent)) {
@@ -283,21 +293,14 @@ export function browserContextFromUserAgent(userAgent: unknown): SiteReportBrows
 }
 
 /**
- * Reads the current validated extension version.
+ * Reads the current extension version.
  *
  * @param runtime - Browser runtime dependency.
  * @returns - Valid extension version, or null when unavailable.
  */
 function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
     try {
-        const manifest = runtime.runtime?.getManifest();
-        if (typeof manifest !== "object" || manifest === null) {
-            return null;
-        }
-        const version = (manifest as { readonly version?: unknown }).version;
-        return typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)
-            ? version
-            : null;
+        return runtime.runtime?.getManifest().version ?? null;
     } catch {
         return null;
     }
@@ -352,7 +355,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                     return { ok: false, error: "missing-tab" };
                 }
                 const tab = tabs.length === 1 ? tabs[0] : undefined;
-                if (!tab || typeof tab.url !== "string") {
+                if (!tab?.url) {
                     return { ok: false, error: "missing-tab" };
                 }
                 let url: URL;
@@ -385,7 +388,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 }
                 if (tab.incognito === true) {
                     if (
-                        typeof tab.windowId !== "number"
+                        tab.windowId === undefined
                         || !Number.isSafeInteger(tab.windowId)
                         || tab.windowId < 0
                     ) {

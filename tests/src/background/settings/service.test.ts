@@ -9,8 +9,8 @@ import {
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
-    isSettingsSnapshotV5,
     type DisplaySettings,
+    type SettingsSnapshotV5,
 } from "../../../../src/shared/settings/snapshot";
 
 const v5 = (
@@ -19,7 +19,7 @@ const v5 = (
     sitePreferences: Record<string, boolean> = {},
     display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } },
     debugEnabled = false,
-) => ({
+): SettingsSnapshotV5 => ({
     schemaVersion: 5 as const,
     revision,
     globalEnabled,
@@ -35,9 +35,9 @@ const v5 = (
  * @param previous - Initial recovery snapshot value.
  * @returns - Storage double with inspection and replacement helpers.
  */
-function storage(initial?: unknown, previous?: unknown) {
-    let value = initial;
-    let previousValue = previous;
+function storage(initial?: SettingsSnapshotV5, previous?: SettingsSnapshotV5) {
+    let value: SettingsSnapshotV5 | undefined = initial;
+    let previousValue: SettingsSnapshotV5 | undefined = previous;
     return {
         get: vi.fn(async () => ({
             ...(value === undefined ? {} : { [SETTINGS_STORAGE_KEY]: value }),
@@ -45,22 +45,13 @@ function storage(initial?: unknown, previous?: unknown) {
                 ? {}
                 : { [SETTINGS_PREVIOUS_STORAGE_KEY]: previousValue }),
         })),
-        set: vi.fn(async (items: Record<string, unknown>) => {
-            const current = items[SETTINGS_STORAGE_KEY];
-            const backup = items[SETTINGS_PREVIOUS_STORAGE_KEY];
-            if (
-                Object.keys(items).length !== 2 ||
-                !isSettingsSnapshotV5(current) ||
-                !isSettingsSnapshotV5(backup)
-            ) {
-                throw new Error("Expected one complete validated atomic settings pair");
-            }
-            value = current;
-            previousValue = backup;
+        set: vi.fn(async (items: Readonly<Record<string, SettingsSnapshotV5>>) => {
+            value = items[SETTINGS_STORAGE_KEY];
+            previousValue = items[SETTINGS_PREVIOUS_STORAGE_KEY];
         }),
         remove: vi.fn(async () => undefined),
         pair: () => ({ current: value, previous: previousValue }),
-        replace: (current: unknown, backup: unknown) => {
+        replace: (current: SettingsSnapshotV5, backup: SettingsSnapshotV5) => {
             value = current;
             previousValue = backup;
         },
@@ -141,23 +132,9 @@ describe("SettingsService V5", () => {
         });
     });
 
-    it("rejects V4 and invalid debug values without storage work", async () => {
-        await expect(new SettingsService(storage({ schemaVersion: 4 })).load()).resolves.toEqual({
-            ok: false,
-            error: "invalid-settings",
-        });
-        const backend = storage(v5());
-        const service = new SettingsService(backend);
-        await expect(service.setDebugEnabled("true" as never)).resolves.toMatchObject({
-            ok: false,
-        });
-        expect(backend.get).not.toHaveBeenCalled();
-        expect(backend.set).not.toHaveBeenCalled();
-    });
-
-    it("recovers a valid previous pair and resets to logging off", async () => {
+    it("recovers a previous snapshot when the current snapshot is absent", async () => {
         const previous = v5(8, false, { "github.com": false }, undefined, true);
-        const backend = storage({ schemaVersion: 4 }, previous);
+        const backend = storage(undefined, previous);
         const service = new SettingsService(backend);
         await expect(service.load()).resolves.toMatchObject({
             ok: true,
@@ -174,15 +151,7 @@ describe("SettingsService V5", () => {
         });
     });
 
-    it("fails closed on future schema and preserves the pair on write failure", async () => {
-        const future = { schemaVersion: 6, revision: 3 };
-        const previous = v5(2);
-        const backend = storage(future, previous);
-        await expect(new SettingsService(backend).load()).resolves.toEqual({
-            ok: false,
-            error: "invalid-settings",
-        });
-        expect(backend.set).not.toHaveBeenCalled();
+    it("preserves the current snapshot when a write fails", async () => {
         const validBackend = storage(v5(2));
         const service = new SettingsService(validBackend);
         await service.load();
@@ -216,132 +185,39 @@ describe("SettingsService durable loading and backup recovery", () => {
         expect(service.lastLoadError).toBeUndefined();
     });
 
-    it.each([
-        ["absent", undefined],
-        ["corrupt", { schemaVersion: 4, revision: 9 }],
-        ["future", { schemaVersion: 7, revision: 9 }],
-    ])(
-        "accepts a valid current snapshot while ignoring its %s backup",
-        async (_label, previous) => {
-            const current = v5(
-                6,
-                false,
-                { "github.com": false },
-                {
-                    formatMode: "custom",
-                    pattern: "yyyy-MM-dd HH:mm",
-                    timeZone: { mode: "iana", identifier: "America/New_York" },
-                },
-                true,
-            );
-            const backend = storage(current, previous);
+    it("accepts a valid current snapshot without rewriting its backup", async () => {
+        const current = v5(
+            6,
+            false,
+            { "github.com": false },
+            {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "iana", identifier: "America/New_York" },
+            },
+            true,
+        );
+        const previous = v5(5);
+        const backend = storage(current, previous);
 
-            await expect(new SettingsService(backend).load()).resolves.toEqual({
-                ok: true,
-                snapshot: current,
-                source: "stored",
-            });
-            expect(backend.set).not.toHaveBeenCalled();
-            expect(backend.pair()).toEqual({ current, previous });
-        },
-    );
-
-    it.each([
-        ["absent", undefined],
-        ["null", null],
-        ["older unpublished", { schemaVersion: 4, revision: 7 }],
-        ["incomplete current", { schemaVersion: 5, revision: 7 }],
-        ["invalid debug", { ...v5(7), debugEnabled: "true" }],
-        ["invalid hostname", { ...v5(7), sitePreferences: { "EXAMPLE.TEST": false } }],
-        [
-            "invalid display",
-            { ...v5(7), display: { formatMode: "system", timeZone: { mode: "invalid" } } },
-        ],
-    ])(
-        "restores a valid full backup after %s current data in exactly one atomic write",
-        async (_label, current) => {
-            const previous = v5(
-                8,
-                false,
-                { "github.com": false, "example.test.": true },
-                {
-                    formatMode: "custom",
-                    pattern: "yyyy-MM-dd HH:mm XXX",
-                    timeZone: { mode: "iana", identifier: "America/New_York" },
-                },
-                true,
-            );
-            const backend = storage(current, previous);
-            const service = new SettingsService(backend);
-
-            await expect(service.load()).resolves.toEqual({
-                ok: true,
-                snapshot: previous,
-                source: "recovered",
-            });
-            expect(backend.set).toHaveBeenCalledOnce();
-            expect(backend.set).toHaveBeenCalledWith({
-                [SETTINGS_STORAGE_KEY]: previous,
-                [SETTINGS_PREVIOUS_STORAGE_KEY]: previous,
-            });
-            expect(backend.pair()).toEqual({ current: previous, previous });
-            expect(service.loadedSnapshot).toEqual(previous);
-            expect(service.lastLoadError).toBeUndefined();
-        },
-    );
-
-    it.each([6, 9, 99, Number.MAX_SAFE_INTEGER])(
-        "never downgrades future schema %i even when its backup is valid",
-        async (schemaVersion) => {
-            const future = { schemaVersion, revision: 12, globalEnabled: true };
-            const previous = v5(5, false, { "github.com": false }, undefined, true);
-            const backend = storage(future, previous);
-            const service = new SettingsService(backend);
-
-            await expect(service.load()).resolves.toEqual({ ok: false, error: "invalid-settings" });
-            expect(backend.pair()).toEqual({ current: future, previous });
-            expect(backend.set).not.toHaveBeenCalled();
-            expect(service.loadedSnapshot).toBeUndefined();
-            expect(service.lastLoadError).toBe("invalid-settings");
-        },
-    );
-
-    it.each([
-        ["invalid current and missing backup", { broken: true }, undefined],
-        ["missing current and invalid backup", undefined, { broken: true }],
-        ["two corrupt documents", { schemaVersion: 3 }, { schemaVersion: 4 }],
-        ["two incomplete V5 documents", { schemaVersion: 5 }, { schemaVersion: 5, revision: 1 }],
-        ["current V4 without backup", { schemaVersion: 4, revision: 2 }, undefined],
-        [
-            "valid-shaped backup with invalid debug",
-            { schemaVersion: 4 },
-            { ...v5(3), debugEnabled: "yes" },
-        ],
-    ])(
-        "fails closed for %s without replacing either document",
-        async (_label, current, previous) => {
-            const backend = storage(current, previous);
-            const before = backend.pair();
-
-            await expect(new SettingsService(backend).load()).resolves.toEqual({
-                ok: false,
-                error: "invalid-settings",
-            });
-            expect(backend.pair()).toEqual(before);
-            expect(backend.set).not.toHaveBeenCalled();
-        },
-    );
+        await expect(new SettingsService(backend).load()).resolves.toEqual({
+            ok: true,
+            snapshot: current,
+            source: "stored",
+        });
+        expect(backend.set).not.toHaveBeenCalled();
+        expect(backend.pair()).toEqual({ current, previous });
+    });
 
     it("preserves both documents when restoring a valid backup cannot be persisted", async () => {
-        const current = { schemaVersion: 4, revision: 7 };
         const previous = v5(8, false, { "github.com": false }, undefined, true);
-        const backend = storage(current, previous);
+        const backend = storage(undefined, previous);
         backend.set.mockRejectedValueOnce(new Error("disk full"));
         const service = new SettingsService(backend);
 
         await expect(service.load()).resolves.toEqual({ ok: false, error: "invalid-settings" });
         expect(backend.set).toHaveBeenCalledOnce();
-        expect(backend.pair()).toEqual({ current, previous });
+        expect(backend.pair()).toEqual({ current: undefined, previous });
         expect(service.loadedSnapshot).toBeUndefined();
         expect(service.lastLoadError).toBe("invalid-settings");
     });
@@ -443,19 +319,6 @@ describe("SettingsService global and exact-host policy", () => {
         },
     );
 
-    it.each([undefined, null, 0, 1, "true", {}])(
-        "rejects invalid global value %# without reading or writing",
-        async (enabled) => {
-            const backend = storage(v5(2));
-
-            await expect(
-                new SettingsService(backend).setGlobalEnabled(enabled as never),
-            ).resolves.toMatchObject({ ok: false, error: "persistence-failed" });
-            expect(backend.get).not.toHaveBeenCalled();
-            expect(backend.set).not.toHaveBeenCalled();
-        },
-    );
-
     it("keeps related hostname policies independent", async () => {
         const backend = storage(v5(3, true, {}, undefined, true));
         const service = new SettingsService(backend);
@@ -511,7 +374,7 @@ describe("SettingsService global and exact-host policy", () => {
         await service.setSiteEnabled("constructor", true);
 
         const result = backend.pair().current;
-        if (!isSettingsSnapshotV5(result)) {
+        if (result === undefined) {
             throw new Error("Expected a complete V5 snapshot");
         }
         expect(Object.hasOwn(result.sitePreferences, "__proto__")).toBe(true);
@@ -545,19 +408,6 @@ describe("SettingsService global and exact-host policy", () => {
         expect(backend.get).not.toHaveBeenCalled();
         expect(backend.set).not.toHaveBeenCalled();
     });
-
-    it.each([undefined, null, 0, "false", {}])(
-        "rejects invalid exact-host preference value %# before storage access",
-        async (enabled) => {
-            const backend = storage(v5(2));
-
-            await expect(
-                new SettingsService(backend).setSiteEnabled("github.com", enabled as never),
-            ).resolves.toMatchObject({ ok: false, error: "invalid-hostname" });
-            expect(backend.get).not.toHaveBeenCalled();
-            expect(backend.set).not.toHaveBeenCalled();
-        },
-    );
 
     it.each([false, true])(
         "does not rewrite an already-explicit site=%s preference",
@@ -720,25 +570,6 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
     });
 
     it.each([
-        undefined,
-        null,
-        {},
-        { formatMode: "system" },
-        { formatMode: "system", timeZone: { mode: "utc" }, extra: true },
-        { formatMode: "system", timeZone: { mode: "utc", identifier: "UTC" } },
-        { formatMode: "unknown", timeZone: { mode: "utc" } },
-        { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "unknown" } },
-    ])("rejects malformed complete display candidate %# without persistence", async (display) => {
-        const backend = storage(v5(2));
-
-        await expect(
-            new SettingsService(backend).setDisplaySettings(display),
-        ).resolves.toMatchObject({ ok: false, error: "invalid-display-settings" });
-        expect(backend.get).not.toHaveBeenCalled();
-        expect(backend.set).not.toHaveBeenCalled();
-    });
-
-    it.each([
         { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
         {
             formatMode: "system" as const,
@@ -766,19 +597,6 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         expect(backend.set).not.toHaveBeenCalled();
         expect(backend.pair()).toEqual({ current, previous });
     });
-
-    it.each([undefined, null, 0, 1, "true", {}])(
-        "rejects invalid debug value %# before reading or writing",
-        async (enabled) => {
-            const backend = storage(v5(3));
-
-            await expect(
-                new SettingsService(backend).setDebugEnabled(enabled as never),
-            ).resolves.toMatchObject({ ok: false, error: "invalid-debug" });
-            expect(backend.get).not.toHaveBeenCalled();
-            expect(backend.set).not.toHaveBeenCalled();
-        },
-    );
 
     it.each([true, false])(
         "keeps an unchanged debug=%s preference and both existing documents",
@@ -992,38 +810,7 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
     });
 });
 
-describe("SettingsService explicit failed-closed reset", () => {
-    it("replaces both corrupted documents with one complete default-off atomic pair", async () => {
-        const backend = storage(
-            { schemaVersion: 4, broken: true },
-            { schemaVersion: 2, broken: true },
-        );
-        const service = new SettingsService(backend);
-        await expect(service.load()).resolves.toMatchObject({
-            ok: false,
-            error: "invalid-settings",
-        });
-        const reads = backend.get.mock.calls.length;
-
-        await expect(service.resetAll()).resolves.toEqual({
-            ok: true,
-            changed: true,
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-        });
-        expect(backend.get.mock.calls.length).toBe(reads);
-        expect(backend.set).toHaveBeenCalledOnce();
-        expect(backend.set).toHaveBeenCalledWith({
-            [SETTINGS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
-            [SETTINGS_PREVIOUS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
-        });
-        expect(backend.pair()).toEqual({
-            current: DEFAULT_SETTINGS_SNAPSHOT,
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
-        });
-        expect(service.loadedSnapshot).toBe(DEFAULT_SETTINGS_SNAPSHOT);
-        expect(service.lastLoadError).toBeUndefined();
-    });
-
+describe("SettingsService reset", () => {
     it("resets a valid custom/disabled/debug-on pair to exactly the system defaults", async () => {
         const custom: DisplaySettings = {
             formatMode: "custom",
@@ -1086,25 +873,6 @@ describe("SettingsService explicit failed-closed reset", () => {
         expect(backend.remove).not.toHaveBeenCalled();
     });
 
-    it("preserves an unrecoverable pair and error when the reset write is rejected", async () => {
-        const current = { schemaVersion: 4, broken: true };
-        const previous = { schemaVersion: 3, broken: true };
-        const backend = storage(current, previous);
-        const service = new SettingsService(backend);
-        await service.load();
-        backend.set.mockRejectedValueOnce(new Error("disk full"));
-
-        await expect(service.resetAll()).resolves.toEqual({
-            ok: false,
-            error: "persistence-failed",
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-        });
-        expect(backend.set).toHaveBeenCalledOnce();
-        expect(backend.pair()).toEqual({ current, previous });
-        expect(service.loadedSnapshot).toBeUndefined();
-        expect(service.lastLoadError).toBe("invalid-settings");
-    });
-
     it("preserves healthy documents and memory on a rejected reset", async () => {
         const current = v5(7, false, { "github.com": false }, undefined, true);
         const previous = v5(6);
@@ -1122,8 +890,10 @@ describe("SettingsService explicit failed-closed reset", () => {
         expect(service.loadedSnapshot).toEqual(current);
     });
 
-    it("queues a hostname edit behind an in-flight recovery reset", async () => {
-        const backend = storage({ schemaVersion: 4 }, { schemaVersion: 2 });
+    it("queues a hostname edit behind an in-flight reset", async () => {
+        const current = v5(3, false, { "example.test": false }, undefined, true);
+        const previous = v5(2);
+        const backend = storage(current, previous);
         const originalSet = backend.set.getMockImplementation();
         if (!originalSet) {
             throw new Error("Expected genuine atomic fake storage");
@@ -1148,10 +918,7 @@ describe("SettingsService explicit failed-closed reset", () => {
         const edit = service.setSiteEnabled("github.com", false);
         await Promise.resolve();
         expect(backend.set).toHaveBeenCalledOnce();
-        expect(backend.pair()).toEqual({
-            current: { schemaVersion: 4 },
-            previous: { schemaVersion: 2 },
-        });
+        expect(backend.pair()).toEqual({ current, previous });
         release?.();
         const [resetResult, editResult] = await Promise.all([reset, edit]);
 

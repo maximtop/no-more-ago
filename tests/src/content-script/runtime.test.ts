@@ -243,4 +243,44 @@ describe("installContentRuntime", () => {
             phase: DOCUMENT_PHASE.ACTIVE,
         });
     });
+
+    it("restores and reprocesses Hacker News across site policy refreshes", async () => {
+        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07.000000Z">`
+            + `<a id="hn-policy-link" href="item?id=1">1 hour ago</a></span>`;
+        const source = messages();
+        const link = document.getElementById("hn-policy-link");
+        if (!(link instanceof HTMLAnchorElement)) {
+            throw new Error("Expected Hacker News link");
+        }
+        let enabled = true;
+        let revision = 1;
+        installContentRuntime({
+            document,
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(link.textContent).not.toBe("1 hour ago");
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch({ type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        expect(link.textContent).toBe("1 hour ago");
+        await Promise.resolve();
+        await Promise.resolve();
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(link.textContent).not.toBe("1 hour ago");
+        expect(document.getElementById("hn-policy-link")).toBe(link);
+        expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
+            .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
+        expect(link.textContent).toBe("1 hour ago");
+    });
 });

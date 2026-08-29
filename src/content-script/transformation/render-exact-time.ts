@@ -6,6 +6,7 @@ import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
 } from "../ownership-markers";
+import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 
 export { OWNED_OUTPUT_ATTRIBUTE, OWNED_SOURCE_ATTRIBUTE } from "../ownership-markers";
 
@@ -53,31 +54,6 @@ export interface OwnedSourceEntry {
      * Extension-owned time element rendered beside the source.
      */
     readonly output: HTMLTimeElement;
-}
-
-/**
- * Records source state needed to restore a page when extension-owned output is removed.
- */
-export interface OwnedDomMutationSink {
-    /**
-     * Captures restoration data immediately before an owned output node is removed.
-     */
-    beforeOwnedOutputRemoval(output: HTMLTimeElement): void;
-
-    /**
-     * Captures an extension-authored hidden-attribute change before it is applied.
-     *
-     * @param source - Source element whose hidden state will change.
-     * @param hidden - Final hidden state authored by the extension.
-     */
-    beforeOwnedSourceHiddenChange(source: Element, hidden: boolean): void;
-
-    /**
-     * Registers a discovered source for efficient ancestor visibility tracking.
-     *
-     * @param source - Timestamp source discovered by an adapter.
-     */
-    trackSource?(source: Element): void;
 }
 
 const recordsByDocument = new WeakMap<Document, Map<Element, OwnedPairRecord>>();

@@ -168,14 +168,17 @@ own URL to select applicable content rules.
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
-including GitHub's relative-time widgets, remain content-side rules and take
-precedence when they accept the same source. Adding or changing a specialized
-source should not require background adapter registration or site-policy
-logic.
+including GitHub's relative-time widgets and Hacker News age widgets, remain
+content-side rules and take precedence when they accept the same source.
+GitHub uses the adjacent generated-time presentation. Hacker News is the
+text-in-place example: it retains the existing simple timestamp link or
+no-link label and owns only that text until restoration. Adding or changing a
+specialized source should not require background adapter registration or
+site-policy logic.
 
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
-frames, Shadow DOM, page labels, and unsupported timestamp forms remain
-outside the current scope.
+frames, Shadow DOM, arbitrary page labels without a registered specialized
+source, and unsupported timestamp forms remain outside the current scope.
 
 ### Release Builds
 
@@ -232,6 +235,9 @@ To add or update a specialized source:
 2. Register it in the content-side precedence list before the generic rule.
 3. Add an offline fixture under `tests/src/content-script/fixtures`.
 4. Test trusted timestamp resolution, restoration, and dynamic page updates.
+   When a source selects text-in-place presentation, also test retained element
+   identity, exact page-owned restoration, target replacement, and page-authored
+   label changes while owned.
 5. Run `pnpm check` and a development build for the affected browser.
 
 Do not add site-specific background activation or registration. The universal
@@ -269,10 +275,10 @@ missing diagnostic event does not by itself mean the content script failed.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard or GitHub timestamp is no longer replaced:** check the page
-  with Debug logs enabled. For GitHub markup changes, update the GitHub
-  fixture and specialized content rule; generic processing accepts only
-  standard `time[datetime]` values.
+- **A standard, GitHub, or Hacker News timestamp is no longer replaced:**
+  check the page with Debug logs enabled. For specialized markup changes,
+  update the matching offline fixture and its content-side rule; generic
+  processing continues to accept only standard `time[datetime]` values.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

@@ -4,7 +4,7 @@
 
 import * as v from "valibot";
 import { diagnosticEventInputSchema } from "../diagnostics/events";
-import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
+import type { DisplaySettings } from "../settings/snapshot";
 import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 
 /**
@@ -83,7 +83,10 @@ export const DOCUMENT_PHASES = [
     DOCUMENT_PHASE.FAILED,
 ] as const;
 
-const presentationDisplaySchema = v.custom<DisplaySettings>(isDisplaySettings);
+const presentationDisplaySchema = v.pipe(
+    v.unknown(),
+    v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
+);
 
 /**
  * Schema for a command that stops a document runtime.
@@ -232,7 +235,7 @@ type DocumentStatusResponse = v.InferOutput<typeof documentStatusResponseSchema>
 /**
  * Recognizes an object containing only the document-teardown command.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is an exact teardown command.
  */
 export function isTeardownDocumentMessage(value: unknown): value is TeardownDocumentMessage {
@@ -242,7 +245,7 @@ export function isTeardownDocumentMessage(value: unknown): value is TeardownDocu
 /**
  * Recognizes an exact policy-refresh command.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is a policy-refresh command.
  */
 export function isRefreshDocumentPolicyMessage(
@@ -254,7 +257,7 @@ export function isRefreshDocumentPolicyMessage(
 /**
  * Recognizes an exact suspend-and-refresh command.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is a suspend-and-refresh command.
  */
 export function isSuspendAndRefreshDocumentPolicyMessage(
@@ -266,7 +269,7 @@ export function isSuspendAndRefreshDocumentPolicyMessage(
 /**
  * Recognizes an object containing only the document-status command.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is an exact status command.
  */
 export function isDocumentStatusMessage(value: unknown): value is DocumentStatusMessage {
@@ -276,7 +279,7 @@ export function isDocumentStatusMessage(value: unknown): value is DocumentStatus
 /**
  * Recognizes a document-status reply with a supported lifecycle phase.
  *
- * @param value - Untrusted runtime response.
+ * @param value - Runtime response.
  * @returns - Whether the value is a valid document status response.
  */
 export function isDocumentStatusResponse(value: unknown): value is DocumentStatusResponse {
@@ -284,10 +287,10 @@ export function isDocumentStatusResponse(value: unknown): value is DocumentStatu
 }
 
 /**
- * Recognizes a complete presentation-update command with valid settings and revision.
+ * Recognizes a presentation-update command and its bounded revision.
  *
- * @param value - Untrusted runtime message.
- * @returns - Whether the value is a valid presentation update command.
+ * @param value - Runtime message.
+ * @returns - Whether the value matches the presentation-update routing contract.
  */
 export function isPresentationUpdateMessage(value: unknown): value is PresentationUpdateMessage {
     return v.safeParse(presentationUpdateMessageSchema, value).success;
@@ -296,7 +299,7 @@ export function isPresentationUpdateMessage(value: unknown): value is Presentati
 /**
  * Recognizes a presentation acknowledgement, optionally for one expected revision.
  *
- * @param value - Untrusted runtime response.
+ * @param value - Runtime response.
  * @param expectedRevision - Revision the acknowledgement must match, when supplied.
  * @returns - Whether the value is a valid presentation acknowledgement.
  */
@@ -312,7 +315,7 @@ export function isPresentationUpdateAcknowledgement(
 /**
  * Recognizes a complete diagnostic-policy update command with a boolean enabled flag.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is a valid diagnostic-policy update command.
  */
 export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicyUpdateMessage {
@@ -322,7 +325,7 @@ export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicy
 /**
  * Recognizes a diagnostic-policy acknowledgement, optionally for one expected revision.
  *
- * @param value - Untrusted runtime response.
+ * @param value - Runtime response.
  * @param expectedRevision - Revision the acknowledgement must match, when supplied.
  * @returns - Whether the value is a valid diagnostic-policy acknowledgement.
  */
@@ -338,7 +341,7 @@ export function isDebugPolicyUpdateAcknowledgement(
 /**
  * Recognizes a diagnostic event with an allowed category and telemetry-field names.
  *
- * @param value - Untrusted runtime message.
+ * @param value - Runtime message.
  * @returns - Whether the value is a valid bounded diagnostic event message.
  */
 export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEventMessage {

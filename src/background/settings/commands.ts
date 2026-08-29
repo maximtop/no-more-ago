@@ -3,7 +3,10 @@
  */
 
 import type { SettingsService } from "./service";
-import { isCanonicalHostname } from "../../shared/settings/snapshot";
+import {
+    isCanonicalHostname,
+    type DisplaySettings,
+} from "../../shared/settings/snapshot";
 import type { ApplicationLifecycle } from "../application/lifecycle";
 import type { DiagnosticsService } from "../diagnostics/service";
 import { deriveDisplayState } from "../projection/display-state";
@@ -161,10 +164,10 @@ export class SettingsCommands {
     /**
      * Validates and persists display settings, then refreshes enabled-site tabs.
      *
-     * @param display - Untrusted display settings payload.
+     * @param display - Typed display settings payload.
      * @returns - Persisted display state and document refresh failures.
      */
-    public async setDisplaySettings(display: unknown): Promise<SetDisplaySettingsResponse> {
+    public async setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
         await this.prepare();
         let acceptedRevision: number | undefined;
         let refreshFailures: readonly DisplayRefreshFailure[] = [];

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import {
+    ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
@@ -47,6 +48,7 @@ describe("GitHub adapter registry", () => {
             sourceKind: "relative-time",
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+            presentation: ADJACENT_TIME_PRESENTATION,
         });
     });
 
@@ -84,6 +86,7 @@ describe("GitHub adapter registry", () => {
             rawDatetime: " 2026-08-23T10:15Z ",
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+            presentation: ADJACENT_TIME_PRESENTATION,
         });
     });
 

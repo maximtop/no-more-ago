@@ -39,6 +39,10 @@ import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 import { LIFECYCLE_REASON } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 import { parseHttpUrl } from "../shared/url/http";
+import type {
+    DisplaySettings,
+    SettingsSnapshotV5,
+} from "../shared/settings/snapshot";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -49,7 +53,7 @@ import { parseHttpUrl } from "../shared/url/http";
 function installApplication(): BackgroundApplication | undefined {
     const candidate = chrome as unknown as {
         readonly storage?: {
-            readonly local?: SettingsStorage & {
+            readonly local?: Pick<DiagnosticStorage, "get" | "set"> & {
                 readonly remove?: (keys: string | readonly string[]) => Promise<void>;
             };
         };
@@ -84,8 +88,11 @@ function installApplication(): BackgroundApplication | undefined {
     }
 
     const storage: SettingsStorage & DiagnosticStorage = {
-        get: (keys) => candidate.storage?.local?.get(keys) as Promise<Record<string, unknown>>,
-        set: (items) => candidate.storage?.local?.set(items) as Promise<void>,
+        get: (keys) => candidate.storage?.local?.get(keys) as Promise<
+            Readonly<Record<string, SettingsSnapshotV5 | undefined>>
+        >,
+        set: (items: Record<string, unknown>) =>
+            candidate.storage?.local?.set(items) as Promise<void>,
         remove: (keys) => candidate.storage?.local?.remove?.(keys) ?? Promise.resolve(),
     };
     const scripting: ScriptingRuntime = {
@@ -125,7 +132,7 @@ function installApplication(): BackgroundApplication | undefined {
             return (result ?? []).flatMap((tab) =>
                 tab.id === undefined
                     ? []
-                    : [typeof tab.url === "string" ? { id: tab.id, url: tab.url } : { id: tab.id }],
+                    : [tab.url === undefined ? { id: tab.id } : { id: tab.id, url: tab.url }],
             );
         },
         sendMessage: (tabId, message, options) =>
@@ -143,7 +150,7 @@ function installApplication(): BackgroundApplication | undefined {
         : /Chrome|Chromium|Edg|OPR/iu.test(userAgent)
             ? DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM
             : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
-    let extensionVersion: unknown;
+    let extensionVersion: string | undefined;
     try {
         extensionVersion = chrome.runtime?.getManifest?.().version;
     } catch {
@@ -151,7 +158,7 @@ function installApplication(): BackgroundApplication | undefined {
     }
     const diagnosticEnvironment = {
         browserFamily,
-        ...(typeof extensionVersion === "string" ? { extensionVersion } : {}),
+        ...(extensionVersion === undefined ? {} : { extensionVersion }),
     };
     return new BackgroundApplication({
         settings: new SettingsService(storage),
@@ -167,29 +174,18 @@ const application = installApplication();
 /**
  * Accepts only messages sent from this extension's options page.
  *
- * @param sender - Untrusted runtime message sender metadata.
+ * @param sender - Runtime message sender metadata.
  * @returns - Whether the sender is this extension's options page.
  */
-function isTrustedOptionsSender(sender: unknown): boolean {
-    if (typeof sender !== "object" || sender === null || !Object.hasOwn(sender, "url")) {
-        return false;
-    }
-    let optionsUrl: unknown;
-    let extensionId: unknown;
+function isTrustedOptionsSender(sender: chrome.runtime.MessageSender): boolean {
     try {
-        optionsUrl = chrome.runtime?.getURL?.(OPTIONS_PAGE_FILE);
-        extensionId = chrome.runtime?.id;
+        return (
+            sender.url === chrome.runtime.getURL(OPTIONS_PAGE_FILE)
+            && sender.id === chrome.runtime.id
+        );
     } catch {
         return false;
     }
-    const values = sender as Record<string, unknown>;
-    if (typeof optionsUrl !== "string" || values.url !== optionsUrl) {
-        return false;
-    }
-    return (
-        typeof extensionId !== "string" ||
-        (Object.hasOwn(values, "id") && values.id === extensionId)
-    );
 }
 
 if (application && chrome.runtime?.onMessage?.addListener) {
@@ -306,7 +302,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(request.display)
+                .setDisplaySettings(request.display as DisplaySettings)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,

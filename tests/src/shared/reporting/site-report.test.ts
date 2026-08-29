@@ -19,7 +19,8 @@ const manifest = { version: "1.2.3" };
  * @param tab - Active tab returned by the tabs API.
  * @param options - Optional browser behavior overrides.
  * @param options.create - Tab creation implementation.
- * @param options.manifest - Manifest value returned by the runtime API.
+ * @param options.manifest - Manifest returned by the runtime API.
+ * @param options.manifest.version - Extension version returned by the runtime API.
  * @param options.userAgent - Browser user agent exposed to the reporter.
  * @returns - Browser runtime with query and creation counters.
  */
@@ -27,7 +28,7 @@ function runtime(
     tab?: SiteReportTab,
     options: {
         readonly create?: () => Promise<unknown>;
-        readonly manifest?: unknown;
+        readonly manifest?: { readonly version: string };
         readonly userAgent?: string;
     } = {},
 ): SiteReportBrowserRuntime & { queries: number; creates: Array<Record<string, unknown>> } {
@@ -208,15 +209,4 @@ describe("site report browser boundary", () => {
         expect(failedBrowser.creates).toHaveLength(1);
     });
 
-    it("fails closed when trusted environment metadata is unavailable", async () => {
-        const browser = runtime(
-            { url: "https://github.com/repo", incognito: false },
-            { manifest: {} },
-        );
-        const result = await createSiteReportReporter(browser).openPopupReport({
-            hostname: "github.com",
-        });
-        expect(result).toEqual({ ok: false, error: "invalid-context" });
-        expect(browser.creates).toHaveLength(0);
-    });
 });

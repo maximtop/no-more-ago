@@ -1,0 +1,26 @@
+<!doctype html>
+<main>
+  <span id="linked" class="age" title="2026-08-28T10:09:07.000000Z">
+    <a href="item?id=1">1 hour ago</a>
+  </span>
+  <span id="absolute-label" class="age" title="2026-08-27T08:04:47Z">
+    <a href="item?id=2">Aug 27, 2026</a>
+  </span>
+  <span id="no-link" class="age" title="2026-08-28T10:17:07Z">52 minutes ago</span>
+  <span id="missing-title" class="age"><a href="item?id=3">missing</a></span>
+  <span id="blank" class="age" title="   "><a href="item?id=4">blank</a></span>
+  <span id="padded" class="age" title=" 2026-08-28T10:09:07Z "><a
+    href="item?id=5">padded</a></span>
+  <span id="local" class="age" title="2026-08-28T10:09:07"><a
+    href="item?id=6">local</a></span>
+  <span id="impossible" class="age" title="2026-02-30T10:09:07Z"><a
+    href="item?id=7">impossible</a></span>
+  <span id="malformed" class="age" title="not a date"><a
+    href="item?id=8">malformed</a></span>
+  <span id="multiple" class="age" title="2026-08-28T10:09:07Z"><a
+    href="item?id=9">one</a><a href="item?id=10">two</a></span>
+  <span id="complex" class="age" title="2026-08-28T10:09:07Z"><a
+    href="item?id=11"><img alt="clock">complex</a></span>
+  <div id="wrong-element" class="age" title="2026-08-28T10:09:07Z">wrong</div>
+  <time id="generic" datetime="2026-08-28T10:09:07Z">generic relative</time>
+</main>

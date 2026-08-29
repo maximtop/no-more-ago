@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../../../../src/content-script/ownership-markers";
 import {
+    ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -47,6 +48,7 @@ describe("genericTimeRule", () => {
             source: valid,
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
             rawDatetime: "2026-08-23T10:15Z",
+            presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
         });

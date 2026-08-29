@@ -13,11 +13,13 @@ import {
     type ProcessInput,
 } from "./process-document";
 import {
-    getOwnedSourceEntries,
+    capturePageOwnedTextChange,
     getOwnedSourceForOutput,
-    restoreExactTimes,
-} from "./render-exact-time";
+    getOwnedTimestampSourceEntries,
+    restoreTimestampPresentations,
+} from "./render-timestamp-presentation";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
+import { defaultRegistry } from "../adapters/registry";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -102,14 +104,38 @@ export class DocumentTransformationController {
             return this.outputs;
         }
 
+        const rules = (this.input.registry ?? defaultRegistry).matching(this.input.url);
+        const sourceAttributes = [
+            ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
+        ];
         const scheduler = new DocumentMutationScheduler({
             document: this.input.root,
             getOwnedSourceForOutput,
+            capturePageOwnedTextChange,
+            sourceAttributes,
+            getSourceMutationRoots: (element, attributeName) => {
+                const applicableRules = attributeName
+                    ? rules.filter((rule) =>
+                        rule.mutationAttributes.some(
+                            (attribute) => attribute === attributeName,
+                        ))
+                    : rules;
+                const roots: Element[] = [];
+                let current: Element | null = element;
+                while (current && current.ownerDocument === this.input.root) {
+                    const candidate = current;
+                    if (applicableRules.some((rule) => rule.matchesElement(candidate))) {
+                        roots.push(candidate);
+                    }
+                    current = current.parentElement;
+                }
+                return roots;
+            },
             onBatch: (batch) => {
                 if (
                     this.diagnosticSink
                     && (
-                        batch.datetimeTargets.length > 0
+                        batch.sourceTargets.length > 0
                         || batch.visibilityRoots.length > 0
                         || batch.displacedOutputSources.length > 0
                     )
@@ -117,7 +143,7 @@ export class DocumentTransformationController {
                     this.diagnosticSink({
                         category: DIAGNOSTIC_CATEGORY.MUTATION,
                         count:
-                            batch.datetimeTargets.length +
+                            batch.sourceTargets.length +
                             batch.visibilityRoots.length +
                             batch.displacedOutputSources.length,
                     });
@@ -133,7 +159,7 @@ export class DocumentTransformationController {
             return this.outputs;
         } catch (error) {
             scheduler.stop();
-            restoreExactTimes(this.input.root);
+            restoreTimestampPresentations(this.input.root);
             this.outputs = [];
             this.scheduler = undefined;
             this.phase = "idle";
@@ -147,7 +173,7 @@ export class DocumentTransformationController {
     teardown(): void {
         this.scheduler?.stop();
         this.scheduler = undefined;
-        restoreExactTimes(this.input.root);
+        restoreTimestampPresentations(this.input.root);
         this.outputs = [];
         this.phase = "idle";
     }
@@ -166,7 +192,7 @@ export class DocumentTransformationController {
             return this.outputs;
         }
         const outputs: HTMLTimeElement[] = [];
-        for (const { source } of getOwnedSourceEntries(this.input.root)) {
+        for (const { source } of getOwnedTimestampSourceEntries(this.input.root)) {
             if (!isConnectedToDocument(source, this.input.root)) {
                 continue;
             }
@@ -191,7 +217,7 @@ export class DocumentTransformationController {
     private reconcile(batch: AffectedMutationBatch, scheduler: DocumentMutationScheduler): void {
         for (const root of batch.removedRoots) {
             if (!isConnectedToDocument(root, this.input.root)) {
-                restoreExactTimes(root, scheduler);
+                restoreTimestampPresentations(root, scheduler);
             }
         }
 
@@ -201,7 +227,7 @@ export class DocumentTransformationController {
             }
         }
 
-        for (const target of batch.datetimeTargets) {
+        for (const target of batch.sourceTargets) {
             if (
                 isConnectedToDocument(target, this.input.root) &&
                 !coveredBy(batch.addedRoots, target) &&
@@ -232,7 +258,7 @@ export class DocumentTransformationController {
             if (
                 isConnectedToDocument(source, this.input.root) &&
                 !coveredBy(batch.addedRoots, source) &&
-                !batch.datetimeTargets.includes(source) &&
+                !batch.sourceTargets.includes(source) &&
                 !coveredBy(batch.visibilityRoots, source)
             ) {
                 reconcileDocumentRegion({

@@ -23,8 +23,8 @@
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized relative timestamps with exact, localized dates.
 It ships a generic `time[datetime]` source for HTTP(S) documents and
-site-specific specialized sources such as GitHub, while keeping extraction
-separate from shared timestamp validation and rendering.
+site-specific specialized sources for GitHub and Hacker News, while keeping
+extraction separate from shared timestamp validation and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -38,7 +38,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Package manager:** pnpm 10.34.5, pinned in `package.json`.
 - **UI:** React 19 and Mantine 9 for popup and options pages.
 - **Date handling:** date-fns 4 and `@date-fns/tz`.
-- **Validation:** Valibot schemas at untrusted and cross-context boundaries.
+- **Validation:** Domain validation for page-derived timestamps and
+  user-authored date settings; internal extension data uses TypeScript
+  contracts.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
 - **Storage:** `chrome.storage.local` stores settings and opt-in diagnostics.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
@@ -49,8 +51,8 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   runtime can process standard timestamps and future specialized sources;
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
-  available, and the production registry contains GitHub as a specialized
-  source.
+  available, and the production registry contains GitHub and Hacker News as
+  specialized sources.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -69,7 +71,7 @@ has an obvious, simpler standard-library replacement.
 │   │   ├── diagnostics/        # Opt-in bounded diagnostic journal
 │   │   ├── projection/         # UI read models
 │   │   ├── runtime/            # Script and tab integration
-│   │   └── settings/           # Validated settings storage
+│   │   └── settings/           # Settings persistence
 │   ├── content-script/         # Page-side timestamp processing
 │   │   ├── adapters/           # Generic fallback and site-specific sources
 │   │   └── transformation/     # Resolve, format, render, and restore
@@ -154,8 +156,12 @@ unpacked or temporary extension when manual browser verification is needed.
   background, and content scripts through typed messages and durable state.
 - Assume the background service worker can stop between events. Do not rely on
   process memory as the sole source of durable state.
-- Validate all messages, persisted data, and page-derived candidates before
-  use. Page markup is untrusted even when an adapter recognizes it.
+- Trust extension-owned storage values, internal runtime messages, and typed
+  browser API results. Do not add runtime object-shape guards solely to defend
+  against those values being tampered with or browser contracts changing.
+- Validate page-derived candidates and user-authored values when domain rules
+  cannot be expressed by TypeScript. Page markup is untrusted even when an
+  adapter recognizes it.
 - Accept timestamps only from valid `<time datetime>` elements or an explicit
   adapter source. Never infer a timestamp from relative text or ambiguous
   values.
@@ -238,8 +244,9 @@ Known architectural exclusions to improve when their area changes:
 
 - Use strict TypeScript and preserve `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes` guarantees.
-- Parse untrusted values once at their boundary with Valibot or a focused
-  parser. Derive TypeScript types from schemas where practical.
+- Parse genuinely external values once at their boundary with Valibot or a
+  focused parser. Do not revalidate extension-owned storage, internal messages,
+  or typed browser API results with generic record checks.
 - Use typed result objects for expected failures. Reserve exceptions for
   programmer errors and truly exceptional failures.
 - Do not inline magic values that form a shared contract, including runtime
@@ -276,9 +283,11 @@ Known architectural exclusions to improve when their area changes:
 - Mirror `src` under `tests/src` and `scripts` under `tests/scripts`.
 - Test observable behavior through the closest public or runtime boundary.
 - Keep tests to the minimum set that protects important behavior, failure
-  handling, persistence, message validation, and build output.
+  handling, persistence, message routing, and build output.
 - Prefer small behavior-level matrices and lifecycle tests at public
   boundaries; do not add structural tests merely to cover every requirement.
+- Do not bypass TypeScript with casts to test impossible storage, message, or
+  browser API shapes. Test domain constraints and observable failure modes.
 - Do not read implementation files as text to assert formatting, command
   spelling, private symbols, source layout, or implementation structure.
 - Use injected browser capabilities and focused doubles instead of reproducing
@@ -317,10 +326,11 @@ Known architectural exclusions to improve when their area changes:
   contracts.
 - Assemble manifests from `src/manifest/common.json` and one browser-specific
   variant. Keep browser differences declarative where possible.
-- Keep settings in one validated, schema-versioned document and persist the
-  current and previous valid snapshots together.
+- Keep settings in one typed, schema-versioned document and persist the current
+  and previous snapshots together.
 - Route settings writes through the background settings service so concurrent
-  popup and options updates remain serialized and validated.
+  popup and options updates remain serialized. Validate only user-authored
+  values with domain constraints that TypeScript cannot express.
 - Keep diagnostic storage separate from settings storage. Diagnostic failures
   must never corrupt settings or block timestamp transformations.
 - Store operational limits and cross-module identifiers in their owning
@@ -350,7 +360,8 @@ Known architectural exclusions to improve when their area changes:
 - Keep all user-facing extension copy in English.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
-- Keep GitHub-specific selectors and timestamp sources inside the GitHub
-  adapter so adding another site changes minimal shared business logic.
+- Keep GitHub- and Hacker News-specific selectors and timestamp sources inside
+  their respective adapters so adding another site changes minimal shared
+  business logic.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.

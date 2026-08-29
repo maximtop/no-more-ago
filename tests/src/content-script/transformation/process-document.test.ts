@@ -17,6 +17,9 @@ import {
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import {
+    ADJACENT_TIME_PRESENTATION,
+    TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -377,12 +380,15 @@ describe("processDocument", () => {
         let specializedValid = true;
         const specialized: TimestampSourceRule = {
             id: "specialized",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("time"),
             discover: (root) => [...root.querySelectorAll("time")],
             extract: (element) => ({
                 ruleId: "specialized",
                 source: element,
                 sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                presentation: ADJACENT_TIME_PRESENTATION,
                 rawDatetime: specializedValid ? "2026-08-24T10:15Z" : "invalid",
                 validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
@@ -408,5 +414,53 @@ describe("processDocument", () => {
         expect(fallback).toHaveLength(1);
         expect(fallback[0]?.dateTime).toBe("2026-08-23T10:15Z");
         restoreExactTimes(document);
+    });
+
+    it("formats an in-place candidate without creating or hiding DOM", () => {
+        document.body.innerHTML = `<span id="age" title="2026-08-28T10:09:07Z">
+            <a id="link" href="item?id=1">1 hour ago</a></span>`;
+        const source = document.getElementById("age");
+        const link = document.getElementById("link");
+        const target = link?.firstChild;
+        if (!source || !link || !(target instanceof Text)) {
+            throw new Error("Expected in-place source");
+        }
+        const rule: TimestampSourceRule = {
+            id: "in-place-test",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: () => ({
+                ruleId: "in-place-test",
+                source,
+                sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
+                rawDatetime: "2026-08-28T10:09:07Z",
+                presentation: {
+                    kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+                    target,
+                },
+                validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+            }),
+        };
+
+        const outputs = processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "utc" },
+            },
+            registry: new AdapterRegistry([rule], genericTimeRule),
+        });
+
+        expect(outputs).toEqual([]);
+        expect(target.data).toBe("2026-08-28 10:09");
+        expect(document.getElementById("link")).toBe(link);
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
     });
 });

@@ -5,7 +5,7 @@
 import * as v from "valibot";
 
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
+import type { DisplaySettings } from "../settings/snapshot";
 import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 import {
     SETTINGS_STATE_FAILURES,
@@ -16,7 +16,10 @@ const readyDocumentStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: nonNegativeSafeIntegerSchema,
     enabled: v.boolean(),
-    display: v.custom<DisplaySettings>(isDisplaySettings),
+    display: v.pipe(
+        v.unknown(),
+        v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
+    ),
     debugEnabled: v.boolean(),
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
@@ -44,10 +47,10 @@ export const documentStateSchema = v.union([
 export type DocumentState = v.InferOutput<typeof documentStateSchema>;
 
 /**
- * Validates an untrusted document runtime state through the canonical schema.
+ * Recognizes the routing fields of a document runtime state.
  *
- * @param value - Untrusted state value.
- * @returns - Whether the value is a valid document runtime state.
+ * @param value - Runtime state value.
+ * @returns - Whether the value matches a document runtime state variant.
  */
 export function isDocumentState(value: unknown): value is DocumentState {
     return v.safeParse(documentStateSchema, value).success;

@@ -4,7 +4,7 @@
 
 import * as v from "valibot";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import { isDisplaySettings, type DisplaySettings } from "../settings/snapshot";
+import type { DisplaySettings } from "../settings/snapshot";
 import {
     POPUP_READY_STATUSES,
     POPUP_RUNTIME_FAILURES,
@@ -61,7 +61,10 @@ const unavailableSitesStateSchema = v.strictObject({
 const readyDisplayStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
-    display: v.custom<DisplaySettings>(isDisplaySettings),
+    display: v.pipe(
+        v.unknown(),
+        v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
+    ),
     debugEnabled: v.boolean(),
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });

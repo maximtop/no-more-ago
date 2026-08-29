@@ -105,4 +105,31 @@ describe("document presentation updates", () => {
         expect(response).toBeUndefined();
         expect(document.querySelector("[data-no-more-ago-output]")?.textContent).not.toBe("2026");
     });
+
+    it("reformats a Hacker News label in place and keeps its link", async () => {
+        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07.000000Z">`
+            + `<a id="hn-link" href="item?id=1">1 hour ago</a></span>`;
+        const source = createMessages();
+        const link = document.getElementById("hn-link");
+        if (!(link instanceof HTMLAnchorElement)) {
+            throw new Error("Expected Hacker News link");
+        }
+        installContentRuntime({
+            document,
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            locales: ["en-US"],
+            loadDocumentState: async () => documentState,
+            messages: source,
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+        const response = source.dispatch({
+            type: UPDATE_PRESENTATION_MESSAGE,
+            revision: 2,
+            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+        });
+        expect(response).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
+        expect(link.textContent).toBe("2026");
+        expect(document.getElementById("hn-link")).toBe(link);
+    });
 });

@@ -79,11 +79,11 @@ function isControl(character: string): boolean {
 /**
  * Validate one user pattern without constructing a user-controlled RegExp.
  *
- * @param pattern - Untrusted custom date-format pattern.
+ * @param pattern - User-authored custom date-format pattern.
  * @returns - Successful normalized pattern or a specific validation error.
  */
-export function validateCustomFormatPattern(pattern: unknown): CustomPatternValidation {
-    if (typeof pattern !== "string" || pattern.trim().length === 0) {
+export function validateCustomFormatPattern(pattern: string): CustomPatternValidation {
+    if (pattern.trim().length === 0) {
         return { ok: false, error: CUSTOM_FORMAT_ERROR.EMPTY };
     }
     if (pattern.length > CUSTOM_FORMAT_MAX_LENGTH) {
