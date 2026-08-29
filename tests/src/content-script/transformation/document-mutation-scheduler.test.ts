@@ -196,6 +196,39 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
     });
 
+    it("keeps source-attribute invalidation local to the mutated target", async () => {
+        document.body.innerHTML = '<section id="wrapper"><span class="timestamp"></span>'
+            + '<span class="timestamp"></span></section>';
+        const wrapper = document.getElementById("wrapper");
+        const sources = Array.from(document.querySelectorAll("span.timestamp"));
+        if (!wrapper || sources.length !== 2) {
+            throw new Error("Expected tracked source fixture");
+        }
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+            sourceAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.TITLE],
+            getSourceMutationRoots: (element) =>
+                element.matches("span.timestamp") ? [element] : [],
+        });
+        for (const source of sources) {
+            scheduler.trackSource(source);
+        }
+        scheduler.start();
+
+        wrapper.title = "container tooltip";
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        sources[0]?.setAttribute("title", "2026-08-29T13:39:19Z");
+        await flushMutations();
+        expect(batches).toHaveLength(1);
+        expect(batches[0]?.sourceTargets).toEqual([sources[0]]);
+        scheduler.stop();
+    });
+
     it("observes page text only beneath an owned in-place source", async () => {
         document.body.innerHTML = `<span id="age"><a>1 hour ago</a></span>
             <p id="unrelated">unrelated</p>`;
@@ -288,6 +321,50 @@ describe("DocumentMutationScheduler", () => {
         } finally {
             vi.unstubAllGlobals();
         }
+    });
+
+    it("retargets several owned labels without rebuilding text observation", async () => {
+        const observe = vi.spyOn(MutationObserver.prototype, "observe");
+        const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+        const sources = Array.from({ length: 4 }, (_, index) => {
+            const source = document.createElement("span");
+            source.append(document.createTextNode(`relative ${String(index)}`));
+            document.body.append(source);
+            return source;
+        });
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: () => undefined,
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        for (const source of sources) {
+            const target = source.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected initial text target");
+            }
+            renderExactText(source, target, "2026", scheduler);
+        }
+        await flushMutations();
+        observe.mockClear();
+        disconnect.mockClear();
+
+        for (const [index, source] of sources.entries()) {
+            const replacement = document.createTextNode(`refreshed ${String(index)}`);
+            source.replaceChildren(replacement);
+            renderExactText(source, replacement, "2027", scheduler);
+        }
+        expect(disconnect).not.toHaveBeenCalled();
+        await flushMutations();
+        expect(disconnect).not.toHaveBeenCalled();
+        expect(observe).not.toHaveBeenCalled();
+
+        scheduler.stop();
+        for (const source of sources) {
+            restoreExactText(source);
+        }
+        observe.mockRestore();
+        disconnect.mockRestore();
     });
 
     it("captures an undelivered same-value page write before stopping", async () => {

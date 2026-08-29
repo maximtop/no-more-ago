@@ -11,6 +11,7 @@ import {
     type TimestampSourceRule,
 } from "./types";
 import { findSimpleTextTarget } from "./simple-text-target";
+import { discoverElements } from "./discover-elements";
 
 const AGE_SELECTOR = "span.age[title]" as const;
 const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
@@ -90,14 +91,7 @@ export const hackerNewsAdapter: TimestampSourceRule = {
     ],
     matches: matchesHackerNewsUrl,
     matchesElement: isHackerNewsAgeElement,
-    discover: (root) => {
-        const candidates: Element[] = [];
-        if (root.nodeType === 1 && isHackerNewsAgeElement(root as Element)) {
-            candidates.push(root as Element);
-        }
-        candidates.push(...root.querySelectorAll(AGE_SELECTOR));
-        return candidates;
-    },
+    discover: (root) => discoverElements(root, AGE_SELECTOR, isHackerNewsAgeElement),
     extract: (element) => {
         if (!isHackerNewsAgeElement(element)) {
             return null;

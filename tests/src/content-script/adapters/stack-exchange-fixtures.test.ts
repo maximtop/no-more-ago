@@ -9,6 +9,10 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
+import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
+import {
+    stackExchangeAdapter,
+} from "../../../../src/content-script/adapters/stack-exchange";
 
 const FIXTURE_NAMES = [
     "questions.html",
@@ -197,5 +201,71 @@ describe("Stack Exchange fixtures", () => {
 
         controller.teardown();
         expect(activity.textContent).toBe("last activity");
+    });
+
+    it("reconciles user-card datetime eligibility with only the specialized adapter", async () => {
+        document.body.innerHTML = '<time class="s-user-card--time" '
+            + 'title="2020-07-12T23:52:48.26Z" datetime="2020-07-12T23:52:48.26Z">'
+            + "Over a year ago</time>";
+        const source = document.querySelector("time");
+        if (!(source instanceof HTMLTimeElement)) {
+            throw new Error("Expected user-card time source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://stackoverflow.com/questions"),
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy",
+                timeZone: { mode: "utc" },
+            },
+            registry: new AdapterRegistry([], stackExchangeAdapter),
+        });
+
+        controller.start();
+        expect(source.textContent).toBe("Over a year ago");
+        source.removeAttribute("datetime");
+        await flushMutations();
+        expect(source.textContent).toBe("2020");
+        source.setAttribute("datetime", "2020-07-12T23:52:48.26Z");
+        await flushMutations();
+        expect(source.textContent).toBe("Over a year ago");
+        controller.teardown();
+    });
+
+    it("updates a batch of page-owned labels and restores their latest values", async () => {
+        document.body.innerHTML = Array.from(
+            { length: 20 },
+            (_, index) => `<span class="relativetime" title="2026-08-29 13:39:19Z">`
+                + `${String(index)} minutes ago</span>`,
+        ).join("");
+        const sources = Array.from(document.querySelectorAll("span"));
+        const controller = new DocumentTransformationController({
+            url: new URL("https://stackoverflow.com/questions"),
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(sources.every((source) => source.textContent === "2026")).toBe(true);
+        for (const [index, source] of sources.entries()) {
+            const target = source.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected owned Stack Exchange label");
+            }
+            target.data = `refreshed ${String(index)} minutes ago`;
+        }
+        await flushMutations();
+        expect(sources.every((source) => source.textContent === "2026")).toBe(true);
+        controller.teardown();
+        for (const [index, source] of sources.entries()) {
+            expect(source.textContent).toBe(`refreshed ${String(index)} minutes ago`);
+        }
     });
 });

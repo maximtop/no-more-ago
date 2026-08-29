@@ -168,13 +168,13 @@ own URL to select applicable content rules.
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
-including GitHub's relative-time widgets and Hacker News age widgets, remain
-content-side rules and take precedence when they accept the same source.
-GitHub uses the adjacent generated-time presentation. Hacker News is the
-text-in-place example: it retains the existing simple timestamp link or
-no-link label and owns only that text until restoration. Adding or changing a
-specialized source should not require background adapter registration or
-site-policy logic.
+including GitHub's relative-time widgets, Hacker News age widgets, and
+approved Stack Exchange title widgets, remain content-side rules and take
+precedence when they accept the same source. GitHub uses the adjacent
+generated-time presentation. Hacker News and Stack Exchange use in-place
+presentation: they retain an existing simple timestamp label and own only that
+text until restoration. Adding or changing a specialized source should not
+require background adapter registration or site-policy logic.
 
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
 frames, Shadow DOM, arbitrary page labels without a registered specialized
@@ -275,10 +275,12 @@ missing diagnostic event does not by itself mean the content script failed.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, or Hacker News timestamp is no longer replaced:**
-  check the page with Debug logs enabled. For specialized markup changes,
-  update the matching offline fixture and its content-side rule; generic
-  processing continues to accept only standard `time[datetime]` values.
+- **A standard, GitHub, Hacker News, or Stack Exchange timestamp is no longer
+  replaced:** check the page with Debug logs enabled. For specialized markup
+  changes, update the matching offline fixture and its content-side rule;
+  generic processing continues to accept only standard `time[datetime]`
+  values. Stack Exchange title widgets render in place, so also verify that
+  the source still contains one unambiguous text label.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

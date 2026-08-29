@@ -3,6 +3,7 @@
  */
 
 import { findSimpleTextTarget } from "./simple-text-target";
+import { discoverElements } from "./discover-elements";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -24,21 +25,36 @@ const STACK_EXCHANGE_TIMESTAMP_SELECTOR = [
     LAST_ACTIVITY_SELECTOR,
 ].join(", ");
 const LICENSED_TITLE_PATTERN = /^(.+Z), License: CC BY-SA (?:2\.5|3\.0|4\.0)$/;
-const LAST_ACTIVITY_HREF = "?lastactivity" as const;
-
-const STACK_EXCHANGE_HOST_ROOTS = [
-    "stackexchange.com",
-    "stackoverflow.com",
-    "serverfault.com",
-    "superuser.com",
+const STACK_EXCHANGE_NETWORK_SUFFIX = ".stackexchange.com" as const;
+const STACK_EXCHANGE_SERVICE_LABELS = new Set([
+    "api",
+    "area51",
+    "blog",
+    "chat",
+    "contests",
+    "data",
+    "openid",
+    "status",
+]);
+const BRANDED_QA_HOSTNAMES = new Set([
     "askubuntu.com",
     "mathoverflow.net",
+    "meta.askubuntu.com",
+    "meta.mathoverflow.net",
+    "meta.serverfault.com",
+    "meta.stackoverflow.com",
+    "meta.superuser.com",
+    "serverfault.com",
     "stackapps.com",
-] as const;
-
-const EXCLUDED_STACK_EXCHANGE_HOSTNAMES = new Set([
-    "blog.serverfault.com",
-    "blog.stackoverflow.com",
+    "stackoverflow.com",
+    "superuser.com",
+]);
+const STACK_OVERFLOW_QA_SITE_LABELS = new Set([
+    "agents",
+    "es",
+    "ja",
+    "pt",
+    "ru",
 ]);
 
 /**
@@ -47,14 +63,45 @@ const EXCLUDED_STACK_EXCHANGE_HOSTNAMES = new Set([
 export const STACK_EXCHANGE_ADAPTER_ID = "stack-exchange" as const;
 
 /**
- * Checks whether a hostname is one allowed root or one of its subdomains.
+ * Checks whether a hostname uses a Stack Exchange network Q&A shape.
  *
  * @param hostname - Canonical URL hostname.
- * @param root - Allowed Stack Exchange network root.
- * @returns - Whether the hostname belongs to the root without lookalike suffixes.
+ * @returns - Whether the hostname is a network meta, site, or per-site meta host.
  */
-function belongsToHostnameRoot(hostname: string, root: string): boolean {
-    return hostname === root || hostname.endsWith(`.${root}`);
+function matchesStackExchangeNetworkHostname(hostname: string): boolean {
+    if (!hostname.endsWith(STACK_EXCHANGE_NETWORK_SUFFIX)) {
+        return false;
+    }
+    const prefix = hostname.slice(0, -STACK_EXCHANGE_NETWORK_SUFFIX.length);
+    const labels = prefix.split(".");
+    if (labels.length === 1) {
+        const site = labels[0];
+        return site === "meta" || Boolean(site && !STACK_EXCHANGE_SERVICE_LABELS.has(site));
+    }
+    const [site, meta] = labels;
+    return labels.length === 2
+        && meta === "meta"
+        && Boolean(site && !STACK_EXCHANGE_SERVICE_LABELS.has(site));
+}
+
+/**
+ * Checks whether a hostname is one known localized Stack Overflow Q&A host.
+ *
+ * @param hostname - Canonical URL hostname.
+ * @returns - Whether the hostname is a localized main or meta Q&A site.
+ */
+function matchesLocalizedStackOverflowHostname(hostname: string): boolean {
+    const labels = hostname.split(".");
+    if (labels.length === 3) {
+        return labels[1] === "stackoverflow"
+            && labels[2] === "com"
+            && STACK_OVERFLOW_QA_SITE_LABELS.has(labels[0] ?? "");
+    }
+    return labels.length === 4
+        && labels[1] === "meta"
+        && labels[2] === "stackoverflow"
+        && labels[3] === "com"
+        && STACK_OVERFLOW_QA_SITE_LABELS.has(labels[0] ?? "");
 }
 
 /**
@@ -64,15 +111,12 @@ function belongsToHostnameRoot(hostname: string, root: string): boolean {
  * @returns - Whether the URL uses HTTP(S) on an approved Q&A hostname.
  */
 export function matchesStackExchangeUrl(url: URL): boolean {
-    if (
-        (url.protocol !== "http:" && url.protocol !== "https:")
-        || EXCLUDED_STACK_EXCHANGE_HOSTNAMES.has(url.hostname)
-    ) {
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
         return false;
     }
-    return STACK_EXCHANGE_HOST_ROOTS.some(
-        (root) => belongsToHostnameRoot(url.hostname, root),
-    );
+    return BRANDED_QA_HOSTNAMES.has(url.hostname)
+        || matchesLocalizedStackOverflowHostname(url.hostname)
+        || matchesStackExchangeNetworkHostname(url.hostname);
 }
 
 /**
@@ -92,26 +136,14 @@ function isHtmlElement(element: Element): boolean {
  * @returns - Whether the element has one approved source shape.
  */
 function isStackExchangeTimestampElement(element: Element): boolean {
-    if (!isHtmlElement(element) || !element.hasAttribute("title")) {
-        return false;
-    }
-    if (element.localName === "span") {
-        return element.classList.contains("relativetime")
-            || element.classList.contains("relativetime-clean");
-    }
-    if (element.localName === "time") {
-        return element.classList.contains("s-user-card--time")
-            && !element.hasAttribute("datetime");
-    }
-    return element.localName === "a"
-        && element.getAttribute("href") === LAST_ACTIVITY_HREF;
+    return isHtmlElement(element) && element.matches(STACK_EXCHANGE_TIMESTAMP_SELECTOR);
 }
 
 /**
- * Reads the strict timestamp portion from one approved Stack Exchange title shape.
+ * Extracts raw title text from one approved Stack Exchange source shape.
  *
  * @param element - Approved Stack Exchange timestamp source.
- * @returns - Raw explicit-zone timestamp, or null for an unsupported title contract.
+ * @returns - Raw text for downstream strict validation, or null for an unsupported license.
  */
 function readStackExchangeDatetime(element: Element): string | null {
     const title = element.getAttribute("title");
@@ -131,22 +163,17 @@ export const stackExchangeAdapter: TimestampSourceRule = {
     id: STACK_EXCHANGE_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
+        TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
         TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
         TIMESTAMP_SOURCE_ATTRIBUTE.TITLE,
     ],
     matches: matchesStackExchangeUrl,
     matchesElement: isStackExchangeTimestampElement,
-    discover: (root) => {
-        const candidates: Element[] = [];
-        if (
-            root.nodeType === Node.ELEMENT_NODE
-            && isStackExchangeTimestampElement(root as Element)
-        ) {
-            candidates.push(root as Element);
-        }
-        candidates.push(...root.querySelectorAll(STACK_EXCHANGE_TIMESTAMP_SELECTOR));
-        return candidates;
-    },
+    discover: (root) => discoverElements(
+        root,
+        STACK_EXCHANGE_TIMESTAMP_SELECTOR,
+        isStackExchangeTimestampElement,
+    ),
     extract: (element) => {
         if (!isStackExchangeTimestampElement(element)) {
             return null;

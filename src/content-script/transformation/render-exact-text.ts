@@ -144,7 +144,14 @@ export function renderExactText(
     const existing = records.get(source);
     if (existing && existing.target !== target) {
         restoreRecord(existing, mutations);
-        mutations?.untrackOwnedTextSource?.(source);
+        const retargeted = mutations?.replaceOwnedTextSource?.(
+            source,
+            existing.target,
+            target,
+        ) ?? false;
+        if (!retargeted) {
+            mutations?.untrackOwnedTextSource?.(source);
+        }
         records.delete(source);
         recordsByTarget.delete(existing.target);
     }

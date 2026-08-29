@@ -8,6 +8,7 @@ import {
 } from "./document-mutation-scheduler";
 import {
     reconcileDocumentRegion,
+    reconcileDocumentSources,
     processDocument,
     type DocumentDiagnosticSink,
     type ProcessInput,
@@ -120,6 +121,11 @@ export class DocumentTransformationController {
                             (attribute) => attribute === attributeName,
                         ))
                     : rules;
+                if (attributeName) {
+                    return applicableRules.some((rule) => rule.matchesElement(element))
+                        ? [element]
+                        : [];
+                }
                 const roots: Element[] = [];
                 let current: Element | null = element;
                 while (current && current.ownerDocument === this.input.root) {
@@ -191,21 +197,15 @@ export class DocumentTransformationController {
         if (!scheduler) {
             return this.outputs;
         }
-        const outputs: HTMLTimeElement[] = [];
-        for (const { source } of getOwnedTimestampSourceEntries(this.input.root)) {
-            if (!isConnectedToDocument(source, this.input.root)) {
-                continue;
-            }
-            outputs.push(
-                ...reconcileDocumentRegion({
-                    ...this.input,
-                    root: source,
-                    ownedDomMutations: scheduler,
-                }),
-            );
-        }
-        this.outputs = outputs;
-        return outputs;
+        const sources = getOwnedTimestampSourceEntries(this.input.root)
+            .map(({ source }) => source)
+            .filter((source) => isConnectedToDocument(source, this.input.root));
+        this.outputs = reconcileDocumentSources({
+            ...this.input,
+            sources,
+            ownedDomMutations: scheduler,
+        });
+        return this.outputs;
     }
 
     /**
@@ -227,18 +227,18 @@ export class DocumentTransformationController {
             }
         }
 
-        for (const target of batch.sourceTargets) {
-            if (
-                isConnectedToDocument(target, this.input.root) &&
-                !coveredBy(batch.addedRoots, target) &&
-                !coveredBy(batch.visibilityRoots, target)
-            ) {
-                reconcileDocumentRegion({
-                    ...this.input,
-                    root: target,
-                    ownedDomMutations: scheduler,
-                });
-            }
+        const sourceTargets = batch.sourceTargets.filter(
+            (target) =>
+                isConnectedToDocument(target, this.input.root)
+                && !coveredBy(batch.addedRoots, target)
+                && !coveredBy(batch.visibilityRoots, target),
+        );
+        if (sourceTargets.length > 0) {
+            reconcileDocumentSources({
+                ...this.input,
+                sources: sourceTargets,
+                ownedDomMutations: scheduler,
+            });
         }
 
         for (const root of batch.visibilityRoots) {

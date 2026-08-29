@@ -76,9 +76,11 @@ fallback.
 GitHub, Hacker News, and supported Stack Exchange Q&A sites have specialized
 sources for their trusted timestamp widgets. Hacker News support applies to
 `span.age[title]` on the exact `news.ycombinator.com` hostname. Stack Exchange
-support applies to `*.stackexchange.com` and the Q&A roots
-`stackoverflow.com`, `serverfault.com`, `superuser.com`, `askubuntu.com`,
-`mathoverflow.net`, and `stackapps.com`, including their Q&A subdomains.
+support applies to Stack Exchange network Q&A and per-site meta host shapes,
+plus the branded Q&A roots `stackoverflow.com`, `serverfault.com`,
+`superuser.com`, `askubuntu.com`, `mathoverflow.net`, and `stackapps.com`.
+Known localized Stack Overflow Q&A hosts are included; service hosts such as
+Chat, API, Data Explorer, Area 51, and blogs are excluded.
 
 The Stack Exchange adapter accepts only simple labels from these approved
 shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,

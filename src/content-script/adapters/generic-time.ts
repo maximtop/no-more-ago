@@ -12,6 +12,7 @@ import {
     type TimestampSourceRule,
 } from "./types";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
+import { discoverElements } from "./discover-elements";
 
 /**
  * Stable identifier for the generic standard-time source rule.
@@ -51,23 +52,7 @@ function isGenericTimeSource(element: Element): boolean {
  * @returns - Standard time elements without extension output markers.
  */
 function discoverStandardTimes(root: ParentNode): readonly Element[] {
-    const candidates: Element[] = [];
-    if (root.nodeType === Node.ELEMENT_NODE) {
-        const element = root as Element;
-        if (
-            isGenericTimeSource(element)
-        ) {
-            candidates.push(element);
-        }
-    }
-    for (const element of root.querySelectorAll("time")) {
-        if (
-            isGenericTimeSource(element)
-        ) {
-            candidates.push(element);
-        }
-    }
-    return candidates;
+    return discoverElements(root, "time", isGenericTimeSource);
 }
 
 /**
