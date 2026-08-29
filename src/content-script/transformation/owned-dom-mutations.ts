@@ -38,6 +38,20 @@ export interface OwnedDomMutationSink {
     trackOwnedTextSource?(source: Element, target: Text): void;
 
     /**
+     * Retargets an already observed in-place source without rebuilding other observations.
+     *
+     * @param source - Source that remains owned across the target replacement.
+     * @param previousTarget - Previously retained page-owned text node.
+     * @param target - Replacement page-owned text node inside the same source.
+     * @returns - Whether the active observation was retargeted in place.
+     */
+    replaceOwnedTextSource?(
+        source: Element,
+        previousTarget: Text,
+        target: Text,
+    ): boolean;
+
+    /**
      * Releases character-data observation for an in-place source.
      *
      * @param source - Source whose owned label is no longer rendered.

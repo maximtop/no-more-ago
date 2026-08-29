@@ -19,6 +19,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     TIME_UNTIL: "time-until",
     STANDARD_TIME: "time",
     HACKER_NEWS_AGE: "hacker-news-age",
+    STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
 } as const;
 
 /**
@@ -28,6 +29,7 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
     DATETIME: "datetime",
     FORMAT: "format",
+    HREF: "href",
     TITLE: "title",
 } as const;
 

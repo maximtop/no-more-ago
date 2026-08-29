@@ -12,6 +12,9 @@ import {
     type TimestampSourceKind,
 } from "./types";
 import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "../../shared/adapters/github-contract";
+import { discoverElements } from "./discover-elements";
+
+const GITHUB_TIMESTAMP_SELECTOR = "relative-time, time-ago, time-until" as const;
 
 const APPROVED_KINDS = new Set<TimestampSourceKind>([
     TIMESTAMP_SOURCE_KIND.RELATIVE_TIME,
@@ -41,14 +44,11 @@ export const githubAdapter: TimestampSourceRule = {
     ],
     matches: matchesGitHubUrl,
     matchesElement: isGitHubTimestampElement,
-    discover: (root) => {
-        const candidates: Element[] = [];
-        if (root instanceof Element && isGitHubTimestampElement(root)) {
-            candidates.push(root);
-        }
-        candidates.push(...root.querySelectorAll("relative-time, time-ago, time-until"));
-        return candidates;
-    },
+    discover: (root) => discoverElements(
+        root,
+        GITHUB_TIMESTAMP_SELECTOR,
+        isGitHubTimestampElement,
+    ),
     extract: (element) => {
         const sourceKind = element.localName as TimestampSourceKind;
         if (!APPROVED_KINDS.has(sourceKind)) {

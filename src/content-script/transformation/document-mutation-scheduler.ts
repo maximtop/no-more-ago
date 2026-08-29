@@ -68,11 +68,11 @@ interface SchedulerInput {
     readonly sourceAttributes?: readonly string[];
 
     /**
-     * Resolves eligible source ancestors affected by one mutation.
+     * Resolves eligible sources affected by one mutation.
      *
      * @param element - Mutated element or child-list container.
-     * @param attributeName - Changed source attribute, when applicable.
-     * @returns - Matching source roots from the element through its ancestors.
+     * @param attributeName - Changed source attribute for target-local invalidation, when present.
+     * @returns - Matching target for an attribute or matching ancestors for a child-list change.
      */
     readonly getSourceMutationRoots?: (
         element: Element,
@@ -98,10 +98,12 @@ interface SchedulerInput {
  * Adds an element once while preserving its first-seen order.
  *
  * @param items - Ordered element collection to update.
+ * @param seen - Constant-time membership index for the collection.
  * @param value - Element to append when it is not already present.
  */
-function addUnique(items: Element[], value: Element): void {
-    if (!items.includes(value)) {
+function addUnique(items: Element[], seen: Set<Element>, value: Element): void {
+    if (!seen.has(value)) {
+        seen.add(value);
         items.push(value);
     }
 }
@@ -322,6 +324,30 @@ export class DocumentMutationScheduler {
             characterDataOldValue: true,
             subtree: true,
         });
+    }
+
+    /**
+     * Retargets an observed in-place source while retaining its existing subtree observation.
+     *
+     * @param source - Source that remains owned across the label replacement.
+     * @param previousTarget - Previously retained text target.
+     * @param target - Replacement text target within the same source.
+     * @returns - Whether the source was retargeted without rebuilding observation.
+     */
+    replaceOwnedTextSource(source: Element, previousTarget: Text, target: Text): boolean {
+        if (
+            this.phase !== "observing"
+            || this.textTargetsBySource.get(source) !== previousTarget
+            || target.ownerDocument !== this.input.document
+            || !source.contains(target)
+            || !source.isConnected
+        ) {
+            return false;
+        }
+        this.captureTextChanges(this.textObserver?.takeRecords() ?? []);
+        this.textTargetsBySource.set(source, target);
+        this.expectedTextChanges.delete(previousTarget);
+        return true;
     }
 
     /**
@@ -551,6 +577,7 @@ export class DocumentMutationScheduler {
     private captureTextChanges(records: readonly MutationRecord[], sources?: Element[]): void {
         const capture = this.input.capturePageOwnedTextChange ?? capturePageOwnedTextChange;
         const newValues = this.getCharacterDataNewValues(records);
+        const seenSources = sources ? new Set(sources) : undefined;
         for (const record of records) {
             if (record.type !== "characterData" || record.target.nodeType !== 3) {
                 continue;
@@ -561,8 +588,8 @@ export class DocumentMutationScheduler {
                 continue;
             }
             const source = capture(target, newValue);
-            if (source && sources) {
-                addUnique(sources, source);
+            if (source && sources && seenSources) {
+                addUnique(sources, seenSources, source);
             }
         }
     }
@@ -578,6 +605,11 @@ export class DocumentMutationScheduler {
         const visibilityRoots: Element[] = [];
         const removedRoots: Element[] = [];
         const displacedOutputSources: Element[] = [];
+        const addedRootSet = new Set<Element>();
+        const sourceTargetSet = new Set<Element>();
+        const visibilityRootSet = new Set<Element>();
+        const removedRootSet = new Set<Element>();
+        const displacedOutputSourceSet = new Set<Element>();
 
         for (const record of records) {
             if (record.type === "characterData") {
@@ -595,14 +627,14 @@ export class DocumentMutationScheduler {
                 const changesSource = attributeName !== null
                     && (this.input.sourceAttributes ?? []).includes(attributeName);
                 if (changesSource) {
-                    for (const source of this.getAffectedSources(target)) {
-                        addUnique(sourceTargets, source);
+                    if (this.relevantElementsBySource.has(target)) {
+                        addUnique(sourceTargets, sourceTargetSet, target);
                     }
                     for (const source of this.input.getSourceMutationRoots?.(
                         target,
                         attributeName,
                     ) ?? []) {
-                        addUnique(sourceTargets, source);
+                        addUnique(sourceTargets, sourceTargetSet, source);
                     }
                 }
                 if (
@@ -644,7 +676,7 @@ export class DocumentMutationScheduler {
                             affectedSources = this.getAffectedSources(target);
                         }
                         for (const source of affectedSources) {
-                            addUnique(visibilityRoots, source);
+                            addUnique(visibilityRoots, visibilityRootSet, source);
                         }
                     }
                 }
@@ -658,7 +690,7 @@ export class DocumentMutationScheduler {
                 for (const source of this.input.getSourceMutationRoots?.(
                     record.target as Element,
                 ) ?? []) {
-                    addUnique(sourceTargets, source);
+                    addUnique(sourceTargets, sourceTargetSet, source);
                 }
             }
 
@@ -673,10 +705,14 @@ export class DocumentMutationScheduler {
                         source.parentNode !== element.parentNode ||
                         source.nextElementSibling !== element
                     ) {
-                        addUnique(displacedOutputSources, source);
+                        addUnique(
+                            displacedOutputSources,
+                            displacedOutputSourceSet,
+                            source,
+                        );
                     }
                 } else {
-                    addUnique(addedRoots, element);
+                    addUnique(addedRoots, addedRootSet, element);
                 }
             }
 
@@ -696,10 +732,14 @@ export class DocumentMutationScheduler {
                         source.parentNode !== element.parentNode ||
                         source.nextElementSibling !== element
                     ) {
-                        addUnique(displacedOutputSources, source);
+                        addUnique(
+                            displacedOutputSources,
+                            displacedOutputSourceSet,
+                            source,
+                        );
                     }
                 } else {
-                    addUnique(removedRoots, element);
+                    addUnique(removedRoots, removedRootSet, element);
                     this.untrackRemovedRoot(element);
                 }
             }
@@ -708,19 +748,14 @@ export class DocumentMutationScheduler {
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
         const normalizedTargets = sourceTargets.filter(
-            (target, index) =>
-                !sourceTargets.slice(0, index).includes(target) &&
-                !coveredBy(normalizedAdded, target),
+            (target) => !coveredBy(normalizedAdded, target),
         );
         const uniqueVisibility = visibilityRoots.filter(
-            (root, index) =>
-                !visibilityRoots.slice(0, index).includes(root) &&
-                !coveredBy(normalizedAdded, root),
+            (root) => !coveredBy(normalizedAdded, root),
         );
         const normalizedVisibility = collapseRoots(uniqueVisibility);
         const normalizedDisplaced = displacedOutputSources.filter(
-            (source, index) =>
-                !displacedOutputSources.slice(0, index).includes(source) &&
+            (source) =>
                 !coveredBy(normalizedAdded, source) &&
                 !normalizedTargets.includes(source),
         );

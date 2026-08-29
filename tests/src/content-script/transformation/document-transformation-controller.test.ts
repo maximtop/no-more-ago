@@ -502,7 +502,7 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
-    it("bounds dynamic discovery and coalesces repeated final datetime changes", async () => {
+    it("bounds dynamic discovery and batches exact-source datetime changes", async () => {
         document.body.innerHTML =
             '<relative-time id="outside" datetime="2026-08-23T10:15:00Z">outside</relative-time>';
         const roots: ParentNode[] = [];
@@ -571,7 +571,7 @@ describe("DocumentTransformationController", () => {
         insideOne.setAttribute("datetime", "2026-08-28T10:15:00Z");
         await flushMutations();
 
-        expect(roots).toEqual([insideOne]);
+        expect(roots).toEqual([]);
         expect(visits).toEqual([insideOne]);
         expect(insideOne.nextElementSibling).toBe(output);
         expect(output.getAttribute("data-no-more-ago-output")).toBe(token);
