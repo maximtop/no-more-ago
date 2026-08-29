@@ -16,6 +16,58 @@ import {
     renderExactText,
     restoreExactText,
 } from "../../../../src/content-script/transformation/render-exact-text";
+import {
+    TIMESTAMP_SOURCE_ATTRIBUTE,
+} from "../../../../src/content-script/adapters/types";
+
+/**
+ * Callback accepted by the controllable MutationObserver test double.
+ */
+type ControllableMutationCallback = (records: readonly MutationRecord[]) => void;
+
+/**
+ * Replaces MutationObserver with a controllable lifecycle double.
+ *
+ * @returns - Callbacks in observer-construction order.
+ */
+function stubControllableMutationObserver(): ControllableMutationCallback[] {
+    const callbacks: ControllableMutationCallback[] = [];
+
+    /**
+     * MutationObserver double that exposes lifecycle callbacks to tests.
+     */
+    class ControllableObserver {
+        /**
+         * Captures a callback for manual delivery.
+         *
+         * @param callback - Mutation callback registered by the scheduler.
+         */
+        constructor(callback: ControllableMutationCallback) {
+            callbacks.push(callback);
+        }
+
+        /**
+         * Accepts observation requests without installing a native observer.
+         */
+        observe(): void {}
+
+        /**
+         * Accepts disconnect requests while retaining callbacks for the test.
+         */
+        disconnect(): void {}
+
+        /**
+         * Returns no pending records.
+         *
+         * @returns - Empty pending record list.
+         */
+        takeRecords(): MutationRecord[] {
+            return [];
+        }
+    }
+    vi.stubGlobal("MutationObserver", ControllableObserver);
+    return callbacks;
+}
 
 const flushMutations = async (): Promise<void> => {
     await Promise.resolve();
@@ -53,45 +105,7 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("normalizes nested and sibling roots from one delivery and ignores text work", () => {
-        /**
-         * Callback captured from a controllable mutation observer.
-         */
-        type Callback = (records: readonly MutationRecord[]) => void;
-        const callbacks: Callback[] = [];
-
-        /**
-         * MutationObserver double that exposes deliveries to the test.
-         */
-        class ControllableObserver {
-            /**
-             * Captures the scheduler callback for manual delivery.
-             *
-             * @param callback - Mutation callback registered by the scheduler.
-             */
-            constructor(callback: Callback) {
-                callbacks.push(callback);
-            }
-
-            /**
-             * Accepts observation requests without installing a native observer.
-             */
-            observe(): void {}
-
-            /**
-             * Accepts disconnect requests without clearing captured callbacks.
-             */
-            disconnect(): void {}
-
-            /**
-             * Returns no pending records for this controllable observer.
-             *
-             * @returns - Empty pending record list.
-             */
-            takeRecords(): MutationRecord[] {
-                return [];
-            }
-        }
-        vi.stubGlobal("MutationObserver", ControllableObserver);
+        const callbacks = stubControllableMutationObserver();
         try {
             const batches: AffectedMutationBatch[] = [];
             const scheduler = new DocumentMutationScheduler({
@@ -138,6 +152,7 @@ describe("DocumentMutationScheduler", () => {
             document,
             onBatch: () => undefined,
             getOwnedSourceForOutput: () => null,
+            sourceAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
         });
         scheduler.start();
         scheduler.start();
@@ -148,7 +163,6 @@ describe("DocumentMutationScheduler", () => {
             attributes: true,
             attributeFilter: [
                 "datetime",
-                "title",
                 "hidden",
                 "aria-hidden",
                 "inert",
@@ -213,6 +227,67 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
         restoreExactText(source);
         expect(target.data).toBe("page refreshed");
+    });
+
+    it("stops character-data observation after an in-place source is released", async () => {
+        const NativeObserver = MutationObserver;
+        let characterDataDeliveries = 0;
+
+        /**
+         * Native observer wrapper that counts character-data deliveries.
+         */
+        class CharacterDataCountingObserver extends NativeObserver {
+            /**
+             * Counts native deliveries that contain character-data records.
+             *
+             * @param callback - Scheduler callback wrapped by the test observer.
+             */
+            constructor(callback: MutationCallback) {
+                super((records, observer) => {
+                    if (records.some((record) => record.type === "characterData")) {
+                        characterDataDeliveries += 1;
+                    }
+                    callback(records, observer);
+                });
+            }
+        }
+        vi.stubGlobal("MutationObserver", CharacterDataCountingObserver);
+        try {
+            const firstSource = document.createElement("span");
+            const firstTarget = document.createTextNode("first relative");
+            const secondSource = document.createElement("span");
+            const secondTarget = document.createTextNode("second relative");
+            firstSource.append(firstTarget);
+            secondSource.append(secondTarget);
+            document.body.append(firstSource, secondSource);
+            const batches: AffectedMutationBatch[] = [];
+            const scheduler = new DocumentMutationScheduler({
+                document,
+                onBatch: (batch) => batches.push(batch),
+                getOwnedSourceForOutput: () => null,
+            });
+            scheduler.start();
+            renderExactText(firstSource, firstTarget, "2026", scheduler);
+            renderExactText(secondSource, secondTarget, "2027", scheduler);
+            await flushMutations();
+            characterDataDeliveries = 0;
+            batches.length = 0;
+
+            restoreExactText(firstSource, scheduler);
+            firstTarget.data = "released page text";
+            await flushMutations();
+            expect(characterDataDeliveries).toBe(0);
+            expect(batches).toEqual([]);
+
+            secondTarget.data = "active page text";
+            await flushMutations();
+            expect(characterDataDeliveries).toBe(1);
+            expect(batches[0]?.sourceTargets).toEqual([secondSource]);
+            scheduler.stop();
+            restoreExactText(secondSource);
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 
     it("captures an undelivered same-value page write before stopping", async () => {
@@ -461,45 +536,7 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("rejects a queued callback from a stopped lifecycle after restart", () => {
-        /**
-         * Callback captured from a controllable mutation observer.
-         */
-        type Callback = (records: readonly MutationRecord[]) => void;
-        const callbacks: Callback[] = [];
-
-        /**
-         * MutationObserver double that exposes stale lifecycle deliveries.
-         */
-        class ControllableObserver {
-            /**
-             * Captures each lifecycle callback for manual delivery.
-             *
-             * @param callback - Mutation callback registered by the scheduler.
-             */
-            constructor(callback: Callback) {
-                callbacks.push(callback);
-            }
-
-            /**
-             * Accepts observation requests without installing a native observer.
-             */
-            observe(): void {}
-
-            /**
-             * Accepts disconnect requests while retaining stale callbacks for the test.
-             */
-            disconnect(): void {}
-
-            /**
-             * Returns no pending records for this controllable observer.
-             *
-             * @returns - Empty pending record list.
-             */
-            takeRecords(): MutationRecord[] {
-                return [];
-            }
-        }
-        vi.stubGlobal("MutationObserver", ControllableObserver);
+        const callbacks = stubControllableMutationObserver();
         try {
             const batches: AffectedMutationBatch[] = [];
             const scheduler = new DocumentMutationScheduler({
@@ -529,45 +566,7 @@ describe("DocumentMutationScheduler", () => {
     });
 
     it("does not carry a suppression identity into a restarted lifecycle", () => {
-        /**
-         * Callback captured from a controllable mutation observer.
-         */
-        type Callback = (records: readonly MutationRecord[]) => void;
-        const callbacks: Callback[] = [];
-
-        /**
-         * MutationObserver double that exposes deliveries across lifecycle restarts.
-         */
-        class ControllableObserver {
-            /**
-             * Captures each lifecycle callback for manual delivery.
-             *
-             * @param callback - Mutation callback registered by the scheduler.
-             */
-            constructor(callback: Callback) {
-                callbacks.push(callback);
-            }
-
-            /**
-             * Accepts observation requests without installing a native observer.
-             */
-            observe(): void {}
-
-            /**
-             * Accepts disconnect requests while retaining callbacks for the test.
-             */
-            disconnect(): void {}
-
-            /**
-             * Returns no pending records for this controllable observer.
-             *
-             * @returns - Empty pending record list.
-             */
-            takeRecords(): MutationRecord[] {
-                return [];
-            }
-        }
-        vi.stubGlobal("MutationObserver", ControllableObserver);
+        const callbacks = stubControllableMutationObserver();
         try {
             document.body.innerHTML =
                 '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';

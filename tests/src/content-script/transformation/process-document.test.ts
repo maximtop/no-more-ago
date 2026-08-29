@@ -19,6 +19,7 @@ import { genericTimeRule } from "../../../../src/content-script/adapters/generic
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -379,7 +380,9 @@ describe("processDocument", () => {
         let specializedValid = true;
         const specialized: TimestampSourceRule = {
             id: "specialized",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("time"),
             discover: (root) => [...root.querySelectorAll("time")],
             extract: (element) => ({
                 ruleId: "specialized",
@@ -424,7 +427,9 @@ describe("processDocument", () => {
         }
         const rule: TimestampSourceRule = {
             id: "in-place-test",
+            mutationAttributes: [],
             matches: () => true,
+            matchesElement: (element) => element === source,
             discover: () => [source],
             extract: () => ({
                 ruleId: "in-place-test",

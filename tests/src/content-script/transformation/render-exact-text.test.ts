@@ -6,8 +6,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
     capturePageOwnedTextChange,
-    getOwnedSourceForText,
-    getOwnedTextSourcesContainingNode,
     renderExactText,
     restoreExactText,
     restoreExactTexts,
@@ -41,15 +39,12 @@ describe("renderExactText", () => {
         expect(link.getAttribute("data-kept")).toBe("yes");
         expect(source.querySelector("[data-no-more-ago-source]")).toBeNull();
         expect(source.querySelector("[data-no-more-ago-output]")).toBeNull();
-        expect(getOwnedSourceForText(target)).toBe(source);
-
         restoreExactText(source);
         expect(target.data).toBe(" 1 hour ago ");
         expect(document.getElementById("link")).toBe(link);
         link.dispatchEvent(new MouseEvent("click"));
         expect(listener).toHaveBeenCalledTimes(1);
         expect(source.outerHTML).toBe(sourceHtml);
-        expect(getOwnedSourceForText(target)).toBeNull();
     });
 
     it("restores only records within the requested root", () => {
@@ -96,21 +91,7 @@ describe("renderExactText", () => {
 
         expect(renderExactText(source, second, "2027")).toBe(second);
         expect(first.data).toBe("1 hour ago");
-        expect(getOwnedSourceForText(first)).toBeNull();
         restoreExactText(source);
         expect(second.data).toBe("page refreshed");
-    });
-
-    it("returns only owned sources containing a changed child-list target", () => {
-        const source = document.createElement("span");
-        const link = document.createElement("a");
-        const target = document.createTextNode("1 hour ago");
-        link.append(target);
-        source.append(link);
-        document.body.append(source);
-        renderExactText(source, target, "2026");
-
-        expect(getOwnedTextSourcesContainingNode(link)).toEqual([source]);
-        expect(getOwnedTextSourcesContainingNode(document.body)).toEqual([]);
     });
 });

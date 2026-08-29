@@ -10,7 +10,7 @@ import {
 } from "./render-exact-time";
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
-    hasOwnedTimestampSource,
+    getOwnedTimestampSourceEntries,
     renderTimestampPresentation,
     restoreTimestampPresentation,
 } from "./render-timestamp-presentation";
@@ -193,13 +193,24 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         }
     }
 
-    if (
-        root.nodeType === 1
-        && hasOwnedTimestampSource(root as Element)
-        && !discovered.has(root as Element)
-    ) {
-        discovered.add(root as Element);
-        discoveredSources.push(root as Element);
+    const rootNode = root as Node;
+    const ownerDocument = rootNode.nodeType === 9
+        ? rootNode as Document
+        : rootNode.ownerDocument;
+    if (ownerDocument) {
+        for (const { source } of getOwnedTimestampSourceEntries(ownerDocument)) {
+            if (
+                !discovered.has(source)
+                && (
+                    rootNode.nodeType === 9
+                    || source === rootNode
+                    || rootNode.contains(source)
+                )
+            ) {
+                discovered.add(source);
+                discoveredSources.push(source);
+            }
+        }
     }
 
     if (diagnosticSink && discoveredSources.length > 0) {

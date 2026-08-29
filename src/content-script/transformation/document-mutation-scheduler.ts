@@ -6,26 +6,12 @@ import {
     clearSourceHiddenProvenance,
     OWNED_OUTPUT_ATTRIBUTE,
 } from "./render-exact-time";
-import {
-    capturePageOwnedTextChange,
-    getOwnedTextSourcesContainingNode,
-    hasOwnedTimestampSource,
-} from "./render-timestamp-presentation";
+import { capturePageOwnedTextChange } from "./render-timestamp-presentation";
 
 /**
  * Attribute names whose page-authored changes can affect generic visibility.
  */
 const VISIBILITY_ATTRIBUTES = ["hidden", "aria-hidden", "inert", "style", "class"] as const;
-
-/**
- * Attribute names whose page-authored changes can affect timestamp resolution.
- */
-const TIMESTAMP_ATTRIBUTES = ["datetime", "title"] as const;
-
-/**
- * Complete observer attribute filter for timestamp and visibility changes.
- */
-const OBSERVED_ATTRIBUTES = [...TIMESTAMP_ATTRIBUTES, ...VISIBILITY_ATTRIBUTES] as const;
 
 /**
  * Coalesced observer changes that can be processed once without revisiting overlapping DOM roots.
@@ -37,7 +23,7 @@ export interface AffectedMutationBatch {
     readonly addedRoots: readonly Element[];
 
     /**
-     * Existing timestamp sources whose timestamp attribute or owned text changed in place.
+     * Existing timestamp sources whose attributes, owned text, or child structure changed.
      */
     readonly sourceTargets: readonly Element[];
 
@@ -77,6 +63,23 @@ interface SchedulerInput {
     readonly getOwnedSourceForOutput: (node: Node) => Element | null;
 
     /**
+     * Adapter-declared source attributes observed on the current URL.
+     */
+    readonly sourceAttributes?: readonly string[];
+
+    /**
+     * Resolves eligible source ancestors affected by one mutation.
+     *
+     * @param element - Mutated element or child-list container.
+     * @param attributeName - Changed source attribute, when applicable.
+     * @returns - Matching source roots from the element through its ancestors.
+     */
+    readonly getSourceMutationRoots?: (
+        element: Element,
+        attributeName?: string,
+    ) => readonly Element[];
+
+    /**
      * Clears renderer hidden ownership when a page-authored mutation is observed.
      */
     readonly clearSourceHiddenProvenance?: (source: Element) => void;
@@ -89,22 +92,6 @@ interface SchedulerInput {
      * @returns - Owning source, or null when the node is not owned.
      */
     readonly capturePageOwnedTextChange?: (node: Node, text: string) => Element | null;
-
-    /**
-     * Returns owned sources containing a child-list mutation target.
-     *
-     * @param node - Mutation target node.
-     * @returns - Containing owned sources.
-     */
-    readonly getOwnedTextSourcesContainingNode?: (node: Node) => readonly Element[];
-
-    /**
-     * Checks whether a source belongs to either presentation renderer.
-     *
-     * @param source - Candidate source element.
-     * @returns - Whether the source is owned.
-     */
-    readonly isOwnedSource?: (source: Element) => boolean;
 }
 
 /**
@@ -159,6 +146,11 @@ export class DocumentMutationScheduler {
     private observer: MutationObserver | undefined;
 
     /**
+     * Character-data observer retained only while in-place sources are owned.
+     */
+    private textObserver: MutationObserver | undefined;
+
+    /**
      * Monotonic lifecycle token that invalidates callbacks queued before a stop or restart.
      */
     private generation = 0;
@@ -183,6 +175,11 @@ export class DocumentMutationScheduler {
         Text,
         { readonly oldValue: string; readonly text: string }[]
     >();
+
+    /**
+     * Active in-place text targets indexed by their adapter-selected sources.
+     */
+    private readonly textTargetsBySource = new Map<Element, Text>();
 
     /**
      * Sources discovered by the active adapter pass, indexed by relevant ancestors.
@@ -220,11 +217,17 @@ export class DocumentMutationScheduler {
             this.handle(records);
         });
         try {
+            const attributeFilter = [
+                ...new Set([
+                    ...(this.input.sourceAttributes ?? []),
+                    ...VISIBILITY_ATTRIBUTES,
+                ]),
+            ];
             observer.observe(this.input.document, {
                 childList: true,
                 subtree: true,
                 attributes: true,
-                attributeFilter: [...OBSERVED_ATTRIBUTES],
+                attributeFilter,
                 attributeOldValue: true,
             });
         } catch (error) {
@@ -239,8 +242,10 @@ export class DocumentMutationScheduler {
      * Disconnects the observer and drops any pending mutation batch.
      */
     stop(): void {
-        const pending = this.observer?.takeRecords() ?? [];
-        this.captureTextChanges(pending);
+        const pendingText = this.textObserver?.takeRecords() ?? [];
+        this.captureTextChanges(pendingText);
+        this.textObserver?.disconnect();
+        this.textObserver = undefined;
         this.observer?.disconnect();
         this.observer = undefined;
         this.phase = "idle";
@@ -248,6 +253,7 @@ export class DocumentMutationScheduler {
         this.suppressedRemovals.clear();
         this.expectedHiddenChanges.clear();
         this.expectedTextChanges.clear();
+        this.textTargetsBySource.clear();
         this.sourcesByRelevantElement.clear();
         this.relevantElementsBySource.clear();
     }
@@ -290,20 +296,91 @@ export class DocumentMutationScheduler {
      * Registers bounded character-data observation for one owned in-place source.
      *
      * @param source - Owned source whose label changes must be observed.
+     * @param target - Exact page-owned text node retained for restoration.
      */
-    trackOwnedTextSource(source: Element): void {
+    trackOwnedTextSource(source: Element, target: Text): void {
         if (
             this.phase !== "observing"
             || source.ownerDocument !== this.input.document
+            || target.ownerDocument !== this.input.document
+            || !source.contains(target)
             || !source.isConnected
         ) {
             return;
         }
-        this.observer?.observe(source, {
+        const current = this.textTargetsBySource.get(source);
+        if (current === target) {
+            return;
+        }
+        if (current) {
+            this.untrackOwnedTextSource(source);
+        }
+        this.textTargetsBySource.set(source, target);
+        const observer = this.textObserver ?? this.createTextObserver();
+        observer.observe(source, {
             characterData: true,
             characterDataOldValue: true,
             subtree: true,
         });
+    }
+
+    /**
+     * Releases character-data observation for one in-place source.
+     *
+     * @param source - Source whose owned text is no longer rendered.
+     */
+    untrackOwnedTextSource(source: Element): void {
+        const target = this.textTargetsBySource.get(source);
+        if (!target) {
+            return;
+        }
+        const observer = this.textObserver;
+        this.captureTextChanges(observer?.takeRecords() ?? []);
+        observer?.disconnect();
+        this.textTargetsBySource.delete(source);
+        this.expectedTextChanges.delete(target);
+        if (this.textTargetsBySource.size === 0) {
+            this.textObserver = undefined;
+            return;
+        }
+        for (const activeSource of this.textTargetsBySource.keys()) {
+            observer?.observe(activeSource, {
+                characterData: true,
+                characterDataOldValue: true,
+                subtree: true,
+            });
+        }
+    }
+
+    /**
+     * Creates a lifecycle-bound character-data observer on first use.
+     *
+     * @returns - New active text observer.
+     */
+    private createTextObserver(): MutationObserver {
+        const generation = this.generation;
+        const observer = new MutationObserver((records) => {
+            if (
+                this.phase !== "observing"
+                || this.textObserver !== observer
+                || this.generation !== generation
+            ) {
+                return;
+            }
+            const sourceTargets: Element[] = [];
+            this.captureTextChanges(records, sourceTargets);
+            if (sourceTargets.length > 0) {
+                this.input.onBatch({
+                    addedRoots: [],
+                    sourceTargets,
+                    visibilityRoots: [],
+                    removedRoots: [],
+                    displacedOutputSources: [],
+                });
+            }
+        });
+        this.textObserver = observer;
+        return observer;
     }
 
     /**
@@ -419,25 +496,25 @@ export class DocumentMutationScheduler {
     }
 
     /**
-     * Resolves the value produced by one character-data record.
+     * Resolves every character-data record's produced value in one reverse pass.
      *
      * @param records - Complete ordered observer delivery.
-     * @param index - Index of the record being interpreted.
-     * @param target - Text target changed by the record.
-     * @returns - Intermediate or final value produced by that record.
+     * @returns - Produced values indexed by mutation-record identity.
      */
-    private getCharacterDataNewValue(
+    private getCharacterDataNewValues(
         records: readonly MutationRecord[],
-        index: number,
-        target: Text,
-    ): string {
-        for (let nextIndex = index + 1; nextIndex < records.length; nextIndex += 1) {
-            const next = records[nextIndex];
-            if (next?.type === "characterData" && next.target === target) {
-                return next.oldValue ?? target.data;
+    ): ReadonlyMap<MutationRecord, string> {
+        const nextValues = new Map<Text, string>();
+        const values = new Map<MutationRecord, string>();
+        for (let index = records.length - 1; index >= 0; index -= 1) {
+            const record = records[index];
+            if (record?.type === "characterData" && record.target.nodeType === 3) {
+                const target = record.target as Text;
+                values.set(record, nextValues.get(target) ?? target.data);
+                nextValues.set(target, record.oldValue ?? target.data);
             }
         }
-        return target.data;
+        return values;
     }
 
     /**
@@ -473,13 +550,13 @@ export class DocumentMutationScheduler {
      */
     private captureTextChanges(records: readonly MutationRecord[], sources?: Element[]): void {
         const capture = this.input.capturePageOwnedTextChange ?? capturePageOwnedTextChange;
-        for (let index = 0; index < records.length; index += 1) {
-            const record = records[index];
-            if (record?.type !== "characterData" || record.target.nodeType !== 3) {
+        const newValues = this.getCharacterDataNewValues(records);
+        for (const record of records) {
+            if (record.type !== "characterData" || record.target.nodeType !== 3) {
                 continue;
             }
             const target = record.target as Text;
-            const newValue = this.getCharacterDataNewValue(records, index, target);
+            const newValue = newValues.get(record) ?? target.data;
             if (this.consumeExpectedTextChange(target, record.oldValue, newValue)) {
                 continue;
             }
@@ -502,7 +579,6 @@ export class DocumentMutationScheduler {
         const removedRoots: Element[] = [];
         const displacedOutputSources: Element[] = [];
 
-        this.captureTextChanges(records, sourceTargets);
         for (const record of records) {
             if (record.type === "characterData") {
                 continue;
@@ -515,14 +591,23 @@ export class DocumentMutationScheduler {
                 if (this.input.getOwnedSourceForOutput(target)) {
                     continue;
                 }
+                const attributeName = record.attributeName;
+                const changesSource = attributeName !== null
+                    && (this.input.sourceAttributes ?? []).includes(attributeName);
+                if (changesSource) {
+                    for (const source of this.getAffectedSources(target)) {
+                        addUnique(sourceTargets, source);
+                    }
+                    for (const source of this.input.getSourceMutationRoots?.(
+                        target,
+                        attributeName,
+                    ) ?? []) {
+                        addUnique(sourceTargets, source);
+                    }
+                }
                 if (
-                    record.attributeName
-                    && (TIMESTAMP_ATTRIBUTES as readonly string[]).includes(record.attributeName)
-                ) {
-                    addUnique(sourceTargets, target);
-                } else if (
-                    record.attributeName &&
-                    (VISIBILITY_ATTRIBUTES as readonly string[]).includes(record.attributeName)
+                    attributeName
+                    && (VISIBILITY_ATTRIBUTES as readonly string[]).includes(attributeName)
                 ) {
                     const expected = this.expectedHiddenChanges.get(target);
                     const expectedChange = expected?.[0];
@@ -533,7 +618,7 @@ export class DocumentMutationScheduler {
                             : target.hasAttribute("hidden") === expectedChange.hidden
                         : false;
                     if (
-                        record.attributeName === "hidden" &&
+                        attributeName === "hidden" &&
                         expectedChange &&
                         expectedChange.oldValue === record.oldValue &&
                         reachedExpectedState
@@ -543,13 +628,13 @@ export class DocumentMutationScheduler {
                             this.expectedHiddenChanges.delete(target);
                         }
                     } else {
-                        if (record.attributeName === "hidden") {
+                        if (attributeName === "hidden") {
                             (this.input.clearSourceHiddenProvenance ?? clearSourceHiddenProvenance)(
                                 target,
                             );
                         }
-                        const changesLocalStyle = record.attributeName === "class"
-                            || record.attributeName === "style";
+                        const changesLocalStyle = attributeName === "class"
+                            || attributeName === "style";
                         let affectedSources: readonly Element[];
                         if (changesLocalStyle) {
                             affectedSources = this.sourcesByRelevantElement.has(target)
@@ -566,14 +651,15 @@ export class DocumentMutationScheduler {
                 continue;
             }
 
-            const containing = this.input.getOwnedTextSourcesContainingNode
-                ?? getOwnedTextSourcesContainingNode;
-            for (const source of containing(record.target)) {
-                addUnique(sourceTargets, source);
-            }
-
             if (this.input.getOwnedSourceForOutput(record.target)) {
                 continue;
+            }
+            if (record.target.nodeType === 1) {
+                for (const source of this.input.getSourceMutationRoots?.(
+                    record.target as Element,
+                ) ?? []) {
+                    addUnique(sourceTargets, source);
+                }
             }
 
             for (const node of record.addedNodes) {
@@ -621,16 +707,15 @@ export class DocumentMutationScheduler {
 
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
-        const isOwned = this.input.isOwnedSource ?? hasOwnedTimestampSource;
         const normalizedTargets = sourceTargets.filter(
             (target, index) =>
                 !sourceTargets.slice(0, index).includes(target) &&
-                (!coveredBy(normalizedAdded, target) || isOwned(target)),
+                !coveredBy(normalizedAdded, target),
         );
         const uniqueVisibility = visibilityRoots.filter(
             (root, index) =>
                 !visibilityRoots.slice(0, index).includes(root) &&
-                (!coveredBy(normalizedAdded, root) || isOwned(root)),
+                !coveredBy(normalizedAdded, root),
         );
         const normalizedVisibility = collapseRoots(uniqueVisibility);
         const normalizedDisplaced = displacedOutputSources.filter(
@@ -642,7 +727,6 @@ export class DocumentMutationScheduler {
 
         this.suppressedRemovals.clear();
         this.expectedHiddenChanges.clear();
-        this.expectedTextChanges.clear();
         if (
             normalizedAdded.length === 0 &&
             normalizedTargets.length === 0 &&

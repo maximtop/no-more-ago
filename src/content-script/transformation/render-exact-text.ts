@@ -45,6 +45,7 @@ export interface OwnedTextSourceEntry {
 }
 
 const recordsByDocument = new WeakMap<Document, Map<Element, OwnedTextRecord>>();
+const recordsByTarget = new WeakMap<Text, OwnedTextRecord>();
 
 /**
  * Retrieves or creates the ownership registry for one document.
@@ -69,17 +70,7 @@ function getRecords(document: Document): Map<Element, OwnedTextRecord> {
  * @returns - Matching record, or null when the node is not owned.
  */
 function findRecordForTarget(node: Node): OwnedTextRecord | null {
-    const document = node.ownerDocument;
-    const records = document ? recordsByDocument.get(document) : undefined;
-    if (!records) {
-        return null;
-    }
-    for (const record of records.values()) {
-        if (record.target === node) {
-            return record;
-        }
-    }
-    return null;
+    return node.nodeType === 3 ? recordsByTarget.get(node as Text) ?? null : null;
 }
 
 /**
@@ -100,26 +91,6 @@ function restoreRecord(record: OwnedTextRecord, mutations?: OwnedDomMutationSink
 }
 
 /**
- * Checks whether a source currently has an in-place ownership record.
- *
- * @param source - Candidate source element.
- * @returns - Whether the source is owned by this renderer.
- */
-export function hasOwnedTextSource(source: Element): boolean {
-    return recordsByDocument.get(source.ownerDocument)?.has(source) ?? false;
-}
-
-/**
- * Resolves an exact owned text node back to its source.
- *
- * @param node - Candidate text node.
- * @returns - Owning source, or null when the node is not owned.
- */
-export function getOwnedSourceForText(node: Node): Element | null {
-    return findRecordForTarget(node)?.source ?? null;
-}
-
-/**
  * Records one page-authored text value as the next restoration baseline.
  *
  * @param node - Exact owned target reported by the observer.
@@ -133,27 +104,6 @@ export function capturePageOwnedTextChange(node: Node, text: string): Element | 
     }
     record.pageText = text;
     return record.source;
-}
-
-/**
- * Finds owned sources that contain a specific child-list mutation target.
- *
- * @param node - Mutation target to relate to owned sources.
- * @returns - Only sources equal to or containing the supplied node.
- */
-export function getOwnedTextSourcesContainingNode(node: Node): readonly Element[] {
-    const document = node.ownerDocument;
-    const records = document ? recordsByDocument.get(document) : undefined;
-    if (!records) {
-        return [];
-    }
-    const sources: Element[] = [];
-    for (const record of records.values()) {
-        if (record.source === node || record.source.contains(node)) {
-            sources.push(record.source);
-        }
-    }
-    return sources;
 }
 
 /**
@@ -194,7 +144,9 @@ export function renderExactText(
     const existing = records.get(source);
     if (existing && existing.target !== target) {
         restoreRecord(existing, mutations);
+        mutations?.untrackOwnedTextSource?.(source);
         records.delete(source);
+        recordsByTarget.delete(existing.target);
     }
     const retained = records.get(source);
     if (retained) {
@@ -203,9 +155,11 @@ export function renderExactText(
         }
         retained.renderedText = text;
     } else {
-        records.set(source, { source, target, pageText: target.data, renderedText: text });
+        const record = { source, target, pageText: target.data, renderedText: text };
+        records.set(source, record);
+        recordsByTarget.set(target, record);
     }
-    mutations?.trackOwnedTextSource?.(source);
+    mutations?.trackOwnedTextSource?.(source, target);
     if (target.data !== text) {
         mutations?.beforeOwnedTextChange?.(target, text);
         target.data = text;
@@ -226,7 +180,9 @@ export function restoreExactText(source: Element, mutations?: OwnedDomMutationSi
         return;
     }
     restoreRecord(record, mutations);
+    mutations?.untrackOwnedTextSource?.(source);
     records?.delete(source);
+    recordsByTarget.delete(record.target);
 }
 
 /**
@@ -247,6 +203,8 @@ export function restoreExactTexts(root: ParentNode, mutations?: OwnedDomMutation
             continue;
         }
         restoreRecord(record, mutations);
+        mutations?.untrackOwnedTextSource?.(source);
         records.delete(source);
+        recordsByTarget.delete(record.target);
     }
 }

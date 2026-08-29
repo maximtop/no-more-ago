@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
+import { GENERIC_TIME_RULE_ID } from "../../../../src/content-script/adapters/generic-time";
+import {
+    HACKER_NEWS_ADAPTER_ID,
+    hackerNewsAdapter,
+    matchesHackerNewsUrl,
+} from "../../../../src/content-script/adapters/hacker-news";
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     TIMESTAMP_PRESENTATION_KIND,
@@ -12,10 +17,6 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
-import {
-    HACKER_NEWS_ADAPTER_ID,
-    matchesHackerNewsUrl,
-} from "../../../../src/shared/adapters/hacker-news-contract";
 
 describe("Hacker News source contract", () => {
     it.each([
@@ -118,7 +119,7 @@ describe("Hacker News source contract", () => {
             expect(
                 defaultRegistry.matching(new URL(`https://news.ycombinator.com${path}`))
                     .map((rule) => rule.id),
-            ).toEqual([HACKER_NEWS_ADAPTER_ID, "generic-time"]);
+            ).toEqual([HACKER_NEWS_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
         }
     });
 });

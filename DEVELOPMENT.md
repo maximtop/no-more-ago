@@ -177,8 +177,8 @@ specialized source should not require background adapter registration or
 site-policy logic.
 
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
-frames, Shadow DOM, page labels, and unsupported timestamp forms remain
-outside the current scope.
+frames, Shadow DOM, arbitrary page labels without a registered specialized
+source, and unsupported timestamp forms remain outside the current scope.
 
 ### Release Builds
 

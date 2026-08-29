@@ -218,8 +218,10 @@ The extension requests:
 No More Ago does not derive dates from visible relative or absolute labels,
 link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
 specialized source trusts only the explicit zoned timestamp in its approved
-`span.age[title]` shape and does not modify that `title` or the link. Standard
-processing remains limited to ordinary light-DOM `time[datetime]` elements.
+`span.age[title]` shape. It changes only the simple label text: the `title`,
+link destination, element identity, attributes, and event listeners remain
+intact. Standard processing remains limited to ordinary light-DOM
+`time[datetime]` elements.
 
 ## Limitations
 

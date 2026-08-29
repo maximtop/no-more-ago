@@ -9,6 +9,7 @@ import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacke
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     ADJACENT_TIME_PRESENTATION,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
@@ -16,15 +17,14 @@ import {
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
-import {
-    getOwnedSourceForText,
-} from "../../../../src/content-script/transformation/render-timestamp-presentation";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
 
 const noMatchRule: TimestampSourceRule = {
     id: "no-match",
+    mutationAttributes: [],
     matches: () => false,
+    matchesElement: () => false,
     discover: () => [],
     extract: () => null,
 };
@@ -348,7 +348,9 @@ describe("DocumentTransformationController", () => {
         const visits: Element[] = [];
         const adapter: TimestampSourceRule = {
             id: "combined-instrumented",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("relative-time"),
             discover: (root) => {
                 roots.push(root);
                 const own = root instanceof Element && root.matches("relative-time") ? [root] : [];
@@ -457,7 +459,9 @@ describe("DocumentTransformationController", () => {
         let shouldThrow = true;
         const adapter: TimestampSourceRule = {
             id: "test",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("relative-time"),
             discover: (root) => [
                 ...(root instanceof Element && root.matches("relative-time") ? [root] : []),
                 ...Array.from(root.querySelectorAll("relative-time")),
@@ -502,7 +506,9 @@ describe("DocumentTransformationController", () => {
         const visits: Element[] = [];
         const adapter: TimestampSourceRule = {
             id: "instrumented",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("relative-time"),
             discover: (root) => {
                 roots.push(root);
                 const own = root instanceof Element && root.matches("relative-time") ? [root] : [];
@@ -616,7 +622,9 @@ describe("DocumentTransformationController", () => {
         let visits = 0;
         const adapter: TimestampSourceRule = {
             id: "counting",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
             matches: () => true,
+            matchesElement: (element) => element.matches("relative-time"),
             discover: (root) => [
                 ...(root instanceof Element && root.matches("relative-time") ? [root] : []),
                 ...Array.from(root.querySelectorAll("relative-time")),
@@ -721,6 +729,107 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
+    it.each([
+        ["class is added after title", "class"],
+        ["title is added after class", "title"],
+    ] as const)("processes a staged Hacker News source when %s", async (_name, finalAttribute) => {
+        const source = document.createElement("span");
+        const link = document.createElement("a");
+        link.textContent = "1 hour ago";
+        source.append(link);
+        if (finalAttribute === "class") {
+            source.title = "2026-08-28T10:09:07Z";
+        } else {
+            source.className = "age";
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            root: document,
+            locales: ["en-US"],
+            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+        });
+        controller.start();
+        document.body.append(source);
+        await flushMutations();
+        expect(link.textContent).toBe("1 hour ago");
+
+        if (finalAttribute === "class") {
+            source.className = "age";
+        } else {
+            source.title = "2026-08-28T10:09:07Z";
+        }
+        await flushMutations();
+        expect(link.textContent).toBe("2026");
+        controller.teardown();
+    });
+
+    it("processes a Hacker News widget when complex content becomes a simple label", async () => {
+        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07Z">
+            <a id="age-link"><strong>1 hour ago</strong></a></span>`;
+        const link = document.getElementById("age-link");
+        if (!link) {
+            throw new Error("Expected Hacker News label");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            root: document,
+            locales: ["en-US"],
+            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+        });
+        controller.start();
+        expect(link.textContent).toBe("1 hour ago");
+
+        link.replaceChildren(document.createTextNode("updated relative label"));
+        await flushMutations();
+        expect(link.textContent).toBe("2026");
+        controller.teardown();
+    });
+
+    it("restores an owned source covered by a broader added root", async () => {
+        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07Z">
+            <a id="age-link">1 hour ago</a></span>`;
+        const source = document.querySelector("span.age");
+        const link = document.getElementById("age-link");
+        if (!source || !link) {
+            throw new Error("Expected Hacker News source");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            root: document,
+            locales: ["en-US"],
+            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+        });
+        controller.start();
+        expect(link.textContent).toBe("2026");
+
+        const region = document.createElement("section");
+        document.body.append(region);
+        source.classList.remove("age");
+        region.append(source);
+        await flushMutations();
+        expect(link.textContent).toBe("1 hour ago");
+        controller.teardown();
+    });
+
+    it("ignores unrelated title changes when no active rule uses title", async () => {
+        const unrelated = document.createElement("div");
+        document.body.append(unrelated);
+        const diagnosticSink = vi.fn();
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            diagnosticSink,
+        });
+        controller.start();
+        diagnosticSink.mockClear();
+
+        unrelated.title = "page tooltip";
+        await flushMutations();
+        expect(diagnosticSink).not.toHaveBeenCalled();
+        controller.teardown();
+    });
+
     it(
         "handles dynamic Hacker News insertion, updates, replacement, movement, and idle",
         async () => {
@@ -782,7 +891,6 @@ describe("DocumentTransformationController", () => {
             document.querySelector("#two")?.replaceChildren();
             await flushMutations();
             expect(replacement.textContent).toBe("replacement relative");
-            expect(getOwnedSourceForText(replacementTarget)).toBeNull();
             wrapper.title = "2027-08-28T10:09:07";
             document.querySelector("#one")?.append(wrapper);
             await flushMutations();

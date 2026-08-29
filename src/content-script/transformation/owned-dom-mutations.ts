@@ -25,7 +25,7 @@ export interface OwnedDomMutationSink {
      * Records an extension-authored text change.
      *
      * @param target - Owned page text about to change.
-     * @param text - Final exact text.
+     * @param text - Final text value.
      */
     beforeOwnedTextChange?(target: Text, text: string): void;
 
@@ -33,8 +33,16 @@ export interface OwnedDomMutationSink {
      * Registers bounded character-data observation for an in-place source.
      *
      * @param source - Source whose owned label must be observed.
+     * @param target - Exact page-owned text node whose changes must be retained.
      */
-    trackOwnedTextSource?(source: Element): void;
+    trackOwnedTextSource?(source: Element, target: Text): void;
+
+    /**
+     * Releases character-data observation for an in-place source.
+     *
+     * @param source - Source whose owned label is no longer rendered.
+     */
+    untrackOwnedTextSource?(source: Element): void;
 
     /**
      * Registers a discovered source for ancestor visibility tracking.

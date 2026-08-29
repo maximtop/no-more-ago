@@ -9,14 +9,12 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
     getOwnedSourceEntries as getOwnedTimeSourceEntries,
-    hasOwnedTimeSource,
     renderExactTime,
     restoreExactTime,
     restoreExactTimes,
 } from "./render-exact-time";
 import {
     getOwnedTextSourceEntries,
-    hasOwnedTextSource,
     renderExactText,
     restoreExactText,
     restoreExactTexts,
@@ -24,8 +22,6 @@ import {
 
 export {
     capturePageOwnedTextChange,
-    getOwnedSourceForText,
-    getOwnedTextSourcesContainingNode,
 } from "./render-exact-text";
 export { getOwnedSourceForOutput } from "./render-exact-time";
 
@@ -69,16 +65,6 @@ export interface OwnedTimestampSourceEntry {
      * Generated or page-owned presentation node.
      */
     readonly output: HTMLTimeElement | Text;
-}
-
-/**
- * Checks both presentation registries for an owned source.
- *
- * @param source - Candidate source element.
- * @returns - Whether either renderer owns the source.
- */
-export function hasOwnedTimestampSource(source: Element): boolean {
-    return hasOwnedTimeSource(source) || hasOwnedTextSource(source);
 }
 
 /**

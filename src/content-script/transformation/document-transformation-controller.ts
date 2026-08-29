@@ -15,12 +15,11 @@ import {
 import {
     capturePageOwnedTextChange,
     getOwnedSourceForOutput,
-    getOwnedTextSourcesContainingNode,
     getOwnedTimestampSourceEntries,
-    hasOwnedTimestampSource,
     restoreTimestampPresentations,
 } from "./render-timestamp-presentation";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
+import { defaultRegistry } from "../adapters/registry";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -105,12 +104,33 @@ export class DocumentTransformationController {
             return this.outputs;
         }
 
+        const rules = (this.input.registry ?? defaultRegistry).matching(this.input.url);
+        const sourceAttributes = [
+            ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
+        ];
         const scheduler = new DocumentMutationScheduler({
             document: this.input.root,
             getOwnedSourceForOutput,
             capturePageOwnedTextChange,
-            getOwnedTextSourcesContainingNode,
-            isOwnedSource: hasOwnedTimestampSource,
+            sourceAttributes,
+            getSourceMutationRoots: (element, attributeName) => {
+                const applicableRules = attributeName
+                    ? rules.filter((rule) =>
+                        rule.mutationAttributes.some(
+                            (attribute) => attribute === attributeName,
+                        ))
+                    : rules;
+                const roots: Element[] = [];
+                let current: Element | null = element;
+                while (current && current.ownerDocument === this.input.root) {
+                    const candidate = current;
+                    if (applicableRules.some((rule) => rule.matchesElement(candidate))) {
+                        roots.push(candidate);
+                    }
+                    current = current.parentElement;
+                }
+                return roots;
+            },
             onBatch: (batch) => {
                 if (
                     this.diagnosticSink

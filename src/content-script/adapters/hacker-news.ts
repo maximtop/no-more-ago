@@ -4,18 +4,53 @@
 
 import {
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
-import {
-    HACKER_NEWS_ADAPTER_ID,
-    matchesHackerNewsUrl,
-} from "../../shared/adapters/hacker-news-contract";
 
 const AGE_SELECTOR = "span.age[title]" as const;
 const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
+
+/**
+ * Stable identifier for the Hacker News source rule.
+ */
+export const HACKER_NEWS_ADAPTER_ID = "hacker-news" as const;
+
+/**
+ * Canonical hostname handled by the Hacker News adapter.
+ */
+export const HACKER_NEWS_HOSTNAME = "news.ycombinator.com" as const;
+
+/**
+ * Checks whether a URL belongs to the supported HTTP(S) Hacker News origin.
+ *
+ * @param url - URL considered for adapter selection.
+ * @returns - Whether the URL uses HTTP(S) and the canonical hostname.
+ */
+export function matchesHackerNewsUrl(url: URL): boolean {
+    return (
+        (url.protocol === "http:" || url.protocol === "https:")
+        && url.hostname === HACKER_NEWS_HOSTNAME
+    );
+}
+
+/**
+ * Checks whether an element has the exact Hacker News age source shape.
+ *
+ * @param element - Candidate Hacker News timestamp element.
+ * @returns - Whether the element can be extracted by this adapter.
+ */
+function isHackerNewsAgeElement(element: Element): boolean {
+    return (
+        element.namespaceURI === HTML_NAMESPACE
+        && element.localName === "span"
+        && element.classList.contains("age")
+        && element.hasAttribute("title")
+    );
+}
 
 /**
  * Finds the only meaningful text node in a container without element children.
@@ -64,22 +99,22 @@ function findPresentationTarget(source: Element): Text | null {
  */
 export const hackerNewsAdapter: TimestampSourceRule = {
     id: HACKER_NEWS_ADAPTER_ID,
+    mutationAttributes: [
+        TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
+        TIMESTAMP_SOURCE_ATTRIBUTE.TITLE,
+    ],
     matches: matchesHackerNewsUrl,
+    matchesElement: isHackerNewsAgeElement,
     discover: (root) => {
         const candidates: Element[] = [];
-        if (root.nodeType === 1 && (root as Element).matches(AGE_SELECTOR)) {
+        if (root.nodeType === 1 && isHackerNewsAgeElement(root as Element)) {
             candidates.push(root as Element);
         }
         candidates.push(...root.querySelectorAll(AGE_SELECTOR));
         return candidates;
     },
     extract: (element) => {
-        if (
-            element.namespaceURI !== HTML_NAMESPACE
-            || element.localName !== "span"
-            || !element.classList.contains("age")
-            || !element.hasAttribute("title")
-        ) {
+        if (!isHackerNewsAgeElement(element)) {
             return null;
         }
         const rawDatetime = element.getAttribute("title");

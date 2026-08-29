@@ -16,6 +16,8 @@ import {
     resolveTrustedTimestamp,
 } from "../../../../src/content-script/transformation/resolve-trusted-timestamp";
 
+const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
+
 describe("resolveTrustedTimestamp", () => {
     it("normalizes an explicitly zoned timestamp to its instant", () => {
         const result = resolveTrustedTimestamp({
@@ -65,7 +67,7 @@ describe("resolveTrustedTimestamp", () => {
         const target = document.createTextNode("1 hour ago");
         source.append(target);
         const base = {
-            ruleId: "hacker-news",
+            ruleId: IN_PLACE_TEST_RULE_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
             rawDatetime: "2026-08-28T10:09:07.000000Z",

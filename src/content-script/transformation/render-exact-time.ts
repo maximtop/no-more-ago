@@ -9,7 +9,6 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 
 export { OWNED_OUTPUT_ATTRIBUTE, OWNED_SOURCE_ATTRIBUTE } from "../ownership-markers";
-export type { OwnedDomMutationSink } from "./owned-dom-mutations";
 
 /**
  * Private ownership record pairing one source element with its generated time node and marker
@@ -244,16 +243,6 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
         entries.push({ source: record.source, output: record.output });
     }
     return entries;
-}
-
-/**
- * Checks whether a source currently has an adjacent-time ownership record.
- *
- * @param source - Candidate source element.
- * @returns - Whether the source is owned by this renderer.
- */
-export function hasOwnedTimeSource(source: Element): boolean {
-    return recordsByDocument.get(source.ownerDocument)?.has(source) ?? false;
 }
 
 /**

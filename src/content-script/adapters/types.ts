@@ -22,6 +22,16 @@ export const TIMESTAMP_SOURCE_KIND = {
 } as const;
 
 /**
+ * Source attributes whose page-authored changes can affect adapter eligibility or extraction.
+ */
+export const TIMESTAMP_SOURCE_ATTRIBUTE = {
+    CLASS: "class",
+    DATETIME: "datetime",
+    FORMAT: "format",
+    TITLE: "title",
+} as const;
+
+/**
  * Presentation strategies selected by trusted timestamp sources.
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
@@ -48,7 +58,8 @@ export type TimestampPresentation =
         readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT;
 
         /**
-         * Existing page-owned label node to update.
+         * Existing page-owned label node to update. The target must belong to
+         * the source document and remain contained by the source.
          */
         readonly target: Text;
     };
@@ -72,6 +83,12 @@ export type TimestampValidationRule =
  */
 export type TimestampSourceKind =
     (typeof TIMESTAMP_SOURCE_KIND)[keyof typeof TIMESTAMP_SOURCE_KIND];
+
+/**
+ * Source attribute observed for adapter-specific eligibility changes.
+ */
+export type TimestampSourceAttribute =
+    (typeof TIMESTAMP_SOURCE_ATTRIBUTE)[keyof typeof TIMESTAMP_SOURCE_ATTRIBUTE];
 
 /**
  * Visibility handling policy carried by a timestamp candidate.
@@ -134,9 +151,19 @@ export interface TimestampSourceRule {
     readonly id: string;
 
     /**
+     * Attributes that can change whether or how this rule extracts an existing source.
+     */
+    readonly mutationAttributes: readonly TimestampSourceAttribute[];
+
+    /**
      * Determines whether the source rule applies to the page URL.
      */
     matches(url: URL): boolean;
+
+    /**
+     * Checks whether one element has this rule's source shape before extraction.
+     */
+    matchesElement(element: Element): boolean;
 
     /**
      * Finds timestamp elements without mutating the document.
