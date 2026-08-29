@@ -90,6 +90,12 @@ using the generic fallback. All sources share presentation, restoration, and
 dynamic-page lifecycle behavior. When a specialized and generic rule both
 accept the same source, the specialized rule wins.
 
+Representative public X and Twitter feed, post, thread, quoted-post, and
+nested-card shapes are verified through the same standard `time[datetime]`
+path. No X/Twitter-specific source is registered. This support is best-effort
+and covers only eligible public light-DOM timestamps; private content, Shadow
+DOM, and future third-party markup remain outside the compatibility claim.
+
 The extension watches relevant dynamic content in each reachable HTTP(S)
 document. Newly added or changed timestamps are processed without requiring a
 full page reload.
