@@ -10,6 +10,7 @@ import { AdapterRegistry } from "../../../../src/content-script/adapters/registr
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_ATTRIBUTE,
+    TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
@@ -19,6 +20,11 @@ import {
 } from "../../../../src/content-script/transformation/document-transformation-controller";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
+import {
+    DOCUMENT_ROUTE_HANDOFF_TRANSITION,
+    type DocumentRouteHandoffPolicy,
+    type DocumentRouteHandoffSession,
+} from "../../../../src/content-script/transformation/route-handoff";
 
 const noMatchRule: TimestampSourceRule = {
     id: "no-match",
@@ -841,9 +847,9 @@ describe("DocumentTransformationController", () => {
             const visits: Element[] = [];
             const instrumented: TimestampSourceRule = {
                 ...hackerNewsAdapter,
-                extract: (element) => {
+                extract: (element, url) => {
                     visits.push(element);
-                    return hackerNewsAdapter.extract(element);
+                    return hackerNewsAdapter.extract(element, url);
                 },
             };
             const controller = new DocumentTransformationController({
@@ -1072,4 +1078,166 @@ describe("DocumentTransformationController", () => {
             computedStyle.mockRestore();
         }
     });
+
+    it("applies no-op, clear, and replace as total route transitions", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const sessions: Array<{
+            readonly session: DocumentRouteHandoffSession;
+            readonly dispose: ReturnType<typeof vi.fn>;
+        }> = [];
+        const activate = vi.fn(() => {
+            const dispose = vi.fn();
+            const session = { noteStructure: vi.fn(), dispose };
+            sessions.push({ session, dispose });
+            return session;
+        });
+        const quarantine: DocumentRouteHandoffPolicy = {
+            allowsRule: () => false,
+            activate,
+        };
+        const classifier = vi.fn(({ currentUrl }: { readonly currentUrl: URL }) => {
+            if (currentUrl.pathname === "/noop") {
+                return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP } as const;
+            }
+            if (currentUrl.pathname === "/replace") {
+                return {
+                    kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                    policy: quarantine,
+                } as const;
+            }
+            return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR } as const;
+        });
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            locales: ["en-US"],
+            routeHandoffClassifier: classifier,
+        });
+
+        const initial = controller.start();
+        expect(initial).toHaveLength(1);
+        const initialOutput = initial[0];
+        controller.reconcileRoute(new URL("https://example.test/noop"));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBe(initialOutput);
+        expect(activate).not.toHaveBeenCalled();
+
+        controller.reconcileRoute(new URL("https://example.test/replace"));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(activate).toHaveBeenCalledOnce();
+
+        controller.reconcileRoute(new URL("https://example.test/clear"));
+        const clearedOutput = document.querySelector("[data-no-more-ago-output]");
+        expect(clearedOutput).toBeInstanceOf(HTMLTimeElement);
+        expect(sessions[0]?.dispose).toHaveBeenCalledOnce();
+        expect(activate).toHaveBeenCalledOnce();
+
+        const classifierCalls = classifier.mock.calls.length;
+        controller.reconcileRoute(new URL("https://example.test/clear"));
+        expect(classifier).toHaveBeenCalledTimes(classifierCalls);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBe(clearedOutput);
+
+        controller.reconcileRoute(new URL("https://example.test/replace"));
+        controller.teardown();
+        const activationsBeforeRestart = activate.mock.calls.length;
+        controller.start();
+        expect(activate).toHaveBeenCalledTimes(activationsBeforeRestart + 1);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
+    it("restores before activating and passing a replacement route", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const events: string[] = [];
+        const firstPolicy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: () => ({
+                noteStructure: () => undefined,
+                dispose: () => events.push("dispose"),
+            }),
+        };
+        const secondPolicy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: () => {
+                events.push("activate");
+                expect(source.hasAttribute("hidden")).toBe(false);
+                expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+                return { noteStructure: () => undefined, dispose: () => undefined };
+            },
+        };
+        const adapter: TimestampSourceRule = {
+            id: "route-order",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: (element) => {
+                events.push("pass");
+                return {
+                    ruleId: "route-order",
+                    source: element,
+                    sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                    rawDatetime: "2026-08-23T10:15Z",
+                    presentation: ADJACENT_TIME_PRESENTATION,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+                };
+            },
+        };
+        let transitionCount = 0;
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            registry: new AdapterRegistry([adapter], noMatchRule),
+            routeHandoffClassifier: () => {
+                events.push("classify");
+                transitionCount += 1;
+                return {
+                    kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                    policy: transitionCount === 1 ? firstPolicy : secondPolicy,
+                };
+            },
+        });
+        controller.start();
+        controller.reconcileRoute(new URL("https://example.test/one"));
+        events.length = 0;
+
+        controller.reconcileRoute(new URL("https://example.test/two"));
+
+        expect(events).toEqual(["classify", "dispose", "activate", "pass"]);
+        controller.teardown();
+    });
+
+    it("fails closed and restores ownership when changed-route classification throws", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const failure = new Error("route classification failed");
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            locales: ["en-US"],
+            routeHandoffClassifier: () => {
+                throw failure;
+            },
+        });
+        controller.start();
+
+        expect(() => controller.reconcileRoute(new URL("https://example.test/next")))
+            .toThrow(failure);
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
 });

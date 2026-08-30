@@ -21,6 +21,8 @@ import {
 import { OWNED_OUTPUT_ATTRIBUTE } from
     "../../../../src/content-script/ownership-markers";
 
+const INSTAGRAM_URL = new URL("https://www.instagram.com/p/example/");
+
 describe("instagramAdapter", () => {
     it.each([
         ["https://www.instagram.com/p/example/", true],
@@ -41,7 +43,7 @@ describe("instagramAdapter", () => {
             throw new Error("Expected Instagram time label");
         }
 
-        expect(instagramAdapter.extract(source)).toEqual({
+        expect(instagramAdapter.extract(source, INSTAGRAM_URL)).toEqual({
             ruleId: INSTAGRAM_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
@@ -68,9 +70,9 @@ describe("instagramAdapter", () => {
         if (!complex || !owned) {
             throw new Error("Expected complex and owned time sources");
         }
-        expect(instagramAdapter.extract(complex)).toBeNull();
-        expect(instagramAdapter.extract(owned)).toBeNull();
-        expect(genericTimeRule.extract(complex)?.presentation.kind).toBe(
+        expect(instagramAdapter.extract(complex, INSTAGRAM_URL)).toBeNull();
+        expect(instagramAdapter.extract(owned, INSTAGRAM_URL)).toBeNull();
+        expect(genericTimeRule.extract(complex, INSTAGRAM_URL)?.presentation.kind).toBe(
             TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME,
         );
         expect(instagramAdapter.discover(document)).toEqual([complex]);

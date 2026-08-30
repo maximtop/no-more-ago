@@ -34,6 +34,11 @@ export const DOCUMENT_POLICY_REFRESHED_MESSAGE = "no-more-ago:document-policy-re
 export const DOCUMENT_TORN_DOWN_MESSAGE = "no-more-ago:document-torn-down";
 
 /**
+ * Requests that a document runtime sample and reconcile its current route.
+ */
+export const RECONCILE_DOCUMENT_ROUTE_MESSAGE = "no-more-ago:reconcile-document-route";
+
+/**
  * Requests the current lifecycle phase of a document runtime.
  */
 export const DOCUMENT_STATUS_MESSAGE = "no-more-ago:status";
@@ -107,6 +112,13 @@ const refreshDocumentPolicyMessageSchema = v.strictObject({
  */
 const suspendAndRefreshDocumentPolicyMessageSchema = v.strictObject({
     type: v.literal(SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE),
+});
+
+/**
+ * Schema for a payload-free command that reconciles the current document route.
+ */
+const reconcileDocumentRouteMessageSchema = v.strictObject({
+    type: v.literal(RECONCILE_DOCUMENT_ROUTE_MESSAGE),
 });
 
 /**
@@ -189,6 +201,13 @@ type SuspendAndRefreshDocumentPolicyMessage = v.InferOutput<
 >;
 
 /**
+ * Command that asks a document runtime to sample and reconcile its current route.
+ */
+type ReconcileDocumentRouteMessage = v.InferOutput<
+    typeof reconcileDocumentRouteMessageSchema
+>;
+
+/**
  * Command that requests a document runtime's lifecycle state.
  */
 type DocumentStatusMessage = v.InferOutput<typeof documentStatusMessageSchema>;
@@ -264,6 +283,18 @@ export function isSuspendAndRefreshDocumentPolicyMessage(
     value: unknown,
 ): value is SuspendAndRefreshDocumentPolicyMessage {
     return v.safeParse(suspendAndRefreshDocumentPolicyMessageSchema, value).success;
+}
+
+/**
+ * Recognizes an exact payload-free document-route reconciliation command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is an exact route reconciliation command.
+ */
+export function isReconcileDocumentRouteMessage(
+    value: unknown,
+): value is ReconcileDocumentRouteMessage {
+    return v.safeParse(reconcileDocumentRouteMessageSchema, value).success;
 }
 
 /**

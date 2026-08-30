@@ -21,13 +21,14 @@
 ## Project Overview
 
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
-HTML and trusted specialized relative timestamps with exact, localized dates.
-It ships a generic `time[datetime]` source for HTTP(S) documents and
-site-specific specialized sources for GitHub, Hacker News, supported Stack
-Exchange Q&A sites, and Telegram Web K, while keeping extraction separate from
-shared timestamp validation and rendering. Instagram uses a site-specific
-presentation rule for its standard timestamps. Public `https://t.me/s/*` pages
-use the generic source.
+HTML and trusted specialized timestamps with exact, localized values. It ships
+a generic instant-only `time[datetime]` source for HTTP(S) documents,
+specialized sources for GitHub, Hacker News, supported Stack Exchange Q&A
+sites, and Telegram Web K, plus a best-effort canonical YouTube watch
+publication source for calendar dates or explicitly zoned instants. Instagram
+uses a site-specific presentation rule for its standard timestamps. Public
+`https://t.me/s/*` pages use the generic source. Extraction remains separate
+from shared semantic validation, presentation, and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -55,9 +56,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, and Telegram Web K as
-  specialized sources plus an Instagram in-place presentation rule for standard
-  timestamps.
+  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and canonical
+  desktop YouTube watch-page publication sources, plus an Instagram in-place
+  presentation rule for standard timestamps.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -78,7 +79,7 @@ has an obvious, simpler standard-library replacement.
 │   │   ├── runtime/            # Script and tab integration
 │   │   └── settings/           # Settings persistence
 │   ├── content-script/         # Page-side timestamp processing
-│   │   ├── adapters/           # Generic fallback and site-specific sources
+│   │   ├── adapters/           # Generic and specialized site sources
 │   │   └── transformation/     # Resolve, format, render, and restore
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
@@ -155,8 +156,33 @@ unpacked or temporary extension when manual browser verification is needed.
 - Keep the content script lightweight. Process matching mutations
   incrementally, avoid repeated whole-document scans, and release observers
   when the extension or domain is disabled.
-- Keep the content-side rule order explicit: specialized rules run before the
-  generic `time[datetime]` fallback, and the generic rule is always last.
+- Keep the content-side rule order explicit. Extract and resolve values strictly
+  in that order, skip lower extractors after one source resolves, and keep the
+  generic `time[datetime]` fallback last.
+- Bound loaded page-data parsing. Reuse at most one YouTube player-response
+  parse record per document, including invalid results, and invalidate it when
+  the selected assignment element or exact text changes or becomes ambiguous.
+- Scope dynamic-route provenance to the current URL and lifecycle generation.
+  Identity-bound loaded data may remain live when its identity matches the
+  current route, but unbound reused data must fail closed until a full-document
+  boundary or another real identity relation exists. Sample the live URL before
+  mutation processing. When a route change alters adapter provenance, advance
+  the generation and restore verified ownership before producing current-route
+  output; route-irrelevant changes must not tear down existing output. Accept
+  queued route-observer work only for the exact current generation, URL,
+  document, session, source, and trusted value.
+- Qualify a third-party list shape from one provenance-backed capture that
+  joins route and card identity, the visible source, and its loaded record.
+  Keep eligibility inside that capture's evidenced loaded record set. Outer
+  mixed renderer types, recursively found identities, and DOM identities
+  outside that set remain unqualified until their own same-capture
+  relationships are established. When a loaded publication field varies
+  across array positions in identity-bound records, require one unique exact
+  visible/loaded label relationship and validate every evidenced variant per
+  record. Never choose one global array position or promote adjacent or
+  continuation values. Preserve only minimal sanitized structure. Never
+  create source trust from separate examples, array order, invented equality,
+  or adversarial mutations.
 - Treat every extension context as independent. Coordinate popup, options,
   background, and content scripts through typed messages and durable state.
 - Assume the background service worker can stop between events. Do not rely on
@@ -167,9 +193,13 @@ unpacked or temporary extension when manual browser verification is needed.
 - Validate page-derived candidates and user-authored values when domain rules
   cannot be expressed by TypeScript. Page markup is untrusted even when an
   adapter recognizes it.
-- Accept timestamps only from valid `<time datetime>` elements or an explicit
-  adapter source. Never infer a timestamp from relative text or ambiguous
-  values.
+- Preserve trusted value semantics. Zoned date-times resolve to absolute
+  instants; strict adapter-approved `YYYY-MM-DD` values resolve to calendar
+  dates and never enter instant or configured-time-zone formatting.
+- Accept generic timestamps only from valid `<time datetime>` elements with a
+  complete explicitly zoned global date-time. Accept calendar dates only from
+  an explicit approved adapter source. Never infer a value from relative text
+  or ambiguous data.
 - Keep async browser operations explicit and handle unavailable tabs, pages,
   storage, and workers without leaving partially applied UI state.
 - Restore original page text immediately when global or per-domain processing
@@ -231,6 +261,11 @@ all browser contexts
 
 Do not import background implementations from popup, options, or content-script
 code. `shared` must not depend on browser-context implementations.
+
+Keep site route, selector, and source provenance in its adapter and shared
+adapter contract. YouTube watch matching, loaded assignment properties, and
+metadata knowledge belong to the YouTube modules; shared calendar and instant
+parsing and presentation remain site-agnostic.
 
 Known architectural exclusions to improve when their area changes:
 
@@ -365,10 +400,13 @@ Known architectural exclusions to improve when their area changes:
 - Keep all user-facing extension copy in English.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
-- Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, and Telegram Web
-  K-specific selectors, timestamp sources, and presentation rules inside their
-  respective adapters so adding another site changes minimal shared business
-  logic. Public `t.me/s/*` support remains on the generic standard timestamp
-  source.
+- Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
+  YouTube-specific selectors, timestamp sources, and presentation rules inside
+  their respective adapters so adding another site changes minimal shared
+  business logic. Public `t.me/s/*` support remains on the generic standard
+  timestamp source.
+- Keep YouTube route matching, selectors, loaded publication properties, and
+  metadata provenance inside the YouTube contract and adapter. Treat its
+  current watch markup as a best-effort source, not a compatibility promise.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.
