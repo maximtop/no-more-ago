@@ -15,11 +15,14 @@ import {
 import {
     resolveTrustedTimestamp,
 } from "../../../../src/content-script/transformation/resolve-trusted-timestamp";
+import {
+    TELEGRAM_WEB_K_ADAPTER_ID,
+} from "../../../../src/content-script/adapters/telegram-web-k";
 
 const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
 
 const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
-    ruleId: "telegram-web-k",
+    ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
     source: document.createElement("div"),
     sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
     rawDatetime,

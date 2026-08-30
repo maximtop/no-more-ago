@@ -59,9 +59,24 @@ export interface OwnedDomMutationSink {
     untrackOwnedTextSource?(source: Element): void;
 
     /**
+     * Releases character-data observation for several in-place sources in one rebuild.
+     *
+     * @param sources - Sources whose owned labels are no longer rendered.
+     */
+    untrackOwnedTextSources?(sources: readonly Element[]): void;
+
+    /**
      * Registers a discovered source for ancestor visibility tracking.
      *
      * @param source - Source discovered by an adapter.
+     * @param trackVisibility - Whether ancestor visibility changes can suppress the source.
      */
-    trackSource?(source: Element): void;
+    trackSource?(source: Element, trackVisibility?: boolean): void;
+
+    /**
+     * Releases ancestor visibility tracking for one discovered source.
+     *
+     * @param source - Source that no longer preserves page suppression.
+     */
+    untrackSource?(source: Element): void;
 }

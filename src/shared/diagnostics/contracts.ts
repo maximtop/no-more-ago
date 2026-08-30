@@ -186,4 +186,4 @@ export const DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH = 20;
 /**
  * Numeric source syntax permitted as bounded failure evidence.
  */
-export const DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN = /^\d{1,20}$/u;
+export const DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN = /^\d+$/u;

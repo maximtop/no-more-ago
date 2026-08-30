@@ -244,6 +244,26 @@ describe("processDocument", () => {
         restoreTimestampPresentations(document);
     });
 
+    it("omits rejected numeric values from generic source diagnostics", () => {
+        document.body.innerHTML = '<time datetime="123456789">account-like value</time>';
+        const diagnosticSink = vi.fn();
+
+        processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            diagnosticSink,
+        });
+
+        expect(diagnosticSink).toHaveBeenCalledWith({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+            count: 1,
+        });
+        expect(JSON.stringify(diagnosticSink.mock.calls)).not.toContain("123456789");
+        expect(JSON.stringify(diagnosticSink.mock.calls)).not.toContain("account-like value");
+    });
+
     it("reconciles one owned source in a bounded region and restores invalid values", () => {
         const source = document.querySelector("relative-time");
         if (!source) {

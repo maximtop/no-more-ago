@@ -10,13 +10,26 @@ import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
 
 const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const MESSAGE_SELECTOR = "div.bubble[data-timestamp]" as const;
+const MESSAGE_CLASS = "bubble" as const;
 const TIME_INNER_SELECTOR = ".time-inner" as const;
+const TIME_INNER_CLASS = "time-inner" as const;
+const CLOCK_CLASS = "i18n" as const;
 const FORWARDED_LABEL_SELECTOR = ".bubble-name-forwarded" as const;
+const FORWARDED_LABEL_CLASS = "bubble-name-forwarded" as const;
+const FORWARDED_CLASS = "forwarded" as const;
+const RELEVANT_CLASSES = [
+    MESSAGE_CLASS,
+    TIME_INNER_CLASS,
+    CLOCK_CLASS,
+    FORWARDED_LABEL_CLASS,
+    FORWARDED_CLASS,
+] as const;
 
 /**
  * Stable identifier for the Telegram Web K source rule.
@@ -49,8 +62,102 @@ export function matchesTelegramWebKUrl(url: URL): boolean {
 function isTelegramWebKMessage(element: Element): boolean {
     return element.namespaceURI === HTML_NAMESPACE
         && element.localName === "div"
-        && element.classList.contains("bubble")
+        && element.classList.contains(MESSAGE_CLASS)
         && element.hasAttribute("data-timestamp");
+}
+
+/**
+ * Checks whether an element is an HTML message container independent of its current class.
+ *
+ * @param element - Element considered as a current or former message source.
+ * @returns - Whether the element has the stable HTML and timestamp shape.
+ */
+function isMessageContainer(element: Element): boolean {
+    return element.namespaceURI === HTML_NAMESPACE
+        && element.localName === "div"
+        && element.hasAttribute("data-timestamp");
+}
+
+/**
+ * Checks whether one class token was present in a previous class attribute.
+ *
+ * @param value - Previous serialized class attribute.
+ * @param token - Class token to find.
+ * @returns - Whether the previous value contained the exact token.
+ */
+function previousClassContains(value: string | null, token: string): boolean {
+    return value?.split(/\s+/u).includes(token) ?? false;
+}
+
+/**
+ * Checks whether a class mutation changed Telegram eligibility or presentation structure.
+ *
+ * @param element - Element whose class changed.
+ * @param oldValue - Previous serialized class attribute.
+ * @returns - Whether a relevant token was added or removed.
+ */
+function changedRelevantClass(element: Element, oldValue: string | null): boolean {
+    return RELEVANT_CLASSES.some(
+        (token) => element.classList.contains(token) !== previousClassContains(oldValue, token),
+    );
+}
+
+/**
+ * Finds the nearest message source owning an adapter-relevant class mutation.
+ *
+ * @param element - Element whose class changed.
+ * @param oldValue - Previous serialized class attribute.
+ * @returns - Current or former owning message source, or null.
+ */
+function findMutationSource(element: Element, oldValue: string | null): Element | null {
+    if (
+        isMessageContainer(element)
+        && (
+            element.classList.contains(MESSAGE_CLASS)
+            || previousClassContains(oldValue, MESSAGE_CLASS)
+        )
+    ) {
+        return element;
+    }
+    let current = element.parentElement;
+    while (current) {
+        if (isTelegramWebKMessage(current)) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
+/**
+ * Maps Telegram source and descendant attribute changes to their owning message bubble.
+ *
+ * @param element - Element whose adapter-declared attribute changed.
+ * @param attributeName - Changed adapter attribute.
+ * @param oldValue - Attribute value before the mutation.
+ * @returns - Exact message source requiring reconciliation.
+ */
+function getMutationSources(
+    element: Element,
+    attributeName: TimestampSourceAttribute,
+    oldValue: string | null,
+): readonly Element[] {
+    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP) {
+        return element.namespaceURI === HTML_NAMESPACE
+            && element.localName === "div"
+            && element.classList.contains(MESSAGE_CLASS)
+            && (element.hasAttribute("data-timestamp") || oldValue !== null)
+            ? [element]
+            : [];
+    }
+    if (
+        attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.CLASS
+        || !changedRelevantClass(element, oldValue)
+    ) {
+        return [];
+    }
+    const source = findMutationSource(element, oldValue);
+    return source ? [source] : [];
 }
 
 /**
@@ -64,7 +171,7 @@ function findClockTarget(source: Element): Text | null {
         source.querySelectorAll(FORWARDED_LABEL_SELECTOR),
     ).some((label) => label.closest(".bubble") === source);
     if (
-        source.classList.contains("forwarded")
+        source.classList.contains(FORWARDED_CLASS)
         || hasForwardedLabel
     ) {
         return null;
@@ -81,7 +188,7 @@ function findClockTarget(source: Element): Text | null {
     const clocks = Array.from(container.children).filter(
         (child) => child.namespaceURI === HTML_NAMESPACE
             && child.localName === "span"
-            && child.classList.contains("i18n"),
+            && child.classList.contains(CLOCK_CLASS),
     );
     const clock = clocks.length === 1 ? clocks[0] : undefined;
     return clock ? findSimpleTextTarget(clock) : null;
@@ -96,6 +203,7 @@ export const telegramWebKAdapter: TimestampSourceRule = {
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
         TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP,
     ],
+    getMutationSources,
     matches: matchesTelegramWebKUrl,
     matchesElement: isTelegramWebKMessage,
     discover: (root) => discoverElements(root, MESSAGE_SELECTOR, isTelegramWebKMessage),

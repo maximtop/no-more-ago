@@ -72,11 +72,15 @@ interface SchedulerInput {
      *
      * @param element - Mutated element or child-list container.
      * @param attributeName - Changed source attribute for target-local invalidation, when present.
+     * @param oldValue - Attribute value before the mutation, when present.
+     * @param wasTracked - Whether the mutated element was an active source before the change.
      * @returns - Matching target for an attribute or matching ancestors for a child-list change.
      */
     readonly getSourceMutationRoots?: (
         element: Element,
         attributeName?: string,
+        oldValue?: string | null,
+        wasTracked?: boolean,
     ) => readonly Element[];
 
     /**
@@ -184,6 +188,11 @@ export class DocumentMutationScheduler {
     private readonly textTargetsBySource = new Map<Element, Text>();
 
     /**
+     * Sources retained for exact invalidation even when they ignore page visibility.
+     */
+    private readonly trackedSources = new Set<Element>();
+
+    /**
      * Sources discovered by the active adapter pass, indexed by relevant ancestors.
      */
     private readonly sourcesByRelevantElement = new Map<Element, Set<Element>>();
@@ -256,6 +265,7 @@ export class DocumentMutationScheduler {
         this.expectedHiddenChanges.clear();
         this.expectedTextChanges.clear();
         this.textTargetsBySource.clear();
+        this.trackedSources.clear();
         this.sourcesByRelevantElement.clear();
         this.relevantElementsBySource.clear();
     }
@@ -356,15 +366,29 @@ export class DocumentMutationScheduler {
      * @param source - Source whose owned text is no longer rendered.
      */
     untrackOwnedTextSource(source: Element): void {
-        const target = this.textTargetsBySource.get(source);
-        if (!target) {
+        this.untrackOwnedTextSources([source]);
+    }
+
+    /**
+     * Releases character-data observation for several in-place sources in one rebuild.
+     *
+     * @param sources - Sources whose owned labels are no longer rendered.
+     */
+    untrackOwnedTextSources(sources: readonly Element[]): void {
+        const released = sources.filter((source) => this.textTargetsBySource.has(source));
+        if (released.length === 0) {
             return;
         }
         const observer = this.textObserver;
         this.captureTextChanges(observer?.takeRecords() ?? []);
         observer?.disconnect();
-        this.textTargetsBySource.delete(source);
-        this.expectedTextChanges.delete(target);
+        for (const source of released) {
+            const target = this.textTargetsBySource.get(source);
+            this.textTargetsBySource.delete(source);
+            if (target) {
+                this.expectedTextChanges.delete(target);
+            }
+        }
         if (this.textTargetsBySource.size === 0) {
             this.textObserver = undefined;
             return;
@@ -425,12 +449,18 @@ export class DocumentMutationScheduler {
     }
 
     /**
-     * Tracks a timestamp source and each ancestor whose visibility can affect it.
+     * Tracks a timestamp source and, when needed, ancestors whose visibility can affect it.
      *
      * @param source - Timestamp source discovered by an adapter.
+     * @param trackVisibility - Whether ancestor visibility changes can suppress the source.
      */
-    trackSource(source: Element): void {
+    trackSource(source: Element, trackVisibility = true): void {
         if (source.ownerDocument !== this.input.document) {
+            return;
+        }
+        this.trackedSources.add(source);
+        if (!trackVisibility) {
+            this.untrackSourceVisibility(source);
             return;
         }
         const relevantElements: Element[] = [];
@@ -446,7 +476,7 @@ export class DocumentMutationScheduler {
         ) {
             return;
         }
-        this.untrackSource(source);
+        this.untrackSourceVisibility(source);
         for (const element of relevantElements) {
             const sources = this.sourcesByRelevantElement.get(element) ?? new Set<Element>();
             sources.add(source);
@@ -460,7 +490,17 @@ export class DocumentMutationScheduler {
      *
      * @param source - Timestamp source no longer tracked at its previous location.
      */
-    private untrackSource(source: Element): void {
+    untrackSource(source: Element): void {
+        this.trackedSources.delete(source);
+        this.untrackSourceVisibility(source);
+    }
+
+    /**
+     * Removes one source from retained ancestor visibility indexes.
+     *
+     * @param source - Timestamp source that no longer preserves page suppression.
+     */
+    private untrackSourceVisibility(source: Element): void {
         const relevantElements = this.relevantElementsBySource.get(source);
         if (!relevantElements) {
             return;
@@ -505,17 +545,13 @@ export class DocumentMutationScheduler {
     }
 
     /**
-     * Removes visibility indexes for tracked sources inside a detached subtree.
+     * Removes retained source and visibility indexes inside detached subtrees.
      *
-     * @param root - Subtree removed from the observed document.
+     * @param roots - Subtrees removed from the observed document.
      */
-    private untrackRemovedRoot(root: Element): void {
-        const sources = this.sourcesByRelevantElement.get(root);
-        if (!sources) {
-            return;
-        }
-        for (const source of [...sources]) {
-            if (source === root || root.contains(source)) {
+    private untrackRemovedRoots(roots: readonly Element[]): void {
+        for (const source of [...this.trackedSources]) {
+            if (roots.some((root) => source === root || root.contains(source))) {
                 this.untrackSource(source);
             }
         }
@@ -627,12 +663,11 @@ export class DocumentMutationScheduler {
                 const changesSource = attributeName !== null
                     && (this.input.sourceAttributes ?? []).includes(attributeName);
                 if (changesSource) {
-                    if (this.relevantElementsBySource.has(target)) {
-                        addUnique(sourceTargets, sourceTargetSet, target);
-                    }
                     for (const source of this.input.getSourceMutationRoots?.(
                         target,
                         attributeName,
+                        record.oldValue,
+                        this.trackedSources.has(target),
                     ) ?? []) {
                         addUnique(sourceTargets, sourceTargetSet, source);
                     }
@@ -740,13 +775,13 @@ export class DocumentMutationScheduler {
                     }
                 } else {
                     addUnique(removedRoots, removedRootSet, element);
-                    this.untrackRemovedRoot(element);
                 }
             }
         }
 
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
+        this.untrackRemovedRoots(normalizedRemoved);
         const normalizedTargets = sourceTargets.filter(
             (target) => !coveredBy(normalizedAdded, target),
         );

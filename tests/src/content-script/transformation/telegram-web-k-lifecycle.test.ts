@@ -132,6 +132,9 @@ describe("Telegram Web K document lifecycle", () => {
                 .toBe("2026-05-14 16:09");
 
             extract.mockClear();
+            document.getElementById("bulk-history")?.classList.add("expanded-layout");
+            await flushMutations();
+            expect(extract).not.toHaveBeenCalled();
             await flushMutations();
             await flushMutations();
             expect(extract).not.toHaveBeenCalled();
@@ -157,7 +160,11 @@ describe("Telegram Web K document lifecycle", () => {
         });
         const clock = document.getElementById("tracked-clock");
         const unrelated = document.querySelector("#unrelated span");
-        if (!clock || !unrelated) {
+        const source = document.getElementById("tracked");
+        const messageContent = document.createElement("span");
+        messageContent.textContent = "message body";
+        source?.prepend(messageContent);
+        if (!clock || !unrelated || !source) {
             throw new Error("Expected tracked and unrelated Telegram messages");
         }
 
@@ -168,20 +175,68 @@ describe("Telegram Web K document lifecycle", () => {
             await flushMutations();
             expect(extract).toHaveBeenCalledTimes(1);
 
-            const source = document.getElementById("tracked");
-            source?.classList.add("selected");
-            source?.classList.add("highlighted");
-            source?.classList.remove("selected");
+            messageContent.classList.add("selected-content");
+            source.classList.add("selected");
+            source.classList.add("highlighted");
+            source.classList.remove("selected");
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(2);
+            expect(extract).toHaveBeenCalledTimes(1);
             expect(document.getElementById("tracked-clock")).toBe(clock);
             expect(unrelated.textContent).toBe("page changed");
             expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(2);
+            expect(extract).toHaveBeenCalledTimes(1);
         } finally {
             controller.teardown();
         }
+    });
+
+    it("reconciles eligibility when relevant descendant classes change", async () => {
+        document.body.innerHTML = messageMarkup("shape", "1778774880", "16:08");
+        const bubble = document.getElementById("shape");
+        const timeInner = document.querySelector("#shape .time-inner");
+        const clock = document.getElementById("shape-clock");
+        const forwardedLabel = document.createElement("span");
+        forwardedLabel.textContent = "page label";
+        bubble?.prepend(forwardedLabel);
+        if (!bubble || !timeInner || !clock) {
+            throw new Error("Expected mutable Telegram message shape");
+        }
+        const controller = new DocumentTransformationController({
+            url: TELEGRAM_WEB_K_URL,
+            root: document,
+            locales: LOCALES,
+            display: UTC_DISPLAY,
+        });
+
+        try {
+            controller.start();
+            expect(clock.textContent).toBe("2026-05-14 16:08");
+
+            clock.classList.remove("i18n");
+            await flushMutations();
+            expect(clock.textContent).toBe("16:08");
+            clock.classList.add("i18n");
+            await flushMutations();
+            expect(clock.textContent).toBe("2026-05-14 16:08");
+
+            timeInner.classList.remove("time-inner");
+            await flushMutations();
+            expect(clock.textContent).toBe("16:08");
+            timeInner.classList.add("time-inner");
+            await flushMutations();
+            expect(clock.textContent).toBe("2026-05-14 16:08");
+
+            forwardedLabel.classList.add("bubble-name-forwarded");
+            await flushMutations();
+            expect(clock.textContent).toBe("16:08");
+            forwardedLabel.classList.remove("bubble-name-forwarded");
+            await flushMutations();
+            expect(clock.textContent).toBe("2026-05-14 16:08");
+        } finally {
+            controller.teardown();
+        }
+        expect(clock.textContent).toBe("16:08");
     });
 
     it("releases stale ownership across moves, removals, and replacements", async () => {
@@ -246,6 +301,12 @@ describe("Telegram Web K document lifecycle", () => {
             bubble.setAttribute("data-timestamp", "1778861280");
             await flushMutations();
             expect(clock.textContent).toBe("2026-05-15 16:08");
+            bubble.removeAttribute("data-timestamp");
+            await flushMutations();
+            expect(clock.textContent).toBe("16:08");
+            bubble.setAttribute("data-timestamp", "1778774880");
+            await flushMutations();
+            expect(clock.textContent).toBe("2026-05-14 16:08");
         } finally {
             controller.teardown();
         }

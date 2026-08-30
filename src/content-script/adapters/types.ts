@@ -161,6 +161,23 @@ export interface TimestampSourceRule {
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
     /**
+     * Maps an adapter-relevant attribute change back to affected source elements.
+     *
+     * Rules may use this when eligibility depends on descendant attributes or when
+     * the mutation removes the source's current matching shape.
+     *
+     * @param element - Element whose attribute changed.
+     * @param attributeName - Adapter-declared attribute that changed.
+     * @param oldValue - Attribute value before the mutation.
+     * @returns - Exact source elements that require re-evaluation.
+     */
+    readonly getMutationSources?: (
+        element: Element,
+        attributeName: TimestampSourceAttribute,
+        oldValue: string | null,
+    ) => readonly Element[];
+
+    /**
      * Determines whether the source rule applies to the page URL.
      */
     matches(url: URL): boolean;

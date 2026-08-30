@@ -165,68 +165,47 @@ export function resolveTrustedTimestamp(
     }
     const validationRule: unknown = candidate.validationRule;
     const rawDatetime = candidate.rawDatetime;
+    let instant: Date | null;
     if (validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS) {
-        const instant = resolveUnixSeconds(rawDatetime);
-        return instant
-            ? {
-                source: candidate.source,
-                sourceDatetime: rawDatetime,
-                instant,
-                validationRule,
-                visibilityPolicy,
-                presentation,
-            }
-            : null;
-    }
-    if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
-        const instant = parseHtmlGlobalDatetime(rawDatetime);
-        return instant
-            ? {
-                source: candidate.source,
-                sourceDatetime: rawDatetime,
-                instant,
-                validationRule,
-                visibilityPolicy,
-                presentation,
-            }
-            : null;
-    }
-    if (
-        validationRule !== TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
-    ) {
+        instant = resolveUnixSeconds(rawDatetime);
+    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
+        instant = parseHtmlGlobalDatetime(rawDatetime);
+    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE) {
+        if (
+            rawDatetime.length === 0
+            || rawDatetime !== rawDatetime.trim()
+            || hasControlCharacter(rawDatetime)
+        ) {
+            return null;
+        }
+        const zoneMatch = rawDatetime.match(ZONE);
+        if (!zoneMatch) {
+            return null;
+        }
+        const zone = zoneMatch[0];
+        if (!hasKnownNumericZone(zone)) {
+            return null;
+        }
+        const dateTime = rawDatetime.slice(0, -zone.length);
+        if (!COMPLETE_DATE_TIME.test(dateTime)) {
+            return null;
+        }
+        const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
+        const time = dateTime.slice(separatorIndex + 1);
+        if (/[Z+-]/.test(time)) {
+            return null;
+        }
+        const parsed = parseISO(rawDatetime);
+        instant = isValid(parsed) ? parsed : null;
+    } else {
         return null;
     }
-    if (
-        rawDatetime.length === 0 ||
-        rawDatetime !== rawDatetime.trim() ||
-        hasControlCharacter(rawDatetime)
-    ) {
-        return null;
-    }
-    const zoneMatch = rawDatetime.match(ZONE);
-    if (!zoneMatch) {
-        return null;
-    }
-    const zone = zoneMatch[0];
-    if (!hasKnownNumericZone(zone)) {
-        return null;
-    }
-    const dateTime = rawDatetime.slice(0, -zone.length);
-    if (!COMPLETE_DATE_TIME.test(dateTime)) {
-        return null;
-    }
-    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
-    const time = dateTime.slice(separatorIndex + 1);
-    if (/[Z+-]/.test(time)) {
-        return null;
-    }
-    const instant = parseISO(candidate.rawDatetime);
-    if (!isValid(instant)) {
+    if (!instant) {
         return null;
     }
     return {
         source: candidate.source,
-        sourceDatetime: candidate.rawDatetime,
+        sourceDatetime: rawDatetime,
         instant,
         validationRule,
         visibilityPolicy,

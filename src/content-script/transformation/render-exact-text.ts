@@ -195,23 +195,54 @@ export function restoreExactText(source: Element, mutations?: OwnedDomMutationSi
 /**
  * Restores and releases every in-place source within a root.
  *
- * @param root - Document or subtree whose sources are restored.
+ * @param root - Document, subtree, or batch of roots whose sources are restored.
  * @param mutations - Optional observer acknowledgement sink.
  */
-export function restoreExactTexts(root: ParentNode, mutations?: OwnedDomMutationSink): void {
-    const rootNode = root as Node;
-    const document = rootNode.nodeType === 9 ? rootNode as Document : rootNode.ownerDocument;
-    const records = document ? recordsByDocument.get(document) : undefined;
-    if (!records) {
-        return;
-    }
-    for (const [source, record] of records) {
-        if (rootNode.nodeType !== 9 && source !== rootNode && !rootNode.contains(source)) {
+export function restoreExactTexts(
+    root: ParentNode | readonly ParentNode[],
+    mutations?: OwnedDomMutationSink,
+): void {
+    const roots: readonly ParentNode[] = Array.isArray(root)
+        ? root as readonly ParentNode[]
+        : [root as ParentNode];
+    const rootsByDocument = new Map<Document, Node[]>();
+    for (const candidate of roots) {
+        const rootNode = candidate as Node;
+        const document = rootNode.nodeType === 9 ? rootNode as Document : rootNode.ownerDocument;
+        if (!document) {
             continue;
         }
-        restoreRecord(record, mutations);
-        mutations?.untrackOwnedTextSource?.(source);
-        records.delete(source);
-        recordsByTarget.delete(record.target);
+        const documentRoots = rootsByDocument.get(document) ?? [];
+        documentRoots.push(rootNode);
+        rootsByDocument.set(document, documentRoots);
+    }
+    for (const [document, rootNodes] of rootsByDocument) {
+        const records = recordsByDocument.get(document);
+        if (!records) {
+            continue;
+        }
+        const restoredSources: Element[] = [];
+        for (const [source, record] of records) {
+            const isCovered = rootNodes.some((rootNode) =>
+                rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
+            );
+            if (!isCovered) {
+                continue;
+            }
+            restoreRecord(record, mutations);
+            restoredSources.push(source);
+            records.delete(source);
+            recordsByTarget.delete(record.target);
+        }
+        if (restoredSources.length === 0) {
+            continue;
+        }
+        if (mutations?.untrackOwnedTextSources) {
+            mutations.untrackOwnedTextSources(restoredSources);
+        } else {
+            for (const source of restoredSources) {
+                mutations?.untrackOwnedTextSource?.(source);
+            }
+        }
     }
 }

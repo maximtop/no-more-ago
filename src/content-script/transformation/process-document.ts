@@ -19,6 +19,8 @@ import { isSourceSuppressed } from "./source-visibility";
 import {
     TIMESTAMP_VISIBILITY_POLICY,
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_SOURCE_KIND,
+    TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate,
     type TimestampSourceRule,
 } from "../adapters/types";
@@ -48,6 +50,25 @@ function emitCandidateSkipped(diagnosticSink: DocumentDiagnosticSink | undefined
         reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
         count: 1,
     });
+}
+
+/**
+ * Returns failure-only source evidence for the explicit Telegram Unix-seconds contract.
+ *
+ * @param candidates - Rejected candidates emitted for one source.
+ * @returns - Bounded numeric evidence, or undefined for every other source contract.
+ */
+function getFailureSourceTimestamp(
+    candidates: readonly TimestampCandidate[],
+): string | undefined {
+    const telegramCandidate = candidates.find(
+        (candidate) =>
+            candidate.sourceKind === TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE
+            && candidate.validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
+    );
+    return telegramCandidate
+        ? safeDiagnosticSourceTimestamp(telegramCandidate.rawDatetime)
+        : undefined;
 }
 
 /**
@@ -251,10 +272,9 @@ function processCandidateCollection(
             .map(resolveTrustedTimestamp)
             .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
+            ownedDomMutations?.untrackSource?.(source);
             restoreTimestampPresentation(source, ownedDomMutations);
-            const sourceTimestamp = candidates
-                .map((candidate) => safeDiagnosticSourceTimestamp(candidate.rawDatetime))
-                .find((value): value is string => value !== undefined);
+            const sourceTimestamp = getFailureSourceTimestamp(candidates);
             diagnosticSink?.({
                 category: DIAGNOSTIC_CATEGORY.SKIP,
                 reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
@@ -264,12 +284,15 @@ function processCandidateCollection(
             continue;
         }
         if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
+            ownedDomMutations?.trackSource?.(source, true);
             releaseSourceHiddenForReconciliation(source, ownedDomMutations);
             if (isSourceSuppressed(source)) {
                 restoreTimestampPresentation(source, ownedDomMutations);
                 emitCandidateSkipped(diagnosticSink);
                 continue;
             }
+        } else {
+            ownedDomMutations?.trackSource?.(source, false);
         }
         const presentation = formatDateWithPresentation(resolved.instant, locales, display);
         if (presentation.text.length === 0) {
@@ -322,7 +345,6 @@ function processCandidateCollection(
  */
 function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeElement[] {
     const { root } = input;
-    const ownedDomMutations = input.ownedDomMutations;
     const rules = getMatchingRules(input);
     if (rules.length === 0) {
         return [];
@@ -335,7 +357,6 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         for (const element of rule.discover(root)) {
             const candidate = rule.extract(element);
             const source = candidate?.source ?? element;
-            ownedDomMutations?.trackSource?.(source);
             if (!discovered.has(source)) {
                 discovered.add(source);
                 discoveredSources.push(source);
@@ -400,7 +421,6 @@ export function reconcileDocumentSources(
         }
         discovered.add(source);
         discoveredSources.push(source);
-        input.ownedDomMutations?.trackSource?.(source);
         for (const rule of rules) {
             if (!rule.matchesElement(source)) {
                 continue;

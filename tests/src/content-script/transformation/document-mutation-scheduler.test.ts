@@ -15,6 +15,7 @@ import {
 import {
     renderExactText,
     restoreExactText,
+    restoreExactTexts,
 } from "../../../../src/content-script/transformation/render-exact-text";
 import {
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -321,6 +322,44 @@ describe("DocumentMutationScheduler", () => {
         } finally {
             vi.unstubAllGlobals();
         }
+    });
+
+    it("rebuilds character-data observation once when several sources are released", async () => {
+        const observe = vi.spyOn(MutationObserver.prototype, "observe");
+        const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+        const sources = Array.from({ length: 5 }, (_, index) => {
+            const source = document.createElement("span");
+            source.append(document.createTextNode(`relative ${String(index)}`));
+            document.body.append(source);
+            return source;
+        });
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: () => undefined,
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        for (const source of sources) {
+            const target = source.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected text target");
+            }
+            renderExactText(source, target, "2026", scheduler);
+        }
+        await flushMutations();
+        observe.mockClear();
+        disconnect.mockClear();
+
+        restoreExactTexts(sources.slice(0, 3), scheduler);
+
+        expect(disconnect).toHaveBeenCalledTimes(1);
+        expect(observe).toHaveBeenCalledTimes(2);
+        expect(sources.slice(0, 3).map((source) => source.textContent))
+            .toEqual(["relative 0", "relative 1", "relative 2"]);
+        scheduler.stop();
+        restoreExactTexts(sources);
+        observe.mockRestore();
+        disconnect.mockRestore();
     });
 
     it("retargets several owned labels without rebuilding text observation", async () => {
