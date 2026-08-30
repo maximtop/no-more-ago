@@ -28,6 +28,7 @@ const COMMENT_ID = "7181895116414517252";
  * @returns - Extraction context that reads current page text.
  */
 const context = (): TimestampExtractionContext => ({
+    url: new URL("https://www.linkedin.com/feed/"),
     readPageText: (target) => target.data,
 });
 

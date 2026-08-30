@@ -4,25 +4,35 @@
 
 import { isValid, parseISO } from "date-fns";
 
+import { parseCalendarDate, type CalendarDate } from "../../shared/date/calendar-date";
 import {
+    TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
-    TIMESTAMP_PRESENTATION_KIND,
     type PageDatetimeTimestampCandidate,
     type TimestampCandidate,
-    type TimestampVisibilityPolicy,
     type TimestampPresentation,
+    type TimestampVisibilityPolicy,
 } from "../adapters/types";
 import { parseHtmlGlobalDatetime } from "./parse-html-global-datetime";
 
 const ZONE = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/;
 const YEAR = "(?:\\d{4}|[+-]\\d{6})";
-const DATE = `(?:${YEAR}-(?:\\d{2}-\\d{2}|\\d{3}|W\\d{2}-\\d)|${YEAR}(?:\\d{4}|\\d{3}|W\\d{3}))`;
+const DATE = `(?:${YEAR}-(?:\\d{2}-\\d{2}|\\d{3}|W\\d{2}-\\d)|${YEAR}`
+    + "(?:\\d{4}|\\d{3}|W\\d{3}))";
 const FRACTION = "(?:[.,]\\d+)";
 const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?`
     + `|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
 const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
 const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
+
+/**
+ * Semantic kinds produced by trusted timestamp resolution.
+ */
+export const RESOLVED_TIMESTAMP_KIND = {
+    INSTANT: "instant",
+    CALENDAR_DATE: "calendar-date",
+} as const;
 
 /**
  * Resolves one exact ten-digit Unix-seconds value without guessing its unit.
@@ -65,7 +75,7 @@ function resolvePresentation(
     }
     const target = presentation.target;
     if (
-        target.nodeType !== 3
+        target.nodeType !== Node.TEXT_NODE
         || target.ownerDocument !== source.ownerDocument
         || !source.contains(target)
     ) {
@@ -125,7 +135,42 @@ function hasControlCharacter(value: string): boolean {
 }
 
 /**
- * Fields shared by every validated timestamp accepted by the shared resolver.
+ * Parses one complete valid ISO date-time carrying an explicit known zone.
+ *
+ * @param rawDatetime - Exact untrusted date-time value.
+ * @returns - Parsed absolute instant or null when rejected.
+ */
+function parseExplicitIsoZone(rawDatetime: string): Date | null {
+    if (
+        rawDatetime.length === 0
+        || rawDatetime !== rawDatetime.trim()
+        || hasControlCharacter(rawDatetime)
+    ) {
+        return null;
+    }
+    const zoneMatch = rawDatetime.match(ZONE);
+    if (!zoneMatch) {
+        return null;
+    }
+    const zone = zoneMatch[0];
+    if (!hasKnownNumericZone(zone)) {
+        return null;
+    }
+    const dateTime = rawDatetime.slice(0, -zone.length);
+    if (!COMPLETE_DATE_TIME.test(dateTime)) {
+        return null;
+    }
+    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
+    const time = dateTime.slice(separatorIndex + 1);
+    if (/[Z+-]/.test(time)) {
+        return null;
+    }
+    const instant = parseISO(rawDatetime);
+    return isValid(instant) ? instant : null;
+}
+
+/**
+ * Source metadata shared by every resolved semantic timestamp value.
  */
 interface ResolvedTimestampBase {
     /**
@@ -134,30 +179,9 @@ interface ResolvedTimestampBase {
     readonly source: Element;
 
     /**
-     * Strictly validated absolute instant.
-     */
-    readonly instant: Date;
-
-    /**
      * Visibility policy selected by the source rule.
      */
     readonly visibilityPolicy: TimestampVisibilityPolicy;
-
-}
-
-/**
- * Resolved page-authored datetime with its exact original serialized value.
- */
-interface ResolvedPageTimestamp extends ResolvedTimestampBase {
-    /**
-     * Exact validated page datetime used by adjacent output when requested.
-     */
-    readonly sourceDatetime: string;
-
-    /**
-     * Page-datetime validation rule that accepted the candidate.
-     */
-    readonly validationRule: PageDatetimeTimestampCandidate["validationRule"];
 
     /**
      * Validated presentation selected by the source rule.
@@ -166,13 +190,75 @@ interface ResolvedPageTimestamp extends ResolvedTimestampBase {
 }
 
 /**
+ * Resolved page-authored value with its exact original serialization.
+ */
+interface ResolvedPageTimestampBase extends ResolvedTimestampBase {
+    /**
+     * Exact validated page date or date-time.
+     */
+    readonly sourceDatetime: string;
+
+    /**
+     * Page-value validation rule that accepted the candidate.
+     */
+    readonly validationRule: PageDatetimeTimestampCandidate["validationRule"];
+}
+
+/**
+ * Resolved page-authored absolute instant.
+ */
+interface ResolvedPageInstantTimestamp extends ResolvedPageTimestampBase {
+    /**
+     * Semantic kind identifying an absolute instant.
+     */
+    readonly kind: typeof RESOLVED_TIMESTAMP_KIND.INSTANT;
+
+    /**
+     * Strictly validated absolute instant.
+     */
+    readonly instant: Date;
+}
+
+/**
+ * Resolved page-authored calendar date.
+ */
+interface ResolvedCalendarDateTimestamp extends ResolvedPageTimestampBase {
+    /**
+     * Semantic kind identifying a calendar date.
+     */
+    readonly kind: typeof RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE;
+
+    /**
+     * Validated date without an instant or time-zone interpretation.
+     */
+    readonly calendarDate: CalendarDate;
+
+    /**
+     * Rule that explicitly permits calendar-date semantics.
+     */
+    readonly validationRule:
+        | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
+        | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE;
+}
+
+/**
  * Resolved derived instant constrained to an existing in-place text target.
  */
 interface ResolvedDerivedTimestamp extends ResolvedTimestampBase {
     /**
+     * Semantic kind identifying an absolute instant.
+     */
+    readonly kind: typeof RESOLVED_TIMESTAMP_KIND.INSTANT;
+
+    /**
      * Derived instants do not fabricate a page datetime value.
      */
     readonly sourceDatetime: null;
+
+    /**
+     * Strictly validated absolute instant.
+     */
+    readonly instant: Date;
 
     /**
      * Derived-instant validation rule that accepted the candidate.
@@ -195,69 +281,19 @@ interface ResolvedDerivedTimestamp extends ResolvedTimestampBase {
 }
 
 /**
- * Validated candidate and absolute instant accepted by the shared resolver.
+ * Trusted candidate preserving instant, calendar-date, and source provenance semantics.
  */
-export type ResolvedTimestamp = ResolvedPageTimestamp | ResolvedDerivedTimestamp;
+export type ResolvedTimestamp =
+    | ResolvedPageInstantTimestamp
+    | ResolvedCalendarDateTimestamp
+    | ResolvedDerivedTimestamp;
 
 /**
- * Resolves one explicit-zone page datetime after common candidate validation.
- *
- * @param candidate - Narrowed page-datetime candidate.
- * @param rawDatetime - Candidate's raw page value.
- * @param presentation - Validated presentation descriptor.
- * @param visibilityPolicy - Validated visibility policy.
- * @returns - Resolved timestamp, or null for invalid page data.
- */
-function resolveExplicitIsoCandidate(
-    candidate: PageDatetimeTimestampCandidate,
-    rawDatetime: string,
-    presentation: TimestampPresentation,
-    visibilityPolicy: TimestampVisibilityPolicy,
-): ResolvedPageTimestamp | null {
-    if (
-        rawDatetime.length === 0 ||
-        rawDatetime !== rawDatetime.trim() ||
-        hasControlCharacter(rawDatetime)
-    ) {
-        return null;
-    }
-    const zoneMatch = rawDatetime.match(ZONE);
-    if (!zoneMatch) {
-        return null;
-    }
-    const zone = zoneMatch[0];
-    if (!hasKnownNumericZone(zone)) {
-        return null;
-    }
-    const dateTime = rawDatetime.slice(0, -zone.length);
-    if (!COMPLETE_DATE_TIME.test(dateTime)) {
-        return null;
-    }
-    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
-    const time = dateTime.slice(separatorIndex + 1);
-    if (/[Z+-]/.test(time)) {
-        return null;
-    }
-    const instant = parseISO(rawDatetime);
-    if (!isValid(instant)) {
-        return null;
-    }
-    return {
-        source: candidate.source,
-        sourceDatetime: rawDatetime,
-        instant,
-        validationRule: candidate.validationRule,
-        visibilityPolicy,
-        presentation,
-    };
-}
-
-/**
- * Resolves a trusted page datetime or derived Unix-millisecond candidate.
+ * Accepts only candidates carrying a recognized rule and a valid semantic value.
  *
  * @param candidate - Timestamp candidate extracted by a trusted adapter.
  * @param nowMilliseconds - Deterministic current Unix milliseconds.
- * @returns - Valid resolved instant and source metadata, or null when rejected.
+ * @returns - Valid resolved semantic timestamp and source metadata, or null when rejected.
  */
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate,
@@ -292,6 +328,7 @@ export function resolveTrustedTimestamp(
         const instant = new Date(epochMilliseconds);
         return isValid(instant)
             ? {
+                kind: RESOLVED_TIMESTAMP_KIND.INSTANT,
                 source: candidate.source,
                 sourceDatetime: null,
                 instant,
@@ -301,42 +338,54 @@ export function resolveTrustedTimestamp(
             }
             : null;
     }
-    const rawDatetime = candidate.rawDatetime;
+
     const validationRule: unknown = candidate.validationRule;
-    if (validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS) {
-        const instant = resolveUnixSeconds(rawDatetime);
-        return instant
-            ? {
+    const rawDatetime = candidate.rawDatetime;
+    if (
+        validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
+        || validationRule
+            === TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE
+    ) {
+        const calendarDate = parseCalendarDate(rawDatetime);
+        if (calendarDate) {
+            return {
+                kind: RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE,
                 source: candidate.source,
                 sourceDatetime: rawDatetime,
-                instant,
+                calendarDate,
                 validationRule,
                 visibilityPolicy,
                 presentation,
-            }
-            : null;
-    }
-    if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
-        const instant = parseHtmlGlobalDatetime(rawDatetime);
-        return instant
-            ? {
-                source: candidate.source,
-                sourceDatetime: rawDatetime,
-                instant,
-                validationRule,
-                visibilityPolicy,
-                presentation,
-            }
-            : null;
-    }
-    if (validationRule !== TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE) {
-        return null;
+            };
+        }
+        if (validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE) {
+            return null;
+        }
     }
 
-    return resolveExplicitIsoCandidate(
-        candidate,
-        rawDatetime,
-        presentation,
+    let instant: Date | null;
+    if (validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS) {
+        instant = resolveUnixSeconds(rawDatetime);
+    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
+        instant = parseHtmlGlobalDatetime(rawDatetime);
+    } else if (
+        validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
+        || validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE
+    ) {
+        instant = parseExplicitIsoZone(rawDatetime);
+    } else {
+        return null;
+    }
+    if (!instant) {
+        return null;
+    }
+    return {
+        kind: RESOLVED_TIMESTAMP_KIND.INSTANT,
+        source: candidate.source,
+        sourceDatetime: rawDatetime,
+        instant,
+        validationRule,
         visibilityPolicy,
-    );
+        presentation,
+    };
 }

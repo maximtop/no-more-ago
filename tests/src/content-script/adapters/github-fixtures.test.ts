@@ -28,6 +28,7 @@ const githubPages = [
 ];
 
 const extractionContext: TimestampExtractionContext = {
+    url: new URL("https://github.com/"),
     readPageText: (target) => target.data,
 };
 

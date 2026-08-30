@@ -10,6 +10,7 @@ import { linkedinAdapter } from "./linkedin";
 import { stackExchangeAdapter } from "./stack-exchange";
 import { telegramWebKAdapter } from "./telegram-web-k";
 import type { TimestampSourceRule } from "./types";
+import { youtubeAdapter, youtubePlayerResponseRule } from "./youtube";
 
 /**
  * Provides deterministic source-rule selection with specialized rules before the generic fallback.
@@ -39,7 +40,7 @@ export class AdapterRegistry {
 }
 
 /**
- * Production registry with specialized-source precedence and generic fallback.
+ * Production registry with prioritized specialized rules before the generic fallback.
  */
 export const defaultRegistry = new AdapterRegistry(
     [
@@ -49,6 +50,8 @@ export const defaultRegistry = new AdapterRegistry(
         linkedinAdapter,
         stackExchangeAdapter,
         telegramWebKAdapter,
+        youtubePlayerResponseRule,
+        youtubeAdapter,
     ],
     genericTimeRule,
 );

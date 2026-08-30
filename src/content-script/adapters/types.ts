@@ -6,6 +6,8 @@
  * Validation rules proving that a candidate carries an eligible timestamp value.
  */
 export const TIMESTAMP_VALIDATION_RULE = {
+    CALENDAR_DATE: "date:calendar",
+    CALENDAR_OR_EXPLICIT_ISO_ZONE: "datetime:calendar-or-explicit-zone",
     EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
     HTML_GLOBAL: "datetime:html-global",
     UNIX_SECONDS: "datetime:unix-seconds",
@@ -24,6 +26,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
     TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
     LINKEDIN_TIMESTAMP: "linkedin-timestamp",
+    YT_FORMATTED_STRING: "yt-formatted-string",
 } as const;
 
 /**
@@ -170,6 +173,8 @@ export interface PageDatetimeTimestampCandidate extends TimestampCandidateBase {
      * Page-datetime validation rule.
      */
     readonly validationRule:
+        | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
+        | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE
         | typeof TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
         | typeof TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL
         | typeof TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS;
@@ -216,6 +221,11 @@ export type TimestampCandidate =
  * Read-only context supplied while an adapter inspects a page source.
  */
 export interface TimestampExtractionContext {
+    /**
+     * Current page URL used by rules whose value provenance is route-specific.
+     */
+    readonly url: URL;
+
     /**
      * Returns the latest page-authored value for an in-place target.
      */
@@ -284,7 +294,11 @@ export interface TimestampSourceRule {
     ): readonly Element[];
 
     /**
-     * Extracts one candidate, or null when the source is unsuitable.
+     * Extracts one candidate for the exact discovered source.
+     *
+     * @param element - Discovered source that the candidate must retain by identity.
+     * @param context - Current route and retained page-owned text capabilities.
+     * @returns - Candidate for `element`, or null when this source tier is unusable.
      */
     extract(
         element: Element,

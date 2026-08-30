@@ -12,7 +12,9 @@ import {
     type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
 
+const GITHUB_URL = new URL("https://github.com/any/path");
 const extractionContext: TimestampExtractionContext = {
+    url: GITHUB_URL,
     readPageText: (target) => target.data,
 };
 

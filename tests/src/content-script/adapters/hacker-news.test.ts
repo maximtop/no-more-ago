@@ -103,7 +103,8 @@ describe("Hacker News source contract", () => {
         });
         for (const id of ["two-links", "icon", "outside"]) {
             const source = document.getElementById(id);
-            expect(source ? hackerNewsAdapter.extract(source) : null).toBeNull();
+            expect(source ? hackerNewsAdapter.extract(source) : null)
+                .toBeNull();
         }
     });
 

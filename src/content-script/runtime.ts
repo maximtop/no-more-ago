@@ -5,8 +5,9 @@
 import type { AdapterRegistry } from "./adapters/registry";
 import {
     DocumentTransformationController,
+    type DocumentTransformationControllerInput,
 } from "./transformation/document-transformation-controller";
-import type { DocumentDiagnosticSink, ProcessInput } from "./transformation/process-document";
+import type { DocumentDiagnosticSink } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -15,6 +16,7 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
+    isReconcileDocumentRouteMessage,
     isRefreshDocumentPolicyMessage,
     isSuspendAndRefreshDocumentPolicyMessage,
     isPresentationUpdateMessage,
@@ -30,6 +32,7 @@ import {
     DEFAULT_DISPLAY_SETTINGS,
     type DisplaySettings,
 } from "../shared/settings/snapshot";
+import type { DocumentRouteHandoffClassifier } from "./transformation/route-handoff";
 
 /**
  * Global symbol used to retain the single content-runtime instance for a document.
@@ -65,6 +68,18 @@ export interface ContentRuntimeHandle {
      * Stops processing, cancels pending startup, and clears diagnostic forwarding.
      */
     teardown(): void;
+}
+
+/**
+ * Same-document route event source such as the content window's popstate event.
+ */
+export interface ContentRouteEventSource {
+    /**
+     * Registers one route-change listener retained for the document lifetime.
+     *
+     * @param listener - Listener that samples the current route when invoked.
+     */
+    addListener(listener: () => void): void;
 }
 
 /**
@@ -137,9 +152,9 @@ interface RuntimeSlot {
     loadDocumentState: (() => Promise<unknown>) | undefined;
 
     /**
-     * Controller input whose display field is populated after state hydration.
+     * Lazily samples the content document's current URL.
      */
-    processInput: ProcessInput & Record<string, unknown>;
+    urlProvider: () => URL;
 }
 
 /**
@@ -152,7 +167,6 @@ interface RuntimeSlot {
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
     slot.presentation = display;
     slot.presentationRevision = revision;
-    (slot.processInput as unknown as Record<string, unknown>).display = display;
 }
 
 /**
@@ -194,6 +208,24 @@ function reformatOwned(slot: RuntimeSlot): void {
     (
         slot.controller as DocumentTransformationController & { reformatOwned: () => void }
     ).reformatOwned();
+}
+
+/**
+ * Samples and reconciles the current route without trusting message payload data.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @returns - Whether reconciliation succeeded and activation may proceed.
+ */
+function reconcileCurrentRoute(slot: RuntimeSlot): boolean {
+    try {
+        const currentUrl = slot.urlProvider();
+        slot.controller.reconcileRoute(new URL(currentUrl.href));
+        return true;
+    } catch {
+        teardown(slot);
+        slot.phase = DOCUMENT_PHASE.FAILED;
+        return false;
+    }
 }
 
 /**
@@ -352,6 +384,9 @@ function activate(
     if (slot.phase === DOCUMENT_PHASE.WAITING || slot.phase === DOCUMENT_PHASE.ACTIVE) {
         return;
     }
+    if (!reconcileCurrentRoute(slot)) {
+        return;
+    }
     slot.generation += 1;
     const generation = slot.generation;
     slot.phase = DOCUMENT_PHASE.WAITING;
@@ -422,6 +457,9 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input - Document, presentation, and messaging dependencies.
  * @param input.document - Page document owned by this runtime.
  * @param input.url - Current page URL used for adapter selection.
+ * @param input.urlProvider - Lazy current page URL source used for route signals.
+ * @param input.routeEvents - Optional same-document route event source.
+ * @param input.routeHandoffClassifier - Optional total retained-policy classifier.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
@@ -433,6 +471,9 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
 export function installContentRuntime(input: {
     readonly document: Document;
     readonly url: URL;
+    readonly urlProvider?: () => URL;
+    readonly routeEvents?: ContentRouteEventSource;
+    readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
@@ -446,20 +487,25 @@ export function installContentRuntime(input: {
         if (input.reportDiagnostic) {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
+        existing.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
         activate(existing, input.loadDocumentState);
         return existing.handle;
     }
-    const processInput = {
+    const slot = {} as RuntimeSlot;
+    const processInput: DocumentTransformationControllerInput = {
         url: input.url,
         root: input.document,
         locales: input.locales,
+        displayProvider: () => slot.presentation ?? DEFAULT_DISPLAY_SETTINGS,
+        urlProvider: () => slot.urlProvider(),
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
-    } as ProcessInput & Record<string, unknown>;
-    const slot = {} as RuntimeSlot;
+        ...(input.routeHandoffClassifier === undefined
+            ? {}
+            : { routeHandoffClassifier: input.routeHandoffClassifier }),
+    };
     slot.document = input.document;
     slot.messages = input.messages;
-    slot.processInput = processInput;
     slot.controller = new DocumentTransformationController(processInput);
     slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.generation = 0;
@@ -470,6 +516,7 @@ export function installContentRuntime(input: {
     slot.debugRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.loadDocumentState = input.loadDocumentState;
+    slot.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
     slot.handle = {
         teardown: () => {
             teardown(slot);
@@ -494,6 +541,10 @@ export function installContentRuntime(input: {
             const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
             sendResponse?.(response);
             return response;
+        }
+        if (isReconcileDocumentRouteMessage(message)) {
+            reconcileCurrentRoute(slot);
+            return undefined;
         }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
@@ -549,6 +600,13 @@ export function installContentRuntime(input: {
         }
         return undefined;
     });
+    try {
+        input.routeEvents?.addListener(() => {
+            reconcileCurrentRoute(slot);
+        });
+    } catch {
+        /* exact-frame route messages remain available when popstate setup is unavailable */
+    }
     runtimeDocument[DOCUMENT_RUNTIME_SLOT] = slot;
     activate(slot, input.loadDocumentState);
     return slot.handle;
