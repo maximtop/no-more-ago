@@ -141,12 +141,15 @@ inferred as dates.
 
 The generic runtime watches relevant dynamic content in each reachable
 HTTP(S) document. Newly added or changed timestamps are processed without a
-full page reload. On a same-document YouTube route change, the runtime samples
-the current URL, restores obsolete extension-owned output, and processes the
-new route generation. A changed-video Watch handoff accepts only loaded player
-data whose two video identities match the current URL. It watches only the
-exact recognized player-assignment scripts, so either signal-first or
-data-first navigation can become live without polling.
+full page reload. Before processing dynamic YouTube content, the runtime
+samples the current URL. On a provenance-changing transition, such as changing
+the Watch video or leaving Watch, it restores obsolete extension-owned output
+and processes the new route generation. Same-video query changes and
+non-Watch-to-non-Watch changes leave the current processing generation intact.
+A changed-video Watch handoff accepts only loaded player data whose two video
+identities match the current URL. It watches only the exact recognized
+player-assignment scripts, so either signal-first or data-first navigation can
+become live without polling.
 
 YouTube publication metadata has no video identity. It therefore remains
 quarantined for the entire same-document changed-video handoff, even after

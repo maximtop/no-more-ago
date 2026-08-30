@@ -21,8 +21,8 @@ strictly offline; do not refresh these documents from YouTube during tests.
 
 ## Modern Home negative qualification
 
-The `3-AFK` evidence ledger records one sanitized capture at
-`2026-08-29T20:04:02.900Z` on canonical desktop Home
+One sanitized capture was recorded at `2026-08-29T20:04:02.900Z` on canonical
+desktop Home
 (`https://www.youtube.com/`). The loaded page contained 22 video lockup
 records. Six rendered cards were inspected, and each card's watch-link
 identity and visible relative label matched the corresponding loaded record.
@@ -52,9 +52,8 @@ result does not qualify other Home experiments, routes, or future markup.
 
 ## Legacy Search negative qualification
 
-The `4-AFK` evidence ledger records one sanitized capture at
-`2026-08-29T21:55:22.748Z` on canonical desktop Search with the real query
-redacted:
+One sanitized capture was recorded at `2026-08-29T21:55:22.748Z` on canonical
+desktop Search with the real query redacted:
 
 ~~~text
 https://www.youtube.com/results?search_query=<redacted>
@@ -112,8 +111,8 @@ future markup, or all list surfaces.
 
 ## Modern Channel Videos negative qualification
 
-The `5-AFK` evidence ledger records one sanitized capture at
-`2026-08-30T08:44:55.960Z` on canonical desktop Channel Videos:
+One sanitized capture was recorded at `2026-08-30T08:44:55.960Z` on canonical
+desktop Channel Videos:
 
 ~~~text
 https://www.youtube.com/@<redacted>/videos

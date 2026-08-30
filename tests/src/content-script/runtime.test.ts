@@ -24,35 +24,22 @@ import {
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
 import { classifyYouTubeWatchRouteHandoff } from
     "../../../src/content-script/adapters/youtube-watch-route-handoff";
-import { youtubePlayerResponseAssignment } from "./adapters/youtube-test-data";
+import {
+    YOUTUBE_LIST_FIXTURE_ID,
+    YOUTUBE_LIST_FIXTURES,
+    youtubePlayerResponseAssignment,
+    type YouTubeListFixtureId,
+} from "./adapters/youtube-test-data";
 
 const WATCH_A = "https://www.youtube.com/watch?v=testVID0001";
 const WATCH_B = "https://www.youtube.com/watch?v=testVID0002";
+const WATCH_C = "https://www.youtube.com/watch?v=testVID0003";
 
-const YOUTUBE_LIST_FIXTURES = [
-    {
-        name: "Home",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/home-modern-relative-only.html",
-        url: new URL("https://www.youtube.com/"),
-        cardSelector: "ytd-rich-item-renderer",
-    },
-    {
-        name: "Search",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/search-legacy-relative-only.html",
-        url: new URL("https://www.youtube.com/results?search_query=fixture"),
-        cardSelector: "ytd-video-renderer",
-    },
-    {
-        name: "Channel Videos",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/" +
-            "channel-videos-modern-relative-only.html",
-        url: new URL("https://www.youtube.com/@fixture-channel/videos"),
-        cardSelector: "yt-lockup-view-model",
-    },
-] as const;
+const YOUTUBE_LIST_CARD_SELECTORS = {
+    [YOUTUBE_LIST_FIXTURE_ID.HOME]: "ytd-rich-item-renderer",
+    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: "ytd-video-renderer",
+    [YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS]: "yt-lockup-view-model",
+} satisfies Readonly<Record<YouTubeListFixtureId, string>>;
 
 /**
  * Flushes one MutationObserver delivery and its scheduled reconciliation.
@@ -593,8 +580,9 @@ describe("installContentRuntime", () => {
 
     it.each(YOUTUBE_LIST_FIXTURES)(
         "keeps ordinary no-source $name mutations inert through detach and reattach",
-        async ({ fixturePath, url, cardSelector }) => {
+        async ({ id, fixturePath, url }) => {
             document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
+            const cardSelector = YOUTUBE_LIST_CARD_SELECTORS[id];
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
                 throw new Error("Network access is forbidden in runtime fixtures");
             });
@@ -606,7 +594,7 @@ describe("installContentRuntime", () => {
             try {
                 runtime = installContentRuntime({
                     document,
-                    url,
+                    url: new URL(url),
                     locales: ["en-US"],
                     loadDocumentState: async () => ({
                         ...state(),
@@ -744,7 +732,7 @@ describe("installContentRuntime", () => {
         },
     );
 
-    it("samples the live Watch route before the first DOM-before-signal batch", async () => {
+    it("samples the live Watch route before both DOM-driven processing paths", async () => {
         setWatchMarkup("testVID0001", "2026-08-01");
         let currentHref = WATCH_A;
         const source = messages();
@@ -770,6 +758,20 @@ describe("installContentRuntime", () => {
         expect(watchOutput()?.dateTime).toBe("2026-08-02");
         expect(document.head.querySelector("meta")?.getAttribute("content"))
             .toBe("2026-08-01");
+
+        currentHref = WATCH_C;
+        setWatchPlayer("testVID0002", "2026-08-03");
+        await flushMutations();
+        await flushMutations();
+
+        expect(watchOutput()).toBeNull();
+        expect(requireWatchLabel().hasAttribute("hidden")).toBe(false);
+
+        setWatchPlayer("testVID0003", "2026-08-04");
+        await flushMutations();
+        await flushMutations();
+
+        expect(watchOutput()?.dateTime).toBe("2026-08-04");
     });
 
     it.each(["before", "after"] as const)(
@@ -974,7 +976,7 @@ describe("installContentRuntime", () => {
             await flushMutations();
             expect(watchOutput()).not.toBeNull();
 
-            currentHref = url.href;
+            currentHref = url;
             source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE });
             document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
             await flushMutations();

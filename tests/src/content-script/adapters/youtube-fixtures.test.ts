@@ -8,11 +8,18 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { youtubePlayerResponseAssignment } from "./youtube-test-data";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
+import { GENERIC_TIME_RULE_ID } from
+    "../../../../src/content-script/adapters/generic-time";
 import { youtubeAdapter } from "../../../../src/content-script/adapters/youtube";
 import { processDocument } from
     "../../../../src/content-script/transformation/process-document";
 import { restoreExactTimes } from
     "../../../../src/content-script/transformation/render-exact-time";
+import { GITHUB_ADAPTER_ID } from "../../../../src/shared/adapters/github-contract";
+import {
+    YOUTUBE_ADAPTER_ID,
+    YOUTUBE_PLAYER_RESPONSE_RULE_ID,
+} from "../../../../src/shared/adapters/youtube-contract";
 
 const WATCH_URL = new URL("https://www.youtube.com/watch?v=testVID0001");
 const OFFLINE_FETCH_ERROR = "Network access is forbidden in YouTube fixtures";
@@ -488,15 +495,15 @@ describe("offline YouTube watch fixture", () => {
         expect(defaultRegistry.matching(
             new URL("https://www.youtube.com/watch?v=testVID0001"),
         ).map((rule) => rule.id)).toEqual([
-            "youtube-player-response",
-            "youtube",
-            "generic-time",
+            YOUTUBE_PLAYER_RESPONSE_RULE_ID,
+            YOUTUBE_ADAPTER_ID,
+            GENERIC_TIME_RULE_ID,
         ]);
         expect(defaultRegistry.matching(
             new URL("https://github.com/example/repo"),
-        ).map((rule) => rule.id)).toEqual(["github", "generic-time"]);
+        ).map((rule) => rule.id)).toEqual([GITHUB_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
         expect(defaultRegistry.matching(
             new URL("https://example.test/path"),
-        ).map((rule) => rule.id)).toEqual(["generic-time"]);
+        ).map((rule) => rule.id)).toEqual([GENERIC_TIME_RULE_ID]);
     });
 });

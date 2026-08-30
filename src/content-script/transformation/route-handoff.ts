@@ -87,7 +87,6 @@ export interface DocumentRouteHandoffPolicy extends TimestampExtractionPolicy {
  */
 export const DOCUMENT_ROUTE_HANDOFF_TRANSITION = {
     NOOP: "noop",
-    PRESERVE: "preserve",
     CLEAR: "clear",
     REPLACE: "replace",
 } as const;
@@ -101,12 +100,6 @@ export type DocumentRouteHandoffTransition =
          * Updates the retained URL without restarting extraction or route observation.
          */
         readonly kind: typeof DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP;
-    }
-    | {
-        /**
-         * Keeps the retained optional policy unchanged.
-         */
-        readonly kind: typeof DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE;
     }
     | {
         /**

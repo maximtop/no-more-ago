@@ -10,6 +10,7 @@ import { AdapterRegistry } from "../../../../src/content-script/adapters/registr
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_ATTRIBUTE,
+    TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
@@ -1078,7 +1079,7 @@ describe("DocumentTransformationController", () => {
         }
     });
 
-    it("applies no-op, preserve, clear, and replace as total route transitions", () => {
+    it("applies no-op, clear, and replace as total route transitions", () => {
         document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
         const source = document.querySelector("time");
         if (!source) {
@@ -1108,9 +1109,6 @@ describe("DocumentTransformationController", () => {
                     policy: quarantine,
                 } as const;
             }
-            if (currentUrl.pathname === "/preserve") {
-                return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE } as const;
-            }
             return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR } as const;
         });
         const controller = new DocumentTransformationController({
@@ -1132,16 +1130,11 @@ describe("DocumentTransformationController", () => {
         expect(source.hasAttribute("hidden")).toBe(false);
         expect(activate).toHaveBeenCalledOnce();
 
-        controller.reconcileRoute(new URL("https://example.test/preserve"));
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-        expect(sessions[0]?.dispose).toHaveBeenCalledOnce();
-        expect(activate).toHaveBeenCalledTimes(2);
-
         controller.reconcileRoute(new URL("https://example.test/clear"));
         const clearedOutput = document.querySelector("[data-no-more-ago-output]");
         expect(clearedOutput).toBeInstanceOf(HTMLTimeElement);
-        expect(sessions[1]?.dispose).toHaveBeenCalledOnce();
-        expect(activate).toHaveBeenCalledTimes(2);
+        expect(sessions[0]?.dispose).toHaveBeenCalledOnce();
+        expect(activate).toHaveBeenCalledOnce();
 
         const classifierCalls = classifier.mock.calls.length;
         controller.reconcileRoute(new URL("https://example.test/clear"));
@@ -1191,7 +1184,7 @@ describe("DocumentTransformationController", () => {
                 return {
                     ruleId: "route-order",
                     source: element,
-                    sourceKind: "time",
+                    sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
                     rawDatetime: "2026-08-23T10:15Z",
                     presentation: ADJACENT_TIME_PRESENTATION,
                     validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,

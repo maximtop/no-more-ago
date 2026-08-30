@@ -405,8 +405,6 @@ export class DocumentTransformationController {
         switch (transition.kind) {
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP:
                 break;
-            case DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE:
-                break;
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR:
                 this.handoffPolicy = undefined;
                 break;
@@ -452,6 +450,9 @@ export class DocumentTransformationController {
             return;
         }
         try {
+            if (this.synchronizeCurrentRoute()) {
+                return;
+            }
             this.outputs = processDocument(this.fullProcessInput(scheduler));
         } catch {
             this.failClosed();

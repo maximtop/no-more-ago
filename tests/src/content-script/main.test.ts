@@ -18,30 +18,18 @@ import {
     SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
 } from "../../../src/shared/messaging/document-messages";
 import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
+import {
+    YOUTUBE_LIST_FIXTURE_ID,
+    YOUTUBE_LIST_FIXTURES,
+    type YouTubeListFixtureId,
+} from "./adapters/youtube-test-data";
 
-const YOUTUBE_LIST_ENTRYPOINT_CASES = [
-    {
-        name: "Home",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/home-modern-relative-only.html",
-        url: "https://www.youtube.com/",
-        labelSelector: ".ytContentMetadataViewModelMetadataTextLastPart",
-    },
-    {
-        name: "Search",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/search-legacy-relative-only.html",
-        url: "https://www.youtube.com/results?search_query=fixture",
-        labelSelector: ".inline-metadata-item.ytd-video-meta-block",
-    },
-    {
-        name: "Channel",
-        fixturePath:
-            "tests/src/content-script/fixtures/youtube/channel-videos-modern-relative-only.html",
-        url: "https://www.youtube.com/@fixture-channel/videos",
-        labelSelector: ".ytContentMetadataViewModelMetadataTextLastPart",
-    },
-] as const;
+const YOUTUBE_LIST_LABEL_SELECTORS = {
+    [YOUTUBE_LIST_FIXTURE_ID.HOME]: ".ytContentMetadataViewModelMetadataTextLastPart",
+    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: ".inline-metadata-item.ytd-video-meta-block",
+    [YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS]:
+        ".ytContentMetadataViewModelMetadataTextLastPart",
+} satisfies Readonly<Record<YouTubeListFixtureId, string>>;
 
 /**
  * Installs a minimal extension runtime mock.
@@ -219,10 +207,11 @@ describe("content entrypoint", () => {
         },
     );
 
-    it.each(YOUTUBE_LIST_ENTRYPOINT_CASES)(
+    it.each(YOUTUBE_LIST_FIXTURES)(
         "keeps the $name fixture local-only through disable and re-enable",
-        async ({ fixturePath, url, labelSelector }) => {
+        async ({ id, fixturePath, url }) => {
             document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
+            const labelSelector = YOUTUBE_LIST_LABEL_SELECTORS[id];
             const originalMarkup = document.documentElement.outerHTML;
             const originalLabelText = Array.from(
                 document.querySelectorAll(labelSelector),
