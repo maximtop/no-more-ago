@@ -54,7 +54,7 @@ function isInstagramTimeElement(element: Element): boolean {
 /**
  * Instagram presentation rule that retains the page-owned element, classes, and inline styles.
  */
-export const instagramAdapter: TimestampSourceRule = {
+export const instagramAdapter = {
     id: INSTAGRAM_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
     matches: matchesInstagramUrl,
@@ -86,4 +86,4 @@ export const instagramAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

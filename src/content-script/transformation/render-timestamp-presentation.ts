@@ -23,6 +23,7 @@ import {
 
 export {
     capturePageOwnedTextChange,
+    readPageOwnedText,
 } from "./render-exact-text";
 export { getOwnedSourceForOutput } from "./render-exact-time";
 
@@ -86,7 +87,7 @@ export function getOwnedTimestampSourceEntries(
  * Renders one validated timestamp using its adapter-selected strategy.
  *
  * @param source - Trusted timestamp source.
- * @param datetime - Original trusted datetime.
+ * @param datetime - Original page datetime, or null for derived in-place output.
  * @param presentation - Validated presentation descriptor.
  * @param text - Formatted exact label.
  * @param mutations - Optional observer acknowledgement sink.
@@ -94,15 +95,25 @@ export function getOwnedTimestampSourceEntries(
  */
 export function renderTimestampPresentation(
     source: Element,
-    datetime: string,
+    datetime: string | null,
     presentation: TimestampPresentation,
     text: string,
     mutations?: OwnedDomMutationSink,
 ): TimestampRenderResult | null {
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
         restoreExactTime(source, mutations);
-        const output = renderExactText(source, presentation.target, text, mutations);
+        const renderedText = `${presentation.textPrefix ?? ""}${text}`
+            + (presentation.textSuffix ?? "");
+        const output = renderExactText(
+            source,
+            presentation.target,
+            renderedText,
+            mutations,
+        );
         return output ? { kind: presentation.kind, output } : null;
+    }
+    if (datetime === null) {
+        return null;
     }
     restoreExactText(source, mutations);
     const output = presentation.kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME

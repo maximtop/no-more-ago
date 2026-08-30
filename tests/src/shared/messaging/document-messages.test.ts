@@ -15,6 +15,7 @@ import {
     DOCUMENT_PHASES,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DIAGNOSTIC_EVENT_MESSAGE,
+    RECONCILE_DOCUMENT_ROUTE_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     UPDATE_DEBUG_POLICY_MESSAGE,
@@ -28,6 +29,7 @@ import {
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
     isReconcileDocumentPolicyMessage,
+    isReconcileDocumentRouteMessage,
 } from "../../../../src/shared/messaging/document-messages";
 
 const display = { formatMode: "system" as const, timeZone: { mode: "utc" as const } };
@@ -106,6 +108,27 @@ describe("document policy messages", () => {
             type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
             revision: 4,
         }, 3)).toBe(false);
+    });
+});
+
+describe("document route messages", () => {
+    it("accepts only payload-free route commands", () => {
+        expect(
+            isReconcileDocumentRouteMessage({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE }),
+        ).toBe(true);
+
+        for (const property of ["url", "query", "videoId", "generation", "pageData"]) {
+            expect(
+                isReconcileDocumentRouteMessage({
+                    type: RECONCILE_DOCUMENT_ROUTE_MESSAGE,
+                    [property]: "forbidden",
+                }),
+            ).toBe(false);
+        }
+
+        for (const value of [null, [], {}, { type: "other" }]) {
+            expect(isReconcileDocumentRouteMessage(value)).toBe(false);
+        }
     });
 });
 

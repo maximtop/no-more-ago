@@ -18,6 +18,11 @@ export const RECONCILE_DOCUMENT_POLICY_MESSAGE = "no-more-ago:reconcile-document
 export const DOCUMENT_POLICY_RECONCILED_MESSAGE = "no-more-ago:document-policy-reconciled";
 
 /**
+ * Requests that a document runtime sample and reconcile its current route.
+ */
+export const RECONCILE_DOCUMENT_ROUTE_MESSAGE = "no-more-ago:reconcile-document-route";
+
+/**
  * Requests the current lifecycle phase of a document runtime.
  */
 export const DOCUMENT_STATUS_MESSAGE = "no-more-ago:status";
@@ -87,6 +92,13 @@ const reconcileDocumentPolicyMessageSchema = v.strictObject({
 const documentPolicyReconciledMessageSchema = v.strictObject({
     type: v.literal(DOCUMENT_POLICY_RECONCILED_MESSAGE),
     revision: v.nullable(nonNegativeSafeIntegerSchema),
+});
+
+/**
+ * Schema for a payload-free command that reconciles the current document route.
+ */
+const reconcileDocumentRouteMessageSchema = v.strictObject({
+    type: v.literal(RECONCILE_DOCUMENT_ROUTE_MESSAGE),
 });
 
 /**
@@ -166,6 +178,13 @@ export type DocumentPolicyReconciledMessage = v.InferOutput<
 >;
 
 /**
+ * Command that asks a document runtime to sample and reconcile its current route.
+ */
+type ReconcileDocumentRouteMessage = v.InferOutput<
+    typeof reconcileDocumentRouteMessageSchema
+>;
+
+/**
  * Command that requests a document runtime's lifecycle state.
  */
 type DocumentStatusMessage = v.InferOutput<typeof documentStatusMessageSchema>;
@@ -234,6 +253,18 @@ export function isDocumentPolicyReconciledMessage(
 ): value is DocumentPolicyReconciledMessage {
     const parsed = v.safeParse(documentPolicyReconciledMessageSchema, value);
     return parsed.success && parsed.output.revision === expectedRevision;
+}
+
+/**
+ * Recognizes an exact payload-free document-route reconciliation command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is an exact route reconciliation command.
+ */
+export function isReconcileDocumentRouteMessage(
+    value: unknown,
+): value is ReconcileDocumentRouteMessage {
+    return v.safeParse(reconcileDocumentRouteMessageSchema, value).success;
 }
 
 /**

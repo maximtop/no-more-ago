@@ -6,10 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
+import { linkedinAdapter } from "../../../../src/content-script/adapters/linkedin";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_ATTRIBUTE,
+    TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
@@ -19,6 +21,11 @@ import {
 } from "../../../../src/content-script/transformation/document-transformation-controller";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
+import {
+    DOCUMENT_ROUTE_HANDOFF_TRANSITION,
+    type DocumentRouteHandoffPolicy,
+    type DocumentRouteHandoffSession,
+} from "../../../../src/content-script/transformation/route-handoff";
 
 const noMatchRule: TimestampSourceRule = {
     id: "no-match",
@@ -73,6 +80,425 @@ describe("DocumentTransformationController", () => {
         await Promise.resolve();
         await Promise.resolve();
     };
+
+    it("reconciles a LinkedIn source when descendant ID evidence changes", async () => {
+        document.body.innerHTML = `
+            <main id="feed">
+                <article id="post">
+                    <p componentkey="timestamp"><span>1w •</span></p>
+                    <a id="evidence"
+                        href="/feed/update/urn:li:activity:7147784590025818113/">
+                        Post
+                    </a>
+                </article>
+                <section id="unrelated">
+                    <a id="unrelated-link" href="/profile">unchanged</a>
+                </section>
+            </main>
+        `;
+        const unrelated = document.getElementById("unrelated");
+        const unrelatedChild = unrelated?.firstElementChild;
+        const unrelatedLink = document.getElementById("unrelated-link");
+        const evidence = document.getElementById("evidence");
+        const target = document.querySelector("p > span")?.firstChild;
+        if (
+            !(evidence instanceof HTMLAnchorElement)
+            || !(unrelatedLink instanceof HTMLAnchorElement)
+            || !(target instanceof Text)
+        ) {
+            throw new Error("Expected LinkedIn fixture");
+        }
+        const visits: Element[] = [];
+        const matchVisits: Element[] = [];
+        const instrumented: TimestampSourceRule = {
+            ...linkedinAdapter,
+            matchesElement: (element, context) => {
+                matchVisits.push(element);
+                return linkedinAdapter.matchesElement(element, context);
+            },
+            extract: (element, context) => {
+                visits.push(element);
+                return linkedinAdapter.extract(element, context);
+            },
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+            registry: new AdapterRegistry([instrumented], genericTimeRule),
+        });
+
+        controller.start();
+        expect(target.data).toBe("2024-01-02 •");
+        visits.length = 0;
+        matchVisits.length = 0;
+
+        unrelatedLink.href = "/profile/changed";
+        await flushMutations();
+
+        expect(matchVisits).toEqual([]);
+        expect(target.data).toBe("2024-01-02 •");
+
+        evidence.href = "/feed/update/urn:li:share:7170283349280292867/";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-03-04 •");
+        expect(visits).toEqual([document.getElementById("post")]);
+        expect(matchVisits).toEqual([]);
+        expect(document.getElementById("unrelated")).toBe(unrelated);
+        expect(unrelated?.firstElementChild).toBe(unrelatedChild);
+
+        evidence.href = "/feed/update/urn:li:activity:malformed/";
+        await flushMutations();
+        expect(target.data).toBe("1w •");
+
+        evidence.href = "/feed/update/urn:li:activity:7147784590025818113/";
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02 •");
+
+        controller.teardown();
+        expect(target.data).toBe("1w •");
+    });
+
+    it("activates an unowned LinkedIn source when ambiguity is removed", async () => {
+        document.body.innerHTML = `
+            <article id="post">
+                <p componentkey="timestamp"><span>1w</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+                <div id="competitor" data-urn="urn:li:share:7170283349280292867"></div>
+            </article>
+        `;
+        const target = document.querySelector("p > span")?.firstChild;
+        const competitor = document.getElementById("competitor");
+        if (!(target instanceof Text) || !competitor) {
+            throw new Error("Expected ambiguous LinkedIn fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(target.data).toBe("1w");
+
+        competitor.removeAttribute("data-urn");
+        await flushMutations();
+
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("keeps an owned outer LinkedIn post valid when a nested reply is inserted", async () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:7147784590025818113">
+                <header>
+                    <p componentkey="post-time"><span id="post-label">1w</span></p>
+                </header>
+            </article>
+        `;
+        const post = document.getElementById("post");
+        const postTarget = document.getElementById("post-label")?.firstChild;
+        if (!post || !(postTarget instanceof Text)) {
+            throw new Error("Expected outer LinkedIn post fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(postTarget.data).toBe("2024-01-02");
+
+        const reply = document.createElement("article");
+        reply.innerHTML = `
+            <p componentkey="reply-time"><span id="reply-label">3d</span></p>
+            <div data-sdui-anchor-id=
+                "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+            </div>
+        `;
+        post.append(reply);
+        await flushMutations();
+
+        expect(postTarget.data).toBe("2024-01-02");
+        expect(document.getElementById("reply-label")?.textContent).toBe("2024-04-05");
+        controller.teardown();
+    });
+
+    it("keeps an outer post independent when a nested reply becomes ambiguous", async () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:7147784590025818113">
+                <p componentkey="post-time"><span id="post-label">1w</span></p>
+                <article id="reply">
+                    <p componentkey="reply-time"><span id="reply-label">3d</span></p>
+                    <div data-sdui-anchor-id=
+                        "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+                    </div>
+                </article>
+            </article>
+        `;
+        const postTarget = document.getElementById("post-label")?.firstChild;
+        const replyTarget = document.getElementById("reply-label")?.firstChild;
+        const reply = document.getElementById("reply");
+        if (!(postTarget instanceof Text) || !(replyTarget instanceof Text) || !reply) {
+            throw new Error("Expected nested LinkedIn ambiguity fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(postTarget.data).toBe("2024-01-02");
+        expect(replyTarget.data).toBe("2024-04-05");
+
+        reply.setAttribute("data-urn", "urn:li:share:7170283349280292867");
+        await flushMutations();
+        expect(replyTarget.data).toBe("3d");
+        expect(postTarget.data).toBe("2024-01-02");
+
+        controller.reformatOwned();
+        expect(postTarget.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("discovers a LinkedIn source after only its label text becomes eligible", async () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="post-time"><span id="label">Loading</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+            </article>
+        `;
+        const target = document.getElementById("label")?.firstChild;
+        if (!(target instanceof Text)) {
+            throw new Error("Expected loading LinkedIn label");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        target.data = "1w";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("coalesces LinkedIn page text and evidence changes into one reconciliation", async () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="post-time"><span id="label">1w •</span></p>
+                <a id="evidence"
+                    href="/feed/update/urn:li:activity:7147784590025818113/">Post</a>
+            </article>
+        `;
+        const target = document.getElementById("label")?.firstChild;
+        const evidence = document.getElementById("evidence");
+        if (!(target instanceof Text) || !(evidence instanceof HTMLAnchorElement)) {
+            throw new Error("Expected co-delivered LinkedIn mutation fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        target.data = "2w • Edited";
+        evidence.href = "/feed/update/urn:li:share:7170283349280292867/";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-03-04 • Edited");
+        controller.teardown();
+    });
+
+    it("reconciles LinkedIn label-shaping attribute transitions", async () => {
+        document.body.innerHTML = `
+            <article>
+                <div id="label-parent">
+                    <span id="label" aria-hidden="true">1w</span>
+                </div>
+                <a href="/feed/update/urn:li:activity:7147784590025818113/">Post</a>
+            </article>
+        `;
+        const parent = document.getElementById("label-parent");
+        const label = document.getElementById("label");
+        const target = label?.firstChild;
+        if (!parent || !label || !(target instanceof Text)) {
+            throw new Error("Expected LinkedIn label fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        parent.classList.add("update-components-actor__sub-description");
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02");
+
+        label.removeAttribute("aria-hidden");
+        await flushMutations();
+        expect(target.data).toBe("1w");
+
+        label.setAttribute("aria-hidden", "true");
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("reconciles LinkedIn comment time eligibility when datetime changes", async () => {
+        document.body.innerHTML = `
+            <article>
+                <time id="label" class="comments-comment-meta__data"
+                    datetime="not-a-date">3d</time>
+                <div data-sdui-anchor-id=
+                    "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+                </div>
+            </article>
+        `;
+        const label = document.getElementById("label");
+        const target = label?.firstChild;
+        if (!label || !(target instanceof Text)) {
+            throw new Error("Expected LinkedIn comment time fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(target.data).toBe("3d");
+
+        label.removeAttribute("datetime");
+        await flushMutations();
+        expect(target.data).toBe("2024-04-05");
+
+        label.setAttribute("datetime", "not-a-date");
+        await flushMutations();
+        expect(target.data).toBe("3d");
+        controller.teardown();
+    });
+
+    it("handles LinkedIn insertion, page text, reformat, removal, and re-enable", async () => {
+        document.body.innerHTML = "<main id='feed'></main>";
+        let display: DisplaySettings = {
+            formatMode: "custom",
+            pattern: "yyyy-MM-dd",
+            timeZone: { mode: "utc" },
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            displayProvider: () => display,
+        });
+        controller.start();
+
+        const post = document.createElement("article");
+        post.innerHTML = `
+            <p componentkey="timestamp"><span>1w •</span></p>
+            <div componentkey="ShareUrn(shareId=7170283349280292867)"></div>
+        `;
+        document.getElementById("feed")?.append(post);
+        await flushMutations();
+        const target = post.querySelector("p > span")?.firstChild;
+        if (!(target instanceof Text)) {
+            throw new Error("Expected LinkedIn text target");
+        }
+        expect(target.data).toBe("2024-03-04 •");
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+
+        target.data = "2w • Edited";
+        await flushMutations();
+        expect(target.data).toBe("2024-03-04 • Edited");
+
+        display = {
+            formatMode: "custom",
+            pattern: "dd/MM/yyyy HH:mm:ss.SSS",
+            timeZone: { mode: "utc" },
+        };
+        controller.reformatOwned();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        post.remove();
+        await flushMutations();
+        expect(target.data).toBe("2w • Edited");
+
+        document.getElementById("feed")?.append(post);
+        await flushMutations();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        const evidence = post.querySelector("[componentkey*='ShareUrn']");
+        if (!evidence) {
+            throw new Error("Expected share evidence");
+        }
+        evidence.setAttribute(
+            "componentkey",
+            "ShareUrn(shareId=7170283349280292867)",
+        );
+        post.setAttribute("data-urn", "urn:li:share:7170283349280292867");
+        await flushMutations();
+
+        expect(post.querySelector("p > span")?.firstChild).toBe(target);
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        controller.teardown();
+        expect(target.data).toBe("2w • Edited");
+
+        controller.start();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+        controller.teardown();
+    });
 
     it("starts idempotently, tears down precisely, and can reactivate", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
@@ -843,9 +1269,7 @@ describe("DocumentTransformationController", () => {
                 ...hackerNewsAdapter,
                 extract: (element) => {
                     visits.push(element);
-                    return hackerNewsAdapter.extract(element, {
-                        url: new URL("https://news.ycombinator.com/item?id=1"),
-                    });
+                    return hackerNewsAdapter.extract(element);
                 },
             };
             const controller = new DocumentTransformationController({
@@ -1074,4 +1498,166 @@ describe("DocumentTransformationController", () => {
             computedStyle.mockRestore();
         }
     });
+
+    it("applies no-op, clear, and replace as total route transitions", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const sessions: Array<{
+            readonly session: DocumentRouteHandoffSession;
+            readonly dispose: ReturnType<typeof vi.fn>;
+        }> = [];
+        const activate = vi.fn(() => {
+            const dispose = vi.fn();
+            const session = { noteStructure: vi.fn(), dispose };
+            sessions.push({ session, dispose });
+            return session;
+        });
+        const quarantine: DocumentRouteHandoffPolicy = {
+            allowsRule: () => false,
+            activate,
+        };
+        const classifier = vi.fn(({ currentUrl }: { readonly currentUrl: URL }) => {
+            if (currentUrl.pathname === "/noop") {
+                return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP } as const;
+            }
+            if (currentUrl.pathname === "/replace") {
+                return {
+                    kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                    policy: quarantine,
+                } as const;
+            }
+            return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR } as const;
+        });
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            locales: ["en-US"],
+            routeHandoffClassifier: classifier,
+        });
+
+        const initial = controller.start();
+        expect(initial).toHaveLength(1);
+        const initialOutput = initial[0];
+        controller.reconcileRoute(new URL("https://example.test/noop"));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBe(initialOutput);
+        expect(activate).not.toHaveBeenCalled();
+
+        controller.reconcileRoute(new URL("https://example.test/replace"));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(activate).toHaveBeenCalledOnce();
+
+        controller.reconcileRoute(new URL("https://example.test/clear"));
+        const clearedOutput = document.querySelector("[data-no-more-ago-output]");
+        expect(clearedOutput).toBeInstanceOf(HTMLTimeElement);
+        expect(sessions[0]?.dispose).toHaveBeenCalledOnce();
+        expect(activate).toHaveBeenCalledOnce();
+
+        const classifierCalls = classifier.mock.calls.length;
+        controller.reconcileRoute(new URL("https://example.test/clear"));
+        expect(classifier).toHaveBeenCalledTimes(classifierCalls);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBe(clearedOutput);
+
+        controller.reconcileRoute(new URL("https://example.test/replace"));
+        controller.teardown();
+        const activationsBeforeRestart = activate.mock.calls.length;
+        controller.start();
+        expect(activate).toHaveBeenCalledTimes(activationsBeforeRestart + 1);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
+    it("restores before activating and passing a replacement route", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const events: string[] = [];
+        const firstPolicy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: () => ({
+                noteStructure: () => undefined,
+                dispose: () => events.push("dispose"),
+            }),
+        };
+        const secondPolicy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: () => {
+                events.push("activate");
+                expect(source.hasAttribute("hidden")).toBe(false);
+                expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+                return { noteStructure: () => undefined, dispose: () => undefined };
+            },
+        };
+        const adapter: TimestampSourceRule = {
+            id: "route-order",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: (element) => {
+                events.push("pass");
+                return {
+                    ruleId: "route-order",
+                    source: element,
+                    sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                    rawDatetime: "2026-08-23T10:15Z",
+                    presentation: ADJACENT_TIME_PRESENTATION,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+                };
+            },
+        };
+        let transitionCount = 0;
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            registry: new AdapterRegistry([adapter], noMatchRule),
+            routeHandoffClassifier: () => {
+                events.push("classify");
+                transitionCount += 1;
+                return {
+                    kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                    policy: transitionCount === 1 ? firstPolicy : secondPolicy,
+                };
+            },
+        });
+        controller.start();
+        controller.reconcileRoute(new URL("https://example.test/one"));
+        events.length = 0;
+
+        controller.reconcileRoute(new URL("https://example.test/two"));
+
+        expect(events).toEqual(["classify", "dispose", "activate", "pass"]);
+        controller.teardown();
+    });
+
+    it("fails closed and restores ownership when changed-route classification throws", () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected route source");
+        }
+        const failure = new Error("route classification failed");
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/initial"),
+            root: document,
+            locales: ["en-US"],
+            routeHandoffClassifier: () => {
+                throw failure;
+            },
+        });
+        controller.start();
+
+        expect(() => controller.reconcileRoute(new URL("https://example.test/next")))
+            .toThrow(failure);
+        expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+    });
+
 });

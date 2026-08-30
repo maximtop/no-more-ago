@@ -22,7 +22,6 @@ import { genericTimeRule } from "../../../../src/content-script/adapters/generic
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_PRESENTATION_KIND,
-    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -33,6 +32,7 @@ import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from "../../../../src/shared/diagnostics/contracts";
+import type { DiagnosticEventInput } from "../../../../src/shared/diagnostics/events";
 
 describe("processDocument", () => {
     let fixture = "";
@@ -46,6 +46,102 @@ describe("processDocument", () => {
 
     beforeEach(() => {
         document.body.innerHTML = fixture;
+    });
+
+    it("formats a derived LinkedIn instant through the public document boundary", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-30T00:00:00.000Z"));
+        try {
+            document.body.innerHTML = `
+                <article>
+                    <p componentkey="timestamp"><span>1w • Edited</span></p>
+                    <a href="/feed/update/urn:li:activity:7147784590025818113/">
+                        Post
+                    </a>
+                </article>
+            `;
+
+            const outputs = processDocument({
+                url: new URL("https://www.linkedin.com/feed/"),
+                root: document,
+                locales: ["en-GB"],
+                display: {
+                    formatMode: "custom",
+                    pattern: "yyyy-MM-dd HH:mm:ss.SSS",
+                    timeZone: { mode: "utc" },
+                },
+            });
+
+            expect(outputs).toEqual([]);
+            expect(document.querySelector("p > span")?.textContent)
+                .toBe("2024-01-02 03:04:05.678 • Edited");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("captures one current-time snapshot for a complete candidate batch", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp-a"><span>1w</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+            </article>
+            <article>
+                <p componentkey="timestamp-b"><span>2w</span></p>
+                <div data-urn="urn:li:share:7170283349280292867"></div>
+            </article>
+        `;
+        const now = vi.spyOn(Date, "now").mockReturnValue(
+            Date.parse("2026-08-30T00:00:00.000Z"),
+        );
+        try {
+            processDocument({
+                url: new URL("https://www.linkedin.com/feed/"),
+                root: document,
+                locales: ["en-GB"],
+            });
+
+            expect(now).toHaveBeenCalledTimes(1);
+        } finally {
+            now.mockRestore();
+        }
+    });
+
+    it("keeps generic time datetime available on LinkedIn", () => {
+        document.body.innerHTML = `
+            <time datetime="2026-08-23T10:15:00Z">one week ago</time>
+        `;
+
+        const outputs = processDocument({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+        });
+
+        expect(outputs).toHaveLength(1);
+        expect(outputs[0]?.dateTime).toBe("2026-08-23T10:15:00Z");
+    });
+
+    it("emits only bounded content-free diagnostics for LinkedIn", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp"><span>1w •</span></p>
+                <div data-urn="urn:li:activity:17074629064821571590"></div>
+            </article>
+        `;
+        const events: DiagnosticEventInput[] = [];
+
+        processDocument({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            diagnosticSink: (event) => events.push(event),
+        });
+
+        const serialized = JSON.stringify(events);
+        expect(serialized).not.toContain("1w");
+        expect(serialized).not.toContain("17074629064821571590");
+        expect(events.length).toBeGreaterThan(0);
     });
 
     it("processes one trusted GitHub relative timestamp end to end", () => {
@@ -446,48 +542,66 @@ describe("processDocument", () => {
         expect(document.querySelector("time")?.textContent).toBe(_name);
     });
 
-    it("prefers a resolved specialized candidate but falls back when it fails", () => {
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">time</time>';
+    it("does not extract a lower source after a higher source resolves", () => {
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15Z">relative</time>';
         const source = document.querySelector("time");
         if (!source) {
             throw new Error("Expected overlap source");
         }
-        let specializedValid = true;
-        const specialized: TimestampSourceRule = {
-            id: "specialized",
-            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
+        const url = new URL("https://example.test/");
+        let higherRaw = "2026-08-24T10:15Z";
+        const higherExtract = vi.fn((element: Element) => ({
+            ruleId: "higher",
+            source: element,
+            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+            rawDatetime: higherRaw,
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy:
+                TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        }));
+        const lowerExtract = vi.fn((element: Element) => ({
+            ruleId: "lower",
+            source: element,
+            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+            rawDatetime: "2026-08-23T10:15Z",
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy:
+                TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        }));
+        const higher: TimestampSourceRule = {
+            id: "higher",
+            mutationAttributes: [],
             matches: () => true,
-            matchesElement: (element) => element.matches("time"),
-            discover: (root) => [...root.querySelectorAll("time")],
-            extract: (element) => ({
-                ruleId: "specialized",
-                source: element,
-                sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
-                presentation: ADJACENT_TIME_PRESENTATION,
-                rawDatetime: specializedValid ? "2026-08-24T10:15Z" : "invalid",
-                validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
-                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
-            }),
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: higherExtract,
         };
-        const registry = new AdapterRegistry([specialized], genericTimeRule);
-        const first = processDocument({
-            url: new URL("https://example.test/"),
-            root: document,
-            locales: ["en-US"],
-            registry,
-        });
-        expect(first).toHaveLength(1);
-        expect(first[0]?.dateTime).toBe("2026-08-24T10:15Z");
+        const lower: TimestampSourceRule = {
+            id: "lower",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: lowerExtract,
+        };
+        const registry = new AdapterRegistry([higher], lower);
+
+        expect(processDocument({ url, root: document, registry })[0]?.dateTime)
+            .toBe("2026-08-24T10:15Z");
+        expect(higherExtract).toHaveBeenCalledWith(
+            source,
+            expect.objectContaining({ url }),
+        );
+        expect(lowerExtract).not.toHaveBeenCalled();
+
         restoreExactTimes(document);
-        specializedValid = false;
-        const fallback = processDocument({
-            url: new URL("https://example.test/"),
-            root: document,
-            locales: ["en-US"],
-            registry,
-        });
-        expect(fallback).toHaveLength(1);
-        expect(fallback[0]?.dateTime).toBe("2026-08-23T10:15Z");
+        higherRaw = "invalid";
+        expect(processDocument({ url, root: document, registry })[0]?.dateTime)
+            .toBe("2026-08-23T10:15Z");
+        expect(lowerExtract).toHaveBeenCalledOnce();
         restoreExactTimes(document);
     });
 
@@ -536,6 +650,157 @@ describe("processDocument", () => {
         expect(target.data).toBe("2026-08-28 10:09");
         expect(document.getElementById("link")).toBe(link);
         expect(source.hasAttribute("hidden")).toBe(false);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+    });
+
+    it(
+        "quarantines a blocked source without extraction or invalid diagnostics",
+        () => {
+            document.body.innerHTML = '<span id="source">relative</span>';
+            const source = document.getElementById("source");
+            if (!source) {
+                throw new Error("Expected policy source");
+            }
+            const higherExtract = vi.fn(() => null);
+            const lowerExtract = vi.fn((element: Element) => ({
+                ruleId: "lower",
+                source: element,
+                sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                rawDatetime: "2026-08-23T10:15Z",
+                presentation: ADJACENT_TIME_PRESENTATION,
+                validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+            }));
+            const matchingRule = (id: string, extract: TimestampSourceRule["extract"]):
+            TimestampSourceRule => ({
+                id,
+                mutationAttributes: [],
+                matches: () => true,
+                matchesElement: (element) => element === source,
+                discover: () => [source],
+                extract,
+            });
+            const registry = new AdapterRegistry(
+                [matchingRule("higher", higherExtract)],
+                matchingRule("lower", lowerExtract),
+            );
+            const url = new URL("https://example.test/");
+
+            expect(processDocument({ url, root: document, registry })).toHaveLength(1);
+            restoreExactTimes(document);
+            higherExtract.mockClear();
+            lowerExtract.mockClear();
+            const diagnosticSink = vi.fn();
+
+            expect(processDocument({
+                url,
+                root: document,
+                registry,
+                extractionPolicy: {
+                    allowsRule: (ruleId) => ruleId !== "lower",
+                },
+                diagnosticSink,
+            })).toEqual([]);
+
+            expect(higherExtract).toHaveBeenCalledOnce();
+            expect(lowerExtract).not.toHaveBeenCalled();
+            expect(source.hasAttribute("hidden")).toBe(false);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+            expect(diagnosticSink.mock.calls.flat()).not.toContainEqual({
+                category: "skip",
+                reason: "invalid-timestamp",
+                count: 1,
+            });
+        },
+    );
+
+    it("keeps an allowed valid higher source lazy under extraction policy", () => {
+        document.body.innerHTML = '<span id="source">relative</span>';
+        const source = document.getElementById("source");
+        if (!source) {
+            throw new Error("Expected policy source");
+        }
+        const higherExtract = vi.fn((element: Element) => ({
+            ruleId: "higher",
+            source: element,
+            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+            rawDatetime: "2026-08-24T10:15Z",
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        }));
+        const lowerExtract = vi.fn(() => null);
+        const registry = new AdapterRegistry(
+            [{
+                id: "higher",
+                mutationAttributes: [],
+                matches: () => true,
+                matchesElement: (element) => element === source,
+                discover: () => [source],
+                extract: higherExtract,
+            }],
+            {
+                id: "lower",
+                mutationAttributes: [],
+                matches: () => true,
+                matchesElement: (element) => element === source,
+                discover: () => [source],
+                extract: lowerExtract,
+            },
+        );
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            registry,
+            extractionPolicy: {
+                allowsRule: () => true,
+            },
+        })[0]?.dateTime).toBe("2026-08-24T10:15Z");
+        expect(lowerExtract).not.toHaveBeenCalled();
+        restoreExactTimes(document);
+    });
+
+    it("rejects a candidate for a different discovered source", () => {
+        document.body.innerHTML = '<time id="discovered">discovered</time>'
+            + '<time id="foreign">foreign</time>';
+        const discovered = document.getElementById("discovered");
+        const foreign = document.getElementById("foreign");
+        if (!discovered || !foreign) {
+            throw new Error("Expected candidate identity sources");
+        }
+        const mismatched: TimestampSourceRule = {
+            id: "mismatched",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === discovered,
+            discover: () => [discovered],
+            extract: () => ({
+                ruleId: "mismatched",
+                source: foreign,
+                sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                rawDatetime: "2026-08-24T10:15Z",
+                presentation: ADJACENT_TIME_PRESENTATION,
+                validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                visibilityPolicy:
+                    TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+            }),
+        };
+        const unused: TimestampSourceRule = {
+            id: "unused",
+            mutationAttributes: [],
+            matches: () => false,
+            matchesElement: () => false,
+            discover: () => [],
+            extract: () => null,
+        };
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            registry: new AdapterRegistry([mismatched], unused),
+        })).toEqual([]);
+        expect(discovered.hasAttribute("hidden")).toBe(false);
+        expect(foreign.hasAttribute("hidden")).toBe(false);
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
     });
 });

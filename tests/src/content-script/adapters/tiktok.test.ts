@@ -22,11 +22,25 @@ import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
+    type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
 
 const VIDEO_ID = "7639779880711749733";
 const VIDEO_URL = new URL(`https://www.tiktok.com/@fictional/video/${VIDEO_ID}`);
 const PROFILE_URL = new URL("https://www.tiktok.com/@fictional?lang=en");
+
+/**
+ * Creates one complete extraction context for a TikTok route.
+ *
+ * @param url - Current TikTok document URL.
+ * @returns - Adapter context with a page-owned text reader.
+ */
+function context(url: URL): TimestampExtractionContext {
+    return {
+        url,
+        readPageText: (target) => target.data,
+    };
+}
 
 /**
  * Installs one matching hydration record.
@@ -79,8 +93,8 @@ describe("TikTok adapter", () => {
             throw new Error("Expected profile card link");
         }
 
-        expect(tiktokProfileAdapter.discover(document)).toEqual([source]);
-        expect(tiktokProfileAdapter.extract(source, { url: PROFILE_URL })).toMatchObject({
+        expect(tiktokProfileAdapter.discover(document, context(PROFILE_URL))).toEqual([source]);
+        expect(tiktokProfileAdapter.extract(source, context(PROFILE_URL))).toMatchObject({
             ruleId: TIKTOK_PROFILE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.TIKTOK_PUBLICATION,
@@ -103,7 +117,7 @@ describe("TikTok adapter", () => {
             throw new Error("Expected direct publication metadata");
         }
 
-        expect(tiktokLegacyDirectAdapter.extract(source, { url: VIDEO_URL })).toMatchObject({
+        expect(tiktokLegacyDirectAdapter.extract(source, context(VIDEO_URL))).toMatchObject({
             source,
             rawDatetime: "2026-05-14T16:08:00.000Z",
             presentation: {
@@ -113,7 +127,7 @@ describe("TikTok adapter", () => {
         });
 
         document.getElementById("date")?.append(document.createElement("i"));
-        expect(tiktokLegacyDirectAdapter.extract(source, { url: VIDEO_URL })).toBeNull();
+        expect(tiktokLegacyDirectAdapter.extract(source, context(VIDEO_URL))).toBeNull();
     });
 
     it("extracts only the current direct feed article date", () => {
@@ -134,8 +148,11 @@ describe("TikTok adapter", () => {
             throw new Error("Expected direct feed publication fixtures");
         }
 
-        expect(tiktokDirectFeedAdapter.discover(document)).toEqual([current, recommendation]);
-        expect(tiktokDirectFeedAdapter.extract(current, { url: VIDEO_URL })).toMatchObject({
+        expect(tiktokDirectFeedAdapter.discover(document, context(VIDEO_URL))).toEqual([
+            current,
+            recommendation,
+        ]);
+        expect(tiktokDirectFeedAdapter.extract(current, context(VIDEO_URL))).toMatchObject({
             source: current,
             rawDatetime: "2026-05-14T16:08:00.000Z",
             presentation: {
@@ -143,7 +160,7 @@ describe("TikTok adapter", () => {
                 target,
             },
         });
-        expect(tiktokDirectFeedAdapter.extract(recommendation, { url: VIDEO_URL })).toBeNull();
+        expect(tiktokDirectFeedAdapter.extract(recommendation, context(VIDEO_URL))).toBeNull();
     });
 
     it("rejects ambiguous cards and never parses visible date text", () => {
@@ -153,7 +170,8 @@ describe("TikTok adapter", () => {
             + '</div><div id="metadata" data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span><span>2026-05-14</span></div>';
 
-        expect(tiktokAdapters.flatMap((adapter) => adapter.discover(document))).toEqual([
+        expect(tiktokAdapters.flatMap((adapter) =>
+            adapter.discover(document, context(VIDEO_URL)))).toEqual([
             document.getElementById("metadata"),
         ]);
         const metadata = document.getElementById("metadata");
@@ -162,7 +180,7 @@ describe("TikTok adapter", () => {
         }
         expect(tiktokLegacyDirectAdapter.extract(
             metadata,
-            { url: new URL("https://www.tiktok.com/@fictional/video/not-an-id") },
+            context(new URL("https://www.tiktok.com/@fictional/video/not-an-id")),
         )).toBeNull();
     });
 

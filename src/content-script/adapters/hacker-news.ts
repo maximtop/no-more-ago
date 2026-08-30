@@ -83,7 +83,7 @@ function findPresentationTarget(source: Element): Text | null {
 /**
  * Specialized Hacker News source using only the page-owned age title.
  */
-export const hackerNewsAdapter: TimestampSourceRule = {
+export const hackerNewsAdapter = {
     id: HACKER_NEWS_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
@@ -114,4 +114,4 @@ export const hackerNewsAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

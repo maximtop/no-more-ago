@@ -102,9 +102,13 @@ describe("Telegram Web K document lifecycle", () => {
             ),
         ).join("");
         document.body.innerHTML = `<main id="bulk-history">${rows}</main>`;
-        const extract = vi.fn((element: Element) => telegramWebKAdapter.extract(element, {
-            url: new URL("https://web.telegram.org/k/#@example"),
-        }));
+        const extract = vi.fn((
+            element: Element,
+            context: Parameters<TimestampSourceRule["extract"]>[1],
+        ) => {
+            void context;
+            return telegramWebKAdapter.extract(element);
+        });
         const instrumented: TimestampSourceRule = {
             ...telegramWebKAdapter,
             extract,

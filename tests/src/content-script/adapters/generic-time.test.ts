@@ -13,8 +13,6 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
-const CONTEXT = { url: new URL("https://example.test/page") } as const;
-
 describe("genericTimeRule", () => {
     it.each([
         ["https://example.test/path", true],
@@ -45,7 +43,7 @@ describe("genericTimeRule", () => {
         if (!valid) {
             throw new Error("Expected valid time");
         }
-        expect(genericTimeRule.extract(valid, CONTEXT)).toEqual({
+        expect(genericTimeRule.extract(valid)).toEqual({
             ruleId: "generic-time",
             source: valid,
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
@@ -56,7 +54,7 @@ describe("genericTimeRule", () => {
         });
         for (const id of ["empty", "title", "aria", "data"]) {
             const element = document.getElementById(id);
-            expect(element ? genericTimeRule.extract(element, CONTEXT) : null).toBeNull();
+            expect(element ? genericTimeRule.extract(element) : null).toBeNull();
         }
     });
 
@@ -77,6 +75,6 @@ describe("genericTimeRule", () => {
         document.body.innerHTML = '<svg><time datetime="2026-08-23T10:15Z">svg</time></svg>';
         expect(genericTimeRule.discover(document)).toEqual([]);
         const source = document.querySelector("svg time");
-        expect(source ? genericTimeRule.extract(source, CONTEXT) : null).toBeNull();
+        expect(source ? genericTimeRule.extract(source) : null).toBeNull();
     });
 });

@@ -420,7 +420,7 @@ function createCandidate(
  */
 function getProfileMutationSources(
     element: Element,
-    attributeName: TimestampSourceAttribute,
+    attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
 ): readonly Element[] {
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF) {
@@ -483,7 +483,7 @@ function getProfileChildMutationSources(
  */
 function getLegacyMutationSources(
     element: Element,
-    attributeName: TimestampSourceAttribute,
+    attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
 ): readonly Element[] {
     if (attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E) {
@@ -505,7 +505,7 @@ function getLegacyMutationSources(
  */
 function getDirectFeedMutationSources(
     element: Element,
-    attributeName: TimestampSourceAttribute,
+    attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
 ): readonly Element[] {
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF) {
