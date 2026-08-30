@@ -6,6 +6,8 @@
  * Validation rules proving that a candidate carries an eligible timestamp value.
  */
 export const TIMESTAMP_VALIDATION_RULE = {
+    CALENDAR_DATE: "date:calendar",
+    CALENDAR_OR_EXPLICIT_ISO_ZONE: "datetime:calendar-or-explicit-zone",
     EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
     HTML_GLOBAL: "datetime:html-global",
     UNIX_SECONDS: "datetime:unix-seconds",
@@ -22,6 +24,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
     TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
+    YT_FORMATTED_STRING: "yt-formatted-string",
 } as const;
 
 /**
@@ -116,7 +119,7 @@ interface TimestampCandidateSource {
     readonly sourceKind: TimestampSourceKind;
 
     /**
-     * Unparsed datetime attribute supplied by the trusted source.
+     * Unparsed date or date-time value supplied by the trusted source.
      */
     readonly rawDatetime: string;
 
@@ -193,7 +196,11 @@ export interface TimestampSourceRule {
     discover(root: ParentNode): readonly Element[];
 
     /**
-     * Returns a trusted candidate or null when the element is unsuitable.
+     * Extracts at most one candidate for the exact discovered source.
+     *
+     * @param element - Discovered source that the candidate must retain by identity.
+     * @param url - Current page URL already considered during rule matching, when available.
+     * @returns - Candidate for `element`, or null when this source tier is unusable.
      */
-    extract(element: Element): TimestampCandidate | null;
+    extract(element: Element, url?: URL): TimestampCandidate | null;
 }

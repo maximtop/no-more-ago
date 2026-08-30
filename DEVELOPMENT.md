@@ -171,7 +171,9 @@ complete global date-times with explicit known offsets. Specialized sources,
 including GitHub's relative-time widgets, Hacker News age widgets, and
 approved Stack Exchange title widgets and Telegram Web K message clocks,
 remain content-side rules and take precedence when they accept the same
-source. GitHub uses the adjacent generated-time presentation. Hacker News,
+source. Rules extract and resolve values strictly in registry order; after one
+source resolves, lower extractors are not called for that element. GitHub uses
+the adjacent generated-time presentation. Hacker News,
 Stack Exchange, and Telegram Web K use in-place presentation: they retain an
 existing simple timestamp label and own only that text until restoration.
 Public `https://t.me/s/*` pages stay on generic `time[datetime]` processing.
@@ -186,9 +188,53 @@ numeric units or parse visible/localized Telegram text. Primary edit-time and
 ambiguous forwarded or saved-message shapes fail closed. Web A remains outside
 the supported source contract.
 
+The canonical YouTube watch rules pair one approved visible label with local
+page data. Recognized loaded player-response data is preferred, with exactly
+one approved `datePublished` metadata value as an initial-document fallback.
+Either source may provide a strict calendar date or a complete explicitly
+zoned instant. Same-document changed-video handoffs admit only current dual-ID
+loaded data; unbound metadata remains quarantined. The content script never
+requests YouTube data.
+
+History-state updates produce a strict payload-free command for the exact
+frame, while `popstate` supplies the equivalent content-side signal. The
+content runtime samples its URL lazily; route or identity values never cross
+the message boundary. The controller owns the current URL and generation,
+classifies every changed href as `preserve`, `clear`, or `replace`, and retains
+that policy through active, waiting, and stopped phases. Exact duplicate hrefs
+are no-ops. Active transitions invalidate prior work and restore verified
+ownership before any current-route output is considered.
+
+Before hydrating a stopped runtime, including global or per-host re-enablement,
+sample the current URL exactly once and reconcile it through the same total
+route classifier. This activation-time sample precedes state hydration so a
+document stopped on Watch video A can restart on the current Watch video B
+without depending on an earlier history signal. If URL sampling or
+classification fails, restore ownership and fail closed without starting
+hydration.
+
+A changed-video Watch policy blocks metadata and deferred publication sources
+for the life of that same-document route. Its active session observes only
+exact recognized player-assignment script nodes and coalesces relevant
+replacement or text changes into a current-generation pass. Route replacement,
+failure, or teardown disposes the session and makes queued callbacks inert.
+
+Trusted resolution preserves these semantic kinds. Instants use the existing
+display format and configured time zone. Calendar dates use the separate
+locale-aware date-only formatter, never receive a configured time zone, and
+cannot acquire a fabricated time. System mode uses the localized medium date.
+Custom mode tokenizes the validated pattern, retains only bounded calendar
+fields and their owned literals, removes time fields and orphaned separators,
+and uses the localized medium date when no usable date projection remains.
+The controller receives one stable lazy display provider backed by the
+runtime's latest hydrated or message-updated snapshot, so reformatting observes
+current settings without controller reconstruction. All specialized rules
+remain content-side and take precedence over the final generic fallback; no
+site-specific background registration or policy logic is needed.
+
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
-frames, Shadow DOM, arbitrary page labels without a registered specialized
-source, and unsupported timestamp forms remain outside the current scope.
+frames, Shadow DOM, unapproved page labels, generic date-only values, and
+unsupported timestamp forms remain outside the current scope.
 
 ### Release Builds
 
@@ -259,6 +305,153 @@ knowledge in the adapter. Observe only attributes that can change extraction
 or eligibility; reuse the existing mutation scheduler rather than adding a
 site loop or polling path.
 
+For canonical YouTube watch pages, keep URL matching and DOM provenance in the
+YouTube contract and adapter. The loaded boundary is exactly one script whose
+text is `var ytInitialPlayerResponse = <JSON>;`. Retain only
+`videoDetails.videoId`,
+`microformat.playerMicroformatRenderer.externalVideoId`, and
+`microformat.playerMicroformatRenderer.publishDate`; both IDs must match the
+canonical URL ID. Reject missing, duplicate, malformed, or assignments above
+2,000,000 characters, then fall back to exactly one
+`meta[itemprop="datePublished"]` value.
+
+The reader stores one record per `Document` in a `WeakMap`: selected script
+identity, exact source text, and the minimal parsed result or invalid outcome.
+Reuse a stable record and recheck the requested video ID on every read.
+Invalidate the record when the assignment is missing, duplicated, oversized,
+replaced, or text-changed. Recording-parser tests must prove reuse and each
+invalidation transition.
+
+Maintain `watch-calendar-date.html` and `watch-local-sources.html` as sanitized
+offline fixtures with their evidence note. Fixture tests replace `fetch` with
+a synchronously throwing fake and assert zero calls after every case. Never
+install a successful response or refresh fixtures from a live page during the
+test run. Route tests use invented video IDs and both signal/data orderings.
+This path does not cover list surfaces, general YouTube SPA behavior, mobile,
+Music, Shorts, embeds, fallback, or player/API lookup.
+
+Run its focused source and public-boundary tests with:
+
+~~~sh
+pnpm test tests/src/content-script/adapters/youtube.test.ts \
+  tests/src/content-script/adapters/youtube-player-response.test.ts \
+  tests/src/content-script/transformation/process-document.test.ts \
+  tests/src/content-script/adapters/youtube-fixtures.test.ts
+~~~
+
+The optional delayed timestamp resolver is an injection seam for deterministic
+tests only; production composition supplies no resolver or network capability.
+Keep at most one current request per exact source. Before applying a completion,
+verify its token, generation, href, document, connection, source, opaque
+identity, current policy, and trusted value. Null, rejected, superseded,
+detached, replaced, and teardown-stale results are terminal no-ops. Exercise
+these boundaries through the runtime/controller APIs with offline data and a
+throwing `fetch` guard; never expose request data through diagnostics or
+storage.
+
+#### Qualify a YouTube list shape
+
+List qualification starts with one provenance-backed capture that joins the
+route and rendered card identity, visible publication label, and corresponding
+loaded record. A positive source additionally requires an approved explicit
+calendar date or explicitly zoned instant in that same joined record. Separate
+examples, array position, or inferred equality do not establish provenance.
+
+The sanitized `home-modern-relative-only.html` fixture is a minimal derivative
+of the Home evidence ledger: six aliased cards joined by `contentId` to six
+loaded lockup records whose synthetic relative labels also match. The captured
+records contain no approved absolute publication value, so production behavior
+is intentionally unchanged. Relative text, arbitrary date-looking fields, and
+the unrelated `replicateAsTimestamp` boolean are not approved sources.
+
+Home fixture tests replace `fetch` with a synchronously throwing fake and
+assert zero calls after every case. Run the focused qualification with:
+
+~~~sh
+pnpm test tests/src/content-script/adapters/youtube-home-fixtures.test.ts
+~~~
+
+The sanitized `search-legacy-relative-only.html` fixture independently records
+one captured legacy Search main-result shape. It traverses only:
+
+~~~text
+contents.twoColumnSearchResultsRenderer.primaryContents
+  .sectionListRenderer.contents[]
+  .itemSectionRenderer.contents[].videoRenderer
+~~~
+
+Each of its six aliased `ytd-video-renderer` cards joins its sole
+`a#video-title` watch identity to `videoRenderer.videoId`. The direct second
+`#metadata-line` span has the captured class tokens, and its visible label
+must equal `publishedTimeText.simpleText` from that same record. The fixture
+also retains two empty `gridShelfViewModel` shapes, one empty loaded
+`shelfRenderer`, and one empty DOM shelf. Those outer mixed shapes, recursively
+found nested identities, and DOM identities outside the evidenced direct main
+set are not eligible records.
+
+Every captured Search publication value was relative. Relative `simpleText`,
+synthetic absolute-looking values, watch-only data, arbitrary DOM attributes,
+and values inserted into mixed outer shapes are not approved sources. Search
+fixture tests replace `fetch` with a synchronously throwing fake, assert zero
+calls after every case, and exercise the document only through the existing
+public processing boundary. Run them with:
+
+~~~sh
+pnpm test tests/src/content-script/adapters/youtube-search-fixtures.test.ts
+~~~
+
+The sanitized `channel-videos-modern-relative-only.html` fixture records one
+captured modern Channel Videos grid. Its selected-tab loaded boundary is:
+
+~~~text
+contents.twoColumnBrowseResultsRenderer.tabs[]
+  .tabRenderer.content.richGridRenderer.contents[]
+  .richItemRenderer.content.lockupViewModel
+~~~
+
+Six aliased cards encode the already-established one-to-one identity equality
+with a minimal fixture-only watch anchor. That anchor is not a captured
+production selector. Each alias selects exactly one loaded record by
+`contentId`; one visible last-part label must then equal exactly one
+`metadataParts[1].text.content` value in that same record.
+
+The publication part occurred at `metadataRows[0]` for three retained examples
+and `metadataRows[1]` for three others. Validate the row variant independently
+for every identity-bound record. Never choose one global row index. The
+fixture also retains one empty loaded continuation outer and one empty DOM
+continuation shell; neither establishes adjacent or nested eligibility.
+
+Every captured Channel publication value was relative. Relative text,
+synthetic absolute-looking values, the unrelated `replicateAsTimestamp`
+boolean, and values injected into a continuation outer are not approved
+sources. Channel fixture tests replace `fetch` with a synchronously throwing
+fake, assert zero calls after every case, and exercise only the public document
+boundary. Run them with:
+
+~~~sh
+pnpm test tests/src/content-script/adapters/youtube-channel-fixtures.test.ts
+~~~
+
+The three completed representative list qualifications are:
+
+| Surface fixture | Qualification |
+| --- | --- |
+| Modern Home lockup | `unsupported-local` |
+| Legacy Search main result | `unsupported-local` |
+| Channel Videos modern grid lockup | `unsupported-local` |
+
+The evidence gate remains `locallyDeliveredSurface: null`. The explicit
+`9-HITL` choice was `local-only`; Branch B evidence work was not authorized and
+no contract, request, provider, permission, persistence rule, or fallback
+implementation exists. Canonical Watch is still the only positive YouTube
+surface. This matches the finalized Watch-only PRD; positive list replacement
+remains future scope. The assembled-product browser check remains deferred to
+the user's final review and is not part of the offline evidence.
+
+New positive list support must begin with new representative evidence that
+already binds DOM identity, visible label, loaded record, and an approved
+explicit value. Keep fixture derivatives minimal, sanitized, and offline.
+
 Follow the adapter and shared-contract rules in [AGENTS.md](AGENTS.md).
 
 ### Debug the Extension
@@ -293,7 +486,8 @@ source value. Successful events never retain raw source timestamps.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K
+- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or
+  supported YouTube watch
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard

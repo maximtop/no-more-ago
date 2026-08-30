@@ -4,6 +4,7 @@
 
 import { isValid, parseISO } from "date-fns";
 
+import { parseCalendarDate, type CalendarDate } from "../../shared/date/calendar-date";
 import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -72,6 +73,14 @@ function resolvePresentation(
 }
 
 /**
+ * Semantic kinds produced by trusted timestamp resolution.
+ */
+export const RESOLVED_TIMESTAMP_KIND = {
+    INSTANT: "instant",
+    CALENDAR_DATE: "calendar-date",
+} as const;
+
+/**
  * Rejects invalid or ambiguous numeric UTC offsets before ISO parsing.
  *
  * @param zone - Numeric UTC offset suffix from an ISO datetime.
@@ -108,23 +117,53 @@ function hasControlCharacter(value: string): boolean {
 }
 
 /**
- * Adapter candidate after its explicit-zone datetime has been validated and parsed into an instant.
+ * Parses one complete valid ISO date-time carrying an explicit known zone.
+ *
+ * @param rawDatetime - Exact untrusted date-time value.
+ * @returns - Parsed absolute instant or null when rejected.
  */
-export interface ResolvedTimestamp {
+function parseExplicitIsoZone(rawDatetime: string): Date | null {
+    if (
+        rawDatetime.length === 0
+        || rawDatetime !== rawDatetime.trim()
+        || hasControlCharacter(rawDatetime)
+    ) {
+        return null;
+    }
+    const zoneMatch = rawDatetime.match(ZONE);
+    if (!zoneMatch) {
+        return null;
+    }
+    const zone = zoneMatch[0];
+    if (!hasKnownNumericZone(zone)) {
+        return null;
+    }
+    const dateTime = rawDatetime.slice(0, -zone.length);
+    if (!COMPLETE_DATE_TIME.test(dateTime)) {
+        return null;
+    }
+    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
+    const time = dateTime.slice(separatorIndex + 1);
+    if (/[Z+-]/.test(time)) {
+        return null;
+    }
+    const instant = parseISO(rawDatetime);
+    return isValid(instant) ? instant : null;
+}
+
+/**
+ * Source metadata shared by every resolved semantic timestamp value.
+ */
+interface ResolvedTimestampBase {
     /**
      * DOM element whose timestamp is being transformed.
      */
     readonly source: Element;
 
     /**
-     * Original explicit-zone datetime retained for rendering and restoration markers.
+     * Original date or date-time retained for rendering and restoration markers.
      */
     readonly sourceDatetime: string;
-
-    /**
-     * Parsed absolute instant produced only after strict timestamp validation.
-     */
-    readonly instant: Date;
 
     /**
      * Validation rule accepted before the timestamp was parsed.
@@ -143,11 +182,37 @@ export interface ResolvedTimestamp {
 }
 
 /**
- * Accepts only adapter candidates carrying the explicit-zone rule and a complete valid ISO
- * datetime; returns null for malformed, ambiguous, or unsupported page data.
+ * Trusted adapter candidate preserving instant or calendar-date semantics.
+ */
+export type ResolvedTimestamp =
+    | (ResolvedTimestampBase & {
+        /**
+         * Semantic kind identifying an absolute instant.
+         */
+        readonly kind: typeof RESOLVED_TIMESTAMP_KIND.INSTANT;
+
+        /**
+         * Parsed absolute instant produced only after strict timestamp validation.
+         */
+        readonly instant: Date;
+    })
+    | (ResolvedTimestampBase & {
+        /**
+         * Semantic kind identifying a calendar date.
+         */
+        readonly kind: typeof RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE;
+
+        /**
+         * Validated date without an instant or time-zone interpretation.
+         */
+        readonly calendarDate: CalendarDate;
+    });
+
+/**
+ * Accepts only candidates carrying a recognized rule and a valid semantic value.
  *
  * @param candidate - Timestamp candidate extracted by a trusted adapter.
- * @returns - Valid resolved instant and source metadata, or null when rejected.
+ * @returns - Valid resolved semantic timestamp and source metadata, or null when rejected.
  */
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate,
@@ -165,38 +230,37 @@ export function resolveTrustedTimestamp(
     }
     const validationRule: unknown = candidate.validationRule;
     const rawDatetime = candidate.rawDatetime;
+    if (
+        validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
+        || validationRule
+            === TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE
+    ) {
+        const calendarDate = parseCalendarDate(rawDatetime);
+        if (calendarDate) {
+            return {
+                kind: RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE,
+                source: candidate.source,
+                sourceDatetime: rawDatetime,
+                calendarDate,
+                validationRule,
+                visibilityPolicy,
+                presentation,
+            };
+        }
+        if (validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE) {
+            return null;
+        }
+    }
     let instant: Date | null;
     if (validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS) {
         instant = resolveUnixSeconds(rawDatetime);
     } else if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
         instant = parseHtmlGlobalDatetime(rawDatetime);
-    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE) {
-        if (
-            rawDatetime.length === 0
-            || rawDatetime !== rawDatetime.trim()
-            || hasControlCharacter(rawDatetime)
-        ) {
-            return null;
-        }
-        const zoneMatch = rawDatetime.match(ZONE);
-        if (!zoneMatch) {
-            return null;
-        }
-        const zone = zoneMatch[0];
-        if (!hasKnownNumericZone(zone)) {
-            return null;
-        }
-        const dateTime = rawDatetime.slice(0, -zone.length);
-        if (!COMPLETE_DATE_TIME.test(dateTime)) {
-            return null;
-        }
-        const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
-        const time = dateTime.slice(separatorIndex + 1);
-        if (/[Z+-]/.test(time)) {
-            return null;
-        }
-        const parsed = parseISO(rawDatetime);
-        instant = isValid(parsed) ? parsed : null;
+    } else if (
+        validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
+        || validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE
+    ) {
+        instant = parseExplicitIsoZone(rawDatetime);
     } else {
         return null;
     }
@@ -204,6 +268,7 @@ export function resolveTrustedTimestamp(
         return null;
     }
     return {
+        kind: RESOLVED_TIMESTAMP_KIND.INSTANT,
         source: candidate.source,
         sourceDatetime: rawDatetime,
         instant,

@@ -14,6 +14,8 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASES,
     DIAGNOSTIC_EVENT_MESSAGE,
+    DOCUMENT_ROUTE_RECONCILED_MESSAGE,
+    RECONCILE_DOCUMENT_ROUTE_MESSAGE,
     REFRESH_DOCUMENT_POLICY_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
     SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
@@ -25,9 +27,11 @@ import {
     isDocumentStatusMessage,
     isDocumentStatusResponse,
     isDiagnosticEventMessage,
+    isDocumentRouteReconciledAcknowledgement,
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
     isRefreshDocumentPolicyMessage,
+    isReconcileDocumentRouteMessage,
     isSuspendAndRefreshDocumentPolicyMessage,
     isTeardownDocumentMessage,
 } from "../../../../src/shared/messaging/document-messages";
@@ -102,6 +106,39 @@ describe("document policy messages", () => {
                 extra: true,
             }),
         ).toBe(false);
+    });
+});
+
+describe("document route messages", () => {
+    it("accepts only payload-free route commands and acknowledgements", () => {
+        expect(
+            isReconcileDocumentRouteMessage({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE }),
+        ).toBe(true);
+        expect(
+            isDocumentRouteReconciledAcknowledgement({
+                type: DOCUMENT_ROUTE_RECONCILED_MESSAGE,
+            }),
+        ).toBe(true);
+
+        for (const property of ["url", "query", "videoId", "generation", "pageData"]) {
+            expect(
+                isReconcileDocumentRouteMessage({
+                    type: RECONCILE_DOCUMENT_ROUTE_MESSAGE,
+                    [property]: "forbidden",
+                }),
+            ).toBe(false);
+            expect(
+                isDocumentRouteReconciledAcknowledgement({
+                    type: DOCUMENT_ROUTE_RECONCILED_MESSAGE,
+                    [property]: "forbidden",
+                }),
+            ).toBe(false);
+        }
+
+        for (const value of [null, [], {}, { type: "other" }]) {
+            expect(isReconcileDocumentRouteMessage(value)).toBe(false);
+            expect(isDocumentRouteReconciledAcknowledgement(value)).toBe(false);
+        }
     });
 });
 

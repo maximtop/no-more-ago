@@ -2,28 +2,33 @@
 
 No More Ago is a browser extension for people who prefer exact dates to text
 such as “3 months ago.” It replaces eligible standard and trusted specialized
-timestamps with localized date and time text while preserving the original
-page state for restoration.
+timestamps with localized exact values while preserving the original page
+state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
 GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
 have specialized sources for trusted timestamp widgets. These integrations
 preserve page-owned elements and links while updating simple labels in place
-needed. Instagram uses the standard timestamp source with a specialized
+when needed. Instagram uses the standard timestamp source with a specialized
 in-place presentation rule that preserves styling hooks. Site markup support is
-best-effort and may change independently of the extension.
+best-effort and may change independently of the extension. Canonical desktop
+YouTube watch pages also have specialized local publication sources for
+calendar dates and explicitly zoned instants.
 
 ## Key Concepts
 
-- **Exact date:** the absolute date and time shown in place of a relative
-  timestamp.
+- **Exact value:** a localized date, with a time only when the trusted source
+  represents an absolute instant.
 - **Standard timestamp:** a `time[datetime]` value containing a complete date
   and time with an explicit, known UTC offset.
+- **Calendar date:** a strict explicit `YYYY-MM-DD` value that retains its
+  calendar day without becoming an instant or receiving a time-zone shift.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange and Telegram Web K timestamps. Specialized rules take precedence
-  over the generic rule when both accept the same source.
+  Exchange and Telegram Web K timestamps, or the approved YouTube watch label
+  and identity-matched loaded data or initial-document metadata. Specialized
+  rules take precedence over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -62,8 +67,12 @@ from source, follow the [development guide](DEVELOPMENT.md).
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
 and Telegram Web K timestamps can also become exact dates. Instagram's simple
-standard timestamp labels retain their page-owned elements and styles. The
-result follows the selected format, browser locale, and time zone.
+standard timestamp labels retain their page-owned elements and styles. A
+supported YouTube watch calendar date becomes a
+localized date without a time, while a supported zoned publication instant
+becomes a localized date and time. Instant output follows the selected format,
+browser locale, and time zone; calendar-date output preserves the same day in
+every configured time zone.
 
 ## Features
 
@@ -120,9 +129,32 @@ left unchanged. Telegram Web A is unsupported because it does not expose the
 same safe machine-readable instant. The extension never parses Telegram's
 visible or localized clock text as timestamp evidence.
 
-The extension watches relevant dynamic content in each reachable HTTP(S)
-document. Newly added or changed timestamps are processed without requiring a
-full page reload.
+On a canonical `www.youtube.com/watch?v=<video-id>` URL, YouTube processing
+pairs the approved visible publication label with recognized data already
+loaded in the document. It prefers identity-matched player publication data,
+then, on an initial full-document load, falls back to exactly one head
+`meta[itemprop="datePublished"]` value. Both sources accept either a strict
+calendar date or a complete explicitly zoned instant. The extension never
+requests YouTube data. If neither eligible local source validates, the label
+stays unchanged; visible relative text and arbitrary attributes are never
+inferred as dates.
+
+The generic runtime watches relevant dynamic content in each reachable
+HTTP(S) document. Newly added or changed timestamps are processed without a
+full page reload. On a same-document YouTube route change, the runtime samples
+the current URL, restores obsolete extension-owned output, and processes the
+new route generation. A changed-video Watch handoff accepts only loaded player
+data whose two video identities match the current URL. It watches only the
+exact recognized player-assignment scripts, so either signal-first or
+data-first navigation can become live without polling.
+
+YouTube publication metadata has no video identity. It therefore remains
+quarantined for the entire same-document changed-video handoff, even after
+metadata or label mutations. If valid identity-matched loaded publication data
+never appears, that Watch label remains page-owned until a full document load.
+Navigating to the captured Home, Search, Channel, or another unsupported route
+restores obsolete Watch output but does not add list-surface or fallback
+support.
 
 ### Global and Site Controls
 
@@ -148,8 +180,15 @@ how dates are displayed.
 
 **Date format**
 
-- **System** uses the browser locale's medium date and short time format.
-- **Custom format** accepts Unicode date and time tokens and shows a preview.
+- **System** uses the browser locale's medium date and short time format for
+  instants, and its localized medium date-only format for calendar dates.
+- **Custom format** accepts Unicode date and time tokens for instants and shows
+  a preview.
+- For supported YouTube calendar dates, a custom format retains its date
+  fields, order, and style while removing time fields and their orphaned
+  separators. A time-only or otherwise unusable date projection safely falls
+  back to the localized medium date-only format. Zoned YouTube values use the
+  selected instant format.
 
 Example custom patterns:
 
@@ -167,6 +206,9 @@ Invalid patterns cannot be saved. The previously saved format remains active.
 - **UTC** displays every supported timestamp in UTC.
 - **IANA** accepts a named zone such as `Europe/Nicosia` or
   `America/New_York`.
+
+Time-zone selection applies only to absolute instants. A calendar date remains
+the same calendar day under System, UTC, and every IANA choice.
 
 Saving display settings refreshes supported timestamps on open pages whenever
 the browser allows it.
@@ -239,11 +281,26 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible zoned standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible canonical YouTube watch calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
+| Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
+| Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
+| Same-document navigation to a list or unsupported route | Obsolete Watch output is restored and the unsupported route remains unchanged. |
+| Captured modern YouTube Home lockup with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
+| Captured legacy YouTube Search main-result shape with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
+| Captured Channel Videos modern grid lockup with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
+| Generic date-only `time[datetime]` | Page content remains unchanged because generic processing is instant-only. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
 | Format or time zone changes | Existing output is reformatted when reachable. |
+
+The completed capture-backed list matrix classifies the investigated modern
+Home lockup, legacy Search main result, and Channel Videos modern grid lockup
+as `unsupported-local`. Therefore no captured local list surface is delivered.
+The finalized Watch-only scope keeps those captures as safe no-op research
+evidence. Canonical Watch remains the only positive YouTube surface; no
+fallback request, provider, permission, or runtime behavior exists.
 
 ## Permissions and Privacy
 
@@ -255,7 +312,8 @@ The extension requests:
 - **Scripting:** registers, updates, and removes one universal content runtime
   at document start for all frames.
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
-  can verify each frame's revision acknowledgement.
+  can verify each frame's revision acknowledgement, and sends a payload-free
+  route-reconciliation signal to the exact frame after a history-state update.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative or absolute labels,
@@ -274,24 +332,63 @@ does not inspect message text, authors, identifiers, localized titles, or full
 Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
 processing.
 
+YouTube publication processing reads only recognized values already present
+in the document. It does not make a network request or perform a player lookup.
+
+It does not derive YouTube dates from visible relative text, page titles, ARIA
+labels, arbitrary `data-*` attributes, nearby text, or elapsed time, and does
+not modify those page-provided attributes. Standard processing remains limited
+to ordinary light-DOM `time[datetime]` elements; Shadow DOM and additional
+source types are deferred.
+
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, Instagram, and Telegram Web K are
-  best-effort integrations whose markup can change independently of the
+- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, and YouTube
+  are best-effort integrations whose markup can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
   may still use the universal generic rule.
+- YouTube support is limited to canonical desktop
+  `www.youtube.com/watch?v=<11-character-video-id>` pages with the approved
+  visible label and recognized loaded publication data, or one
+  `datePublished` metadata value at the initial full-document boundary. Values
+  must be a strict calendar date or a complete explicitly zoned instant.
+  Same-document changed-video handoffs require current dual-ID loaded data;
+  unbound metadata stays quarantined until a full document load. Mobile,
+  Music, embed, Shorts, list surfaces, general YouTube SPA support, fallback,
+  and player/API lookup are not supported by this path.
+- YouTube calendar dates use the localized medium date style in System mode.
+  Custom mode projects only the configured calendar fields and falls back to
+  that localized date-only style when the projection is unusable. It never
+  adds a time or applies the configured time zone.
+- Canonical Watch is the only positive YouTube source. The captured Home,
+  Search, and Channel list shapes remain `unsupported-local`. The selected
+  local-only outcome adds no player request; positive list replacement remains
+  outside the finalized Watch-only scope.
+- The recorded modern YouTube Home lockup shape contains relative-only local
+  data and remains unchanged. Its `unsupported-local` qualification applies
+  only to that captured shape; it is not Home replacement support or a promise
+  about other experiments, future markup, or all list surfaces.
+- The recorded legacy YouTube Search main-result shape also contains only
+  relative local publication data and remains unchanged. Its
+  `unsupported-local` qualification is not positive Search replacement
+  support and does not generalize to shelves, the three excluded DOM
+  identities, other Search experiments, future markup, or every list surface.
+- The recorded Channel Videos modern grid lockup also contains relative-only
+  local publication data and remains unchanged. Its `unsupported-local`
+  qualification is not positive Channel replacement support and does not
+  generalize to other Channel tabs, routes, shelves, Shorts, experiments,
+  future markup, or all Channel pages.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.
 - Frames that are inaccessible or use a non-HTTP(S) scheme remain unchanged.
-- Shadow DOM, unregistered page labels, durations, date-only values, local
-  date-times, and other non-global timestamp forms are outside the current
-  scope.
+- Shadow DOM, unapproved page labels, durations, generic date-only values,
+  local date-times, and other unsupported timestamp forms remain unchanged.
 - Website markup can change at any time, so compatibility is best-effort and
   is not a promise about future markup.
 - The extension is not yet distributed through browser stores.

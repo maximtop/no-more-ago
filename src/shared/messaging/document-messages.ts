@@ -34,6 +34,16 @@ export const DOCUMENT_POLICY_REFRESHED_MESSAGE = "no-more-ago:document-policy-re
 export const DOCUMENT_TORN_DOWN_MESSAGE = "no-more-ago:document-torn-down";
 
 /**
+ * Requests that a document runtime sample and reconcile its current route.
+ */
+export const RECONCILE_DOCUMENT_ROUTE_MESSAGE = "no-more-ago:reconcile-document-route";
+
+/**
+ * Acknowledges that a document route signal was accepted.
+ */
+export const DOCUMENT_ROUTE_RECONCILED_MESSAGE = "no-more-ago:document-route-reconciled";
+
+/**
  * Requests the current lifecycle phase of a document runtime.
  */
 export const DOCUMENT_STATUS_MESSAGE = "no-more-ago:status";
@@ -107,6 +117,20 @@ const refreshDocumentPolicyMessageSchema = v.strictObject({
  */
 const suspendAndRefreshDocumentPolicyMessageSchema = v.strictObject({
     type: v.literal(SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE),
+});
+
+/**
+ * Schema for a payload-free command that reconciles the current document route.
+ */
+const reconcileDocumentRouteMessageSchema = v.strictObject({
+    type: v.literal(RECONCILE_DOCUMENT_ROUTE_MESSAGE),
+});
+
+/**
+ * Schema for a payload-free route reconciliation acknowledgement.
+ */
+const documentRouteReconciledAcknowledgementSchema = v.strictObject({
+    type: v.literal(DOCUMENT_ROUTE_RECONCILED_MESSAGE),
 });
 
 /**
@@ -189,6 +213,20 @@ type SuspendAndRefreshDocumentPolicyMessage = v.InferOutput<
 >;
 
 /**
+ * Command that asks a document runtime to sample and reconcile its current route.
+ */
+type ReconcileDocumentRouteMessage = v.InferOutput<
+    typeof reconcileDocumentRouteMessageSchema
+>;
+
+/**
+ * Reply confirming that a route reconciliation signal was accepted.
+ */
+export type DocumentRouteReconciledAcknowledgement = v.InferOutput<
+    typeof documentRouteReconciledAcknowledgementSchema
+>;
+
+/**
  * Command that requests a document runtime's lifecycle state.
  */
 type DocumentStatusMessage = v.InferOutput<typeof documentStatusMessageSchema>;
@@ -264,6 +302,30 @@ export function isSuspendAndRefreshDocumentPolicyMessage(
     value: unknown,
 ): value is SuspendAndRefreshDocumentPolicyMessage {
     return v.safeParse(suspendAndRefreshDocumentPolicyMessageSchema, value).success;
+}
+
+/**
+ * Recognizes an exact payload-free document-route reconciliation command.
+ *
+ * @param value - Untrusted runtime message.
+ * @returns - Whether the value is an exact route reconciliation command.
+ */
+export function isReconcileDocumentRouteMessage(
+    value: unknown,
+): value is ReconcileDocumentRouteMessage {
+    return v.safeParse(reconcileDocumentRouteMessageSchema, value).success;
+}
+
+/**
+ * Recognizes an exact payload-free route reconciliation acknowledgement.
+ *
+ * @param value - Untrusted runtime response.
+ * @returns - Whether the value is an exact route reconciliation acknowledgement.
+ */
+export function isDocumentRouteReconciledAcknowledgement(
+    value: unknown,
+): value is DocumentRouteReconciledAcknowledgement {
+    return v.safeParse(documentRouteReconciledAcknowledgementSchema, value).success;
 }
 
 /**
