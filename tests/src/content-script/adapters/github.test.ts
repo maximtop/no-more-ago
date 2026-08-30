@@ -9,9 +9,14 @@ import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
 
 const GITHUB_URL = new URL("https://github.com/any/path");
+const extractionContext: TimestampExtractionContext = {
+    url: GITHUB_URL,
+    readPageText: (target) => target.data,
+};
 
 describe("GitHub adapter registry", () => {
     it("selects only exact GitHub HTTP(S) URLs", () => {
@@ -38,13 +43,13 @@ describe("GitHub adapter registry", () => {
             throw new Error("Expected the GitHub adapter");
         }
 
-        const [element] = adapter.discover(document);
+        const [element] = adapter.discover(document, extractionContext);
         expect(element).toBeDefined();
         if (!element) {
             throw new Error("Expected one discovered relative-time element");
         }
 
-        expect(adapter.extract(element, GITHUB_URL)).toMatchObject({
+        expect(adapter.extract(element, extractionContext)).toMatchObject({
             ruleId: "github",
             rawDatetime: "2026-08-23T10:15:00Z",
             sourceKind: "relative-time",
@@ -63,8 +68,14 @@ describe("GitHub adapter registry", () => {
         if (!adapter || !root) {
             throw new Error("Expected adapter and root");
         }
-        expect(adapter.discover(root)).toEqual([root, root.firstElementChild]);
-        expect(adapter.discover(document.createElement("aside"))).toEqual([]);
+        expect(adapter.discover(root, extractionContext)).toEqual([
+            root,
+            root.firstElementChild,
+        ]);
+        expect(adapter.discover(
+            document.createElement("aside"),
+            extractionContext,
+        )).toEqual([]);
     });
 
     it.each([
@@ -80,8 +91,8 @@ describe("GitHub adapter registry", () => {
         if (!element) {
             throw new Error("Expected an approved source element");
         }
-        expect(adapter?.discover(document)).toEqual([element]);
-        expect(adapter?.extract(element, GITHUB_URL)).toEqual({
+        expect(adapter?.discover(document, extractionContext)).toEqual([element]);
+        expect(adapter?.extract(element, extractionContext)).toEqual({
             ruleId: "github",
             source: element,
             sourceKind,
@@ -107,8 +118,8 @@ describe("GitHub adapter registry", () => {
         const original = document.body.innerHTML;
         const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
         expect(adapter).not.toBeNull();
-        for (const element of adapter?.discover(document) ?? []) {
-            expect(adapter?.extract(element, GITHUB_URL)).toBeNull();
+        for (const element of adapter?.discover(document, extractionContext) ?? []) {
+            expect(adapter?.extract(element, extractionContext)).toBeNull();
         }
         expect(document.body.innerHTML).toBe(original);
     });

@@ -13,6 +13,7 @@ import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
 import {
     YOUTUBE_ADAPTER_ID,
@@ -22,6 +23,19 @@ import {
 import { youtubePlayerResponseAssignment } from "./youtube-test-data";
 
 const WATCH_URL = new URL("https://www.youtube.com/watch?v=testVID0001");
+
+/**
+ * Creates an extraction context for one YouTube route.
+ *
+ * @param url - Route whose video identity should be used.
+ * @returns - Adapter extraction context.
+ */
+function context(url: URL = WATCH_URL): TimestampExtractionContext {
+    return {
+        url,
+        readPageText: (target) => target.data,
+    };
+}
 
 /**
  * Loads one approved YouTube watch publication label.
@@ -105,7 +119,7 @@ describe("youtubeAdapter", () => {
         appendPlayerAssignment("2026-08-29T10:15:00+03:00");
         const metadataQuery = vi.spyOn(document.head, "querySelectorAll");
 
-        expect(youtubePlayerResponseRule.extract(source, WATCH_URL)).toEqual({
+        expect(youtubePlayerResponseRule.extract(source, context())).toEqual({
             ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
@@ -133,8 +147,8 @@ describe("youtubeAdapter", () => {
             throw new Error("Expected watch publication label");
         }
 
-        expect(youtubeAdapter.discover(document)).toEqual([source]);
-        expect(youtubeAdapter.extract(source, WATCH_URL)).toEqual({
+        expect(youtubeAdapter.discover(document, context())).toEqual([source]);
+        expect(youtubeAdapter.extract(source, context())).toEqual({
             ruleId: YOUTUBE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
@@ -153,8 +167,8 @@ describe("youtubeAdapter", () => {
         appendPlayerAssignment("2026-08-29T10:15:00+03:00");
         const unsupportedUrl = new URL("https://youtube.com/watch?v=testVID0001");
 
-        expect(youtubePlayerResponseRule.extract(source, unsupportedUrl)).toBeNull();
-        expect(youtubeAdapter.extract(source, unsupportedUrl)).toBeNull();
+        expect(youtubePlayerResponseRule.extract(source, context(unsupportedUrl))).toBeNull();
+        expect(youtubeAdapter.extract(source, context(unsupportedUrl))).toBeNull();
     });
 
     it.each([
@@ -173,7 +187,7 @@ describe("youtubeAdapter", () => {
             appendPlayerAssignment(publication, videoId, externalVideoId);
         }
 
-        expect(youtubePlayerResponseRule.extract(source, WATCH_URL)).toBeNull();
+        expect(youtubePlayerResponseRule.extract(source, context())).toBeNull();
     });
 
     it("keeps discovery bounded to the supplied root", () => {
@@ -182,8 +196,8 @@ describe("youtubeAdapter", () => {
         const source = loadApprovedLabel();
         const unrelatedRoot = document.createElement("aside");
 
-        expect(youtubeAdapter.discover(unrelatedRoot)).toEqual([]);
-        expect(youtubeAdapter.discover(source)).toEqual([source]);
+        expect(youtubeAdapter.discover(unrelatedRoot, context())).toEqual([]);
+        expect(youtubeAdapter.discover(source, context())).toEqual([source]);
     });
 
     it.each([
@@ -199,7 +213,7 @@ describe("youtubeAdapter", () => {
         document.head.innerHTML = metadata;
         const source = loadApprovedLabel();
 
-        expect(youtubeAdapter.extract(source, WATCH_URL)).toBeNull();
+        expect(youtubeAdapter.extract(source, context())).toBeNull();
     });
 
     it("does not discover or extract a label outside the approved container", () => {
@@ -212,10 +226,10 @@ describe("youtubeAdapter", () => {
             throw new Error("Expected unapproved label");
         }
 
-        expect(youtubeAdapter.discover(document)).toEqual([]);
-        expect(youtubeAdapter.extract(source, WATCH_URL)).toBeNull();
-        expect(youtubePlayerResponseRule.discover(document)).toEqual([]);
-        expect(youtubePlayerResponseRule.extract(source, WATCH_URL)).toBeNull();
+        expect(youtubeAdapter.discover(document, context())).toEqual([]);
+        expect(youtubeAdapter.extract(source, context())).toBeNull();
+        expect(youtubePlayerResponseRule.discover(document, context())).toEqual([]);
+        expect(youtubePlayerResponseRule.extract(source, context())).toBeNull();
     });
 
     it("does not infer a date from visible text or unapproved attributes", () => {
@@ -229,7 +243,7 @@ describe("youtubeAdapter", () => {
             throw new Error("Expected watch publication label");
         }
 
-        expect(youtubeAdapter.discover(document)).toEqual([source]);
-        expect(youtubeAdapter.extract(source, WATCH_URL)).toBeNull();
+        expect(youtubeAdapter.discover(document, context())).toEqual([source]);
+        expect(youtubeAdapter.extract(source, context())).toBeNull();
     });
 });

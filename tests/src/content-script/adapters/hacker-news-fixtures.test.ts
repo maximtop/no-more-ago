@@ -165,9 +165,9 @@ describe("Hacker News fixtures", () => {
             let visits = 0;
             const instrumented = {
                 ...hackerNewsAdapter,
-                extract: (element: Element, url: URL) => {
+                extract: (element: Element) => {
                     visits += 1;
-                    return hackerNewsAdapter.extract(element, url);
+                    return hackerNewsAdapter.extract(element);
                 },
             };
             const sink = vi.fn();

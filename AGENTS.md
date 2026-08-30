@@ -24,11 +24,12 @@ No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized timestamps with exact, localized values. It ships
 a generic instant-only `time[datetime]` source for HTTP(S) documents,
 specialized sources for GitHub, Hacker News, supported Stack Exchange Q&A
-sites, and Telegram Web K, plus a best-effort canonical YouTube watch
-publication source for calendar dates or explicitly zoned instants. Instagram
-uses a site-specific presentation rule for its standard timestamps. Public
-`https://t.me/s/*` pages use the generic source. Extraction remains separate
-from shared semantic validation, presentation, and rendering.
+sites, Telegram Web K, and best-effort LinkedIn timestamps, plus a best-effort
+canonical YouTube watch publication source for calendar dates or explicitly
+zoned instants. Instagram uses a site-specific presentation rule for its
+standard timestamps. Public `https://t.me/s/*` pages use the generic source.
+Extraction remains separate from shared semantic validation, presentation,
+and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -56,9 +57,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and canonical
-  desktop YouTube watch-page publication sources, plus an Instagram in-place
-  presentation rule for standard timestamps.
+  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and best-effort
+  LinkedIn and canonical desktop YouTube watch-page publication sources, plus
+  an Instagram in-place presentation rule for standard timestamps.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -197,9 +198,16 @@ unpacked or temporary extension when manual browser verification is needed.
   instants; strict adapter-approved `YYYY-MM-DD` values resolve to calendar
   dates and never enter instant or configured-time-zone formatting.
 - Accept generic timestamps only from valid `<time datetime>` elements with a
-  complete explicitly zoned global date-time. Accept calendar dates only from
-  an explicit approved adapter source. Never infer a value from relative text
-  or ambiguous data.
+  complete explicitly zoned global date-time. Accept calendar dates and other
+  derived timestamps only from explicit approved adapter sources. Never infer
+  a value from relative text or ambiguous data.
+- Treat LinkedIn's accepted `activity`, `ugcPost`, `share`, and `comment` ID
+  timestamps as best-effort ID creation/allocation time. Keep ID grammar,
+  decoding, local association, nesting, and presentation delimiters in the
+  LinkedIn adapter boundary.
+- Never derive a LinkedIn instant from relative or display text. Reject missing,
+  malformed, future, or ambiguous local ID evidence without a network fallback
+  or page mutation.
 - Keep async browser operations explicit and handle unavailable tabs, pages,
   storage, and workers without leaving partially applied UI state.
 - Restore original page text immediately when global or per-domain processing
@@ -401,10 +409,10 @@ Known architectural exclusions to improve when their area changes:
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
 - Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
-  YouTube-specific selectors, timestamp sources, and presentation rules inside
-  their respective adapters so adding another site changes minimal shared
-  business logic. Public `t.me/s/*` support remains on the generic standard
-  timestamp source.
+  LinkedIn- and YouTube-specific selectors, timestamp sources, and presentation
+  rules inside their respective adapters so adding or repairing a source
+  changes minimal shared business logic. Public `t.me/s/*` support remains on
+  the generic standard timestamp source.
 - Keep YouTube route matching, selectors, loaded publication properties, and
   metadata provenance inside the YouTube contract and adapter. Treat its
   current watch markup as a best-effort source, not a compatibility promise.

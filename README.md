@@ -7,14 +7,14 @@ state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
-GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
-have specialized sources for trusted timestamp widgets. These integrations
-preserve page-owned elements and links while updating simple labels in place
-when needed. Instagram uses the standard timestamp source with a specialized
-in-place presentation rule that preserves styling hooks. Site markup support is
-best-effort and may change independently of the extension. Canonical desktop
-YouTube watch pages also have specialized local publication sources for
-calendar dates and explicitly zoned instants.
+GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
+LinkedIn have specialized sources for trusted or best-effort timestamp inputs.
+These integrations preserve page-owned elements and links while updating
+simple labels in place when needed. Instagram uses the standard timestamp
+source with a specialized in-place presentation rule that preserves styling
+hooks. Site markup support is best-effort and may change independently of the
+extension. Canonical desktop YouTube watch pages also have specialized local
+publication sources for calendar dates and explicitly zoned instants.
 
 ## Key Concepts
 
@@ -27,8 +27,9 @@ calendar dates and explicitly zoned instants.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
   Exchange and Telegram Web K timestamps, or the approved YouTube watch label
-  and identity-matched loaded data or initial-document metadata. Specialized
-  rules take precedence over the generic rule when both accept the same source.
+  and identity-matched loaded data or initial-document metadata, plus
+  best-effort LinkedIn ID timestamps. Specialized rules take precedence over
+  the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -66,9 +67,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-and Telegram Web K timestamps can also become exact dates. Instagram's simple
-standard timestamp labels retain their page-owned elements and styles. A
-supported YouTube watch calendar date becomes a
+Telegram Web K, and best-effort LinkedIn ID timestamps can also become exact
+dates. Instagram's simple standard timestamp labels retain their page-owned
+elements and styles. A supported YouTube watch calendar date becomes a
 localized date without a time, while a supported zoned publication instant
 becomes a localized date and time. Instant output follows the selected format,
 browser locale, and time zone; calendar-date output preserves the same day in
@@ -85,8 +86,8 @@ compact numeric offset. Date-only, local, malformed, impossible, and
 unknown-zone values remain unchanged. Visible text is never parsed as a
 fallback.
 
-GitHub, Hacker News, and supported Stack Exchange Q&A sites have specialized
-sources for their trusted timestamp widgets. Hacker News support applies to
+GitHub, Hacker News, supported Stack Exchange Q&A sites, and LinkedIn have
+specialized timestamp sources. Hacker News support applies to
 `span.age[title]` on the exact `news.ycombinator.com` hostname. Stack Exchange
 support applies to Stack Exchange network Q&A and per-site meta host shapes,
 plus the branded Q&A roots `stackoverflow.com`, `serverfault.com`,
@@ -107,6 +108,24 @@ labels are updated in place so their element identity, classes, inline styles,
 and surrounding layout hooks remain page-owned. Complex timestamp markup keeps
 using the generic adjacent-output fallback. This presentation integration is
 best-effort and does not infer dates from Instagram's visible text.
+
+LinkedIn posts, reshares, comments, and replies have a best-effort specialized
+source when one visible timestamp label is locally associated with exactly one
+explicit `activity`, `ugcPost`, `share`, or `comment` ID. The adapter derives
+Unix milliseconds from the ID's upper bits and preserves the full millisecond
+value through the selected format and time zone. This is best-effort ID
+creation or allocation time: LinkedIn does not document the encoding, and the
+result is not guaranteed to equal an official `createdAt`, `publishedAt`, or
+visible publication time.
+
+LinkedIn support recognizes only the English-style relative label grammar used
+for `just now` and the `s`, `m`, `h`, `d`, `w`, `mo`, `y`, and `yr` units. Other
+localized label grammars remain unchanged. The adapter never calculates a date
+from that relative label, `Edited`, an ARIA label, or nearby display text.
+Missing, malformed, future, or ambiguous ID evidence leaves the label
+unchanged. The adapter makes no LinkedIn API or other timestamp request and
+preserves adjacent metadata, links, attributes, and page-owned element identity
+when replacing the timestamp text.
 
 Representative public X and Twitter feed, post, thread, quoted-post, and
 nested-card shapes are verified through the same standard `time[datetime]`
@@ -284,7 +303,7 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible zoned standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible zoned standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or LinkedIn timestamp | The trusted or best-effort ID instant is shown with the configured exact-date presentation. |
 | Eligible canonical YouTube watch calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
 | Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
 | Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
@@ -314,14 +333,16 @@ The extension requests:
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative or absolute labels,
-link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
-specialized source trusts only the explicit zoned timestamp in its approved
-`span.age[title]` shape. The Stack Exchange source reads `title` only from its
-listed timestamp widgets and accepts only strict explicit-zone values plus the
-known comment-license suffix. In-place sources change only their simple label
-text: the `title`, link destination, element identity, attributes, and event
-listeners remain intact. Standard processing remains limited to ordinary
-light-DOM `time[datetime]` elements.
+ARIA labels, nearby text, or elapsed time. The Hacker News specialized source
+trusts only the explicit zoned timestamp in its approved `span.age[title]`
+shape. The Stack Exchange source reads `title` only from its listed timestamp
+widgets and accepts only strict explicit-zone values plus the known
+comment-license suffix. LinkedIn is the best-effort derived-ID exception: it
+accepts only explicit supported IDs in approved local URL, URN, component-key,
+or data-anchor evidence and makes no network request. In-place sources change
+only their selected label text; link destinations, element identity,
+attributes, and event listeners remain intact. Standard processing remains
+limited to ordinary light-DOM `time[datetime]` elements.
 
 The Telegram Web K source trusts only a matching message bubble's ten-digit
 Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It
@@ -343,7 +364,8 @@ source types are deferred.
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, and YouTube
+- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, LinkedIn, and
+  YouTube
   are best-effort integrations whose markup can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`

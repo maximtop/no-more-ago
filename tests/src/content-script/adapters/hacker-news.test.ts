@@ -18,8 +18,6 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
-const HACKER_NEWS_URL = new URL("https://news.ycombinator.com/");
-
 describe("Hacker News source contract", () => {
     it.each([
         ["https://news.ycombinator.com/", true],
@@ -69,7 +67,7 @@ describe("Hacker News source contract", () => {
             throw new Error("Expected linked age text");
         }
 
-        expect(hackerNewsAdapter.extract(source, HACKER_NEWS_URL)).toEqual({
+        expect(hackerNewsAdapter.extract(source)).toEqual({
             ruleId: HACKER_NEWS_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
@@ -99,13 +97,13 @@ describe("Hacker News source contract", () => {
         if (!simple) {
             throw new Error("Expected simple age widget");
         }
-        expect(hackerNewsAdapter.extract(simple, HACKER_NEWS_URL)?.presentation).toMatchObject({
+        expect(hackerNewsAdapter.extract(simple)?.presentation).toMatchObject({
             kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
             target: simple.firstChild,
         });
         for (const id of ["two-links", "icon", "outside"]) {
             const source = document.getElementById(id);
-            expect(source ? hackerNewsAdapter.extract(source, HACKER_NEWS_URL) : null)
+            expect(source ? hackerNewsAdapter.extract(source) : null)
                 .toBeNull();
         }
     });

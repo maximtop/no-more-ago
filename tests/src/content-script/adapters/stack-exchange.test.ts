@@ -18,8 +18,6 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
-const STACK_OVERFLOW_URL = new URL("https://stackoverflow.com/questions");
-
 describe("Stack Exchange source contract", () => {
     it.each([
         ["https://stackoverflow.com/questions", true],
@@ -123,7 +121,7 @@ describe("Stack Exchange source contract", () => {
             throw new Error("Expected a simple Stack Exchange timestamp label");
         }
 
-        expect(stackExchangeAdapter.extract(source, STACK_OVERFLOW_URL)).toEqual({
+        expect(stackExchangeAdapter.extract(source)).toEqual({
             ruleId: STACK_EXCHANGE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.STACK_EXCHANGE_TIMESTAMP,
@@ -150,7 +148,7 @@ describe("Stack Exchange source contract", () => {
 
         for (const id of ["license", "complex", "generic"]) {
             const source = document.getElementById(id);
-            expect(source ? stackExchangeAdapter.extract(source, STACK_OVERFLOW_URL) : null)
+            expect(source ? stackExchangeAdapter.extract(source) : null)
                 .toBeNull();
         }
     });

@@ -149,7 +149,7 @@ function readStackExchangeDatetime(element: Element): string | null {
 /**
  * Specialized Stack Exchange source using only approved title-bearing widgets.
  */
-export const stackExchangeAdapter: TimestampSourceRule = {
+export const stackExchangeAdapter = {
     id: STACK_EXCHANGE_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
@@ -186,4 +186,4 @@ export const stackExchangeAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

@@ -188,6 +188,15 @@ numeric units or parse visible/localized Telegram text. Primary edit-time and
 ambiguous forwarded or saved-message shapes fail closed. Web A remains outside
 the supported source contract.
 
+LinkedIn is a best-effort specialized in-place source with a different value
+provenance: its adapter accepts one strict local content ID and emits a derived
+Unix-millisecond candidate rather than a page-authored datetime. Treat that
+value as ID creation/allocation time, never as guaranteed official creation or
+publication time. ID parsing, DOM association, nesting rules, and presentation
+delimiters stay inside the LinkedIn adapter modules. Shared resolution validates
+the derived epoch, while shared rendering owns and restores only the selected
+page Text node.
+
 The canonical YouTube watch rules pair one approved visible label with local
 page data. Recognized loaded player-response data is preferred, with exactly
 one approved `datePublished` metadata value as an initial-document fallback.
@@ -297,7 +306,12 @@ To add or update a specialized source:
    When a source selects text-in-place presentation, also test retained element
    identity, exact page-owned restoration, target replacement, and page-authored
    label changes while owned.
-5. Run `pnpm check` and a development build for the affected browser.
+5. For a derived-ID source, test the full ID grammar, unsafe and future values,
+   local ambiguity, compound text preservation, and proof that relative text
+   does not affect the instant.
+6. Keep fixtures synthetic and offline; remove names, content, tracking data,
+   authentication state, and real user or content IDs.
+7. Run `pnpm check` and a development build for the affected browser.
 
 Do not add site-specific background activation or registration. The universal
 runtime already reaches every accessible HTTP(S) document and frame.
@@ -467,15 +481,18 @@ source value. Successful events never retain raw source timestamps.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or
-  supported YouTube watch
+- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, LinkedIn,
+  or supported YouTube watch
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard
   `time[datetime]` values. In-place adapters require one unambiguous simple
   label. For Web K, also verify an HTML `div.bubble[data-timestamp]`, one
   bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
-  ten-digit seconds value. Do not recover by parsing localized UI text.
+  ten-digit seconds value. For best-effort LinkedIn support, verify the
+  accepted local ID evidence and timestamp-label relationship before changing
+  selectors. Do not recover from markup drift by parsing localized or relative
+  UI text or adding a network fallback.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

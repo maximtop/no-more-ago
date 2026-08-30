@@ -12,6 +12,7 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
     getOwnedTimestampSourceEntries,
+    readPageOwnedText,
     renderTimestampPresentation,
     restoreTimestampPresentation,
     type TimestampRenderResult,
@@ -28,6 +29,7 @@ import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate,
+    type TimestampExtractionContext,
     type TimestampSourceRule,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
@@ -73,9 +75,13 @@ function getFailureSourceTimestamp(
             candidate.sourceKind === TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE
             && candidate.validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
     );
-    return telegramCandidate
-        ? safeDiagnosticSourceTimestamp(telegramCandidate.rawDatetime)
-        : undefined;
+    if (
+        !telegramCandidate
+        || telegramCandidate.validationRule !== TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS
+    ) {
+        return undefined;
+    }
+    return safeDiagnosticSourceTimestamp(telegramCandidate.rawDatetime);
 }
 
 /**
@@ -323,6 +329,19 @@ function addCandidate(
 }
 
 /**
+ * Creates the read-only adapter context for one processing pass.
+ *
+ * @param url - Current route URL for route-specific value provenance.
+ * @returns - Context exposing the current route and retained page-authored text reader.
+ */
+function createExtractionContext(url: URL): TimestampExtractionContext {
+    return {
+        url,
+        readPageText: readPageOwnedText,
+    };
+}
+
+/**
  * Renders or restores one already-discovered candidate collection.
  *
  * @param input - Presentation, ownership, and diagnostic dependencies.
@@ -412,13 +431,15 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         return [];
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
+    const nowMilliseconds = Date.now();
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
+    const extractionContext = createExtractionContext(input.url);
     for (const rule of rules) {
-        for (const element of rule.discover(root)) {
+        for (const element of rule.discover(root, extractionContext)) {
             if (!discovered.has(element)) {
                 discovered.add(element);
                 discoveredSources.push(element);
@@ -430,10 +451,10 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             if (resolvedBySource.has(element)) {
                 continue;
             }
-            const candidate = rule.extract(element, input.url);
+            const candidate = rule.extract(element, extractionContext);
             if (candidate?.source === element) {
                 addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate);
+                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
                 if (resolved) {
                     resolvedBySource.set(element, resolved);
                 }
@@ -482,11 +503,13 @@ export function reconcileDocumentSources(
         return [];
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
+    const nowMilliseconds = Date.now();
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
+    const extractionContext = createExtractionContext(input.url);
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -498,9 +521,6 @@ export function reconcileDocumentSources(
         discovered.add(source);
         discoveredSources.push(source);
         for (const rule of rules) {
-            if (!rule.matchesElement(source)) {
-                continue;
-            }
             if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
                 blockedSources.add(source);
                 continue;
@@ -508,10 +528,10 @@ export function reconcileDocumentSources(
             if (resolvedBySource.has(source)) {
                 continue;
             }
-            const candidate = rule.extract(source, input.url);
+            const candidate = rule.extract(source, extractionContext);
             if (candidate?.source === source) {
                 addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate);
+                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
                 if (resolved) {
                     resolvedBySource.set(source, resolved);
                 }

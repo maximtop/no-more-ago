@@ -7,6 +7,9 @@ import { readFile } from "node:fs/promises";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
+import type {
+    TimestampExtractionContext,
+} from "../../../../src/content-script/adapters/types";
 import { DocumentTransformationController } from
     "../../../../src/content-script/transformation/document-transformation-controller";
 import { processDocument } from "../../../../src/content-script/transformation/process-document";
@@ -23,6 +26,11 @@ const githubPages = [
     "/search?q=repo%3Agithub%2Fdocs+is%3Aissue+45593&type=issues",
     "/github/docs/actions/runs/32653376977",
 ];
+
+const extractionContext: TimestampExtractionContext = {
+    url: new URL("https://github.com/"),
+    readPageText: (target) => target.data,
+};
 
 /**
  * GitHub fixture case describing either one trusted timestamp or expected no-op selectors.
@@ -160,7 +168,7 @@ describe("offline GitHub source fixtures", () => {
                 }
                 const adapter = defaultRegistry.matching(new URL(url))[0];
                 expect(adapter).not.toBeNull();
-                expect(adapter?.extract(source, new URL(url))).toMatchObject({
+                expect(adapter?.extract(source, extractionContext)).toMatchObject({
                     source,
                     rawDatetime: sourceCase.rawDatetime,
                 });

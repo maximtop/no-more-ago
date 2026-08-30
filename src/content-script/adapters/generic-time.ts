@@ -81,11 +81,11 @@ function extractStandardTime(
 /**
  * Generic rule for standard time elements on every HTTP(S) document.
  */
-export const genericTimeRule: TimestampSourceRule = {
+export const genericTimeRule = {
     id: GENERIC_TIME_RULE_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
     matches: isHttpUrl,
     matchesElement: isGenericTimeSource,
     discover: discoverStandardTimes,
     extract: extractStandardTime,
-};
+} satisfies TimestampSourceRule;

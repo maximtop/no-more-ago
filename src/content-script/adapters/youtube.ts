@@ -80,11 +80,11 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
-    extract: (element, url) => {
+    extract: (element, context) => {
         if (!isYouTubeWatchPublicationSource(element)) {
             return null;
         }
-        const videoId = getYouTubeWatchVideoId(url);
+        const videoId = getYouTubeWatchVideoId(context.url);
         if (videoId === null) {
             return null;
         }
@@ -111,10 +111,10 @@ export const youtubeAdapter: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
-    extract: (element, url) => {
+    extract: (element, context) => {
         if (
             !isYouTubeWatchPublicationSource(element)
-            || getYouTubeWatchVideoId(url) === null
+            || getYouTubeWatchVideoId(context.url) === null
         ) {
             return null;
         }
