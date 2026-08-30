@@ -5,6 +5,7 @@
 import { genericTimeRule } from "./generic-time";
 import { githubAdapter } from "./github";
 import { hackerNewsAdapter } from "./hacker-news";
+import { instagramAdapter } from "./instagram";
 import { stackExchangeAdapter } from "./stack-exchange";
 import { telegramWebKAdapter } from "./telegram-web-k";
 import type { TimestampSourceRule } from "./types";
@@ -40,6 +41,12 @@ export class AdapterRegistry {
  * Production registry with specialized-source precedence and generic fallback.
  */
 export const defaultRegistry = new AdapterRegistry(
-    [githubAdapter, hackerNewsAdapter, stackExchangeAdapter, telegramWebKAdapter],
+    [
+        githubAdapter,
+        hackerNewsAdapter,
+        instagramAdapter,
+        stackExchangeAdapter,
+        telegramWebKAdapter,
+    ],
     genericTimeRule,
 );

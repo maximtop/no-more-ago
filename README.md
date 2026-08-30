@@ -10,8 +10,9 @@ pages, including public Telegram channel pages under `https://t.me/s/*`.
 GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
 have specialized sources for trusted timestamp widgets. These integrations
 preserve page-owned elements and links while updating simple labels in place
-when needed. Site markup support is best-effort and may change independently
-of the extension.
+needed. Instagram uses the standard timestamp source with a specialized
+in-place presentation rule that preserves styling hooks. Site markup support is
+best-effort and may change independently of the extension.
 
 ## Key Concepts
 
@@ -60,8 +61,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-and Telegram Web K timestamps can also become exact dates. The result follows
-the selected format, browser locale, and time zone.
+and Telegram Web K timestamps can also become exact dates. Instagram's simple
+standard timestamp labels retain their page-owned elements and styles. The
+result follows the selected format, browser locale, and time zone.
 
 ## Features
 
@@ -90,6 +92,12 @@ shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,
 using the generic fallback. All sources share presentation, restoration, and
 dynamic-page lifecycle behavior. When a specialized and generic rule both
 accept the same source, the specialized rule wins.
+
+On the exact `www.instagram.com` hostname, simple standard `time[datetime]`
+labels are updated in place so their element identity, classes, inline styles,
+and surrounding layout hooks remain page-owned. Complex timestamp markup keeps
+using the generic adjacent-output fallback. This presentation integration is
+best-effort and does not infer dates from Instagram's visible text.
 
 Representative public X and Twitter feed, post, thread, quoted-post, and
 nested-card shapes are verified through the same standard `time[datetime]`
@@ -271,8 +279,8 @@ processing.
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, and Telegram Web K are best-effort
-  specialized integrations whose markup can change independently of the
+- GitHub, Hacker News, Stack Exchange, Instagram, and Telegram Web K are
+  best-effort integrations whose markup can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
