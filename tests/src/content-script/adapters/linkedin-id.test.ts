@@ -85,6 +85,8 @@ describe("parseLinkedInIds", () => {
         "activityId=7147784590025818113 0",
         "commentId= 7181895116414517252",
         "urn:li:activity:123456789012345678901",
+        `xurn:li:activity:${ACTIVITY_ID}`,
+        `noturn:li:comment:(ugcPost:${UGC_POST_ID},${COMMENT_ID})`,
     ])("rejects malformed or unsupported evidence %s", (value) => {
         expect(parseLinkedInIds(value)).toEqual([]);
     });

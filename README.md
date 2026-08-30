@@ -112,11 +112,14 @@ creation or allocation time: LinkedIn does not document the encoding, and the
 result is not guaranteed to equal an official `createdAt`, `publishedAt`, or
 visible publication time.
 
-LinkedIn support never calculates a date from `1d`, `1w`, `1mo`, `Edited`, an
-ARIA label, or nearby display text. Missing, malformed, future, or ambiguous ID
-evidence leaves the label unchanged. The adapter makes no LinkedIn API or other
-timestamp request and preserves adjacent metadata, links, attributes, and
-page-owned element identity when replacing the timestamp text.
+LinkedIn support recognizes only the English-style relative label grammar used
+for `just now` and the `s`, `m`, `h`, `d`, `w`, `mo`, `y`, and `yr` units. Other
+localized label grammars remain unchanged. The adapter never calculates a date
+from that relative label, `Edited`, an ARIA label, or nearby display text.
+Missing, malformed, future, or ambiguous ID evidence leaves the label
+unchanged. The adapter makes no LinkedIn API or other timestamp request and
+preserves adjacent metadata, links, attributes, and page-owned element identity
+when replacing the timestamp text.
 
 Representative public X and Twitter feed, post, thread, quoted-post, and
 nested-card shapes are verified through the same standard `time[datetime]`

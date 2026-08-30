@@ -235,6 +235,112 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
+    it("keeps an outer post independent when a nested reply becomes ambiguous", async () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:7147784590025818113">
+                <p componentkey="post-time"><span id="post-label">1w</span></p>
+                <article id="reply">
+                    <p componentkey="reply-time"><span id="reply-label">3d</span></p>
+                    <div data-sdui-anchor-id=
+                        "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+                    </div>
+                </article>
+            </article>
+        `;
+        const postTarget = document.getElementById("post-label")?.firstChild;
+        const replyTarget = document.getElementById("reply-label")?.firstChild;
+        const reply = document.getElementById("reply");
+        if (!(postTarget instanceof Text) || !(replyTarget instanceof Text) || !reply) {
+            throw new Error("Expected nested LinkedIn ambiguity fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(postTarget.data).toBe("2024-01-02");
+        expect(replyTarget.data).toBe("2024-04-05");
+
+        reply.setAttribute("data-urn", "urn:li:share:7170283349280292867");
+        await flushMutations();
+        expect(replyTarget.data).toBe("3d");
+        expect(postTarget.data).toBe("2024-01-02");
+
+        controller.reformatOwned();
+        expect(postTarget.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("discovers a LinkedIn source after only its label text becomes eligible", async () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="post-time"><span id="label">Loading</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+            </article>
+        `;
+        const target = document.getElementById("label")?.firstChild;
+        if (!(target instanceof Text)) {
+            throw new Error("Expected loading LinkedIn label");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        target.data = "1w";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("coalesces LinkedIn page text and evidence changes into one reconciliation", async () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="post-time"><span id="label">1w •</span></p>
+                <a id="evidence"
+                    href="/feed/update/urn:li:activity:7147784590025818113/">Post</a>
+            </article>
+        `;
+        const target = document.getElementById("label")?.firstChild;
+        const evidence = document.getElementById("evidence");
+        if (!(target instanceof Text) || !(evidence instanceof HTMLAnchorElement)) {
+            throw new Error("Expected co-delivered LinkedIn mutation fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        target.data = "2w • Edited";
+        evidence.href = "/feed/update/urn:li:share:7170283349280292867/";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-03-04 • Edited");
+        controller.teardown();
+    });
+
     it("reconciles LinkedIn label-shaping attribute transitions", async () => {
         document.body.innerHTML = `
             <article>

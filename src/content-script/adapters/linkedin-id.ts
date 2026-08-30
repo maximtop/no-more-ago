@@ -35,26 +35,37 @@ export interface LinkedInLogicalId {
 
 const MAX_LINKEDIN_ID_DIGITS = 20;
 const DECIMAL_TOKEN = `[1-9]\\d{0,${String(MAX_LINKEDIN_ID_DIGITS - 1)}}`;
+const POST_ID_KIND_TOKEN = "activity|ugcPost|share";
+const LEFT_TOKEN_BOUNDARY = "(?:^|[^0-9A-Za-z_])";
 const DECIMAL_PATTERN = new RegExp(`^${DECIMAL_TOKEN}$`, "u");
-const DIRECT_URN_PATTERN =
-    new RegExp(`urn:li:(activity|ugcPost|share):(${DECIMAL_TOKEN})(?=$|[/?#&,)\\]])`, "gu");
+const STRICT_POST_URN_PATTERN = new RegExp(
+    `^urn:li:(${POST_ID_KIND_TOKEN}):(${DECIMAL_TOKEN})$`,
+    "u",
+);
+const DIRECT_URN_PATTERN = new RegExp(
+    `${LEFT_TOKEN_BOUNDARY}urn:li:(${POST_ID_KIND_TOKEN}):`
+        + `(${DECIMAL_TOKEN})(?=$|[/?#&,)\\]])`,
+    "gu",
+);
 const NAMED_ID_PATTERN = new RegExp(
-    `\\b(activity|ugcPost|share|comment)Id=(${DECIMAL_TOKEN})(?=$|[,)])`,
+    `\\b(${POST_ID_KIND_TOKEN}|comment)Id=(${DECIMAL_TOKEN})(?=$|[,)])`,
     "gu",
 );
 const COMMENT_URN_PATTERN = new RegExp(
-    "urn:li:comment:\\((?:(?:urn:li:)?(?:activity|ugcPost|share):)?"
+    `${LEFT_TOKEN_BOUNDARY}urn:li:comment:\\(`
+        + `(?:(?:urn:li:)?(?:${POST_ID_KIND_TOKEN}):)?`
         + `${DECIMAL_TOKEN},(${DECIMAL_TOKEN})\\)(?![0-9A-Za-z_])`,
     "gu",
 );
 const COMMENT_URN_CONTEXT_PATTERN = new RegExp(
-    "urn:li:comment:\\((?:(?:urn:li:)?(activity|ugcPost|share):)"
+    `${LEFT_TOKEN_BOUNDARY}urn:li:comment:\\(`
+        + `(?:(?:urn:li:)?(${POST_ID_KIND_TOKEN}):)`
         + `(${DECIMAL_TOKEN}),(${DECIMAL_TOKEN})\\)(?![0-9A-Za-z_])`,
     "gu",
 );
 const NAMED_COMMENT_CONTEXT_PATTERN = new RegExp(
     `commentId=(${DECIMAL_TOKEN}),\\s*thread=urn:li:`
-        + `(activity|ugcPost|share):(${DECIMAL_TOKEN})(?=$|[,)])`,
+        + `(${POST_ID_KIND_TOKEN}):(${DECIMAL_TOKEN})(?=$|[,)])`,
     "gu",
 );
 const LINKEDIN_TIMESTAMP_BITS = 22n;
@@ -126,6 +137,19 @@ export function parseLinkedInIds(value: string): readonly LinkedInLogicalId[] {
         }
     }
     return [...ids.values()];
+}
+
+/**
+ * Parses one complete supported post URN without accepting surrounding text.
+ *
+ * @param value - Candidate complete LinkedIn post URN.
+ * @returns - Strict post ID, or null for any unsupported grammar.
+ */
+export function parseLinkedInPostUrn(value: string): LinkedInLogicalId | null {
+    const match = value.match(STRICT_POST_URN_PATTERN);
+    const kind = match?.[1] as LinkedInIdKind | undefined;
+    const decimal = match?.[2];
+    return kind && decimal ? { kind, decimal } : null;
 }
 
 /**

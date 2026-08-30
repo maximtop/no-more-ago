@@ -44,6 +44,15 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
 } as const;
 
 /**
+ * DOM mutation kinds forwarded to adapter-specific source invalidation.
+ */
+export const TIMESTAMP_MUTATION_KIND = {
+    ATTRIBUTE: "attribute",
+    CHARACTER_DATA: "character-data",
+    CHILD_LIST: "child-list",
+} as const;
+
+/**
  * Presentation strategies selected by trusted timestamp sources.
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
@@ -95,12 +104,6 @@ export const TIMESTAMP_VISIBILITY_POLICY = {
 } as const;
 
 /**
- * Validation rule carried by a timestamp candidate.
- */
-export type TimestampValidationRule =
-    (typeof TIMESTAMP_VALIDATION_RULE)[keyof typeof TIMESTAMP_VALIDATION_RULE];
-
-/**
  * Source kind carried by a timestamp candidate.
  */
 export type TimestampSourceKind =
@@ -111,6 +114,12 @@ export type TimestampSourceKind =
  */
 export type TimestampSourceAttribute =
     (typeof TIMESTAMP_SOURCE_ATTRIBUTE)[keyof typeof TIMESTAMP_SOURCE_ATTRIBUTE];
+
+/**
+ * DOM mutation kind forwarded to adapter-specific source invalidation.
+ */
+export type TimestampMutationKind =
+    (typeof TIMESTAMP_MUTATION_KIND)[keyof typeof TIMESTAMP_MUTATION_KIND];
 
 /**
  * Visibility handling policy carried by a timestamp candidate.
@@ -228,6 +237,11 @@ export interface TimestampSourceRule {
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
     /**
+     * Whether page-authored character-data changes can create a source for this rule.
+     */
+    readonly observesCharacterData?: boolean;
+
+    /**
      * Maps an adapter-relevant mutation back to affected source elements.
      *
      * Rules may use this when eligibility depends on descendant attributes, child
@@ -237,6 +251,7 @@ export interface TimestampSourceRule {
      * @param attributeName - Adapter-declared attribute that changed, when present.
      * @param oldValue - Attribute value before the mutation.
      * @param context - Read-only page extraction context.
+     * @param mutationKind - Kind of DOM mutation being mapped.
      * @returns - Exact source elements that require re-evaluation.
      */
     readonly getMutationSources?: (
@@ -244,6 +259,7 @@ export interface TimestampSourceRule {
         attributeName: TimestampSourceAttribute | undefined,
         oldValue: string | null,
         context: TimestampExtractionContext,
+        mutationKind: TimestampMutationKind,
     ) => readonly Element[];
 
     /**

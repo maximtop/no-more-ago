@@ -6,18 +6,20 @@ import { discoverElements } from "./discover-elements";
 import { isHtmlElement } from "./html-element";
 import {
     decodeLinkedInIdMilliseconds,
-    parseLinkedInIds,
+    parseLinkedInPostUrn,
     parseLinkedInTargetIds,
     type LinkedInLogicalId,
 } from "./linkedin-id";
 import { findSimpleTextTarget } from "./simple-text-target";
 import {
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_MUTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
+    type TimestampMutationKind,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
@@ -39,7 +41,7 @@ const EVIDENCE_SELECTOR = [
     "a[href]",
 ].join(", ");
 const LINKEDIN_PERMALINK_PATTERN = new RegExp(
-    "^/feed/update/(urn:li:(?:activity|ugcPost|share):[1-9]\\d{0,19})/?$",
+    "^/feed/update/([^/]+)/?$",
     "u",
 );
 const RELATIVE_PRESENTATION_PATTERN = new RegExp(
@@ -105,6 +107,69 @@ interface LinkedInAssociation extends LinkedInPresentation {
      */
     readonly id: LinkedInLogicalId;
 }
+
+/**
+ * One logical ID and its number of distinct local evidence occurrences.
+ */
+interface CountedLinkedInId {
+    /**
+     * Parsed logical ID.
+     */
+    readonly id: LinkedInLogicalId;
+
+    /**
+     * Number of evidence elements contributing the ID.
+     */
+    count: number;
+}
+
+/**
+ * Scope-local logical IDs keyed by kind and decimal value.
+ */
+type LinkedInIdCounts = Map<string, CountedLinkedInId>;
+
+/**
+ * Indexes candidate scopes, parsed evidence, and unresolved labels for one pass.
+ */
+interface LinkedInAssociationIndex {
+    /**
+     * Root whose descendants may participate in this pass.
+     */
+    readonly root: ParentNode;
+
+    /**
+     * Bounded local scopes considered for each presentation.
+     */
+    readonly scopesByPresentation: ReadonlyMap<
+        LinkedInPresentation,
+        readonly Element[]
+    >;
+
+    /**
+     * All candidate scopes used to avoid indexing unrelated ancestors.
+     */
+    readonly candidateScopes: ReadonlySet<Element>;
+
+    /**
+     * Parsed evidence counts aggregated once for each candidate scope.
+     */
+    readonly evidenceByScope: ReadonlyMap<Element, LinkedInIdCounts>;
+
+    /**
+     * Evidence already owned by independently associated descendant sources.
+     */
+    readonly excludedByScope: Map<Element, LinkedInIdCounts>;
+
+    /**
+     * Presentations that still compete inside each candidate scope.
+     */
+    readonly pendingByScope: Map<Element, Set<LinkedInPresentation>>;
+}
+
+const cachedAssociationsByContext = new WeakMap<
+    TimestampExtractionContext,
+    Map<Element, LinkedInAssociation>
+>();
 
 /**
  * Checks whether a URL belongs to LinkedIn over HTTP(S).
@@ -174,7 +239,8 @@ function parseLinkedInPermalinkIds(value: string): readonly LinkedInLogicalId[] 
         return [];
     }
     const urn = pathname.match(LINKEDIN_PERMALINK_PATTERN)?.[1];
-    return urn ? parseLinkedInIds(urn) : [];
+    const id = urn ? parseLinkedInPostUrn(urn) : null;
+    return id ? [id] : [];
 }
 
 /**
@@ -211,7 +277,11 @@ function collectPresentations(
     root: ParentNode,
     context: TimestampExtractionContext,
 ): readonly LinkedInPresentation[] {
-    return discoverElements(root, LABEL_SELECTOR, isHtmlElement)
+    return discoverElements(
+        root,
+        LABEL_SELECTOR,
+        (element) => isHtmlElement(element) && element.matches(LABEL_SELECTOR),
+    )
         .map((label) => resolvePresentation(label, context))
         .filter((value): value is LinkedInPresentation => value !== null);
 }
@@ -223,41 +293,11 @@ function collectPresentations(
  * @returns - Evidence elements in document order.
  */
 function collectEvidenceElements(root: ParentNode): readonly Element[] {
-    return discoverElements(root, EVIDENCE_SELECTOR, isHtmlElement);
-}
-
-/**
- * Selects one target ID in a scope while pruning independently associated descendants.
- *
- * @param scope - Candidate local association boundary.
- * @param presentation - Label currently being associated.
- * @param evidenceElements - Evidence indexed once for the inspected root.
- * @param nestedSources - Independently associated descendant sources.
- * @returns - One deduplicated logical target, or null when absent or ambiguous.
- */
-function selectLogicalId(
-    scope: Element,
-    presentation: LinkedInPresentation,
-    evidenceElements: readonly Element[],
-    nestedSources: ReadonlySet<Element>,
-): LinkedInLogicalId | null {
-    const ids = new Map<string, LinkedInLogicalId>();
-    for (const evidence of evidenceElements) {
-        if (evidence !== scope && !scope.contains(evidence)) {
-            continue;
-        }
-        const belongsToNestedSource = [...nestedSources].some((nestedSource) =>
-            !nestedSource.contains(presentation.label)
-            && (evidence === nestedSource || nestedSource.contains(evidence))
-        );
-        if (belongsToNestedSource) {
-            continue;
-        }
-        for (const id of collectElementIds(evidence)) {
-            ids.set(`${id.kind}:${id.decimal}`, id);
-        }
-    }
-    return ids.size === 1 ? ids.values().next().value ?? null : null;
+    return discoverElements(
+        root,
+        EVIDENCE_SELECTOR,
+        (element) => isHtmlElement(element) && element.matches(EVIDENCE_SELECTOR),
+    );
 }
 
 /**
@@ -273,41 +313,241 @@ function isBroadAssociationBoundary(element: Element): boolean {
 }
 
 /**
- * Finds one presentation's smallest unambiguous local association.
+ * Returns the nearest content item that evidence must not escape.
+ *
+ * @param element - Label, evidence, or candidate scope.
+ * @returns - Nearest article boundary, or null when the shape has none.
+ */
+function findContentItemBoundary(element: Element): Element | null {
+    return element.closest("article");
+}
+
+/**
+ * Checks whether one element remains inside an inspected root.
+ *
+ * @param element - Candidate descendant or element root.
+ * @param root - Document or element root for this pass.
+ * @returns - Whether the element belongs to the root.
+ */
+function belongsToRoot(element: Element, root: ParentNode): boolean {
+    const rootNode = root as Node;
+    return rootNode.nodeType === Node.DOCUMENT_NODE
+        || element === rootNode
+        || rootNode.contains(element);
+}
+
+/**
+ * Collects one label's bounded ancestor scopes without crossing its content item.
+ *
+ * @param presentation - Eligible page-owned label.
+ * @param root - Document or exact source root.
+ * @returns - Candidate scopes from nearest to broadest.
+ */
+function collectAssociationScopes(
+    presentation: LinkedInPresentation,
+    root: ParentNode,
+): readonly Element[] {
+    const scopes: Element[] = [];
+    const contentBoundary = findContentItemBoundary(presentation.label);
+    let scope: Element | null = presentation.label.parentElement;
+    for (let depth = 0; scope && depth < MAX_ASSOCIATION_DEPTH; depth += 1) {
+        if (isBroadAssociationBoundary(scope) || !belongsToRoot(scope, root)) {
+            break;
+        }
+        scopes.push(scope);
+        if (scope === contentBoundary || scope === root) {
+            break;
+        }
+        scope = scope.parentElement;
+    }
+    return scopes;
+}
+
+/**
+ * Adds logical IDs to a mutable counted collection.
+ *
+ * @param target - Counted collection to update.
+ * @param ids - Logical IDs contributed by one evidence element.
+ */
+function addLogicalIds(
+    target: LinkedInIdCounts,
+    ids: readonly LinkedInLogicalId[],
+): void {
+    for (const id of ids) {
+        const key = `${id.kind}:${id.decimal}`;
+        const existing = target.get(key);
+        if (existing) {
+            existing.count += 1;
+        } else {
+            target.set(key, { id, count: 1 });
+        }
+    }
+}
+
+/**
+ * Adds counted logical IDs to another mutable collection.
+ *
+ * @param target - Counted collection to update.
+ * @param source - Counted IDs to merge.
+ */
+function addLogicalIdCounts(target: LinkedInIdCounts, source: LinkedInIdCounts): void {
+    for (const [key, entry] of source) {
+        const existing = target.get(key);
+        if (existing) {
+            existing.count += entry.count;
+        } else {
+            target.set(key, { id: entry.id, count: entry.count });
+        }
+    }
+}
+
+/**
+ * Builds one pass-local index instead of rescanning all evidence for every label.
+ *
+ * @param root - Document or exact source subtree to inspect.
+ * @param presentations - Eligible labels inside the root.
+ * @returns - Candidate-scope, evidence, and pending-presentation indexes.
+ */
+function createAssociationIndex(
+    root: ParentNode,
+    presentations: readonly LinkedInPresentation[],
+): LinkedInAssociationIndex {
+    const scopesByPresentation = new Map<LinkedInPresentation, readonly Element[]>();
+    const candidateScopes = new Set<Element>();
+    const pendingByScope = new Map<Element, Set<LinkedInPresentation>>();
+    for (const presentation of presentations) {
+        const scopes = collectAssociationScopes(presentation, root);
+        scopesByPresentation.set(presentation, scopes);
+        for (const scope of scopes) {
+            candidateScopes.add(scope);
+            const pending = pendingByScope.get(scope) ?? new Set<LinkedInPresentation>();
+            pending.add(presentation);
+            pendingByScope.set(scope, pending);
+        }
+    }
+    const evidenceByScope = new Map<Element, LinkedInIdCounts>();
+    for (const evidence of collectEvidenceElements(root)) {
+        const ids = collectElementIds(evidence);
+        if (ids.length === 0) {
+            continue;
+        }
+        const contentBoundary = findContentItemBoundary(evidence);
+        let scope: Element | null = evidence;
+        while (scope && belongsToRoot(scope, root)) {
+            if (
+                candidateScopes.has(scope)
+                && findContentItemBoundary(scope) === contentBoundary
+            ) {
+                const counts = evidenceByScope.get(scope)
+                    ?? new Map<string, CountedLinkedInId>();
+                addLogicalIds(counts, ids);
+                evidenceByScope.set(scope, counts);
+            }
+            if (
+                scope === contentBoundary
+                || scope === root
+                || isBroadAssociationBoundary(scope)
+            ) {
+                break;
+            }
+            scope = scope.parentElement;
+        }
+    }
+    return {
+        root,
+        scopesByPresentation,
+        candidateScopes,
+        evidenceByScope,
+        excludedByScope: new Map(),
+        pendingByScope,
+    };
+}
+
+/**
+ * Returns evidence remaining after independently associated descendants are excluded.
+ *
+ * @param index - Pass-local association index.
+ * @param scope - Candidate source boundary.
+ * @returns - Effective scope-local evidence counts.
+ */
+function getEffectiveEvidence(
+    index: LinkedInAssociationIndex,
+    scope: Element,
+): LinkedInIdCounts {
+    const effective: LinkedInIdCounts = new Map();
+    const excluded = index.excludedByScope.get(scope);
+    for (const [key, entry] of index.evidenceByScope.get(scope) ?? []) {
+        const count = entry.count - (excluded?.get(key)?.count ?? 0);
+        if (count > 0) {
+            effective.set(key, { id: entry.id, count });
+        }
+    }
+    return effective;
+}
+
+/**
+ * Finds one presentation's smallest currently unambiguous local association.
  *
  * @param presentation - Eligible label presentation.
- * @param evidenceElements - Evidence indexed once for the inspected root.
- * @param nestedSources - Independently associated descendant sources.
- * @param pendingPresentations - Labels not yet proven to have independent sources.
- * @returns - Accepted association, or null when local evidence is unsuitable.
+ * @param index - Pass-local association index.
+ * @returns - Accepted association, or null while local evidence is unsuitable.
  */
 function findAssociation(
     presentation: LinkedInPresentation,
-    evidenceElements: readonly Element[],
-    nestedSources: ReadonlySet<Element>,
-    pendingPresentations: ReadonlySet<LinkedInPresentation>,
+    index: LinkedInAssociationIndex,
 ): LinkedInAssociation | null {
-    let scope: Element | null = presentation.label.parentElement;
-    for (let depth = 0; scope && depth < MAX_ASSOCIATION_DEPTH; depth += 1) {
-        if (isBroadAssociationBoundary(scope)) {
-            return null;
+    for (const scope of index.scopesByPresentation.get(presentation) ?? []) {
+        if ((index.pendingByScope.get(scope)?.size ?? 0) > 1) {
+            continue;
         }
-        const containsPendingPresentation = [...pendingPresentations].some(
-            (pending) => pending !== presentation && scope?.contains(pending.label),
-        );
-        const id = containsPendingPresentation
-            ? null
-            : selectLogicalId(scope, presentation, evidenceElements, nestedSources);
+        const evidence = getEffectiveEvidence(index, scope);
+        const id = evidence.size === 1 ? evidence.values().next().value?.id : undefined;
         if (id) {
             return { ...presentation, source: scope, id };
         }
-        scope = scope.parentElement;
     }
     return null;
 }
 
 /**
- * Resolves all independent associations under one root, deepest labels first.
+ * Excludes one accepted source's effective evidence from broader local scopes.
+ *
+ * @param association - Newly accepted local association.
+ * @param index - Mutable pass-local association index.
+ */
+function excludeAssociationEvidence(
+    association: LinkedInAssociation,
+    index: LinkedInAssociationIndex,
+): void {
+    const evidence = getEffectiveEvidence(index, association.source);
+    const contentBoundary = findContentItemBoundary(association.source);
+    if (association.source === contentBoundary) {
+        return;
+    }
+    let scope = association.source.parentElement;
+    while (scope && belongsToRoot(scope, index.root)) {
+        if (
+            index.candidateScopes.has(scope)
+            && findContentItemBoundary(scope) === contentBoundary
+        ) {
+            const excluded = index.excludedByScope.get(scope)
+                ?? new Map<string, CountedLinkedInId>();
+            addLogicalIdCounts(excluded, evidence);
+            index.excludedByScope.set(scope, excluded);
+        }
+        if (
+            scope === contentBoundary
+            || scope === index.root
+            || isBroadAssociationBoundary(scope)
+        ) {
+            break;
+        }
+        scope = scope.parentElement;
+    }
+}
+
+/**
+ * Resolves all independent associations under one root using pass-local indexes.
  *
  * @param root - Document or exact source subtree to inspect.
  * @param context - Processing context.
@@ -318,50 +558,44 @@ function resolveAssociations(
     context: TimestampExtractionContext,
 ): readonly LinkedInAssociation[] {
     const presentations = collectPresentations(root, context);
-    const evidenceElements = collectEvidenceElements(root);
-    const depth = (element: Element): number => {
-        let value = 0;
-        let current: Element | null = element;
-        while (current) {
-            value += 1;
-            current = current.parentElement;
-        }
-        return value;
-    };
-    const deepestFirst = [...presentations].sort(
-        (left, right) => depth(right.label) - depth(left.label),
-    );
+    const index = createAssociationIndex(root, presentations);
     const associationsByPresentation = new Map<LinkedInPresentation, LinkedInAssociation>();
     const associationsBySource = new Map<Element, LinkedInAssociation | null>();
-    const nestedSources = new Set<Element>();
-    const pendingPresentations = new Set(presentations);
-    let progressed: boolean;
-    do {
-        progressed = false;
-        for (const presentation of deepestFirst) {
-            if (!pendingPresentations.has(presentation)) {
-                continue;
-            }
-            const association = findAssociation(
-                presentation,
-                evidenceElements,
-                nestedSources,
-                pendingPresentations,
-            );
-            if (!association) {
-                continue;
-            }
-            pendingPresentations.delete(presentation);
-            progressed = true;
-            associationsByPresentation.set(presentation, association);
-            if (associationsBySource.has(association.source)) {
-                associationsBySource.set(association.source, null);
-            } else {
-                associationsBySource.set(association.source, association);
-                nestedSources.add(association.source);
+    const queue = [...presentations].reverse();
+    const queued = new Set(queue);
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+        const presentation = queue[cursor];
+        if (!presentation || associationsByPresentation.has(presentation)) {
+            continue;
+        }
+        queued.delete(presentation);
+        const association = findAssociation(presentation, index);
+        if (!association) {
+            continue;
+        }
+        associationsByPresentation.set(presentation, association);
+        if (associationsBySource.has(association.source)) {
+            associationsBySource.set(association.source, null);
+        } else {
+            associationsBySource.set(association.source, association);
+            excludeAssociationEvidence(association, index);
+        }
+        for (const scope of index.scopesByPresentation.get(presentation) ?? []) {
+            const pending = index.pendingByScope.get(scope);
+            pending?.delete(presentation);
+            if (pending?.size === 1) {
+                const remaining = pending.values().next().value;
+                if (
+                    remaining
+                    && !queued.has(remaining)
+                    && !associationsByPresentation.has(remaining)
+                ) {
+                    queued.add(remaining);
+                    queue.push(remaining);
+                }
             }
         }
-    } while (progressed);
+    }
     const ordered: LinkedInAssociation[] = [];
     const seen = new Set<Element>();
     for (const presentation of presentations) {
@@ -398,6 +632,47 @@ function resolveAssociation(
 }
 
 /**
+ * Retains one discovery pass so extraction does not rebuild the same association index.
+ *
+ * @param associations - Associations resolved together in one regional pass.
+ * @param context - Extraction context shared by discovery and extraction.
+ * @returns - Source elements in association order.
+ */
+function cacheAssociations(
+    associations: readonly LinkedInAssociation[],
+    context: TimestampExtractionContext,
+): readonly Element[] {
+    cachedAssociationsByContext.set(
+        context,
+        new Map(associations.map((association) => [association.source, association])),
+    );
+    return associations.map(({ source }) => source);
+}
+
+/**
+ * Consumes a discovery result or reconstructs one exact source outside discovery.
+ *
+ * @param source - Candidate source boundary.
+ * @param context - Current extraction context.
+ * @returns - One unambiguous association, or null.
+ */
+function takeAssociation(
+    source: Element,
+    context: TimestampExtractionContext,
+): LinkedInAssociation | null {
+    const cached = cachedAssociationsByContext.get(context);
+    const association = cached?.get(source);
+    if (!association) {
+        return resolveAssociation(source, context);
+    }
+    cached?.delete(source);
+    if (cached?.size === 0) {
+        cachedAssociationsByContext.delete(context);
+    }
+    return association;
+}
+
+/**
  * Traverses at most a fixed number of local elements for mutation-source lookup.
  *
  * @param root - Local ancestor being inspected.
@@ -405,22 +680,30 @@ function resolveAssociation(
  * @returns - Whether the predicate stopped traversal before the element budget was exhausted.
  */
 function visitBoundedElements(root: Element, visit: (element: Element) => boolean): boolean {
-    const pending = [root];
-    let visited = 0;
-    while (pending.length > 0 && visited < MAX_MUTATION_SCAN_ELEMENTS) {
-        const element = pending.pop();
+    if (visit(root)) {
+        return true;
+    }
+    const contentBoundary = findContentItemBoundary(root);
+    const walker = root.ownerDocument.createTreeWalker(
+        root,
+        NodeFilter.SHOW_ELEMENT,
+        {
+            acceptNode: (node) => {
+                const element = node as Element;
+                const candidateBoundary = findContentItemBoundary(element);
+                return candidateBoundary && candidateBoundary !== contentBoundary
+                    ? NodeFilter.FILTER_REJECT
+                    : NodeFilter.FILTER_ACCEPT;
+            },
+        },
+    );
+    for (let visited = 1; visited < MAX_MUTATION_SCAN_ELEMENTS; visited += 1) {
+        const element = walker.nextNode();
         if (!element) {
-            continue;
+            return false;
         }
-        visited += 1;
-        if (visit(element)) {
+        if (visit(element as Element)) {
             return true;
-        }
-        for (let index = element.children.length - 1; index >= 0; index -= 1) {
-            const child = element.children.item(index);
-            if (child) {
-                pending.push(child);
-            }
         }
     }
     return false;
@@ -437,6 +720,7 @@ function findPotentialAssociationSource(
     element: Element,
     context: TimestampExtractionContext,
 ): Element | null {
+    const contentBoundary = findContentItemBoundary(element);
     let scope: Element | null = element;
     for (let depth = 0; scope && depth < MAX_ASSOCIATION_DEPTH; depth += 1) {
         if (isBroadAssociationBoundary(scope)) {
@@ -463,6 +747,9 @@ function findPotentialAssociationSource(
         });
         if (found) {
             return scope;
+        }
+        if (scope === contentBoundary) {
+            return null;
         }
         scope = scope.parentElement;
     }
@@ -506,6 +793,7 @@ function isRelevantAttributeMutation(
  * @param attributeName - Changed adapter attribute, when applicable.
  * @param oldValue - Attribute value before the mutation.
  * @param context - Processing context.
+ * @param mutationKind - Kind of DOM mutation being mapped.
  * @returns - Exact candidate source requiring reconciliation.
  */
 function getMutationSources(
@@ -513,7 +801,17 @@ function getMutationSources(
     attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
     context: TimestampExtractionContext,
+    mutationKind: TimestampMutationKind,
 ): readonly Element[] {
+    if (
+        mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
+        && (
+            !element.matches(LABEL_SELECTOR)
+            || !resolvePresentation(element, context)
+        )
+    ) {
+        return [];
+    }
     if (
         attributeName
         && !isRelevantAttributeMutation(element, attributeName, oldValue)
@@ -530,14 +828,15 @@ function getMutationSources(
 export const linkedinAdapter = {
     id: LINKEDIN_ADAPTER_ID,
     mutationAttributes: MUTATION_ATTRIBUTES,
+    observesCharacterData: true,
     getMutationSources,
     matches: matchesLinkedInUrl,
     matchesElement: (element: Element, context: TimestampExtractionContext) =>
         resolveAssociation(element, context) !== null,
     discover: (root: ParentNode, context: TimestampExtractionContext) =>
-        resolveAssociations(root, context).map(({ source }) => source),
+        cacheAssociations(resolveAssociations(root, context), context),
     extract: (element: Element, context: TimestampExtractionContext) => {
-        const association = resolveAssociation(element, context);
+        const association = takeAssociation(element, context);
         if (!association) {
             return null;
         }

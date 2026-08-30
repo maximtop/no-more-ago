@@ -276,4 +276,25 @@ describe("linkedinAdapter", () => {
         ]));
         expect(candidates).toHaveLength(2);
     });
+
+    it("does not lend an outer post ID to a nested comment without local evidence", () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:${ACTIVITY_ID}">
+                <header>
+                    <p componentkey="post-time"><span>1w</span></p>
+                </header>
+                <article id="comment">
+                    <p componentkey="comment-time"><span>3d</span></p>
+                    <div data-sdui-anchor-id="malformed-comment"></div>
+                </article>
+            </article>
+        `;
+        const extractionContext = context();
+        const sources = linkedinAdapter.discover(document, extractionContext);
+
+        expect(sources).toEqual([document.getElementById("post")]);
+        expect(linkedinAdapter.extract(sources[0] as Element, extractionContext))
+            .toMatchObject({ epochMilliseconds: 1_704_164_645_678 });
+        expect(document.querySelector("#comment p")?.textContent).toBe("3d");
+    });
 });

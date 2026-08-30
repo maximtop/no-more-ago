@@ -26,6 +26,7 @@ import type {
     TimestampExtractionContext,
     TimestampSourceAttribute,
 } from "../adapters/types";
+import { TIMESTAMP_MUTATION_KIND } from "../adapters/types";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -122,18 +123,25 @@ export class DocumentTransformationController {
             getOwnedSourceForOutput,
             capturePageOwnedTextChange,
             sourceAttributes,
+            observeCharacterData: rules.some(
+                (rule) => rule.observesCharacterData === true,
+            ),
             getSourceMutationRoots: (
                 element,
                 attributeName,
                 oldValue,
-                trackedSource,
+                trackedSources,
+                mutationKind,
             ) => {
-                const applicableRules = attributeName
-                    ? rules.filter((rule) =>
-                        rule.mutationAttributes.some(
-                            (attribute) => attribute === attributeName,
-                        ))
-                    : rules;
+                const applicableRules = mutationKind
+                    === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
+                    ? rules.filter((rule) => rule.observesCharacterData === true)
+                    : attributeName
+                        ? rules.filter((rule) =>
+                            rule.mutationAttributes.some(
+                                (attribute) => attribute === attributeName,
+                            ))
+                        : rules;
                 const sources: Element[] = [];
                 const seen = new Set<Element>();
                 const addSource = (source: Element): void => {
@@ -143,8 +151,10 @@ export class DocumentTransformationController {
                     }
                 };
 
-                if (trackedSource) {
-                    addSource(trackedSource);
+                if (mutationKind !== TIMESTAMP_MUTATION_KIND.CHARACTER_DATA) {
+                    for (const trackedSource of trackedSources) {
+                        addSource(trackedSource);
+                    }
                 }
                 for (const rule of applicableRules) {
                     if (rule.getMutationSources) {
@@ -153,6 +163,7 @@ export class DocumentTransformationController {
                             attributeName as TimestampSourceAttribute | undefined,
                             oldValue ?? null,
                             extractionContext,
+                            mutationKind,
                         )) {
                             addSource(source);
                         }
