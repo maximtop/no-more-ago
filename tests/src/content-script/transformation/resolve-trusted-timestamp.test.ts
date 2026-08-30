@@ -20,6 +20,28 @@ import {
 } from "../../../../src/content-script/adapters/telegram-web-k";
 
 const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
+const DERIVED_SOURCE = document.createElement("span");
+const DERIVED_TARGET = document.createTextNode("1w");
+DERIVED_SOURCE.append(DERIVED_TARGET);
+
+/**
+ * Creates one derived candidate for resolver-domain tests.
+ *
+ * @param epochMilliseconds - Candidate Unix milliseconds.
+ * @returns - Derived in-place timestamp candidate.
+ */
+const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => ({
+    ruleId: "linkedin",
+    source: DERIVED_SOURCE,
+    sourceKind: TIMESTAMP_SOURCE_KIND.LINKEDIN_TIMESTAMP,
+    epochMilliseconds,
+    presentation: {
+        kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+        target: DERIVED_TARGET,
+    },
+    validationRule: TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS,
+    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+});
 
 const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
     ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
@@ -100,6 +122,41 @@ describe("resolveTrustedTimestamp", () => {
             ...(rule === null ? {} : { validationRule: rule }),
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         }) as unknown as TimestampCandidate;
+
+    it("preserves a valid derived Unix millisecond instant", () => {
+        const epochMilliseconds = 1_704_164_645_678;
+        const result = resolveTrustedTimestamp(
+            derivedCandidate(epochMilliseconds),
+            epochMilliseconds + 1,
+        );
+
+        expect(result?.instant.getTime()).toBe(epochMilliseconds);
+        expect(result?.sourceDatetime).toBeNull();
+        expect(result?.validationRule).toBe(
+            TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS,
+        );
+    });
+
+    it.each([
+        [0, 1_704_164_645_679],
+        [-1, 1_704_164_645_679],
+        [1_704_164_645_678.5, 1_704_164_645_679],
+        [Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER + 2],
+        [8_640_000_000_000_001, Number.MAX_SAFE_INTEGER],
+        [1_704_164_645_680, 1_704_164_645_679],
+    ])("rejects derived epoch %s at clock %s", (epochMilliseconds, now) => {
+        expect(resolveTrustedTimestamp(derivedCandidate(epochMilliseconds), now))
+            .toBeNull();
+    });
+
+    it("does not apply the derived future check to an existing datetime candidate", () => {
+        const result = resolveTrustedTimestamp(
+            candidate("2099-01-01T00:00:00Z"),
+            1_704_164_645_679,
+        );
+
+        expect(result?.instant.toISOString()).toBe("2099-01-01T00:00:00.000Z");
+    });
 
     it("carries only a presentation target that belongs to the source", () => {
         const source = document.createElement("span");

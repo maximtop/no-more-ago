@@ -9,6 +9,7 @@ export const TIMESTAMP_VALIDATION_RULE = {
     EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
     HTML_GLOBAL: "datetime:html-global",
     UNIX_SECONDS: "datetime:unix-seconds",
+    DERIVED_UNIX_MILLISECONDS: "instant:derived-unix-milliseconds",
 } as const;
 
 /**
@@ -22,6 +23,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
     TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
+    LINKEDIN_TIMESTAMP: "linkedin-timestamp",
 } as const;
 
 /**
@@ -34,6 +36,10 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     FORMAT: "format",
     HREF: "href",
     TITLE: "title",
+    DATA_ID: "data-id",
+    DATA_URN: "data-urn",
+    COMPONENT_KEY: "componentkey",
+    SDUI_ANCHOR_ID: "data-sdui-anchor-id",
 } as const;
 
 /**
@@ -67,6 +73,16 @@ export type TimestampPresentation =
          * the source document and remain contained by the source.
          */
         readonly target: Text;
+
+        /**
+         * Page-authored content before the replaceable timestamp segment.
+         */
+        readonly textPrefix?: string;
+
+        /**
+         * Page-authored content after the replaceable timestamp segment.
+         */
+        readonly textSuffix?: string;
     };
 
 /**
@@ -102,61 +118,116 @@ export type TimestampVisibilityPolicy =
     (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
 
 /**
- * DOM element whose timestamp is being transformed.
+ * Fields shared by page-datetime and derived timestamp candidates.
  */
-interface TimestampCandidateSource {
+interface TimestampCandidateBase {
+    /**
+     * Stable identifier of the rule that accepted the source.
+     */
+    readonly ruleId: string;
+
     /**
      * DOM element whose timestamp is being transformed.
      */
     readonly source: Element;
 
     /**
-     * Kind of source element recognized by the source rule.
+     * Kind of source recognized by the rule.
      */
     readonly sourceKind: TimestampSourceKind;
 
     /**
-     * Unparsed datetime attribute supplied by the trusted source.
-     */
-    readonly rawDatetime: string;
-
-    /**
-     * DOM presentation strategy and existing target selected by the source rule.
+     * DOM presentation and target selected by the rule.
      */
     readonly presentation: TimestampPresentation;
-}
-
-/**
- * Canonical timestamp candidate emitted by a source rule.
- */
-export interface TimestampCandidate extends TimestampCandidateSource {
-    /**
-     * Identifier of the source rule that accepted the timestamp source.
-     */
-    readonly ruleId: string;
 
     /**
-     * Rule proving that the raw datetime value is eligible.
-     */
-    readonly validationRule: TimestampValidationRule;
-
-    /**
-     * Visibility policy explicitly selected by the source rule.
+     * Visibility policy explicitly selected by the rule.
      */
     readonly visibilityPolicy: TimestampVisibilityPolicy;
 }
 
 /**
- * Generic or site-specific source rule for discovering trusted timestamp candidates.
+ * Candidate backed by a page-authored datetime string.
+ */
+export interface PageDatetimeTimestampCandidate extends TimestampCandidateBase {
+    /**
+     * Unparsed datetime attribute supplied by the source.
+     */
+    readonly rawDatetime: string;
+
+    /**
+     * Page-datetime validation rule.
+     */
+    readonly validationRule:
+        | typeof TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
+        | typeof TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL
+        | typeof TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS;
+}
+
+/**
+ * Candidate backed by a derived Unix-millisecond instant.
+ */
+export interface DerivedUnixMillisecondsTimestampCandidate
+    extends TimestampCandidateBase {
+    /**
+     * Unrounded Unix epoch milliseconds derived at the adapter boundary.
+     */
+    readonly epochMilliseconds: number;
+
+    /**
+     * Derived values use an existing page-owned text target.
+     */
+    readonly presentation: Extract<
+        TimestampPresentation,
+        {
+            /**
+             * In-place presentation discriminant used for candidate narrowing.
+             */
+            readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT;
+        }
+    >;
+
+    /**
+     * Derived-instant validation rule.
+     */
+    readonly validationRule:
+        typeof TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS;
+}
+
+/**
+ * Canonical candidate emitted by a timestamp source rule.
+ */
+export type TimestampCandidate =
+    | PageDatetimeTimestampCandidate
+    | DerivedUnixMillisecondsTimestampCandidate;
+
+/**
+ * Read-only context supplied while an adapter inspects a page source.
+ */
+export interface TimestampExtractionContext {
+    /**
+     * Trusted current document URL.
+     */
+    readonly url: URL;
+
+    /**
+     * Returns the latest page-authored value for an in-place target.
+     */
+    readonly readPageText: (target: Text) => string;
+}
+
+/**
+ * Generic or site-specific source rule for trusted timestamp candidates.
  */
 export interface TimestampSourceRule {
     /**
-     * Stable source-rule identifier used in diagnostics and processing.
+     * Stable source-rule identifier.
      */
     readonly id: string;
 
     /**
-     * Attributes that can change whether or how this rule extracts an existing source.
+     * Attributes whose page-authored changes affect this rule.
      */
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
@@ -178,22 +249,46 @@ export interface TimestampSourceRule {
     ) => readonly Element[];
 
     /**
-     * Determines whether the source rule applies to the page URL.
+     * Determines whether the rule applies to the page URL.
      */
     matches(url: URL): boolean;
 
     /**
-     * Checks whether one element has this rule's source shape before extraction.
+     * Checks whether one observed mutation can affect this rule before any
+     * ancestor source lookup is attempted.
+     *
+     * @param element - Mutated page element.
+     * @param attributeName - Changed source attribute, when applicable.
+     * @param context - Read-only page extraction context.
+     * @returns - Whether source lookup is required for this rule.
      */
-    matchesElement(element: Element): boolean;
+    shouldInspectMutation?(
+        element: Element,
+        attributeName: string | undefined,
+        context: TimestampExtractionContext,
+    ): boolean;
 
     /**
-     * Finds timestamp elements without mutating the document.
+     * Checks one element's source shape in the current extraction context.
      */
-    discover(root: ParentNode): readonly Element[];
+    matchesElement(
+        element: Element,
+        context?: TimestampExtractionContext,
+    ): boolean;
 
     /**
-     * Returns a trusted candidate or null when the element is unsuitable.
+     * Finds source elements without mutating the supplied DOM region.
      */
-    extract(element: Element): TimestampCandidate | null;
+    discover(
+        root: ParentNode,
+        context?: TimestampExtractionContext,
+    ): readonly Element[];
+
+    /**
+     * Extracts one candidate, or null when the source is unsuitable.
+     */
+    extract(
+        element: Element,
+        context?: TimestampExtractionContext,
+    ): TimestampCandidate | null;
 }

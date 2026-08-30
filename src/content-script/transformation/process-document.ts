@@ -11,6 +11,7 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
     getOwnedTimestampSourceEntries,
+    readPageOwnedText,
     renderTimestampPresentation,
     restoreTimestampPresentation,
 } from "./render-timestamp-presentation";
@@ -22,6 +23,7 @@ import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate,
+    type TimestampExtractionContext,
     type TimestampSourceRule,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
@@ -66,9 +68,13 @@ function getFailureSourceTimestamp(
             candidate.sourceKind === TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE
             && candidate.validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
     );
-    return telegramCandidate
-        ? safeDiagnosticSourceTimestamp(telegramCandidate.rawDatetime)
-        : undefined;
+    if (
+        !telegramCandidate
+        || telegramCandidate.validationRule !== TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS
+    ) {
+        return undefined;
+    }
+    return safeDiagnosticSourceTimestamp(telegramCandidate.rawDatetime);
 }
 
 /**
@@ -238,6 +244,19 @@ function addCandidate(
 }
 
 /**
+ * Creates read-only adapter context for one processing URL.
+ *
+ * @param url - Trusted current document URL.
+ * @returns - Context exposing the retained page-authored text reader.
+ */
+function createExtractionContext(url: URL): TimestampExtractionContext {
+    return {
+        url,
+        readPageText: readPageOwnedText,
+    };
+}
+
+/**
  * Renders or restores one already-discovered candidate collection.
  *
  * @param input - Presentation, ownership, and diagnostic dependencies.
@@ -269,7 +288,7 @@ function processCandidateCollection(
     for (const source of discoveredSources) {
         const candidates = candidatesBySource.get(source) ?? [];
         const resolved = candidates
-            .map(resolveTrustedTimestamp)
+            .map((candidate) => resolveTrustedTimestamp(candidate))
             .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
             ownedDomMutations?.untrackSource?.(source);
@@ -353,9 +372,10 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
+    const extractionContext = createExtractionContext(input.url);
     for (const rule of rules) {
-        for (const element of rule.discover(root)) {
-            const candidate = rule.extract(element);
+        for (const element of rule.discover(root, extractionContext)) {
+            const candidate = rule.extract(element, extractionContext);
             const source = candidate?.source ?? element;
             if (!discovered.has(source)) {
                 discovered.add(source);
@@ -411,6 +431,7 @@ export function reconcileDocumentSources(
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
+    const extractionContext = createExtractionContext(input.url);
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -422,10 +443,10 @@ export function reconcileDocumentSources(
         discovered.add(source);
         discoveredSources.push(source);
         for (const rule of rules) {
-            if (!rule.matchesElement(source)) {
+            if (!rule.matchesElement(source, extractionContext)) {
                 continue;
             }
-            const candidate = rule.extract(source);
+            const candidate = rule.extract(source, extractionContext);
             if (candidate) {
                 addCandidate(candidatesBySource, candidate);
             }

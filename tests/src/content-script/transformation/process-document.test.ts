@@ -33,6 +33,7 @@ import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from "../../../../src/shared/diagnostics/contracts";
+import type { DiagnosticEventInput } from "../../../../src/shared/diagnostics/events";
 
 describe("processDocument", () => {
     let fixture = "";
@@ -46,6 +47,75 @@ describe("processDocument", () => {
 
     beforeEach(() => {
         document.body.innerHTML = fixture;
+    });
+
+    it("formats a derived LinkedIn instant through the public document boundary", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-30T00:00:00.000Z"));
+        try {
+            document.body.innerHTML = `
+                <article>
+                    <p componentkey="timestamp"><span>1w • Edited</span></p>
+                    <a href="/feed/update/urn:li:activity:7147784590025818113/">
+                        Post
+                    </a>
+                </article>
+            `;
+
+            const outputs = processDocument({
+                url: new URL("https://www.linkedin.com/feed/"),
+                root: document,
+                locales: ["en-GB"],
+                display: {
+                    formatMode: "custom",
+                    pattern: "yyyy-MM-dd HH:mm:ss.SSS",
+                    timeZone: { mode: "utc" },
+                },
+            });
+
+            expect(outputs).toEqual([]);
+            expect(document.querySelector("p > span")?.textContent)
+                .toBe("2024-01-02 03:04:05.678 • Edited");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("keeps generic time datetime available on LinkedIn", () => {
+        document.body.innerHTML = `
+            <time datetime="2026-08-23T10:15:00Z">one week ago</time>
+        `;
+
+        const outputs = processDocument({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+        });
+
+        expect(outputs).toHaveLength(1);
+        expect(outputs[0]?.dateTime).toBe("2026-08-23T10:15:00Z");
+    });
+
+    it("emits only bounded content-free diagnostics for LinkedIn", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp"><span>1w •</span></p>
+                <div data-urn="urn:li:activity:17074629064821571590"></div>
+            </article>
+        `;
+        const events: DiagnosticEventInput[] = [];
+
+        processDocument({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            diagnosticSink: (event) => events.push(event),
+        });
+
+        const serialized = JSON.stringify(events);
+        expect(serialized).not.toContain("1w");
+        expect(serialized).not.toContain("17074629064821571590");
+        expect(events.length).toBeGreaterThan(0);
     });
 
     it("processes one trusted GitHub relative timestamp end to end", () => {

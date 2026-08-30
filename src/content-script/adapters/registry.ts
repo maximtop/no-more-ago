@@ -6,6 +6,7 @@ import { genericTimeRule } from "./generic-time";
 import { githubAdapter } from "./github";
 import { hackerNewsAdapter } from "./hacker-news";
 import { instagramAdapter } from "./instagram";
+import { linkedinAdapter } from "./linkedin";
 import { stackExchangeAdapter } from "./stack-exchange";
 import { telegramWebKAdapter } from "./telegram-web-k";
 import type { TimestampSourceRule } from "./types";
@@ -45,6 +46,7 @@ export const defaultRegistry = new AdapterRegistry(
         githubAdapter,
         hackerNewsAdapter,
         instagramAdapter,
+        linkedinAdapter,
         stackExchangeAdapter,
         telegramWebKAdapter,
     ],

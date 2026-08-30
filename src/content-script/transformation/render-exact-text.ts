@@ -107,6 +107,16 @@ export function capturePageOwnedTextChange(node: Node, text: string): Element | 
 }
 
 /**
+ * Returns the latest page-authored text retained for an owned target.
+ *
+ * @param target - Existing page-owned text node.
+ * @returns - Retained page text, or current text when the target is not owned.
+ */
+export function readPageOwnedText(target: Text): string {
+    return recordsByTarget.get(target)?.pageText ?? target.data;
+}
+
+/**
  * Lists connected in-place sources without scanning page DOM.
  *
  * @param document - Document whose records are requested.

@@ -17,11 +17,15 @@ import {
     capturePageOwnedTextChange,
     getOwnedSourceForOutput,
     getOwnedTimestampSourceEntries,
+    readPageOwnedText,
     restoreTimestampPresentations,
 } from "./render-timestamp-presentation";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
 import { defaultRegistry } from "../adapters/registry";
-import type { TimestampSourceAttribute } from "../adapters/types";
+import type {
+    TimestampExtractionContext,
+    TimestampSourceAttribute,
+} from "../adapters/types";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -107,6 +111,10 @@ export class DocumentTransformationController {
         }
 
         const rules = (this.input.registry ?? defaultRegistry).matching(this.input.url);
+        const extractionContext: TimestampExtractionContext = {
+            url: this.input.url,
+            readPageText: readPageOwnedText,
+        };
         const sourceAttributes = [
             ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
         ];
@@ -122,34 +130,86 @@ export class DocumentTransformationController {
                             (attribute) => attribute === attributeName,
                         ))
                     : rules;
+                const ownedSources = new Set(
+                    getOwnedTimestampSourceEntries(this.input.root)
+                        .map(({ source }) => source),
+                );
+                const sources: Element[] = [];
+                const seen = new Set<Element>();
+                const addSource = (source: Element): void => {
+                    if (!seen.has(source)) {
+                        seen.add(source);
+                        sources.push(source);
+                    }
+                };
+
                 if (attributeName) {
-                    const sources: Element[] = [];
-                    const seen = new Set<Element>();
-                    for (const rule of applicableRules) {
-                        const mutationSources = rule.getMutationSources?.(
-                            element,
-                            attributeName as TimestampSourceAttribute,
-                            oldValue ?? null,
-                        ) ?? (rule.matchesElement(element) || wasTracked ? [element] : []);
-                        for (const source of mutationSources) {
-                            if (!seen.has(source)) {
-                                seen.add(source);
-                                sources.push(source);
-                            }
+                    let current: Element | null = element;
+                    while (current && current.ownerDocument === this.input.root) {
+                        if (ownedSources.has(current)) {
+                            addSource(current);
+                            break;
                         }
+                        current = current.parentElement;
+                    }
+                    for (const rule of applicableRules) {
+                        if (rule.getMutationSources) {
+                            for (const source of rule.getMutationSources(
+                                element,
+                                attributeName as TimestampSourceAttribute,
+                                oldValue ?? null,
+                            )) {
+                                addSource(source);
+                            }
+                            continue;
+                        }
+                        const shouldInspect = rule.shouldInspectMutation?.(
+                            element,
+                            attributeName,
+                            extractionContext,
+                        ) ?? true;
+                        if (!shouldInspect) {
+                            continue;
+                        }
+                        current = element;
+                        while (current && current.ownerDocument === this.input.root) {
+                            if (rule.matchesElement(current, extractionContext)) {
+                                addSource(current);
+                                break;
+                            }
+                            current = current.parentElement;
+                        }
+                    }
+                    if (sources.length === 0 && wasTracked) {
+                        addSource(element);
                     }
                     return sources;
                 }
-                const roots: Element[] = [];
+
+                const inspectionRules = applicableRules.filter((rule) =>
+                    rule.shouldInspectMutation?.(
+                        element,
+                        undefined,
+                        extractionContext,
+                    ) ?? true
+                );
                 let current: Element | null = element;
                 while (current && current.ownerDocument === this.input.root) {
-                    const candidate = current;
-                    if (applicableRules.some((rule) => rule.matchesElement(candidate))) {
-                        roots.push(candidate);
+                    if (ownedSources.has(current)) {
+                        addSource(current);
+                    }
+                    const isMatching = inspectionRules.some(
+                        (rule) => rule.matchesElement(
+                            current as Element,
+                            extractionContext,
+                        ),
+                    );
+                    if (isMatching) {
+                        addSource(current);
                     }
                     current = current.parentElement;
                 }
-                return roots;
+                return sources;
             },
             onBatch: (batch) => {
                 if (

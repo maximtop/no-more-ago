@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
+import { linkedinAdapter } from "../../../../src/content-script/adapters/linkedin";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     ADJACENT_TIME_PRESENTATION,
@@ -73,6 +74,162 @@ describe("DocumentTransformationController", () => {
         await Promise.resolve();
         await Promise.resolve();
     };
+
+    it("reconciles a LinkedIn source when descendant ID evidence changes", async () => {
+        document.body.innerHTML = `
+            <main id="feed">
+                <article id="post">
+                    <p componentkey="timestamp"><span>1w •</span></p>
+                    <a id="evidence"
+                        href="/feed/update/urn:li:activity:7147784590025818113/">
+                        Post
+                    </a>
+                </article>
+                <section id="unrelated">
+                    <a id="unrelated-link" href="/profile">unchanged</a>
+                </section>
+            </main>
+        `;
+        const unrelated = document.getElementById("unrelated");
+        const unrelatedChild = unrelated?.firstElementChild;
+        const unrelatedLink = document.getElementById("unrelated-link");
+        const evidence = document.getElementById("evidence");
+        const target = document.querySelector("p > span")?.firstChild;
+        if (
+            !(evidence instanceof HTMLAnchorElement)
+            || !(unrelatedLink instanceof HTMLAnchorElement)
+            || !(target instanceof Text)
+        ) {
+            throw new Error("Expected LinkedIn fixture");
+        }
+        const visits: Element[] = [];
+        const matchVisits: Element[] = [];
+        const instrumented: TimestampSourceRule = {
+            ...linkedinAdapter,
+            matchesElement: (element, context) => {
+                matchVisits.push(element);
+                return linkedinAdapter.matchesElement(element, context);
+            },
+            extract: (element, context) => {
+                visits.push(element);
+                return linkedinAdapter.extract(element, context);
+            },
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+            registry: new AdapterRegistry([instrumented], genericTimeRule),
+        });
+
+        controller.start();
+        expect(target.data).toBe("2024-01-02 •");
+        visits.length = 0;
+        matchVisits.length = 0;
+
+        unrelatedLink.href = "/profile/changed";
+        await flushMutations();
+
+        expect(matchVisits).toEqual([]);
+        expect(target.data).toBe("2024-01-02 •");
+
+        evidence.href = "/feed/update/urn:li:share:7170283349280292867/";
+        await flushMutations();
+
+        expect(target.data).toBe("2024-03-04 •");
+        expect(visits).toEqual([document.getElementById("post")]);
+        expect(document.getElementById("unrelated")).toBe(unrelated);
+        expect(unrelated?.firstElementChild).toBe(unrelatedChild);
+
+        evidence.href = "/feed/update/urn:li:activity:malformed/";
+        await flushMutations();
+        expect(target.data).toBe("1w •");
+
+        evidence.href = "/feed/update/urn:li:activity:7147784590025818113/";
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02 •");
+
+        controller.teardown();
+        expect(target.data).toBe("1w •");
+    });
+
+    it("handles LinkedIn insertion, page text, reformat, removal, and re-enable", async () => {
+        document.body.innerHTML = "<main id='feed'></main>";
+        let display: DisplaySettings = {
+            formatMode: "custom",
+            pattern: "yyyy-MM-dd",
+            timeZone: { mode: "utc" },
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            displayProvider: () => display,
+        });
+        controller.start();
+
+        const post = document.createElement("article");
+        post.innerHTML = `
+            <p componentkey="timestamp"><span>1w •</span></p>
+            <div componentkey="ShareUrn(shareId=7170283349280292867)"></div>
+        `;
+        document.getElementById("feed")?.append(post);
+        await flushMutations();
+        const target = post.querySelector("p > span")?.firstChild;
+        if (!(target instanceof Text)) {
+            throw new Error("Expected LinkedIn text target");
+        }
+        expect(target.data).toBe("2024-03-04 •");
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+
+        target.data = "2w • Edited";
+        await flushMutations();
+        expect(target.data).toBe("2024-03-04 • Edited");
+
+        display = {
+            formatMode: "custom",
+            pattern: "dd/MM/yyyy HH:mm:ss.SSS",
+            timeZone: { mode: "utc" },
+        };
+        controller.reformatOwned();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        post.remove();
+        await flushMutations();
+        expect(target.data).toBe("2w • Edited");
+
+        document.getElementById("feed")?.append(post);
+        await flushMutations();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        const evidence = post.querySelector("[componentkey*='ShareUrn']");
+        if (!evidence) {
+            throw new Error("Expected share evidence");
+        }
+        evidence.setAttribute(
+            "componentkey",
+            "ShareUrn(shareId=7170283349280292867)",
+        );
+        post.setAttribute("data-urn", "urn:li:share:7170283349280292867");
+        await flushMutations();
+
+        expect(post.querySelector("p > span")?.firstChild).toBe(target);
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+
+        controller.teardown();
+        expect(target.data).toBe("2w • Edited");
+
+        controller.start();
+        expect(target.data).toBe("04/03/2024 05:06:07.891 • Edited");
+        expect(post.querySelectorAll("time")).toHaveLength(0);
+        controller.teardown();
+    });
 
     it("starts idempotently, tears down precisely, and can reactivate", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'

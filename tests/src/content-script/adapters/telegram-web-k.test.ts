@@ -115,7 +115,9 @@ describe("Telegram Web K source contract", () => {
             throw new Error("Expected malformed Telegram source");
         }
 
-        expect(telegramWebKAdapter.extract(source)?.rawDatetime).toBe(" not-numeric ");
+        expect(telegramWebKAdapter.extract(source)).toMatchObject({
+            rawDatetime: " not-numeric ",
+        });
     });
 
     it("ignores forwarding labels and clocks owned by nested bubbles", () => {
