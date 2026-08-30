@@ -6,6 +6,7 @@ import { isHttpUrl } from "../../shared/url/http";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
 import { discoverElements } from "./discover-elements";
 import { findSimpleTextTarget } from "./simple-text-target";
+import { isHtmlElement } from "./html-element";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -25,7 +26,6 @@ export const INSTAGRAM_ADAPTER_ID = "instagram" as const;
  */
 export const INSTAGRAM_HOSTNAME = "www.instagram.com" as const;
 
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const INSTAGRAM_TIME_SELECTOR = "time[datetime]" as const;
 
 /**
@@ -45,7 +45,7 @@ export function matchesInstagramUrl(url: URL): boolean {
  * @returns - Whether the element has the supported standard-time shape.
  */
 function isInstagramTimeElement(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === TIMESTAMP_SOURCE_KIND.STANDARD_TIME
         && element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME)
         && !element.hasAttribute(OWNED_OUTPUT_ATTRIBUTE);

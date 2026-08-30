@@ -13,16 +13,12 @@ import {
 } from "./types";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
 import { discoverElements } from "./discover-elements";
+import { isHtmlElement } from "./html-element";
 
 /**
  * Stable identifier for the generic standard-time source rule.
  */
 export const GENERIC_TIME_RULE_ID = "generic-time" as const;
-
-/**
- * Namespace assigned to standard HTML elements in every document realm.
- */
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 
 /**
  * Recognizes a standard HTML time element without relying on realm-specific constructors.
@@ -31,7 +27,7 @@ const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
  * @returns - Whether the candidate is a standard HTML time element.
  */
 function isStandardTimeElement(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === TIMESTAMP_SOURCE_KIND.STANDARD_TIME;
 }
 

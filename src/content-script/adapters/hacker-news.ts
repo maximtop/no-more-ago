@@ -12,9 +12,9 @@ import {
 } from "./types";
 import { findSimpleTextTarget } from "./simple-text-target";
 import { discoverElements } from "./discover-elements";
+import { isHtmlElement } from "./html-element";
 
 const AGE_SELECTOR = "span.age[title]" as const;
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 
 /**
  * Stable identifier for the Hacker News source rule.
@@ -47,7 +47,7 @@ export function matchesHackerNewsUrl(url: URL): boolean {
  */
 function isHackerNewsAgeElement(element: Element): boolean {
     return (
-        element.namespaceURI === HTML_NAMESPACE
+        isHtmlElement(element)
         && element.localName === "span"
         && element.classList.contains("age")
         && element.hasAttribute("title")
@@ -69,7 +69,7 @@ function findPresentationTarget(source: Element): Text | null {
     if (
         children.length !== 1
         || !link
-        || link.namespaceURI !== HTML_NAMESPACE
+        || !isHtmlElement(link)
         || link.localName !== "a"
     ) {
         return null;
