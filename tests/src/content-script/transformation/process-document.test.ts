@@ -14,6 +14,9 @@ import {
     OWNED_SOURCE_ATTRIBUTE,
     restoreExactTimes,
 } from "../../../../src/content-script/transformation/render-exact-time";
+import {
+    restoreTimestampPresentations,
+} from "../../../../src/content-script/transformation/render-timestamp-presentation";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import {
@@ -26,6 +29,10 @@ import {
     type TimestampSourceRule,
 } from "../../../../src/content-script/adapters/types";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
 
 describe("processDocument", () => {
     let fixture = "";
@@ -187,6 +194,54 @@ describe("processDocument", () => {
             count: 1,
         });
         expect(JSON.stringify(invalid.mock.calls)).not.toContain("not a real timestamp");
+    });
+
+    it("emits bounded raw evidence only for failed Telegram timestamp resolution", () => {
+        const runTelegram = (rawDatetime: string, label: string) => {
+            document.body.innerHTML = `<div class="bubble" data-timestamp="${rawDatetime}">`
+                + `<span class="time-inner"><span id="telegram-diagnostic-clock" `
+                + `class="i18n">${label}</span></span></div>`;
+            const diagnosticSink = vi.fn();
+            processDocument({
+                url: new URL("https://web.telegram.org/k/?private=query#fragment"),
+                root: document,
+                locales: ["en-US"],
+                display: {
+                    formatMode: "custom",
+                    pattern: "yyyy-MM-dd HH:mm",
+                    timeZone: { mode: "utc" },
+                },
+                diagnosticSink,
+            });
+            return diagnosticSink;
+        };
+
+        const numericFailure = runTelegram("123456789", "numeric failure");
+        expect(numericFailure).toHaveBeenCalledWith({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+            count: 1,
+            sourceTimestamp: "123456789",
+        });
+
+        const proseFailure = runTelegram("not-a-timestamp", "prose failure");
+        const proseSkip = proseFailure.mock.calls
+            .map(([value]) => value as Record<string, unknown>)
+            .find((event) => event.reason === DIAGNOSTIC_REASON.INVALID_TIMESTAMP);
+        expect(proseSkip).toEqual({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+            count: 1,
+        });
+
+        const success = runTelegram("1778774880", "16:08");
+        expect(document.getElementById("telegram-diagnostic-clock")?.textContent)
+            .toBe("2026-05-14 16:08");
+        expect(success.mock.calls.every(([value]) =>
+            !("sourceTimestamp" in (value as Record<string, unknown>))
+        )).toBe(true);
+        expect(JSON.stringify(success.mock.calls)).not.toContain("1778774880");
+        restoreTimestampPresentations(document);
     });
 
     it("reconciles one owned source in a bounded region and restores invalid values", () => {

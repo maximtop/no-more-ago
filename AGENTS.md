@@ -23,9 +23,10 @@
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized relative timestamps with exact, localized dates.
 It ships a generic `time[datetime]` source for HTTP(S) documents and
-site-specific specialized sources for GitHub, Hacker News, and supported Stack
-Exchange Q&A sites, while keeping extraction separate from shared timestamp
-validation and rendering.
+site-specific specialized sources for GitHub, Hacker News, supported Stack
+Exchange Q&A sites, and Telegram Web K, while keeping extraction separate from
+shared timestamp validation and rendering. Public `https://t.me/s/*` pages use
+the generic source.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -52,8 +53,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   runtime can process standard timestamps and future specialized sources;
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
-  available, and the production registry contains GitHub, Hacker News, and
-  Stack Exchange as specialized sources.
+  available, including public `https://t.me/s/*` pages. The production registry
+  contains GitHub, Hacker News, Stack Exchange, and Telegram Web K as
+  specialized sources.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -361,8 +363,9 @@ Known architectural exclusions to improve when their area changes:
 - Keep all user-facing extension copy in English.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
-- Keep GitHub-, Hacker News-, and Stack Exchange-specific selectors and
-  timestamp sources inside their respective adapters so adding another site
-  changes minimal shared business logic.
+- Keep GitHub-, Hacker News-, Stack Exchange-, and Telegram Web K-specific
+  selectors and timestamp sources inside their respective adapters so adding
+  another site changes minimal shared business logic. Public `t.me/s/*`
+  support remains on the generic standard timestamp source.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.

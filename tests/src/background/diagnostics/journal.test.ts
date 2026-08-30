@@ -5,6 +5,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DiagnosticEvent } from "../../../../src/shared/diagnostics/events";
 import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
+import {
     DIAGNOSTICS_MAX_BYTES,
     DIAGNOSTICS_STORAGE_KEY,
     DiagnosticJournal,
@@ -18,6 +22,16 @@ const event = (timestamp: number): DiagnosticEvent => ({
     pageCategory: "repository",
     incognito: false,
     count: timestamp,
+});
+
+const failedTimestampEvent = (timestamp: number): DiagnosticEvent => ({
+    category: DIAGNOSTIC_CATEGORY.SKIP,
+    timestamp,
+    hostname: "web.telegram.org",
+    pageCategory: "other",
+    incognito: false,
+    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+    sourceTimestamp: "123456789",
 });
 
 /**
@@ -87,6 +101,19 @@ describe("DiagnosticJournal", () => {
         expect(envelope.entries.at(-1)).toEqual(event(3));
         expect(new TextEncoder().encode(JSON.stringify(envelope)).byteLength)
             .toBeLessThanOrEqual(250);
+    });
+
+    it("round-trips bounded invalid timestamp evidence through snapshots", async () => {
+        const storage = createStorage();
+        const journal = new DiagnosticJournal(storage);
+        const failed = failedTimestampEvent(2);
+        await journal.setEnabled(true);
+        await journal.append(failed);
+
+        await expect(journal.readSnapshot()).resolves.toEqual({
+            ok: true,
+            entries: [failed],
+        });
     });
 
     it("validates stored data once when a snapshot is read", async () => {

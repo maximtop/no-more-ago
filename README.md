@@ -6,11 +6,12 @@ timestamps with localized date and time text while preserving the original
 page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
-pages. GitHub, Hacker News, and supported Stack Exchange Q&A sites have
-specialized sources for trusted timestamp widgets. These integrations preserve
-page-owned elements and links while updating simple labels in place when
-needed. Site markup support is best-effort and may change independently of the
-extension.
+pages, including public Telegram channel pages under `https://t.me/s/*`.
+GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
+have specialized sources for trusted timestamp widgets. These integrations
+preserve page-owned elements and links while updating simple labels in place
+when needed. Site markup support is best-effort and may change independently
+of the extension.
 
 ## Key Concepts
 
@@ -20,8 +21,8 @@ extension.
   and time with an explicit, known UTC offset.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange title timestamps. Specialized rules take precedence over the
-  generic rule when both accept the same source.
+  Exchange and Telegram Web K timestamps. Specialized rules take precedence
+  over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -58,9 +59,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 5. Eligible timestamps are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
-become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, and Stack Exchange
-timestamps can also become exact dates. The result follows the selected format,
-browser locale, and time zone.
+become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
+and Telegram Web K timestamps can also become exact dates. The result follows
+the selected format, browser locale, and time zone.
 
 ## Features
 
@@ -95,6 +96,21 @@ nested-card shapes are verified through the same standard `time[datetime]`
 path. No X/Twitter-specific source is registered. This support is best-effort
 and covers only eligible public light-DOM timestamps; private content, Shadow
 DOM, and future third-party markup remain outside the compatibility claim.
+
+Public Telegram channel pages under `https://t.me/s/*` use the same standard
+`time[datetime]` path as other HTTP(S) pages. Their complete, explicitly zoned
+post timestamps receive generic validation and reversible adjacent output; no
+Telegram-specific public-page parser is used.
+
+Telegram Web K support applies only to `https://web.telegram.org/k/*`. It
+expands one ordinary message clock from the matching bubble's exact ten-digit
+Unix-seconds `data-timestamp` value, using the current format, locale, and time
+zone. The clock text changes in place, so separate edited indicators, delivery
+status, counters, icons, links, and their event behavior remain page-owned.
+Primary edit-time labels and ambiguous forwarded or saved-message shapes are
+left unchanged. Telegram Web A is unsupported because it does not expose the
+same safe machine-readable instant. The extension never parses Telegram's
+visible or localized clock text as timestamp evidence.
 
 The extension watches relevant dynamic content in each reachable HTTP(S)
 document. Newly added or changed timestamps are processed without requiring a
@@ -164,8 +180,11 @@ Logs are stored locally and capped at 5,000,000 bytes. **Clear logs** removes
 the current entries. Disabling **Debug logs** also deletes retained logs.
 
 Downloaded diagnostic records may include the sender frame's hostname and
-whether the tab was incognito. They exclude URL paths, query strings,
-fragments, and page content.
+whether the tab was incognito. An invalid-timestamp record may also contain the
+rejected source value only when it is one to twenty decimal digits. Successful
+events never retain raw source timestamps. Records exclude URL paths, query
+strings, fragments, message text, authors, chat or message identifiers, and
+other page content.
 
 The extension does not submit diagnostic data automatically. Reporting opens a
 GitHub form for review and manual submission.
@@ -212,7 +231,7 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible standard, GitHub, Hacker News, or Stack Exchange timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
@@ -241,13 +260,23 @@ text: the `title`, link destination, element identity, attributes, and event
 listeners remain intact. Standard processing remains limited to ordinary
 light-DOM `time[datetime]` elements.
 
+The Telegram Web K source trusts only a matching message bubble's ten-digit
+Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It
+does not inspect message text, authors, identifiers, localized titles, or full
+Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
+processing.
+
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, and Stack Exchange are best-effort specialized
-  integrations whose markup can change independently of the extension.
+- GitHub, Hacker News, Stack Exchange, and Telegram Web K are best-effort
+  specialized integrations whose markup can change independently of the
+  extension.
+- Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
+  pages and Web K are unsupported. Independently eligible standard timestamps
+  may still use the universal generic rule.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.

@@ -283,4 +283,44 @@ describe("installContentRuntime", () => {
             .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
         expect(link.textContent).toBe("1 hour ago");
     });
+
+    it("restores and reprocesses Telegram Web K across site policy refreshes", async () => {
+        document.body.innerHTML = '<div class="bubble" data-timestamp="1778774880">'
+            + '<span class="time-inner"><span id="telegram-policy-clock" '
+            + 'class="i18n">16:08</span></span></div>';
+        const source = messages();
+        const clock = document.getElementById("telegram-policy-clock");
+        if (!clock) {
+            throw new Error("Expected Telegram policy clock");
+        }
+        let enabled = true;
+        let revision = 1;
+        installContentRuntime({
+            document,
+            url: new URL("https://web.telegram.org/k/#@fictional"),
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(clock.textContent).not.toBe("16:08");
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch({ type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        expect(clock.textContent).toBe("16:08");
+        await Promise.resolve();
+        await Promise.resolve();
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(clock.textContent).not.toBe("16:08");
+        expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
+            .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
+        expect(clock.textContent).toBe("16:08");
+    });
 });

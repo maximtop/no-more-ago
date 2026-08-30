@@ -18,7 +18,43 @@ import {
 
 const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
 
+const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
+    ruleId: "telegram-web-k",
+    source: document.createElement("div"),
+    sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
+    rawDatetime,
+    presentation: ADJACENT_TIME_PRESENTATION,
+    validationRule: TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
+    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+});
+
 describe("resolveTrustedTimestamp", () => {
+    it("resolves an exact ten-digit Unix-seconds source", () => {
+        const result = resolveTrustedTimestamp(unixSecondsCandidate("1778774880"));
+
+        expect(result?.instant.toISOString()).toBe("2026-05-14T16:08:00.000Z");
+        expect(result?.sourceDatetime).toBe("1778774880");
+        expect(result?.validationRule).toBe(TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS);
+    });
+
+    it.each([
+        "",
+        "177877488",
+        "01778774880",
+        "17787748800",
+        "1778774880000",
+        " 1778774880",
+        "1778774880 ",
+        "+1778774880",
+        "-1778774880",
+        "177877488.0",
+        "1.77877488e9",
+        "17787748\n80",
+        "not-a-timestamp",
+    ])("rejects non-contract Unix-seconds input %j", (rawDatetime) => {
+        expect(resolveTrustedTimestamp(unixSecondsCandidate(rawDatetime))).toBeNull();
+    });
+
     it("normalizes an explicitly zoned timestamp to its instant", () => {
         const result = resolveTrustedTimestamp({
             ruleId: "github",

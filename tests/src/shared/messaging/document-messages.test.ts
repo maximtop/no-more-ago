@@ -4,7 +4,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { DIAGNOSTIC_CATEGORY } from "../../../../src/shared/diagnostics/contracts";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -195,6 +198,17 @@ describe("diagnostic policy and event messages", () => {
             isDiagnosticEventMessage({
                 type: DIAGNOSTIC_EVENT_MESSAGE,
                 event: { category: DIAGNOSTIC_CATEGORY.MUTATION, count: 1 },
+            }),
+        ).toBe(true);
+        expect(
+            isDiagnosticEventMessage({
+                type: DIAGNOSTIC_EVENT_MESSAGE,
+                event: {
+                    category: DIAGNOSTIC_CATEGORY.SKIP,
+                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                    count: 1,
+                    sourceTimestamp: "123456789",
+                },
             }),
         ).toBe(true);
         expect(

@@ -16,12 +16,13 @@ import {
 
 const snapshot: DiagnosticArchiveSnapshot = {
     entries: [{
-        category: "lifecycle",
+        category: "skip",
         timestamp: 1_700_000_000_000,
-        hostname: "github.com",
-        pageCategory: "repository",
+        hostname: "web.telegram.org",
+        pageCategory: "other",
         incognito: false,
-        reason: "adapter-matched",
+        reason: "invalid-timestamp",
+        sourceTimestamp: "123456789",
     }],
     environment: { browserFamily: "chromium", extensionVersion: "1.2.3" },
 };

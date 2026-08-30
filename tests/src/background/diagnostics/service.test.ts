@@ -6,6 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 import { DiagnosticsService } from "../../../../src/background/diagnostics/service";
 import type { DiagnosticJournal } from "../../../../src/background/diagnostics/journal";
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
 import { createSettingsSnapshot } from "../../../../src/shared/settings/snapshot";
 
 /**
@@ -55,5 +59,32 @@ describe("DiagnosticsService frame authorization", () => {
 
         expect(accepted).toBe(false);
         expect(fixtureValue.append).not.toHaveBeenCalled();
+    });
+
+    it("passes sanitized invalid timestamp evidence to the enabled journal", async () => {
+        const fixtureValue = fixture();
+        const accepted = await fixtureValue.service.record(
+            {
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                count: 1,
+                sourceTimestamp: "123456789",
+            },
+            {
+                url: "https://web.telegram.org/k/?private=query#fragment",
+                tab: { url: "https://web.telegram.org/k/", incognito: false },
+            },
+            fixtureValue.state,
+        );
+
+        expect(accepted).toBe(true);
+        expect(fixtureValue.append).toHaveBeenCalledWith(expect.objectContaining({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+            hostname: "web.telegram.org",
+            sourceTimestamp: "123456789",
+        }));
+        expect(JSON.stringify(fixtureValue.append.mock.calls))
+            .not.toMatch(/private|query|fragment/u);
     });
 });

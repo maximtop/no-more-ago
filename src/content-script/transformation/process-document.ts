@@ -23,7 +23,10 @@ import {
     type TimestampSourceRule,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
-import type { DiagnosticEventInput } from "../../shared/diagnostics/events";
+import {
+    safeDiagnosticSourceTimestamp,
+    type DiagnosticEventInput,
+} from "../../shared/diagnostics/events";
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
@@ -243,16 +246,20 @@ function processCandidateCollection(
     const outputs: HTMLTimeElement[] = [];
     let renderedCount = 0;
     for (const source of discoveredSources) {
-        const resolved = candidatesBySource
-            .get(source)
-            ?.map(resolveTrustedTimestamp)
+        const candidates = candidatesBySource.get(source) ?? [];
+        const resolved = candidates
+            .map(resolveTrustedTimestamp)
             .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
             restoreTimestampPresentation(source, ownedDomMutations);
+            const sourceTimestamp = candidates
+                .map((candidate) => safeDiagnosticSourceTimestamp(candidate.rawDatetime))
+                .find((value): value is string => value !== undefined);
             diagnosticSink?.({
                 category: DIAGNOSTIC_CATEGORY.SKIP,
                 reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
                 count: 1,
+                ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
             });
             continue;
         }

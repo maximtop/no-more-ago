@@ -9,12 +9,16 @@ import { isCanonicalHostname } from "../settings/snapshot";
 import {
     DIAGNOSTIC_BROWSER_FAMILIES,
     DIAGNOSTIC_CATEGORIES,
+    DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_MAX_COUNT,
     DIAGNOSTIC_MAX_DURATION_MS,
+    DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH,
     DIAGNOSTIC_MAX_STACK_FRAMES,
     DIAGNOSTIC_PAGE_CATEGORIES,
     DIAGNOSTIC_PAGE_CATEGORY,
+    DIAGNOSTIC_REASON,
     DIAGNOSTIC_REASONS,
+    DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN,
     DIAGNOSTIC_STACK_FRAME_PATTERN,
     type DiagnosticPageCategory,
 } from "./contracts";
@@ -43,12 +47,13 @@ export const diagnosticEventInputSchema = v.strictObject({
     extensionVersion: v.exactOptional(v.unknown()),
     browserFamily: v.exactOptional(v.unknown()),
     stack: v.exactOptional(v.unknown()),
+    sourceTimestamp: v.exactOptional(v.unknown()),
 });
 
 /**
- * Canonical persisted diagnostic event schema.
+ * Canonical fields accepted in one persisted diagnostic event.
  */
-export const diagnosticEventSchema = v.strictObject({
+const diagnosticEventFieldsSchema = v.strictObject({
     category: v.picklist(DIAGNOSTIC_CATEGORIES),
     timestamp: v.pipe(v.number(), v.safeInteger(), v.minValue(0)),
     hostname: v.pipe(v.string(), v.check(isCanonicalHostname)),
@@ -70,7 +75,28 @@ export const diagnosticEventSchema = v.strictObject({
             v.maxLength(DIAGNOSTIC_MAX_STACK_FRAMES),
         ),
     ),
+    sourceTimestamp: v.exactOptional(
+        v.pipe(
+            v.string(),
+            v.maxLength(DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH),
+            v.regex(DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN),
+        ),
+    ),
 });
+
+/**
+ * Canonical persisted diagnostic event schema.
+ */
+export const diagnosticEventSchema = v.pipe(
+    diagnosticEventFieldsSchema,
+    v.check(
+        (event) => event.sourceTimestamp === undefined
+            || (
+                event.category === DIAGNOSTIC_CATEGORY.SKIP
+                && event.reason === DIAGNOSTIC_REASON.INVALID_TIMESTAMP
+            ),
+    ),
+);
 
 /**
  * Trusted sender-derived diagnostic context.
@@ -211,6 +237,20 @@ function scrubStack(value: unknown): string[] | undefined {
 }
 
 /**
+ * Returns bounded numeric source evidence without retaining arbitrary page data.
+ *
+ * @param value - Raw page-derived timestamp value.
+ * @returns - Accepted decimal value, or undefined.
+ */
+export function safeDiagnosticSourceTimestamp(value: unknown): string | undefined {
+    return typeof value === "string"
+        && value.length <= DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH
+        && DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN.test(value)
+        ? value
+        : undefined;
+}
+
+/**
  * Normalizes one diagnostic event before it reaches storage.
  *
  * @param input - Untrusted diagnostic fields.
@@ -238,6 +278,10 @@ export function sanitizeDiagnosticEvent(
     const adapterVersion = safeVersion(value.adapterVersion);
     const extensionVersion = safeVersion(value.extensionVersion);
     const stack = scrubStack(value.stack);
+    const sourceTimestamp = value.category === DIAGNOSTIC_CATEGORY.SKIP
+        && value.reason === DIAGNOSTIC_REASON.INVALID_TIMESTAMP
+        ? safeDiagnosticSourceTimestamp(value.sourceTimestamp)
+        : undefined;
     const event: DiagnosticEvent = {
         category: value.category,
         timestamp: now,
@@ -249,6 +293,7 @@ export function sanitizeDiagnosticEvent(
         ...(extensionVersion === undefined ? {} : { extensionVersion }),
         ...(browserFamily === undefined ? {} : { browserFamily }),
         ...(stack === undefined ? {} : { stack }),
+        ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
     };
     return event;
 }

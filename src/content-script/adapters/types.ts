@@ -8,6 +8,7 @@
 export const TIMESTAMP_VALIDATION_RULE = {
     EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
     HTML_GLOBAL: "datetime:html-global",
+    UNIX_SECONDS: "datetime:unix-seconds",
 } as const;
 
 /**
@@ -20,6 +21,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     STANDARD_TIME: "time",
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
+    TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
 } as const;
 
 /**
@@ -27,6 +29,7 @@ export const TIMESTAMP_SOURCE_KIND = {
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
+    DATA_TIMESTAMP: "data-timestamp",
     DATETIME: "datetime",
     FORMAT: "format",
     HREF: "href",
