@@ -82,6 +82,11 @@ export interface ProcessInput {
     readonly url: URL;
 
     /**
+     * Lazily supplies the current document URL for SPA reconciliation.
+     */
+    readonly urlProvider?: () => URL;
+
+    /**
      * Document subtree whose eligible timestamp sources are processed.
      */
     readonly root: Document;
@@ -130,6 +135,11 @@ export interface ReconcileInput {
      * Trusted sender URL used to derive diagnostic context.
      */
     readonly url: URL;
+
+    /**
+     * Lazily supplies the current document URL for SPA reconciliation.
+     */
+    readonly urlProvider?: () => URL;
 
     /**
      * Document subtree whose eligible timestamp sources are processed.
@@ -203,15 +213,29 @@ interface CandidateCollection {
 }
 
 /**
+ * Resolves the current URL once for one processing or reconciliation pass.
+ *
+ * @param input - Processing input carrying a static URL and optional provider.
+ * @returns - Current URL snapshot used consistently by the pass.
+ */
+function getCurrentUrl(
+    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+): URL {
+    return input.urlProvider?.() ?? input.url;
+}
+
+/**
  * Selects active rules and reports an unsupported URL through the bounded diagnostic contract.
  *
  * @param input - Processing dependencies carrying URL, registry, and diagnostics.
+ * @param url - Current URL snapshot used for this pass.
  * @returns - Matching rules in source precedence order.
  */
 function getMatchingRules(
     input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+    url: URL,
 ): readonly TimestampSourceRule[] {
-    const rules = (input.registry ?? defaultRegistry).matching(input.url);
+    const rules = (input.registry ?? defaultRegistry).matching(url);
     if (rules.length === 0) {
         input.diagnosticSink?.({
             category: DIAGNOSTIC_CATEGORY.SKIP,
@@ -321,7 +345,7 @@ function processCandidateCollection(
         );
         if (result) {
             renderedCount += 1;
-            if (result.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
+            if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
                 outputs.push(result.output);
             }
         }
@@ -345,17 +369,19 @@ function processCandidateCollection(
  */
 function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeElement[] {
     const { root } = input;
-    const rules = getMatchingRules(input);
+    const url = getCurrentUrl(input);
+    const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
     }
+    const extractionContext = { url } as const;
     const started = input.diagnosticSink ? performance.now() : undefined;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     for (const rule of rules) {
         for (const element of rule.discover(root)) {
-            const candidate = rule.extract(element);
+            const candidate = rule.extract(element, extractionContext);
             const source = candidate?.source ?? element;
             if (!discovered.has(source)) {
                 discovered.add(source);
@@ -403,10 +429,12 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 export function reconcileDocumentSources(
     input: ReconcileSourcesInput,
 ): readonly HTMLTimeElement[] {
-    const rules = getMatchingRules(input);
+    const url = getCurrentUrl(input);
+    const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
     }
+    const extractionContext = { url } as const;
     const started = input.diagnosticSink ? performance.now() : undefined;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
@@ -425,7 +453,7 @@ export function reconcileDocumentSources(
             if (!rule.matchesElement(source)) {
                 continue;
             }
-            const candidate = rule.extract(source);
+            const candidate = rule.extract(source, extractionContext);
             if (candidate) {
                 addCandidate(candidatesBySource, candidate);
             }
@@ -444,6 +472,7 @@ export function reconcileDocumentSources(
  *
  * @param input - Full-document processing inputs.
  * @param input.url - Current page URL used to select an adapter.
+ * @param input.urlProvider - Dynamic source of the current page URL.
  * @param input.root - Document to discover and transform.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
@@ -456,6 +485,7 @@ export function reconcileDocumentSources(
  */
 export function processDocument({
     url,
+    urlProvider,
     root,
     locales,
     localesProvider,
@@ -467,6 +497,7 @@ export function processDocument({
 }: ProcessInput): readonly HTMLTimeElement[] {
     return processRegion({
         url,
+        ...(urlProvider === undefined ? {} : { urlProvider }),
         root,
         registry,
         ...(locales === undefined ? {} : { locales }),

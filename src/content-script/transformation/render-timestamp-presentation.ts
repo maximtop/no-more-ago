@@ -9,6 +9,7 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
     getOwnedSourceEntries as getOwnedTimeSourceEntries,
+    renderAppendedTime,
     renderExactTime,
     restoreExactTime,
     restoreExactTimes,
@@ -31,9 +32,11 @@ export { getOwnedSourceForOutput } from "./render-exact-time";
 export type TimestampRenderResult =
     | {
         /**
-         * Adjacent-output strategy discriminant.
+         * Generated-output strategy discriminant.
          */
-        readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME;
+        readonly kind:
+            | typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME
+            | typeof TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME;
 
         /**
          * Generated extension-owned time element.
@@ -102,7 +105,9 @@ export function renderTimestampPresentation(
         return output ? { kind: presentation.kind, output } : null;
     }
     restoreExactText(source, mutations);
-    const output = renderExactTime(source, datetime, text, mutations);
+    const output = presentation.kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME
+        ? renderAppendedTime(source, datetime, text, mutations)
+        : renderExactTime(source, datetime, text, mutations);
     return output ? { kind: presentation.kind, output } : null;
 }
 

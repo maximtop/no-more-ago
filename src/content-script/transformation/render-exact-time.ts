@@ -39,6 +39,11 @@ interface OwnedPairRecord {
      * Whether the extension currently owns the source's hidden attribute.
      */
     sourceHiddenByExtension: boolean;
+
+    /**
+     * Whether generated output replaces or follows a visible source.
+     */
+    readonly hidesSource: boolean;
 }
 
 /**
@@ -136,10 +141,17 @@ function expectedOutputMarker(record: OwnedPairRecord): string {
  * @param output - Verified extension-owned time element to update.
  * @param datetime - Trusted source datetime preserved on the output.
  * @param text - Newly formatted exact date text.
+ * @param hidesSource - Whether the generated output replaces its source.
  */
-function updateOutput(output: HTMLTimeElement, datetime: string, text: string): void {
+function updateOutput(
+    output: HTMLTimeElement,
+    datetime: string,
+    text: string,
+    hidesSource: boolean,
+): void {
     output.dateTime = datetime;
     output.textContent = text;
+    output.style.display = hidesSource ? "" : "block";
 }
 
 /**
@@ -246,19 +258,20 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
 }
 
 /**
- * Reuses or creates an extension-owned time node, hides its source when required, and returns
- * null rather than adopting markup whose ownership marker cannot be verified.
+ * Creates or updates verified generated output in replace-source or preserve-source mode.
  *
- * @param source - Page-owned time element selected by a trusted adapter.
- * @param datetime - Trusted source datetime to preserve on the generated node.
+ * @param source - Page-owned source selected by a trusted adapter.
+ * @param datetime - Trusted source datetime for the generated time element.
  * @param text - Exact formatted date text to display.
+ * @param hidesSource - Whether the renderer hides the page-owned source.
  * @param mutations - Optional sink for renderer-authored DOM mutations.
  * @returns - Verified generated time element, or null on an ownership conflict.
  */
-export function renderExactTime(
+function renderOwnedTime(
     source: Element,
     datetime: string,
     text: string,
+    hidesSource: boolean,
     mutations?: OwnedDomMutationSink,
 ): HTMLTimeElement | null {
     const document = source.ownerDocument;
@@ -269,6 +282,7 @@ export function renderExactTime(
         const sourceMarker = parseSourceMarker(source.getAttribute(OWNED_SOURCE_ATTRIBUTE));
         if (
             existing.source !== source ||
+            existing.hidesSource !== hidesSource ||
             sourceMarker === null ||
             `${sourceMarker.state}:${sourceMarker.token}` !== expectedSourceMarker(existing) ||
             existing.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(existing)
@@ -278,7 +292,11 @@ export function renderExactTime(
         if (!source.parentNode) {
             return null;
         }
-        if (!source.hasAttribute("hidden") && !existing.sourceWasHidden) {
+        if (
+            hidesSource
+            && !source.hasAttribute("hidden")
+            && !existing.sourceWasHidden
+        ) {
             mutations?.beforeOwnedSourceHiddenChange(source, true);
             source.setAttribute("hidden", "");
             existing.sourceHiddenByExtension = true;
@@ -286,7 +304,7 @@ export function renderExactTime(
         if (source.nextElementSibling !== existing.output) {
             source.after(existing.output);
         }
-        updateOutput(existing.output, datetime, text);
+        updateOutput(existing.output, datetime, text, hidesSource);
         return existing.output;
     }
 
@@ -305,18 +323,56 @@ export function renderExactTime(
         token,
         sourceWasHidden,
         sourceHiddenByExtension: false,
+        hidesSource,
     };
-    updateOutput(record.output, datetime, text);
+    updateOutput(record.output, datetime, text, hidesSource);
     record.output.setAttribute(OWNED_OUTPUT_ATTRIBUTE, expectedOutputMarker(record));
     source.after(record.output);
     source.setAttribute(OWNED_SOURCE_ATTRIBUTE, expectedSourceMarker(record));
-    if (!sourceWasHidden) {
+    if (hidesSource && !sourceWasHidden) {
         mutations?.beforeOwnedSourceHiddenChange(source, true);
         source.setAttribute("hidden", "");
         record.sourceHiddenByExtension = true;
     }
     records.set(source, record);
     return record.output;
+}
+
+/**
+ * Reuses or creates an extension-owned time node, hides its source when required, and returns
+ * null rather than adopting markup whose ownership marker cannot be verified.
+ *
+ * @param source - Page-owned time element selected by a trusted adapter.
+ * @param datetime - Trusted source datetime to preserve on the generated node.
+ * @param text - Exact formatted date text to display.
+ * @param mutations - Optional sink for renderer-authored DOM mutations.
+ * @returns - Verified generated time element, or null on an ownership conflict.
+ */
+export function renderExactTime(
+    source: Element,
+    datetime: string,
+    text: string,
+    mutations?: OwnedDomMutationSink,
+): HTMLTimeElement | null {
+    return renderOwnedTime(source, datetime, text, true, mutations);
+}
+
+/**
+ * Creates or updates owned generated time while preserving its source.
+ *
+ * @param source - Page-owned source that remains visible and interactive.
+ * @param datetime - Trusted canonical datetime for the generated time element.
+ * @param text - Exact formatted date text.
+ * @param mutations - Optional sink for renderer-authored DOM mutations.
+ * @returns - Verified generated time element, or null on ownership conflict.
+ */
+export function renderAppendedTime(
+    source: Element,
+    datetime: string,
+    text: string,
+    mutations?: OwnedDomMutationSink,
+): HTMLTimeElement | null {
+    return renderOwnedTime(source, datetime, text, false, mutations);
 }
 
 /**

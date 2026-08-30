@@ -22,6 +22,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
     TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
+    TIKTOK_PUBLICATION: "tiktok-publication",
 } as const;
 
 /**
@@ -29,10 +30,12 @@ export const TIMESTAMP_SOURCE_KIND = {
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
+    DATA_E2E: "data-e2e",
     DATA_TIMESTAMP: "data-timestamp",
     DATETIME: "datetime",
     FORMAT: "format",
     HREF: "href",
+    ID: "id",
     TITLE: "title",
 } as const;
 
@@ -41,6 +44,7 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
     ADJACENT_TIME: "adjacent-time",
+    APPENDED_TIME: "appended-time",
     IN_PLACE_TEXT: "in-place-text",
 } as const;
 
@@ -52,10 +56,18 @@ export const ADJACENT_TIME_PRESENTATION = {
 } as const;
 
 /**
+ * Shared presentation descriptor for generated output that preserves its source.
+ */
+export const APPENDED_TIME_PRESENTATION = {
+    kind: TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME,
+} as const;
+
+/**
  * Validated presentation strategy carried from adapter extraction to rendering.
  */
 export type TimestampPresentation =
     | typeof ADJACENT_TIME_PRESENTATION
+    | typeof APPENDED_TIME_PRESENTATION
     | {
         /**
          * In-place strategy discriminant.
@@ -147,6 +159,16 @@ export interface TimestampCandidate extends TimestampCandidateSource {
 }
 
 /**
+ * Current document facts supplied consistently during one extraction pass.
+ */
+export interface TimestampExtractionContext {
+    /**
+     * Current document URL captured for this pass.
+     */
+    readonly url: URL;
+}
+
+/**
  * Generic or site-specific source rule for discovering trusted timestamp candidates.
  */
 export interface TimestampSourceRule {
@@ -195,5 +217,8 @@ export interface TimestampSourceRule {
     /**
      * Returns a trusted candidate or null when the element is unsuitable.
      */
-    extract(element: Element): TimestampCandidate | null;
+    extract(
+        element: Element,
+        context?: TimestampExtractionContext,
+    ): TimestampCandidate | null;
 }

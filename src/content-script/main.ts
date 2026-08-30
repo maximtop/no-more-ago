@@ -9,6 +9,7 @@ import { DIAGNOSTIC_EVENT_MESSAGE } from "../shared/messaging/document-messages"
 installContentRuntime({
     document,
     url: new URL(window.location.href),
+    urlProvider: () => new URL(window.location.href),
     locales: navigator.languages,
     localesProvider: () => navigator.languages,
     ...(typeof chrome.runtime.sendMessage === "function"

@@ -106,7 +106,8 @@ export class DocumentTransformationController {
             return this.outputs;
         }
 
-        const rules = (this.input.registry ?? defaultRegistry).matching(this.input.url);
+        const currentUrl = this.input.urlProvider?.() ?? this.input.url;
+        const rules = (this.input.registry ?? defaultRegistry).matching(currentUrl);
         const sourceAttributes = [
             ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
         ];

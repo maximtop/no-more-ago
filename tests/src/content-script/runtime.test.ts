@@ -59,6 +59,16 @@ function state(enabled = true, revision = 1) {
 }
 
 /**
+ * Allows runtime hydration and presentation work to settle.
+ *
+ * @returns - Promise settled after queued runtime work.
+ */
+async function settleRuntime(): Promise<void> {
+    await Promise.resolve();
+    await Promise.resolve();
+}
+
+/**
  * Installs a test document runtime.
  *
  * @param source - Controllable message source.
@@ -87,6 +97,7 @@ describe("installContentRuntime", () => {
         ];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
+        document.head.innerHTML = "";
         document.body.innerHTML =
             '<time datetime="2026-08-23T10:15:00Z">relative</time>';
     });
@@ -322,5 +333,99 @@ describe("installContentRuntime", () => {
         expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
             .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
         expect(clock.textContent).toBe("16:08");
+    });
+
+    it("removes and recreates TikTok profile output across policy changes", async () => {
+        const postId = "7639779880711749733";
+        document.body.innerHTML = '<div data-e2e="user-post-item">'
+            + `<a id="tiktok-policy-card" href="/@fictional/video/${postId}">card</a>`
+            + "</div>";
+        const source = messages();
+        const link = document.getElementById("tiktok-policy-card");
+        if (!(link instanceof HTMLAnchorElement)) {
+            throw new Error("Expected TikTok policy card");
+        }
+        let enabled = true;
+        let revision = 1;
+        const url = new URL("https://www.tiktok.com/@fictional");
+        installContentRuntime({
+            document,
+            url,
+            urlProvider: () => url,
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+        });
+        await settleRuntime();
+        expect(link.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        expect(link.hasAttribute("hidden")).toBe(false);
+
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch({ type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        expect(link.nextElementSibling).toBeNull();
+        expect(document.getElementById("tiktok-policy-card")).toBe(link);
+        await settleRuntime();
+
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        await settleRuntime();
+        expect(link.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+
+        expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
+            .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
+        expect(link.nextElementSibling).toBeNull();
+        expect(link.textContent).toBe("card");
+    });
+
+    it("restores and reprocesses a TikTok direct label across policy changes", async () => {
+        const postId = "7639779880711749733";
+        document.head.innerHTML = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" '
+            + 'type="application/json">'
+            + `{"itemInfo":{"itemStruct":{"id":"${postId}",`
+            + '"createTime":"1778774880"}}}</script>';
+        document.body.innerHTML = '<div data-e2e="browser-nickname">'
+            + '<span>Fictional</span><span> · </span>'
+            + '<span id="tiktok-policy-date">5-14</span></div>';
+        const source = messages();
+        const date = document.getElementById("tiktok-policy-date");
+        if (!date) {
+            throw new Error("Expected TikTok policy date");
+        }
+        let enabled = true;
+        let revision = 1;
+        const url = new URL(`https://www.tiktok.com/@fictional/video/${postId}`);
+        installContentRuntime({
+            document,
+            url,
+            urlProvider: () => url,
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+        });
+        await settleRuntime();
+        expect(date.textContent).not.toBe("5-14");
+
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch({ type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        expect(date.textContent).toBe("5-14");
+        await settleRuntime();
+
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        await settleRuntime();
+        expect(date.textContent).not.toBe("5-14");
+        expect(document.getElementById("tiktok-policy-date")).toBe(date);
+
+        expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
+            .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
+        expect(date.textContent).toBe("5-14");
     });
 });

@@ -7,12 +7,13 @@ page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
-GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
-have specialized sources for trusted timestamp widgets. These integrations
-preserve page-owned elements and links while updating simple labels in place
-needed. Instagram uses the standard timestamp source with a specialized
-in-place presentation rule that preserves styling hooks. Site markup support is
-best-effort and may change independently of the extension.
+GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
+TikTok have specialized sources for trusted timestamp widgets. These
+integrations preserve page-owned elements and links while updating simple
+labels in place where needed. Instagram uses the standard timestamp source
+with a specialized in-place presentation rule that preserves styling hooks.
+Site markup support is best-effort and may change independently of the
+extension.
 
 ## Key Concepts
 
@@ -22,8 +23,8 @@ best-effort and may change independently of the extension.
   and time with an explicit, known UTC offset.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange and Telegram Web K timestamps. Specialized rules take precedence
-  over the generic rule when both accept the same source.
+  Exchange, Telegram Web K, and TikTok timestamps. Specialized rules take
+  precedence over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -61,9 +62,10 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-and Telegram Web K timestamps can also become exact dates. Instagram's simple
-standard timestamp labels retain their page-owned elements and styles. The
-result follows the selected format, browser locale, and time zone.
+Telegram Web K, and supported TikTok timestamps can also become exact dates.
+Instagram's simple standard timestamp labels retain their page-owned elements
+and styles. The result follows the selected format, browser locale, and time
+zone.
 
 ## Features
 
@@ -119,6 +121,30 @@ Primary edit-time labels and ambiguous forwarded or saved-message shapes are
 left unchanged. Telegram Web A is unsupported because it does not expose the
 same safe machine-readable instant. The extension never parses Telegram's
 visible or localized clock text as timestamp evidence.
+
+TikTok support applies only to HTTPS `www.tiktok.com` user profiles and direct
+`/@handle/video/<post-id>` or `/@handle/photo/<post-id>` pages whose markup
+matches the tested guest or authenticated shapes. Direct video and photo pages
+replace one simple publication-date label in place. Profile grids add one
+removable exact date beneath each unambiguous video or photo card while
+preserving the card link.
+
+For a current publication, the extension first uses a valid `createTime` from
+the page's universal hydration JSON when the same record's scalar `id` exactly
+matches the current post ID. Otherwise it accepts a strict 19-digit decimal
+post ID and derives Unix seconds as `BigInt(postId) >> 32n`. Both sources must
+fall between `2016-01-01T00:00:00Z` and the browser's current time plus 24
+hours. The ID-derived value is suitable for date-and-minute display, but its
+seconds are not claimed to be TikTok's exact publication second. A custom
+format that includes seconds still formats the decoded instant normally.
+
+TikTok processing reads only the current URL, supported DOM shapes, and the
+already loaded universal hydration script. It does not request TikTok data,
+inspect response bodies, or replace page `fetch` or `XMLHttpRequest`. Initial
+hydration can be stale after in-page navigation, so an embedded timestamp is
+never used for another post ID. Unsupported or ambiguous shapes are left
+unchanged. As with every site adapter, compatibility is best-effort because
+TikTok can change its markup independently.
 
 The extension watches relevant dynamic content in each reachable HTTP(S)
 document. Newly added or changed timestamps are processed without requiring a
@@ -240,6 +266,7 @@ Choose **Reset all settings** on the options page to restore:
 | Situation | Result |
 | --- | --- |
 | Eligible standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Supported TikTok profile card or direct video/photo publication | A matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is appended to the card or rendered in place. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
@@ -259,12 +286,14 @@ The extension requests:
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative or absolute labels,
-link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
-specialized source trusts only the explicit zoned timestamp in its approved
-`span.age[title]` shape. The Stack Exchange source reads `title` only from its
-listed timestamp widgets and accepts only strict explicit-zone values plus the
-known comment-license suffix. In-place sources change only their simple label
-text: the `title`, link destination, element identity, attributes, and event
+ARIA labels, nearby text, or elapsed time. The Hacker News specialized source
+trusts only the explicit zoned timestamp in its approved `span.age[title]`
+shape. The Stack Exchange source reads `title` only from its listed timestamp
+widgets and accepts only strict explicit-zone values plus the known
+comment-license suffix. TikTok is the documented exception for link
+destinations: it accepts only a strict post ID from an exact supported current
+URL or profile-card link. In-place sources change only their simple label text:
+the `title`, link destination, element identity, attributes, and event
 listeners remain intact. Standard processing remains limited to ordinary
 light-DOM `time[datetime]` elements.
 
@@ -274,17 +303,28 @@ does not inspect message text, authors, identifiers, localized titles, or full
 Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
 processing.
 
+TikTok support adds no permissions, settings, accounts, network requests, or
+external service. Successful processing does not retain post IDs, raw source
+timestamps, URL paths, authors, titles, or page content in diagnostics.
+
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, Instagram, and Telegram Web K are
-  best-effort integrations whose markup can change independently of the
+- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, and TikTok
+  are best-effort integrations whose markup can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
   may still use the universal generic rule.
+- TikTok support is limited to tested `www.tiktok.com/@...` profile, direct
+  video, and direct photo shapes. For You, Following, search, embeds, LIVE,
+  TikTok Studio, short/mobile links, other subdomains, and non-HTTPS pages do
+  not receive TikTok-specialized processing.
+- A timestamp decoded from a TikTok post ID is a validated fallback with
+  date-and-minute precision, not proof of TikTok's exact publication second.
+  TikTok markup and embedded-state compatibility remain best-effort.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.

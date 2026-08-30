@@ -422,6 +422,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input - Document, presentation, and messaging dependencies.
  * @param input.document - Page document owned by this runtime.
  * @param input.url - Current page URL used for adapter selection.
+ * @param input.urlProvider - Dynamic source of the current page URL.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
@@ -433,6 +434,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
 export function installContentRuntime(input: {
     readonly document: Document;
     readonly url: URL;
+    readonly urlProvider?: () => URL;
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
@@ -451,6 +453,7 @@ export function installContentRuntime(input: {
     }
     const processInput = {
         url: input.url,
+        ...(input.urlProvider === undefined ? {} : { urlProvider: input.urlProvider }),
         root: input.document,
         locales: input.locales,
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),

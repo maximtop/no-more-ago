@@ -70,6 +70,11 @@ export const TAB_ACTION = {
 } as const;
 
 /**
+ * Maximum time one tab operation may delay runtime reconciliation.
+ */
+const TAB_OPERATION_TIMEOUT_MS = 1_000;
+
+/**
  * Global activation policy.
  */
 export type ActivationPolicy = (typeof ACTIVATION_POLICY)[keyof typeof ACTIVATION_POLICY];
@@ -251,6 +256,32 @@ function settle<T>(operation: () => Promise<T>): Promise<
 }
 
 /**
+ * Settles a browser operation within a bounded interval.
+ *
+ * @param operation - Operation to invoke and settle.
+ * @param timeoutMs - Maximum interval to wait for settlement.
+ * @returns - A tagged success or failure result.
+ */
+async function settleWithin<T>(
+    operation: () => Promise<T>,
+    timeoutMs: number,
+): Promise<{ readonly ok: true; readonly value: T } | { readonly ok: false }> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<{ readonly ok: false }>((resolve) => {
+        timeout = setTimeout(() => {
+            resolve({ ok: false });
+        }, timeoutMs);
+    });
+    try {
+        return await Promise.race([settle(operation), deadline]);
+    } finally {
+        if (timeout !== undefined) {
+            clearTimeout(timeout);
+        }
+    }
+}
+
+/**
  * Reconciles the universal registration.
  *
  * @param scripting - Scripting API boundary.
@@ -361,15 +392,21 @@ async function refresh(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    await settle(() => tabs.sendMessage(tab.id, {
-        type: enabled
-            ? REFRESH_DOCUMENT_POLICY_MESSAGE
-            : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    }));
-    const ensured = await settle(() => scripting.executeScript({
-        target: { tabId: tab.id, allFrames: true },
-        files: [CONTENT_SCRIPT_FILE],
-    }));
+    await settleWithin(
+        () => tabs.sendMessage(tab.id, {
+            type: enabled
+                ? REFRESH_DOCUMENT_POLICY_MESSAGE
+                : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
+        }),
+        TAB_OPERATION_TIMEOUT_MS,
+    );
+    const ensured = await settleWithin(
+        () => scripting.executeScript({
+            target: { tabId: tab.id, allFrames: true },
+            files: [CONTENT_SCRIPT_FILE],
+        }),
+        TAB_OPERATION_TIMEOUT_MS,
+    );
     const ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
     if (!ok) {
         failures.push({
@@ -399,8 +436,10 @@ async function teardown(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const result = await settle(() =>
-        tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }));
+    const result = await settleWithin(
+        () => tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }),
+        TAB_OPERATION_TIMEOUT_MS,
+    );
     if (!result.ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,

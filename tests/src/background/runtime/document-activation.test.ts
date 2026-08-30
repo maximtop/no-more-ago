@@ -216,6 +216,75 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
+    it("does not let a pending tab message block reconciliation", async () => {
+        vi.useFakeTimers();
+        try {
+            const fake = fakes([
+                "https://pending.test/page",
+                "https://reachable.test/page",
+            ]);
+            fake.tabs.sendMessage
+                .mockImplementationOnce(() =>
+                    new Promise<{ readonly type: string }>(() => undefined))
+                .mockResolvedValueOnce({ type: "ack" });
+            const coordinator = new DocumentActivationCoordinator(fake);
+            const reconciliation = coordinator.reconcile({
+                revision: 5,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            });
+            const outcome = Promise.race([
+                reconciliation.then((result) => ({ kind: "resolved" as const, result })),
+                new Promise<{ readonly kind: "deadline" }>((resolve) => {
+                    setTimeout(() => {
+                        resolve({ kind: "deadline" });
+                    }, 2_000);
+                }),
+            ]);
+
+            await vi.advanceTimersByTimeAsync(2_000);
+
+            await expect(outcome).resolves.toMatchObject({ kind: "resolved" });
+            expect(fake.scripting.executeScript).toHaveBeenCalledTimes(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("does not let a pending tab injection block reconciliation", async () => {
+        vi.useFakeTimers();
+        try {
+            const fake = fakes([
+                "https://pending.test/page",
+                "https://reachable.test/page",
+            ]);
+            fake.scripting.executeScript
+                .mockImplementationOnce(() => new Promise<never>(() => undefined))
+                .mockResolvedValueOnce([{ frameId: 0 }]);
+            const coordinator = new DocumentActivationCoordinator(fake);
+            const reconciliation = coordinator.reconcile({
+                revision: 6,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            });
+            const outcome = Promise.race([
+                reconciliation.then((result) => ({ kind: "resolved" as const, result })),
+                new Promise<{ readonly kind: "deadline" }>((resolve) => {
+                    setTimeout(() => {
+                        resolve({ kind: "deadline" });
+                    }, 2_000);
+                }),
+            ]);
+
+            await vi.advanceTimersByTimeAsync(2_000);
+
+            await expect(outcome).resolves.toMatchObject({ kind: "resolved" });
+            expect(fake.scripting.executeScript).toHaveBeenCalledTimes(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("contains synchronous browser API failures and still reconciles siblings", async () => {
         const fake = fakes([
             "https://first.test/page",
