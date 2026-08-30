@@ -2,13 +2,15 @@
  * @file LinkedIn adapter for best-effort timestamps derived from local IDs.
  */
 
-import { findSimpleTextTarget } from "./simple-text-target";
+import { discoverElements } from "./discover-elements";
+import { isHtmlElement } from "./html-element";
 import {
-    LINKEDIN_ID_KIND,
     decodeLinkedInIdMilliseconds,
     parseLinkedInIds,
+    parseLinkedInTargetIds,
     type LinkedInLogicalId,
 } from "./linkedin-id";
+import { findSimpleTextTarget } from "./simple-text-target";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -16,12 +18,14 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
+    type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
 
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
+const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
 const MAX_ASSOCIATION_DEPTH = 8;
+const MAX_MUTATION_SCAN_ELEMENTS = 128;
 const LABEL_SELECTOR = [
     "p[componentkey] > span",
     ".update-components-actor__sub-description span[aria-hidden='true']",
@@ -34,6 +38,10 @@ const EVIDENCE_SELECTOR = [
     "[data-urn]",
     "a[href]",
 ].join(", ");
+const LINKEDIN_PERMALINK_PATTERN = new RegExp(
+    "^/feed/update/(urn:li:(?:activity|ugcPost|share):[1-9]\\d{0,19})/?$",
+    "u",
+);
 const RELATIVE_PRESENTATION_PATTERN = new RegExp(
     "^(?<prefix>\\s*)(?:\\d+\\s*(?:mo|yr|s|m|h|d|w|y)|just now)"
         + "(?<suffix>\\s*(?:•[\\s\\S]*)?)$",
@@ -45,6 +53,12 @@ const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.DATA_ID,
     TIMESTAMP_SOURCE_ATTRIBUTE.DATA_URN,
     TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
+] as const;
+const MUTATION_ATTRIBUTES = [
+    ...EVIDENCE_ATTRIBUTES,
+    TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
+    TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_HIDDEN,
+    TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
 ] as const;
 
 /**
@@ -93,16 +107,6 @@ interface LinkedInAssociation extends LinkedInPresentation {
 }
 
 /**
- * Supported target IDs carried by one approved DOM evidence element.
- */
-interface LinkedInEvidence {
-    /**
-     * Target IDs parsed from that element's approved attributes.
-     */
-    readonly ids: readonly LinkedInLogicalId[];
-}
-
-/**
  * Checks whether a URL belongs to LinkedIn over HTTP(S).
  *
  * @param url - URL considered for adapter selection.
@@ -117,44 +121,24 @@ export function matchesLinkedInUrl(url: URL): boolean {
 }
 
 /**
- * Returns matching elements from a Document or Element, including the root.
- *
- * @param root - DOM region to inspect.
- * @param selector - Selector limited to adapter-owned shapes.
- * @returns - Matching elements in document order.
- */
-function selectElements(root: ParentNode, selector: string): readonly Element[] {
-    const elements = Array.from(root.querySelectorAll(selector));
-    const rootNode = root as Node;
-    if (rootNode.nodeType === 1) {
-        const rootElement = rootNode as Element;
-        if (rootElement.matches(selector)) {
-            elements.unshift(rootElement);
-        }
-    }
-    return elements;
-}
-
-/**
  * Resolves the page-authored relative segment and exact preserved delimiters.
  *
  * @param label - Structurally accepted LinkedIn label element.
- * @param context - Optional processing context with retained page text.
+ * @param context - Processing context with retained page text.
  * @returns - Existing target and delimiters, or null for an unsupported shape.
  */
 function resolvePresentation(
     label: Element,
-    context?: TimestampExtractionContext,
+    context: TimestampExtractionContext,
 ): LinkedInPresentation | null {
-    if (label.namespaceURI !== HTML_NAMESPACE) {
+    if (!isHtmlElement(label)) {
         return null;
     }
     const target = findSimpleTextTarget(label);
     if (!target) {
         return null;
     }
-    const pageText = context?.readPageText(target) ?? target.data;
-    const match = pageText.match(RELATIVE_PRESENTATION_PATTERN);
+    const match = context.readPageText(target).match(RELATIVE_PRESENTATION_PATTERN);
     const prefix = match?.groups?.prefix;
     const suffix = match?.groups?.suffix;
     return prefix === undefined || suffix === undefined
@@ -168,49 +152,108 @@ function resolvePresentation(
 }
 
 /**
- * Removes a composite comment's parent thread from target-ID consideration.
+ * Parses IDs only from a direct LinkedIn feed permalink path.
  *
- * @param value - One adapter-approved evidence attribute.
- * @returns - Explicit comment IDs, or post IDs when the value has no comment.
+ * @param value - Raw href attribute value.
+ * @returns - The permalink's supported target ID, or an empty collection.
  */
-function parseTargetIds(value: string): readonly LinkedInLogicalId[] {
-    const ids = parseLinkedInIds(value);
-    const comments = ids.filter((id) => id.kind === LINKEDIN_ID_KIND.COMMENT);
-    return comments.length > 0 ? comments : ids;
+function parseLinkedInPermalinkIds(value: string): readonly LinkedInLogicalId[] {
+    let url: URL;
+    try {
+        url = new URL(value, LINKEDIN_URL_BASE);
+    } catch {
+        return [];
+    }
+    if (!matchesLinkedInUrl(url) || url.search.length > 0 || url.hash.length > 0) {
+        return [];
+    }
+    let pathname: string;
+    try {
+        pathname = decodeURIComponent(url.pathname);
+    } catch {
+        return [];
+    }
+    const urn = pathname.match(LINKEDIN_PERMALINK_PATTERN)?.[1];
+    return urn ? parseLinkedInIds(urn) : [];
 }
 
 /**
- * Collects supported target evidence only from approved attributes.
+ * Collects deduplicated target IDs from one approved evidence element.
+ *
+ * @param element - Evidence element carrying adapter-approved attributes.
+ * @returns - Supported target IDs in attribute order.
+ */
+function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
+    const ids = new Map<string, LinkedInLogicalId>();
+    for (const attribute of EVIDENCE_ATTRIBUTES) {
+        const value = element.getAttribute(attribute);
+        if (value === null) {
+            continue;
+        }
+        const parsed = attribute === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
+            ? parseLinkedInPermalinkIds(value)
+            : parseLinkedInTargetIds(value);
+        for (const id of parsed) {
+            ids.set(`${id.kind}:${id.decimal}`, id);
+        }
+    }
+    return [...ids.values()];
+}
+
+/**
+ * Finds eligible label presentations inside one candidate root.
+ *
+ * @param root - Candidate local association root.
+ * @param context - Processing context.
+ * @returns - Eligible page-owned presentations in document order.
+ */
+function collectPresentations(
+    root: ParentNode,
+    context: TimestampExtractionContext,
+): readonly LinkedInPresentation[] {
+    return discoverElements(root, LABEL_SELECTOR, isHtmlElement)
+        .map((label) => resolvePresentation(label, context))
+        .filter((value): value is LinkedInPresentation => value !== null);
+}
+
+/**
+ * Finds adapter-approved evidence elements inside one candidate root.
+ *
+ * @param root - Candidate local association root.
+ * @returns - Evidence elements in document order.
+ */
+function collectEvidenceElements(root: ParentNode): readonly Element[] {
+    return discoverElements(root, EVIDENCE_SELECTOR, isHtmlElement);
+}
+
+/**
+ * Selects one target ID in a scope while pruning independently associated descendants.
  *
  * @param scope - Candidate local association boundary.
- * @returns - Evidence elements with deduplicated target IDs.
- */
-function collectEvidence(scope: Element): readonly LinkedInEvidence[] {
-    return selectElements(scope, EVIDENCE_SELECTOR).flatMap((element) => {
-        const ids = new Map<string, LinkedInLogicalId>();
-        for (const attribute of EVIDENCE_ATTRIBUTES) {
-            const value = element.getAttribute(attribute);
-            if (value === null) {
-                continue;
-            }
-            for (const id of parseTargetIds(value)) {
-                ids.set(`${id.kind}:${id.decimal}`, id);
-            }
-        }
-        return ids.size > 0 ? [{ ids: [...ids.values()] }] : [];
-    });
-}
-
-/**
- * Selects one logical target and rejects every distinct local competitor.
- *
- * @param evidence - Approved evidence inside the local boundary.
+ * @param presentation - Label currently being associated.
+ * @param evidenceElements - Evidence indexed once for the inspected root.
+ * @param nestedSources - Independently associated descendant sources.
  * @returns - One deduplicated logical target, or null when absent or ambiguous.
  */
-function selectLogicalId(evidence: readonly LinkedInEvidence[]): LinkedInLogicalId | null {
+function selectLogicalId(
+    scope: Element,
+    presentation: LinkedInPresentation,
+    evidenceElements: readonly Element[],
+    nestedSources: ReadonlySet<Element>,
+): LinkedInLogicalId | null {
     const ids = new Map<string, LinkedInLogicalId>();
-    for (const entry of evidence) {
-        for (const id of entry.ids) {
+    for (const evidence of evidenceElements) {
+        if (evidence !== scope && !scope.contains(evidence)) {
+            continue;
+        }
+        const belongsToNestedSource = [...nestedSources].some((nestedSource) =>
+            !nestedSource.contains(presentation.label)
+            && (evidence === nestedSource || nestedSource.contains(evidence))
+        );
+        if (belongsToNestedSource) {
+            continue;
+        }
+        for (const id of collectElementIds(evidence)) {
             ids.set(`${id.kind}:${id.decimal}`, id);
         }
     }
@@ -230,75 +273,109 @@ function isBroadAssociationBoundary(element: Element): boolean {
 }
 
 /**
- * Checks whether one changed attribute can introduce LinkedIn timestamp input.
- *
- * @param element - Element carrying the observed mutation.
- * @param attributeName - Changed adapter-owned attribute.
- * @returns - Whether local source lookup is necessary.
- */
-function hasRelevantAttributeMutation(
-    element: Element,
-    attributeName: string,
-): boolean {
-    if (
-        attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY
-        && element.localName === "p"
-        && Array.from(element.children).some((child) => child.localName === "span")
-    ) {
-        return true;
-    }
-    if (!EVIDENCE_ATTRIBUTES.some((attribute) => attribute === attributeName)) {
-        return false;
-    }
-    const value = element.getAttribute(attributeName);
-    return value !== null && parseTargetIds(value).length > 0;
-}
-
-/**
- * Finds eligible label presentations inside one candidate scope.
- *
- * @param scope - Candidate local association boundary.
- * @param context - Processing context.
- * @returns - Eligible page-owned presentations.
- */
-function collectPresentations(
-    scope: ParentNode,
-    context?: TimestampExtractionContext,
-): readonly LinkedInPresentation[] {
-    return selectElements(scope, LABEL_SELECTOR)
-        .map((label) => resolvePresentation(label, context))
-        .filter((value): value is LinkedInPresentation => value !== null);
-}
-
-/**
- * Finds the smallest ancestor containing one label and one logical target ID.
+ * Finds one presentation's smallest unambiguous local association.
  *
  * @param presentation - Eligible label presentation.
- * @param context - Processing context.
- * @returns - Accepted source boundary, or null when local association fails.
+ * @param evidenceElements - Evidence indexed once for the inspected root.
+ * @param nestedSources - Independently associated descendant sources.
+ * @param pendingPresentations - Labels not yet proven to have independent sources.
+ * @returns - Accepted association, or null when local evidence is unsuitable.
  */
-function findAssociationSource(
+function findAssociation(
     presentation: LinkedInPresentation,
-    context?: TimestampExtractionContext,
-): Element | null {
+    evidenceElements: readonly Element[],
+    nestedSources: ReadonlySet<Element>,
+    pendingPresentations: ReadonlySet<LinkedInPresentation>,
+): LinkedInAssociation | null {
     let scope: Element | null = presentation.label.parentElement;
     for (let depth = 0; scope && depth < MAX_ASSOCIATION_DEPTH; depth += 1) {
         if (isBroadAssociationBoundary(scope)) {
             return null;
         }
-        const presentations = collectPresentations(scope, context);
-        if (presentations.length > 1) {
-            return null;
-        }
-        if (
-            presentations.length === 1
-            && selectLogicalId(collectEvidence(scope)) !== null
-        ) {
-            return scope;
+        const containsPendingPresentation = [...pendingPresentations].some(
+            (pending) => pending !== presentation && scope?.contains(pending.label),
+        );
+        const id = containsPendingPresentation
+            ? null
+            : selectLogicalId(scope, presentation, evidenceElements, nestedSources);
+        if (id) {
+            return { ...presentation, source: scope, id };
         }
         scope = scope.parentElement;
     }
     return null;
+}
+
+/**
+ * Resolves all independent associations under one root, deepest labels first.
+ *
+ * @param root - Document or exact source subtree to inspect.
+ * @param context - Processing context.
+ * @returns - Unambiguous associations in presentation document order.
+ */
+function resolveAssociations(
+    root: ParentNode,
+    context: TimestampExtractionContext,
+): readonly LinkedInAssociation[] {
+    const presentations = collectPresentations(root, context);
+    const evidenceElements = collectEvidenceElements(root);
+    const depth = (element: Element): number => {
+        let value = 0;
+        let current: Element | null = element;
+        while (current) {
+            value += 1;
+            current = current.parentElement;
+        }
+        return value;
+    };
+    const deepestFirst = [...presentations].sort(
+        (left, right) => depth(right.label) - depth(left.label),
+    );
+    const associationsByPresentation = new Map<LinkedInPresentation, LinkedInAssociation>();
+    const associationsBySource = new Map<Element, LinkedInAssociation | null>();
+    const nestedSources = new Set<Element>();
+    const pendingPresentations = new Set(presentations);
+    let progressed: boolean;
+    do {
+        progressed = false;
+        for (const presentation of deepestFirst) {
+            if (!pendingPresentations.has(presentation)) {
+                continue;
+            }
+            const association = findAssociation(
+                presentation,
+                evidenceElements,
+                nestedSources,
+                pendingPresentations,
+            );
+            if (!association) {
+                continue;
+            }
+            pendingPresentations.delete(presentation);
+            progressed = true;
+            associationsByPresentation.set(presentation, association);
+            if (associationsBySource.has(association.source)) {
+                associationsBySource.set(association.source, null);
+            } else {
+                associationsBySource.set(association.source, association);
+                nestedSources.add(association.source);
+            }
+        }
+    } while (progressed);
+    const ordered: LinkedInAssociation[] = [];
+    const seen = new Set<Element>();
+    for (const presentation of presentations) {
+        const association = associationsByPresentation.get(presentation);
+        if (
+            association
+            && associationsBySource.get(association.source) === association
+            && !seen.has(association.source)
+        ) {
+            seen.add(association.source);
+            ordered.push(association);
+        }
+    }
+    return ordered;
 }
 
 /**
@@ -310,44 +387,156 @@ function findAssociationSource(
  */
 function resolveAssociation(
     source: Element,
-    context?: TimestampExtractionContext,
+    context: TimestampExtractionContext,
 ): LinkedInAssociation | null {
     if (isBroadAssociationBoundary(source)) {
         return null;
     }
-    const presentations = collectPresentations(source, context).filter(
-        (presentation) => findAssociationSource(presentation, context) === source,
-    );
-    const presentation = presentations[0];
-    if (presentations.length !== 1 || !presentation) {
-        return null;
+    return resolveAssociations(source, context).find(
+        (association) => association.source === source,
+    ) ?? null;
+}
+
+/**
+ * Traverses at most a fixed number of local elements for mutation-source lookup.
+ *
+ * @param root - Local ancestor being inspected.
+ * @param visit - Predicate that stops traversal once both source inputs are found.
+ * @returns - Whether the predicate stopped traversal before the element budget was exhausted.
+ */
+function visitBoundedElements(root: Element, visit: (element: Element) => boolean): boolean {
+    const pending = [root];
+    let visited = 0;
+    while (pending.length > 0 && visited < MAX_MUTATION_SCAN_ELEMENTS) {
+        const element = pending.pop();
+        if (!element) {
+            continue;
+        }
+        visited += 1;
+        if (visit(element)) {
+            return true;
+        }
+        for (let index = element.children.length - 1; index >= 0; index -= 1) {
+            const child = element.children.item(index);
+            if (child) {
+                pending.push(child);
+            }
+        }
     }
-    const id = selectLogicalId(collectEvidence(source));
-    return id ? { ...presentation, source, id } : null;
+    return false;
+}
+
+/**
+ * Finds one bounded local source that has both a live label and target evidence.
+ *
+ * @param element - Mutated element or child-list container.
+ * @param context - Processing context.
+ * @returns - Smallest candidate source, or null when none is found within the bounds.
+ */
+function findPotentialAssociationSource(
+    element: Element,
+    context: TimestampExtractionContext,
+): Element | null {
+    let scope: Element | null = element;
+    for (let depth = 0; scope && depth < MAX_ASSOCIATION_DEPTH; depth += 1) {
+        if (isBroadAssociationBoundary(scope)) {
+            return null;
+        }
+        let hasPresentation = false;
+        let hasEvidence = false;
+        const found = visitBoundedElements(scope, (candidate) => {
+            if (
+                !hasPresentation
+                && candidate.matches(LABEL_SELECTOR)
+                && resolvePresentation(candidate, context)
+            ) {
+                hasPresentation = true;
+            }
+            if (
+                !hasEvidence
+                && candidate.matches(EVIDENCE_SELECTOR)
+                && collectElementIds(candidate).length > 0
+            ) {
+                hasEvidence = true;
+            }
+            return hasPresentation && hasEvidence;
+        });
+        if (found) {
+            return scope;
+        }
+        scope = scope.parentElement;
+    }
+    return null;
+}
+
+/**
+ * Checks whether one adapter-observed attribute can change LinkedIn eligibility.
+ *
+ * @param element - Element whose attribute changed.
+ * @param attributeName - Changed adapter attribute.
+ * @param oldValue - Attribute value before the change.
+ * @returns - Whether bounded local source lookup is needed.
+ */
+function isRelevantAttributeMutation(
+    element: Element,
+    attributeName: TimestampSourceAttribute,
+    oldValue: string | null,
+): boolean {
+    if (EVIDENCE_ATTRIBUTES.some((attribute) => attribute === attributeName)) {
+        return true;
+    }
+    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.CLASS) {
+        return element.classList.contains("update-components-actor__sub-description")
+            || oldValue?.split(/\s+/u)
+                .includes("update-components-actor__sub-description") === true;
+    }
+    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_HIDDEN) {
+        return element.localName === "span"
+            && (element.getAttribute(attributeName) === "true" || oldValue === "true");
+    }
+    return attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME
+        && element.localName === "time"
+        && element.classList.contains("comments-comment-meta__data");
+}
+
+/**
+ * Maps an adapter-observed mutation to one bounded candidate source.
+ *
+ * @param element - Mutated element or child-list container.
+ * @param attributeName - Changed adapter attribute, when applicable.
+ * @param oldValue - Attribute value before the mutation.
+ * @param context - Processing context.
+ * @returns - Exact candidate source requiring reconciliation.
+ */
+function getMutationSources(
+    element: Element,
+    attributeName: TimestampSourceAttribute | undefined,
+    oldValue: string | null,
+    context: TimestampExtractionContext,
+): readonly Element[] {
+    if (
+        attributeName
+        && !isRelevantAttributeMutation(element, attributeName, oldValue)
+    ) {
+        return [];
+    }
+    const source = findPotentialAssociationSource(element, context);
+    return source ? [source] : [];
 }
 
 /**
  * Specialized LinkedIn source using only accepted local ID evidence.
  */
-export const linkedinAdapter: TimestampSourceRule = {
+export const linkedinAdapter = {
     id: LINKEDIN_ADAPTER_ID,
-    mutationAttributes: EVIDENCE_ATTRIBUTES,
+    mutationAttributes: MUTATION_ATTRIBUTES,
+    getMutationSources,
     matches: matchesLinkedInUrl,
-    shouldInspectMutation: (element, attributeName) => attributeName === undefined
-        ? !isBroadAssociationBoundary(element)
-        : hasRelevantAttributeMutation(element, attributeName),
-    matchesElement: (element, context) => resolveAssociation(element, context) !== null,
-    discover: (root, context) => {
-        const sources = new Set<Element>();
-        for (const presentation of collectPresentations(root, context)) {
-            const source = findAssociationSource(presentation, context);
-            if (source) {
-                sources.add(source);
-            }
-        }
-        return [...sources];
-    },
-    extract: (element, context) => {
+    matchesElement: (element: Element, context: TimestampExtractionContext) =>
+        resolveAssociation(element, context) !== null,
+    discover: (root: ParentNode, context: TimestampExtractionContext) =>
+        resolveAssociations(root, context).map(({ source }) => source),
+    extract: (element: Element, context: TimestampExtractionContext) => {
         const association = resolveAssociation(element, context);
         if (!association) {
             return null;
@@ -371,4 +560,4 @@ export const linkedinAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

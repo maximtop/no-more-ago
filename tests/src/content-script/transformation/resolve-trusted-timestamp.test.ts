@@ -18,8 +18,12 @@ import {
 import {
     TELEGRAM_WEB_K_ADAPTER_ID,
 } from "../../../../src/content-script/adapters/telegram-web-k";
+import {
+    LINKEDIN_ADAPTER_ID,
+} from "../../../../src/content-script/adapters/linkedin";
 
 const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
+const NOW_MILLISECONDS = Date.parse("2100-01-01T00:00:00Z");
 const DERIVED_SOURCE = document.createElement("span");
 const DERIVED_TARGET = document.createTextNode("1w");
 DERIVED_SOURCE.append(DERIVED_TARGET);
@@ -31,7 +35,7 @@ DERIVED_SOURCE.append(DERIVED_TARGET);
  * @returns - Derived in-place timestamp candidate.
  */
 const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => ({
-    ruleId: "linkedin",
+    ruleId: LINKEDIN_ADAPTER_ID,
     source: DERIVED_SOURCE,
     sourceKind: TIMESTAMP_SOURCE_KIND.LINKEDIN_TIMESTAMP,
     epochMilliseconds,
@@ -55,7 +59,10 @@ const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
 
 describe("resolveTrustedTimestamp", () => {
     it("resolves an exact ten-digit Unix-seconds source", () => {
-        const result = resolveTrustedTimestamp(unixSecondsCandidate("1778774880"));
+        const result = resolveTrustedTimestamp(
+            unixSecondsCandidate("1778774880"),
+            NOW_MILLISECONDS,
+        );
 
         expect(result?.instant.toISOString()).toBe("2026-05-14T16:08:00.000Z");
         expect(result?.sourceDatetime).toBe("1778774880");
@@ -77,7 +84,10 @@ describe("resolveTrustedTimestamp", () => {
         "17787748\n80",
         "not-a-timestamp",
     ])("rejects non-contract Unix-seconds input %j", (rawDatetime) => {
-        expect(resolveTrustedTimestamp(unixSecondsCandidate(rawDatetime))).toBeNull();
+        expect(resolveTrustedTimestamp(
+            unixSecondsCandidate(rawDatetime),
+            NOW_MILLISECONDS,
+        )).toBeNull();
     });
 
     it("normalizes an explicitly zoned timestamp to its instant", () => {
@@ -89,7 +99,7 @@ describe("resolveTrustedTimestamp", () => {
             presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-        });
+        }, NOW_MILLISECONDS);
 
         expect(result?.instant.toISOString()).toBe("2026-08-23T07:15:00.000Z");
         expect(result?.sourceDatetime).toBe("2026-08-23T10:15:00+03:00");
@@ -105,7 +115,7 @@ describe("resolveTrustedTimestamp", () => {
                 presentation: ADJACENT_TIME_PRESENTATION,
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-            }),
+            }, NOW_MILLISECONDS),
         ).toBeNull();
     });
 
@@ -174,11 +184,15 @@ describe("resolveTrustedTimestamp", () => {
             kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
             target,
         } as const;
-        expect(resolveTrustedTimestamp({ ...base, presentation })?.presentation).toBe(
-            presentation,
-        );
+        expect(resolveTrustedTimestamp(
+            { ...base, presentation },
+            NOW_MILLISECONDS,
+        )?.presentation).toBe(presentation);
         target.remove();
-        expect(resolveTrustedTimestamp({ ...base, presentation })).toBeNull();
+        expect(resolveTrustedTimestamp(
+            { ...base, presentation },
+            NOW_MILLISECONDS,
+        )).toBeNull();
     });
 
     it.each([
@@ -208,7 +222,10 @@ describe("resolveTrustedTimestamp", () => {
         ["2026-08-23T10:15-00:01", "2026-08-23T10:16:00.000Z"],
     ])("accepts complete supported instant %s", (rawDatetime, expected) => {
         const source = document.createElement("relative-time");
-        const result = resolveTrustedTimestamp({ ...candidate(rawDatetime), source });
+        const result = resolveTrustedTimestamp(
+            { ...candidate(rawDatetime), source },
+            NOW_MILLISECONDS,
+        );
         expect(result?.source).toBe(source);
         expect(result?.sourceDatetime).toBe(rawDatetime);
         expect(result?.instant.toISOString()).toBe(expected);
@@ -271,7 +288,10 @@ describe("resolveTrustedTimestamp", () => {
     ])("rejects unsafe or incomplete input %j", (rawDatetime) => {
         const source = document.createElement("relative-time");
         source.textContent = "3 months ago";
-        const result = resolveTrustedTimestamp({ ...candidate(rawDatetime), source });
+        const result = resolveTrustedTimestamp(
+            { ...candidate(rawDatetime), source },
+            NOW_MILLISECONDS,
+        );
         expect(result).toBeNull();
         expect(source.textContent).toBe("3 months ago");
     });
@@ -296,7 +316,7 @@ describe("resolveTrustedTimestamp", () => {
         ["2026-08-23T10:15:30.123Z", "2026-08-23T10:15:30.123Z"],
         ["10000-01-01T00:00Z", "+010000-01-01T00:00:00.000Z"],
     ])("accepts HTML global date-time %s", (rawDatetime, expected) => {
-        const result = resolveTrustedTimestamp(htmlCandidate(rawDatetime));
+        const result = resolveTrustedTimestamp(htmlCandidate(rawDatetime), NOW_MILLISECONDS);
 
         expect(result?.instant.toISOString()).toBe(expected);
         expect(result?.validationRule).toBe(TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL);
@@ -320,10 +340,16 @@ describe("resolveTrustedTimestamp", () => {
         "P1D",
         "100000000000000000000000-08-23T10:15Z",
     ])("rejects ineligible HTML global date-time %j", (rawDatetime) => {
-        expect(resolveTrustedTimestamp(htmlCandidate(rawDatetime))).toBeNull();
+        expect(resolveTrustedTimestamp(
+            htmlCandidate(rawDatetime),
+            NOW_MILLISECONDS,
+        )).toBeNull();
     });
 
     it.each([null, "other:rule"])("rejects rule %j", (rule) => {
-        expect(resolveTrustedTimestamp(candidate("2026-08-23T10:15Z", rule))).toBeNull();
+        expect(resolveTrustedTimestamp(
+            candidate("2026-08-23T10:15Z", rule),
+            NOW_MILLISECONDS,
+        )).toBeNull();
     });
 });

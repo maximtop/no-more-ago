@@ -73,14 +73,14 @@ interface SchedulerInput {
      * @param element - Mutated element or child-list container.
      * @param attributeName - Changed source attribute for target-local invalidation, when present.
      * @param oldValue - Attribute value before the mutation, when present.
-     * @param wasTracked - Whether the mutated element was an active source before the change.
+     * @param trackedSource - Nearest retained source owning the mutation, when present.
      * @returns - Matching target for an attribute or matching ancestors for a child-list change.
      */
     readonly getSourceMutationRoots?: (
         element: Element,
         attributeName?: string,
         oldValue?: string | null,
-        wasTracked?: boolean,
+        trackedSource?: Element | null,
     ) => readonly Element[];
 
     /**
@@ -545,6 +545,23 @@ export class DocumentMutationScheduler {
     }
 
     /**
+     * Finds the nearest retained source without enumerating every active source.
+     *
+     * @param element - Mutated element or child-list container.
+     * @returns - Nearest connected tracked source, or null.
+     */
+    private findTrackedSource(element: Element): Element | null {
+        let current: Element | null = element;
+        while (current && current.ownerDocument === this.input.document) {
+            if (this.trackedSources.has(current)) {
+                return current;
+            }
+            current = current.parentElement;
+        }
+        return null;
+    }
+
+    /**
      * Removes retained source and visibility indexes inside detached subtrees.
      *
      * @param roots - Subtrees removed from the observed document.
@@ -667,7 +684,7 @@ export class DocumentMutationScheduler {
                         target,
                         attributeName,
                         record.oldValue,
-                        this.trackedSources.has(target),
+                        this.findTrackedSource(target),
                     ) ?? []) {
                         addUnique(sourceTargets, sourceTargetSet, source);
                     }
@@ -724,6 +741,9 @@ export class DocumentMutationScheduler {
             if (record.target.nodeType === 1) {
                 for (const source of this.input.getSourceMutationRoots?.(
                     record.target as Element,
+                    undefined,
+                    null,
+                    this.findTrackedSource(record.target as Element),
                 ) ?? []) {
                     addUnique(sourceTargets, sourceTargetSet, source);
                 }

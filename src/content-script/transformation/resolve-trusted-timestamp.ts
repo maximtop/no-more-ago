@@ -9,7 +9,6 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     TIMESTAMP_PRESENTATION_KIND,
     type PageDatetimeTimestampCandidate,
-    type TimestampValidationRule,
     type TimestampCandidate,
     type TimestampVisibilityPolicy,
     type TimestampPresentation,
@@ -126,18 +125,13 @@ function hasControlCharacter(value: string): boolean {
 }
 
 /**
- * Validated candidate and absolute instant accepted by the shared resolver.
+ * Fields shared by every validated timestamp accepted by the shared resolver.
  */
-export interface ResolvedTimestamp {
+interface ResolvedTimestampBase {
     /**
      * DOM element whose timestamp is being transformed.
      */
     readonly source: Element;
-
-    /**
-     * Page datetime for adjacent output, or null for a derived in-place value.
-     */
-    readonly sourceDatetime: string | null;
 
     /**
      * Strictly validated absolute instant.
@@ -145,20 +139,65 @@ export interface ResolvedTimestamp {
     readonly instant: Date;
 
     /**
-     * Validation rule that accepted the candidate.
-     */
-    readonly validationRule: TimestampValidationRule;
-
-    /**
      * Visibility policy selected by the source rule.
      */
     readonly visibilityPolicy: TimestampVisibilityPolicy;
+
+}
+
+/**
+ * Resolved page-authored datetime with its exact original serialized value.
+ */
+interface ResolvedPageTimestamp extends ResolvedTimestampBase {
+    /**
+     * Exact validated page datetime used by adjacent output when requested.
+     */
+    readonly sourceDatetime: string;
+
+    /**
+     * Page-datetime validation rule that accepted the candidate.
+     */
+    readonly validationRule: PageDatetimeTimestampCandidate["validationRule"];
 
     /**
      * Validated presentation selected by the source rule.
      */
     readonly presentation: TimestampPresentation;
 }
+
+/**
+ * Resolved derived instant constrained to an existing in-place text target.
+ */
+interface ResolvedDerivedTimestamp extends ResolvedTimestampBase {
+    /**
+     * Derived instants do not fabricate a page datetime value.
+     */
+    readonly sourceDatetime: null;
+
+    /**
+     * Derived-instant validation rule that accepted the candidate.
+     */
+    readonly validationRule:
+        typeof TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS;
+
+    /**
+     * Derived instants can only update an existing page-owned text target.
+     */
+    readonly presentation: Extract<
+        TimestampPresentation,
+        {
+            /**
+             * In-place presentation discriminant required for derived values.
+             */
+            readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT;
+        }
+    >;
+}
+
+/**
+ * Validated candidate and absolute instant accepted by the shared resolver.
+ */
+export type ResolvedTimestamp = ResolvedPageTimestamp | ResolvedDerivedTimestamp;
 
 /**
  * Resolves one explicit-zone page datetime after common candidate validation.
@@ -174,7 +213,7 @@ function resolveExplicitIsoCandidate(
     rawDatetime: string,
     presentation: TimestampPresentation,
     visibilityPolicy: TimestampVisibilityPolicy,
-): ResolvedTimestamp | null {
+): ResolvedPageTimestamp | null {
     if (
         rawDatetime.length === 0 ||
         rawDatetime !== rawDatetime.trim() ||
@@ -222,7 +261,7 @@ function resolveExplicitIsoCandidate(
  */
 export function resolveTrustedTimestamp(
     candidate: TimestampCandidate,
-    nowMilliseconds: number = Date.now(),
+    nowMilliseconds: number,
 ): ResolvedTimestamp | null {
     const presentation = resolvePresentation(candidate.source, candidate.presentation);
     if (!presentation) {

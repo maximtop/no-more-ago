@@ -25,13 +25,9 @@ const COMMENT_ID = "7181895116414517252";
 /**
  * Creates the read-only extraction context used by direct adapter tests.
  *
- * @param url - LinkedIn page URL.
  * @returns - Extraction context that reads current page text.
  */
-const context = (
-    url = "https://www.linkedin.com/feed/",
-): TimestampExtractionContext => ({
-    url: new URL(url),
+const context = (): TimestampExtractionContext => ({
     readPageText: (target) => target.data,
 });
 
@@ -110,6 +106,34 @@ describe("linkedinAdapter", () => {
         });
     });
 
+    it("accepts only direct LinkedIn feed permalinks as href evidence", () => {
+        const permalink = "https://www.linkedin.com/feed/update/"
+            + `urn%3Ali%3Aactivity%3A${ACTIVITY_ID}/`;
+        const absolute = extractSingle(`
+            <article>
+                <p componentkey="timestamp"><span>1w</span></p>
+                <a href="${permalink}">
+                    Post
+                </a>
+            </article>
+        `);
+        expect(absolute).toMatchObject({ epochMilliseconds: 1_704_164_645_678 });
+
+        for (const href of [
+            `https://example.test/?next=urn:li:activity:${ACTIVITY_ID}`,
+            `/redirect?url=urn%3Ali%3Aactivity%3A${ACTIVITY_ID}`,
+            `/profile#urn:li:activity:${ACTIVITY_ID}`,
+        ]) {
+            document.body.innerHTML = `
+                <article>
+                    <p componentkey="timestamp"><span>1w</span></p>
+                    <a href="${href}">Outbound</a>
+                </article>
+            `;
+            expect(linkedinAdapter.discover(document, context())).toEqual([]);
+        }
+    });
+
     it.each([
         [`urn:li:ugcPost:${UGC_POST_ID}`, 1_706_933_106_789],
         [`ShareUrn(shareId=${SHARE_ID})`, 1_709_528_767_891],
@@ -134,6 +158,18 @@ describe("linkedinAdapter", () => {
         `);
 
         expect(candidate).toMatchObject({ epochMilliseconds: 1_712_297_228_912 });
+    });
+
+    it("rejects an independent post ID beside a comment ID", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp-comment"><span>5d</span></p>
+                <div componentkey="CommentUrn(commentId=${COMMENT_ID},
+                    shareId=${SHARE_ID})"></div>
+            </article>
+        `;
+
+        expect(linkedinAdapter.discover(document, context())).toEqual([]);
     });
 
     it("does not derive the instant from the relative token", () => {
@@ -211,5 +247,33 @@ describe("linkedinAdapter", () => {
             expect.objectContaining({ epochMilliseconds: 1_704_164_645_678 }),
             expect.objectContaining({ epochMilliseconds: 1_712_297_228_912 }),
         ]));
+    });
+
+    it("keeps a post ID at its outer boundary independent from nested comments", () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:${ACTIVITY_ID}">
+                <header>
+                    <p componentkey="post-time"><span>1w •</span></p>
+                </header>
+                <article id="reply">
+                    <header>
+                        <p componentkey="reply-time"><span>3d</span></p>
+                        <span data-sdui-anchor-id=
+                            "comment-urn:li:comment:(ugcPost:1,${COMMENT_ID})::0">
+                        </span>
+                    </header>
+                </article>
+            </article>
+        `;
+        const extractionContext = context();
+        const candidates = linkedinAdapter
+            .discover(document, extractionContext)
+            .map((source) => linkedinAdapter.extract(source, extractionContext));
+
+        expect(candidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ epochMilliseconds: 1_704_164_645_678 }),
+            expect.objectContaining({ epochMilliseconds: 1_712_297_228_912 }),
+        ]));
+        expect(candidates).toHaveLength(2);
     });
 });

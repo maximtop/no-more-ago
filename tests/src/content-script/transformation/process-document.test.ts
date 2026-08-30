@@ -81,6 +81,33 @@ describe("processDocument", () => {
         }
     });
 
+    it("captures one current-time snapshot for a complete candidate batch", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp-a"><span>1w</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+            </article>
+            <article>
+                <p componentkey="timestamp-b"><span>2w</span></p>
+                <div data-urn="urn:li:share:7170283349280292867"></div>
+            </article>
+        `;
+        const now = vi.spyOn(Date, "now").mockReturnValue(
+            Date.parse("2026-08-30T00:00:00.000Z"),
+        );
+        try {
+            processDocument({
+                url: new URL("https://www.linkedin.com/feed/"),
+                root: document,
+                locales: ["en-GB"],
+            });
+
+            expect(now).toHaveBeenCalledTimes(1);
+        } finally {
+            now.mockRestore();
+        }
+    });
+
     it("keeps generic time datetime available on LinkedIn", () => {
         document.body.innerHTML = `
             <time datetime="2026-08-23T10:15:00Z">one week ago</time>

@@ -244,14 +244,12 @@ function addCandidate(
 }
 
 /**
- * Creates read-only adapter context for one processing URL.
+ * Creates the read-only adapter context for one processing pass.
  *
- * @param url - Trusted current document URL.
  * @returns - Context exposing the retained page-authored text reader.
  */
-function createExtractionContext(url: URL): TimestampExtractionContext {
+function createExtractionContext(): TimestampExtractionContext {
     return {
-        url,
         readPageText: readPageOwnedText,
     };
 }
@@ -262,12 +260,14 @@ function createExtractionContext(url: URL): TimestampExtractionContext {
  * @param input - Presentation, ownership, and diagnostic dependencies.
  * @param collection - Ordered sources and their adapter candidates.
  * @param started - Optional start time captured before discovery.
+ * @param nowMilliseconds - Current time captured once for the complete pass.
  * @returns - Generated adjacent time outputs from the processed sources.
  */
 function processCandidateCollection(
     input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
     collection: CandidateCollection,
     started: number | undefined,
+    nowMilliseconds: number,
 ): readonly HTMLTimeElement[] {
     const locales = input.localesProvider?.() ?? input.locales ?? [];
     const display = input.displayProvider?.() ?? input.display;
@@ -288,7 +288,7 @@ function processCandidateCollection(
     for (const source of discoveredSources) {
         const candidates = candidatesBySource.get(source) ?? [];
         const resolved = candidates
-            .map((candidate) => resolveTrustedTimestamp(candidate))
+            .map((candidate) => resolveTrustedTimestamp(candidate, nowMilliseconds))
             .find((candidate) => candidate !== null) ?? null;
         if (!resolved) {
             ownedDomMutations?.untrackSource?.(source);
@@ -369,10 +369,11 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         return [];
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
+    const nowMilliseconds = Date.now();
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
-    const extractionContext = createExtractionContext(input.url);
+    const extractionContext = createExtractionContext();
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
             const candidate = rule.extract(element, extractionContext);
@@ -411,6 +412,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         input,
         { candidatesBySource, discoveredSources },
         started,
+        nowMilliseconds,
     );
 }
 
@@ -428,10 +430,11 @@ export function reconcileDocumentSources(
         return [];
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
+    const nowMilliseconds = Date.now();
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
-    const extractionContext = createExtractionContext(input.url);
+    const extractionContext = createExtractionContext();
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -443,9 +446,6 @@ export function reconcileDocumentSources(
         discovered.add(source);
         discoveredSources.push(source);
         for (const rule of rules) {
-            if (!rule.matchesElement(source, extractionContext)) {
-                continue;
-            }
             const candidate = rule.extract(source, extractionContext);
             if (candidate) {
                 addCandidate(candidatesBySource, candidate);
@@ -456,6 +456,7 @@ export function reconcileDocumentSources(
         input,
         { candidatesBySource, discoveredSources },
         started,
+        nowMilliseconds,
     );
 }
 

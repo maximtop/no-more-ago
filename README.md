@@ -7,13 +7,13 @@ page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
-GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
-and LinkedIn have specialized sources for trusted or best-effort timestamp
-inputs. These
-integrations preserve page-owned elements and links while updating simple
-labels in place when needed. Instagram uses the standard timestamp source with
-a specialized in-place presentation rule that preserves styling hooks. Site
-markup support is best-effort and may change independently of the extension.
+GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
+LinkedIn have specialized sources for trusted or best-effort timestamp inputs.
+These integrations preserve page-owned elements and links while updating
+simple labels in place when needed. Instagram uses the standard timestamp
+source with a specialized in-place presentation rule that preserves styling
+hooks. Site markup support is best-effort and may change independently of the
+extension.
 
 ## Key Concepts
 

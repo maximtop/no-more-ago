@@ -143,6 +143,7 @@ describe("DocumentTransformationController", () => {
 
         expect(target.data).toBe("2024-03-04 •");
         expect(visits).toEqual([document.getElementById("post")]);
+        expect(matchVisits).toEqual([]);
         expect(document.getElementById("unrelated")).toBe(unrelated);
         expect(unrelated?.firstElementChild).toBe(unrelatedChild);
 
@@ -156,6 +157,162 @@ describe("DocumentTransformationController", () => {
 
         controller.teardown();
         expect(target.data).toBe("1w •");
+    });
+
+    it("activates an unowned LinkedIn source when ambiguity is removed", async () => {
+        document.body.innerHTML = `
+            <article id="post">
+                <p componentkey="timestamp"><span>1w</span></p>
+                <div data-urn="urn:li:activity:7147784590025818113"></div>
+                <div id="competitor" data-urn="urn:li:share:7170283349280292867"></div>
+            </article>
+        `;
+        const target = document.querySelector("p > span")?.firstChild;
+        const competitor = document.getElementById("competitor");
+        if (!(target instanceof Text) || !competitor) {
+            throw new Error("Expected ambiguous LinkedIn fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(target.data).toBe("1w");
+
+        competitor.removeAttribute("data-urn");
+        await flushMutations();
+
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("keeps an owned outer LinkedIn post valid when a nested reply is inserted", async () => {
+        document.body.innerHTML = `
+            <article id="post" data-urn="urn:li:activity:7147784590025818113">
+                <header>
+                    <p componentkey="post-time"><span id="post-label">1w</span></p>
+                </header>
+            </article>
+        `;
+        const post = document.getElementById("post");
+        const postTarget = document.getElementById("post-label")?.firstChild;
+        if (!post || !(postTarget instanceof Text)) {
+            throw new Error("Expected outer LinkedIn post fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(postTarget.data).toBe("2024-01-02");
+
+        const reply = document.createElement("article");
+        reply.innerHTML = `
+            <p componentkey="reply-time"><span id="reply-label">3d</span></p>
+            <div data-sdui-anchor-id=
+                "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+            </div>
+        `;
+        post.append(reply);
+        await flushMutations();
+
+        expect(postTarget.data).toBe("2024-01-02");
+        expect(document.getElementById("reply-label")?.textContent).toBe("2024-04-05");
+        controller.teardown();
+    });
+
+    it("reconciles LinkedIn label-shaping attribute transitions", async () => {
+        document.body.innerHTML = `
+            <article>
+                <div id="label-parent">
+                    <span id="label" aria-hidden="true">1w</span>
+                </div>
+                <a href="/feed/update/urn:li:activity:7147784590025818113/">Post</a>
+            </article>
+        `;
+        const parent = document.getElementById("label-parent");
+        const label = document.getElementById("label");
+        const target = label?.firstChild;
+        if (!parent || !label || !(target instanceof Text)) {
+            throw new Error("Expected LinkedIn label fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        parent.classList.add("update-components-actor__sub-description");
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02");
+
+        label.removeAttribute("aria-hidden");
+        await flushMutations();
+        expect(target.data).toBe("1w");
+
+        label.setAttribute("aria-hidden", "true");
+        await flushMutations();
+        expect(target.data).toBe("2024-01-02");
+        controller.teardown();
+    });
+
+    it("reconciles LinkedIn comment time eligibility when datetime changes", async () => {
+        document.body.innerHTML = `
+            <article>
+                <time id="label" class="comments-comment-meta__data"
+                    datetime="not-a-date">3d</time>
+                <div data-sdui-anchor-id=
+                    "comment-urn:li:comment:(ugcPost:1,7181895116414517252)::0">
+                </div>
+            </article>
+        `;
+        const label = document.getElementById("label");
+        const target = label?.firstChild;
+        if (!label || !(target instanceof Text)) {
+            throw new Error("Expected LinkedIn comment time fixture");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.linkedin.com/feed/"),
+            root: document,
+            locales: ["en-GB"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        controller.start();
+        expect(target.data).toBe("3d");
+
+        label.removeAttribute("datetime");
+        await flushMutations();
+        expect(target.data).toBe("2024-04-05");
+
+        label.setAttribute("datetime", "not-a-date");
+        await flushMutations();
+        expect(target.data).toBe("3d");
+        controller.teardown();
     });
 
     it("handles LinkedIn insertion, page text, reformat, removal, and re-enable", async () => {

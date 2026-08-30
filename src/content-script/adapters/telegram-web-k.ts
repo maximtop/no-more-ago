@@ -139,9 +139,13 @@ function findMutationSource(element: Element, oldValue: string | null): Element 
  */
 function getMutationSources(
     element: Element,
-    attributeName: TimestampSourceAttribute,
+    attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
 ): readonly Element[] {
+    if (attributeName === undefined) {
+        const source = findMutationSource(element, oldValue);
+        return source ? [source] : [];
+    }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP) {
         return isHtmlElement(element)
             && element.localName === "div"
@@ -197,7 +201,7 @@ function findClockTarget(source: Element): Text | null {
 /**
  * Specialized Telegram Web K source using the bubble's message.date value.
  */
-export const telegramWebKAdapter: TimestampSourceRule = {
+export const telegramWebKAdapter = {
     id: TELEGRAM_WEB_K_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
@@ -229,4 +233,4 @@ export const telegramWebKAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

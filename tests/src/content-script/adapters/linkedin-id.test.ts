@@ -8,6 +8,7 @@ import {
     LINKEDIN_ID_KIND,
     decodeLinkedInIdMilliseconds,
     parseLinkedInIds,
+    parseLinkedInTargetIds,
 } from "../../../../src/content-script/adapters/linkedin-id";
 
 const ACTIVITY_ID = "7147784590025818113";
@@ -53,6 +54,20 @@ describe("parseLinkedInIds", () => {
         ]));
     });
 
+    it("removes only a structurally proven parent thread from comment targets", () => {
+        const contextual = "ContentUrnCommentUrn(commentUrn=CommentUrn("
+            + `commentId=${COMMENT_ID}, thread=urn:li:ugcPost:${UGC_POST_ID}))`;
+        const independent = `CommentUrn(commentId=${COMMENT_ID}, shareId=${SHARE_ID})`;
+
+        expect(parseLinkedInTargetIds(contextual)).toEqual([
+            { kind: LINKEDIN_ID_KIND.COMMENT, decimal: COMMENT_ID },
+        ]);
+        expect(parseLinkedInTargetIds(independent)).toEqual(expect.arrayContaining([
+            { kind: LINKEDIN_ID_KIND.COMMENT, decimal: COMMENT_ID },
+            { kind: LINKEDIN_ID_KIND.SHARE, decimal: SHARE_ID },
+        ]));
+    });
+
     it.each([
         "urn:li:unknown:7147784590025818113",
         "urn:li:activity:",
@@ -69,6 +84,7 @@ describe("parseLinkedInIds", () => {
         "activityId=7147784590025818113.0",
         "activityId=7147784590025818113 0",
         "commentId= 7181895116414517252",
+        "urn:li:activity:123456789012345678901",
     ])("rejects malformed or unsupported evidence %s", (value) => {
         expect(parseLinkedInIds(value)).toEqual([]);
     });
@@ -94,6 +110,17 @@ describe("decodeLinkedInIdMilliseconds", () => {
         expect(decodeLinkedInIdMilliseconds({
             kind: LINKEDIN_ID_KIND.ACTIVITY,
             decimal: "1",
+        })).toBeNull();
+    });
+
+    it("rejects values outside the supported unsigned 64-bit width", () => {
+        expect(decodeLinkedInIdMilliseconds({
+            kind: LINKEDIN_ID_KIND.ACTIVITY,
+            decimal: "18446744073709551616",
+        })).toBeNull();
+        expect(decodeLinkedInIdMilliseconds({
+            kind: LINKEDIN_ID_KIND.ACTIVITY,
+            decimal: "9".repeat(100_000),
         })).toBeNull();
     });
 });

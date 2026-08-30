@@ -31,6 +31,7 @@ export const TIMESTAMP_SOURCE_KIND = {
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
+    ARIA_HIDDEN: "aria-hidden",
     DATA_TIMESTAMP: "data-timestamp",
     DATETIME: "datetime",
     FORMAT: "format",
@@ -207,11 +208,6 @@ export type TimestampCandidate =
  */
 export interface TimestampExtractionContext {
     /**
-     * Trusted current document URL.
-     */
-    readonly url: URL;
-
-    /**
      * Returns the latest page-authored value for an in-place target.
      */
     readonly readPageText: (target: Text) => string;
@@ -232,20 +228,22 @@ export interface TimestampSourceRule {
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
     /**
-     * Maps an adapter-relevant attribute change back to affected source elements.
+     * Maps an adapter-relevant mutation back to affected source elements.
      *
-     * Rules may use this when eligibility depends on descendant attributes or when
-     * the mutation removes the source's current matching shape.
+     * Rules may use this when eligibility depends on descendant attributes, child
+     * structure, or a mutation that removes the source's current matching shape.
      *
-     * @param element - Element whose attribute changed.
-     * @param attributeName - Adapter-declared attribute that changed.
+     * @param element - Mutated element or child-list container.
+     * @param attributeName - Adapter-declared attribute that changed, when present.
      * @param oldValue - Attribute value before the mutation.
+     * @param context - Read-only page extraction context.
      * @returns - Exact source elements that require re-evaluation.
      */
     readonly getMutationSources?: (
         element: Element,
-        attributeName: TimestampSourceAttribute,
+        attributeName: TimestampSourceAttribute | undefined,
         oldValue: string | null,
+        context: TimestampExtractionContext,
     ) => readonly Element[];
 
     /**
@@ -254,26 +252,11 @@ export interface TimestampSourceRule {
     matches(url: URL): boolean;
 
     /**
-     * Checks whether one observed mutation can affect this rule before any
-     * ancestor source lookup is attempted.
-     *
-     * @param element - Mutated page element.
-     * @param attributeName - Changed source attribute, when applicable.
-     * @param context - Read-only page extraction context.
-     * @returns - Whether source lookup is required for this rule.
-     */
-    shouldInspectMutation?(
-        element: Element,
-        attributeName: string | undefined,
-        context: TimestampExtractionContext,
-    ): boolean;
-
-    /**
      * Checks one element's source shape in the current extraction context.
      */
     matchesElement(
         element: Element,
-        context?: TimestampExtractionContext,
+        context: TimestampExtractionContext,
     ): boolean;
 
     /**
@@ -281,7 +264,7 @@ export interface TimestampSourceRule {
      */
     discover(
         root: ParentNode,
-        context?: TimestampExtractionContext,
+        context: TimestampExtractionContext,
     ): readonly Element[];
 
     /**
@@ -289,6 +272,6 @@ export interface TimestampSourceRule {
      */
     extract(
         element: Element,
-        context?: TimestampExtractionContext,
+        context: TimestampExtractionContext,
     ): TimestampCandidate | null;
 }
