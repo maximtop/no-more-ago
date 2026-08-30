@@ -58,6 +58,14 @@ interface SchedulerInput {
     readonly onBatch: (batch: AffectedMutationBatch) => void;
 
     /**
+     * Requests a flush even when the current records produce no element targets.
+     *
+     * This lets callers reconcile document-wide context such as an SPA URL change while
+     * retaining a stable observer attribute filter.
+     */
+    readonly shouldFlush?: () => boolean;
+
+    /**
      * Resolves an extension-owned output node back to its source, if ownership is still valid.
      */
     readonly getOwnedSourceForOutput: (node: Node) => Element | null;
@@ -74,6 +82,8 @@ interface SchedulerInput {
      * @param attributeName - Changed source attribute for target-local invalidation, when present.
      * @param oldValue - Attribute value before the mutation, when present.
      * @param wasTracked - Whether the mutated element was an active source before the change.
+     * @param addedNodes - Direct children added by a child-list mutation.
+     * @param removedNodes - Direct children removed by a child-list mutation.
      * @returns - Matching target for an attribute or matching ancestors for a child-list change.
      */
     readonly getSourceMutationRoots?: (
@@ -81,6 +91,8 @@ interface SchedulerInput {
         attributeName?: string,
         oldValue?: string | null,
         wasTracked?: boolean,
+        addedNodes?: readonly Node[],
+        removedNodes?: readonly Node[],
     ) => readonly Element[];
 
     /**
@@ -724,6 +736,11 @@ export class DocumentMutationScheduler {
             if (record.target.nodeType === 1) {
                 for (const source of this.input.getSourceMutationRoots?.(
                     record.target as Element,
+                    undefined,
+                    undefined,
+                    undefined,
+                    Array.from(record.addedNodes),
+                    Array.from(record.removedNodes),
                 ) ?? []) {
                     addUnique(sourceTargets, sourceTargetSet, source);
                 }
@@ -802,7 +819,8 @@ export class DocumentMutationScheduler {
             normalizedTargets.length === 0 &&
             normalizedVisibility.length === 0 &&
             normalizedRemoved.length === 0 &&
-            normalizedDisplaced.length === 0
+            normalizedDisplaced.length === 0 &&
+            !this.input.shouldFlush?.()
         ) {
             return;
         }

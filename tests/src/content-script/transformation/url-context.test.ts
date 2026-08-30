@@ -44,7 +44,7 @@ describe("timestamp extraction URL context", () => {
             matchesElement: (element) => element === source,
             discover: () => [source],
             extract: (element, context) => {
-                seenUrls.push(context?.url.href ?? "missing");
+                seenUrls.push(context.url.href);
                 return {
                     ruleId: "url-context-test",
                     source: element,

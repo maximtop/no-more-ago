@@ -10,8 +10,13 @@ import { defaultRegistry } from
     "../../../../src/content-script/adapters/registry";
 import {
     matchesTikTokUrl,
-    TIKTOK_ADAPTER_ID,
-    tiktokAdapter,
+    TIKTOK_DIRECT_FEED_ADAPTER_ID,
+    TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
+    TIKTOK_PROFILE_ADAPTER_ID,
+    tiktokAdapters,
+    tiktokDirectFeedAdapter,
+    tiktokLegacyDirectAdapter,
+    tiktokProfileAdapter,
 } from "../../../../src/content-script/adapters/tiktok";
 import {
     TIMESTAMP_PRESENTATION_KIND,
@@ -74,9 +79,9 @@ describe("TikTok adapter", () => {
             throw new Error("Expected profile card link");
         }
 
-        expect(tiktokAdapter.discover(document)).toEqual([source]);
-        expect(tiktokAdapter.extract(source, { url: PROFILE_URL })).toMatchObject({
-            ruleId: TIKTOK_ADAPTER_ID,
+        expect(tiktokProfileAdapter.discover(document)).toEqual([source]);
+        expect(tiktokProfileAdapter.extract(source, { url: PROFILE_URL })).toMatchObject({
+            ruleId: TIKTOK_PROFILE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.TIKTOK_PUBLICATION,
             rawDatetime: "2026-05-14T16:08:00.000Z",
@@ -98,7 +103,7 @@ describe("TikTok adapter", () => {
             throw new Error("Expected direct publication metadata");
         }
 
-        expect(tiktokAdapter.extract(source, { url: VIDEO_URL })).toMatchObject({
+        expect(tiktokLegacyDirectAdapter.extract(source, { url: VIDEO_URL })).toMatchObject({
             source,
             rawDatetime: "2026-05-14T16:08:00.000Z",
             presentation: {
@@ -108,7 +113,7 @@ describe("TikTok adapter", () => {
         });
 
         document.getElementById("date")?.append(document.createElement("i"));
-        expect(tiktokAdapter.extract(source, { url: VIDEO_URL })).toBeNull();
+        expect(tiktokLegacyDirectAdapter.extract(source, { url: VIDEO_URL })).toBeNull();
     });
 
     it("extracts only the current direct feed article date", () => {
@@ -129,8 +134,8 @@ describe("TikTok adapter", () => {
             throw new Error("Expected direct feed publication fixtures");
         }
 
-        expect(tiktokAdapter.discover(document)).toEqual([current, recommendation]);
-        expect(tiktokAdapter.extract(current, { url: VIDEO_URL })).toMatchObject({
+        expect(tiktokDirectFeedAdapter.discover(document)).toEqual([current, recommendation]);
+        expect(tiktokDirectFeedAdapter.extract(current, { url: VIDEO_URL })).toMatchObject({
             source: current,
             rawDatetime: "2026-05-14T16:08:00.000Z",
             presentation: {
@@ -138,7 +143,7 @@ describe("TikTok adapter", () => {
                 target,
             },
         });
-        expect(tiktokAdapter.extract(recommendation, { url: VIDEO_URL })).toBeNull();
+        expect(tiktokDirectFeedAdapter.extract(recommendation, { url: VIDEO_URL })).toBeNull();
     });
 
     it("rejects ambiguous cards and never parses visible date text", () => {
@@ -148,14 +153,14 @@ describe("TikTok adapter", () => {
             + '</div><div id="metadata" data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span><span>2026-05-14</span></div>';
 
-        expect(tiktokAdapter.discover(document)).toEqual([
+        expect(tiktokAdapters.flatMap((adapter) => adapter.discover(document))).toEqual([
             document.getElementById("metadata"),
         ]);
         const metadata = document.getElementById("metadata");
         if (!metadata) {
             throw new Error("Expected direct metadata source");
         }
-        expect(tiktokAdapter.extract(
+        expect(tiktokLegacyDirectAdapter.extract(
             metadata,
             { url: new URL("https://www.tiktok.com/@fictional/video/not-an-id") },
         )).toBeNull();
@@ -163,7 +168,13 @@ describe("TikTok adapter", () => {
 
     it("registers TikTok before generic only on supported paths", () => {
         expect(defaultRegistry.matching(VIDEO_URL).map(({ id }) => id))
-            .toEqual([TIKTOK_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
+            .toEqual([
+                TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
+                TIKTOK_DIRECT_FEED_ADAPTER_ID,
+                GENERIC_TIME_RULE_ID,
+            ]);
+        expect(defaultRegistry.matching(PROFILE_URL).map(({ id }) => id))
+            .toEqual([TIKTOK_PROFILE_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
         expect(defaultRegistry.matching(
             new URL("https://www.tiktok.com/foryou"),
         ).map(({ id }) => id)).toEqual([GENERIC_TIME_RULE_ID]);

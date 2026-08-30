@@ -160,7 +160,7 @@ describe("offline GitHub source fixtures", () => {
                 }
                 const adapter = defaultRegistry.matching(new URL(url))[0];
                 expect(adapter).not.toBeNull();
-                expect(adapter?.extract(source)).toMatchObject({
+                expect(adapter?.extract(source, { url: new URL(url) })).toMatchObject({
                     source,
                     rawDatetime: sourceCase.rawDatetime,
                 });

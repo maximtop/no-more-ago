@@ -128,7 +128,7 @@ interface TimestampCandidateSource {
     readonly sourceKind: TimestampSourceKind;
 
     /**
-     * Unparsed datetime attribute supplied by the trusted source.
+     * Adapter-supplied timestamp evidence before shared validation and parsing.
      */
     readonly rawDatetime: string;
 
@@ -200,6 +200,20 @@ export interface TimestampSourceRule {
     ) => readonly Element[];
 
     /**
+     * Maps child membership changes back to sources whose eligibility or evidence changed.
+     *
+     * @param element - Element whose direct child list changed.
+     * @param addedNodes - Nodes added by the page-authored mutation.
+     * @param removedNodes - Nodes removed by the page-authored mutation.
+     * @returns - Exact source elements that require re-evaluation.
+     */
+    readonly getChildMutationSources?: (
+        element: Element,
+        addedNodes: readonly Node[],
+        removedNodes: readonly Node[],
+    ) => readonly Element[];
+
+    /**
      * Determines whether the source rule applies to the page URL.
      */
     matches(url: URL): boolean;
@@ -219,6 +233,6 @@ export interface TimestampSourceRule {
      */
     extract(
         element: Element,
-        context?: TimestampExtractionContext,
+        context: TimestampExtractionContext,
     ): TimestampCandidate | null;
 }

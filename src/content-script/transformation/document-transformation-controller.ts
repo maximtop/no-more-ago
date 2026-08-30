@@ -66,6 +66,11 @@ export class DocumentTransformationController {
     private scheduler: DocumentMutationScheduler | undefined;
 
     /**
+     * URL used by the latest document-wide adapter selection pass.
+     */
+    private processedUrl: string | undefined;
+
+    /**
      * Current bounded diagnostic reporter, which callers may replace without restarting the
      * controller.
      */
@@ -106,8 +111,9 @@ export class DocumentTransformationController {
             return this.outputs;
         }
 
+        const registry = this.input.registry ?? defaultRegistry;
         const currentUrl = this.input.urlProvider?.() ?? this.input.url;
-        const rules = (this.input.registry ?? defaultRegistry).matching(currentUrl);
+        const rules = registry.all();
         const sourceAttributes = [
             ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
         ];
@@ -116,13 +122,25 @@ export class DocumentTransformationController {
             getOwnedSourceForOutput,
             capturePageOwnedTextChange,
             sourceAttributes,
-            getSourceMutationRoots: (element, attributeName, oldValue, wasTracked) => {
+            shouldFlush: () =>
+                (this.input.urlProvider?.() ?? this.input.url).href !== this.processedUrl,
+            getSourceMutationRoots: (
+                element,
+                attributeName,
+                oldValue,
+                wasTracked,
+                addedNodes = [],
+                removedNodes = [],
+            ) => {
+                const currentRules = registry.matching(
+                    this.input.urlProvider?.() ?? this.input.url,
+                );
                 const applicableRules = attributeName
-                    ? rules.filter((rule) =>
+                    ? currentRules.filter((rule) =>
                         rule.mutationAttributes.some(
                             (attribute) => attribute === attributeName,
                         ))
-                    : rules;
+                    : currentRules;
                 if (attributeName) {
                     const sources: Element[] = [];
                     const seen = new Set<Element>();
@@ -139,13 +157,33 @@ export class DocumentTransformationController {
                             }
                         }
                     }
+                    if (wasTracked && !seen.has(element)) {
+                        sources.push(element);
+                    }
                     return sources;
                 }
                 const roots: Element[] = [];
+                const seen = new Set<Element>();
+                for (const rule of applicableRules) {
+                    for (const source of rule.getChildMutationSources?.(
+                        element,
+                        addedNodes,
+                        removedNodes,
+                    ) ?? []) {
+                        if (!seen.has(source)) {
+                            seen.add(source);
+                            roots.push(source);
+                        }
+                    }
+                }
                 let current: Element | null = element;
                 while (current && current.ownerDocument === this.input.root) {
                     const candidate = current;
-                    if (applicableRules.some((rule) => rule.matchesElement(candidate))) {
+                    if (
+                        !seen.has(candidate)
+                        && applicableRules.some((rule) => rule.matchesElement(candidate))
+                    ) {
+                        seen.add(candidate);
                         roots.push(candidate);
                     }
                     current = current.parentElement;
@@ -169,6 +207,15 @@ export class DocumentTransformationController {
                             batch.displacedOutputSources.length,
                     });
                 }
+                const batchUrl = (this.input.urlProvider?.() ?? this.input.url).href;
+                if (batchUrl !== this.processedUrl) {
+                    this.outputs = processDocument({
+                        ...this.input,
+                        ownedDomMutations: scheduler,
+                    });
+                    this.processedUrl = batchUrl;
+                    return;
+                }
                 this.reconcile(batch, scheduler);
             },
         });
@@ -176,6 +223,7 @@ export class DocumentTransformationController {
         try {
             scheduler.start();
             this.outputs = processDocument({ ...this.input, ownedDomMutations: scheduler });
+            this.processedUrl = (this.input.urlProvider?.() ?? currentUrl).href;
             this.phase = "active";
             return this.outputs;
         } catch (error) {
@@ -183,6 +231,7 @@ export class DocumentTransformationController {
             restoreTimestampPresentations(this.input.root);
             this.outputs = [];
             this.scheduler = undefined;
+            this.processedUrl = undefined;
             this.phase = "idle";
             throw error;
         }
@@ -196,6 +245,7 @@ export class DocumentTransformationController {
         this.scheduler = undefined;
         restoreTimestampPresentations(this.input.root);
         this.outputs = [];
+        this.processedUrl = undefined;
         this.phase = "idle";
     }
 

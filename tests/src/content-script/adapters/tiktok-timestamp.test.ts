@@ -151,4 +151,32 @@ describe("TikTok timestamp evidence", () => {
         expect(resolveTikTokPublicationDatetime(document, VIDEO_ID))
             .toBe(VIDEO_ID_DATETIME);
     });
+
+    it("caches a malformed hydration snapshot until its text changes", () => {
+        document.head.innerHTML = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" '
+            + 'type="application/json">{invalid</script>';
+        const script = document.querySelector("script");
+        if (!(script instanceof HTMLScriptElement)) {
+            throw new Error("Expected malformed hydration script");
+        }
+        const parse = vi.spyOn(JSON, "parse");
+
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+        expect(parse).toHaveBeenCalledTimes(1);
+
+        script.textContent = JSON.stringify({
+            itemInfo: { itemStruct: { id: VIDEO_ID, createTime: VIDEO_CREATE_TIME } },
+        });
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID))
+            .toBe("2026-05-14T16:08:00.000Z");
+        expect(parse).toHaveBeenCalledTimes(2);
+    });
+
+    it("falls back without throwing when hydration exceeds the traversal budget", () => {
+        installHydration(Array.from({ length: 100_001 }, () => ({})));
+
+        expect(() => resolveTikTokPublicationDatetime(document, VIDEO_ID)).not.toThrow();
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+    });
 });

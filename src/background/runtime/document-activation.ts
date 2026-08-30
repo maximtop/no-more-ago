@@ -7,9 +7,9 @@ import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import {
-    REFRESH_DOCUMENT_POLICY_MESSAGE,
-    SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    TEARDOWN_DOCUMENT_MESSAGE,
+    isDocumentPolicyReconciledMessage,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
+    type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
 import type { RuntimeTab, TabsRuntime } from "./tabs";
 import type {
@@ -21,6 +21,7 @@ import {
     DOCUMENT_RUNTIME_REGISTRATION_ID,
     registrationMatches,
 } from "./register-documents";
+import { settleBrowserOperation } from "./settle";
 
 /**
  * Global activation policy values.
@@ -68,11 +69,6 @@ export const TAB_ACTION = {
     INJECT: "inject",
     TEARDOWN: "teardown",
 } as const;
-
-/**
- * Maximum time one tab operation may delay runtime reconciliation.
- */
-const TAB_OPERATION_TIMEOUT_MS = 1_000;
 
 /**
  * Global activation policy.
@@ -237,51 +233,6 @@ interface DocumentActivationDependencies {
 }
 
 /**
- * Settles a browser operation without rejecting reconciliation.
- *
- * @param operation - Operation to invoke and settle.
- * @returns - A tagged success or failure result.
- */
-function settle<T>(operation: () => Promise<T>): Promise<
-    { readonly ok: true; readonly value: T } | { readonly ok: false }
-> {
-    try {
-        return Promise.resolve(operation()).then(
-            (value) => ({ ok: true, value } as const),
-            () => ({ ok: false } as const),
-        );
-    } catch {
-        return Promise.resolve({ ok: false } as const);
-    }
-}
-
-/**
- * Settles a browser operation within a bounded interval.
- *
- * @param operation - Operation to invoke and settle.
- * @param timeoutMs - Maximum interval to wait for settlement.
- * @returns - A tagged success or failure result.
- */
-async function settleWithin<T>(
-    operation: () => Promise<T>,
-    timeoutMs: number,
-): Promise<{ readonly ok: true; readonly value: T } | { readonly ok: false }> {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<{ readonly ok: false }>((resolve) => {
-        timeout = setTimeout(() => {
-            resolve({ ok: false });
-        }, timeoutMs);
-    });
-    try {
-        return await Promise.race([settle(operation), deadline]);
-    } finally {
-        if (timeout !== undefined) {
-            clearTimeout(timeout);
-        }
-    }
-}
-
-/**
  * Reconciles the universal registration.
  *
  * @param scripting - Scripting API boundary.
@@ -372,11 +323,32 @@ async function httpTabs(
 }
 
 /**
- * Broadcasts policy, then ensures the content runtime in all frames.
+ * Delivers one idempotent policy command and verifies its retained revision.
+ *
+ * @param tabs - Tabs API boundary.
+ * @param tabId - Target top-level tab identifier.
+ * @param message - Effective policy and associated settings revision.
+ * @returns - Whether a document runtime acknowledged the exact revision.
+ */
+async function deliverPolicy(
+    tabs: TabsRuntime,
+    tabId: number,
+    message: ReconcileDocumentPolicyMessage,
+): Promise<boolean> {
+    const result = await settleBrowserOperation(
+        () => tabs.sendMessage(tabId, message),
+    );
+    return result.ok
+        && isDocumentPolicyReconciledMessage(result.value, message.revision);
+}
+
+/**
+ * Ensures the content runtime in all frames and converges it on the requested policy.
  *
  * @param tab - Target tab.
  * @param hostname - Canonical top-level hostname for the target tab.
  * @param enabled - Whether the site's effective policy is enabled.
+ * @param revision - Settings revision associated with this operation.
  * @param scripting - Scripting API boundary.
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
@@ -387,27 +359,33 @@ async function refresh(
     tab: RuntimeTab,
     hostname: string,
     enabled: boolean,
+    revision: number | null,
     scripting: ScriptingRuntime,
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    await settleWithin(
-        () => tabs.sendMessage(tab.id, {
-            type: enabled
-                ? REFRESH_DOCUMENT_POLICY_MESSAGE
-                : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-        }),
-        TAB_OPERATION_TIMEOUT_MS,
+    const message = {
+        type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+        revision,
+        enabled,
+    } as const;
+    const [initialPolicyOk, ensured] = await Promise.all([
+        deliverPolicy(tabs, tab.id, message),
+        settleBrowserOperation(
+            () => scripting.executeScript({
+                target: { tabId: tab.id, allFrames: true },
+                files: [CONTENT_SCRIPT_FILE],
+            }),
+        ),
+    ]);
+    const runtimeEnsured = ensured.ok
+        && Array.isArray(ensured.value)
+        && ensured.value.length > 0;
+    const policyOk = initialPolicyOk || (
+        runtimeEnsured && await deliverPolicy(tabs, tab.id, message)
     );
-    const ensured = await settleWithin(
-        () => scripting.executeScript({
-            target: { tabId: tab.id, allFrames: true },
-            files: [CONTENT_SCRIPT_FILE],
-        }),
-        TAB_OPERATION_TIMEOUT_MS,
-    );
-    const ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
+    const ok = runtimeEnsured && policyOk;
     if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -420,10 +398,11 @@ async function refresh(
 }
 
 /**
- * Broadcasts synchronous teardown to every reachable frame.
+ * Reconciles every reachable frame to a disabled global policy.
  *
  * @param tab - Target tab.
  * @param hostname - Canonical top-level hostname for the target tab.
+ * @param revision - Settings revision associated with this operation.
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
  * @param records - Tab outcome collection to append to.
@@ -432,15 +411,17 @@ async function refresh(
 async function teardown(
     tab: RuntimeTab,
     hostname: string,
+    revision: number | null,
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const result = await settleWithin(
-        () => tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }),
-        TAB_OPERATION_TIMEOUT_MS,
-    );
-    if (!result.ok) {
+    const ok = await deliverPolicy(tabs, tab.id, {
+        type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+        revision,
+        enabled: false,
+    });
+    if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: tab.id,
@@ -448,7 +429,7 @@ async function teardown(
             action: TAB_ACTION.TEARDOWN,
         });
     }
-    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok: result.ok });
+    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok });
 }
 
 /**
@@ -492,7 +473,14 @@ export class DocumentActivationCoordinator {
                 return;
             }
             if (!enabled) {
-                await teardown(tab, url.hostname, this.input.tabs, failures, records);
+                await teardown(
+                    tab,
+                    url.hostname,
+                    input.revision,
+                    this.input.tabs,
+                    failures,
+                    records,
+                );
                 return;
             }
             const siteEnabled = isSiteEnabled(input.sitePreferences ?? {}, url.hostname);
@@ -500,6 +488,7 @@ export class DocumentActivationCoordinator {
                 tab,
                 url.hostname,
                 siteEnabled,
+                input.revision,
                 this.input.scripting,
                 this.input.tabs,
                 failures,

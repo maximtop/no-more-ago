@@ -205,6 +205,115 @@ describe("TikTok document lifecycle", () => {
         expect(links.every((link) => link.isConnected)).toBe(true);
     });
 
+    it("invalidates every publication link when profile-card membership changes", async () => {
+        const firstId = publicationId(1_778_774_880, 1);
+        const secondId = publicationId(1_778_861_280, 2);
+        const first = appendProfileCard(firstId, 1);
+        const owner = first.parentElement;
+        if (!owner) {
+            throw new Error("Expected profile card owner");
+        }
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.tiktok.com/@fictional"),
+            root: document,
+            locales: LOCALES,
+            display: UTC_DISPLAY,
+        });
+        const second = document.createElement("a");
+        second.href = `/@fictional/photo/${secondId}`;
+        second.textContent = "second";
+
+        try {
+            controller.start();
+            expect(outputAfter(first).textContent).toBe("2026-05-14 16:08");
+
+            owner.append(second);
+            await flushMutations();
+            expect(first.nextElementSibling).toBe(second);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+
+            second.remove();
+            await flushMutations();
+            expect(outputAfter(first).textContent).toBe("2026-05-14 16:08");
+        } finally {
+            controller.teardown();
+        }
+    });
+
+    it("selects current rules after navigating from an unsupported route", async () => {
+        const id = publicationId(1_778_774_880, 3);
+        document.body.innerHTML = '<div id="metadata" data-e2e="placeholder">'
+            + '<span>Fictional</span><span> · </span>'
+            + '<span id="route-date">page date</span></div>';
+        const source = document.getElementById("metadata");
+        const date = document.getElementById("route-date");
+        if (!source || !date) {
+            throw new Error("Expected route-change fixture");
+        }
+        let currentUrl = new URL("https://www.tiktok.com/foryou");
+        const controller = new DocumentTransformationController({
+            url: currentUrl,
+            urlProvider: () => currentUrl,
+            root: document,
+            locales: LOCALES,
+            display: UTC_DISPLAY,
+        });
+
+        try {
+            controller.start();
+            expect(date.textContent).toBe("page date");
+
+            currentUrl = new URL(`https://www.tiktok.com/@fictional/video/${id}`);
+            source.setAttribute("data-e2e", "browser-nickname");
+            await flushMutations();
+            expect(date.textContent).toBe("2026-05-14 16:08");
+
+            currentUrl = new URL("https://www.tiktok.com/foryou");
+            source.setAttribute("data-e2e", "placeholder");
+            await flushMutations();
+            expect(date.textContent).toBe("page date");
+        } finally {
+            controller.teardown();
+        }
+    });
+
+    it("reconciles existing sources when hydration is inserted or replaced", async () => {
+        const id = publicationId(1_778_774_870, 4);
+        const link = appendProfileCard(id, 1);
+        const controller = new DocumentTransformationController({
+            url: new URL("https://www.tiktok.com/@fictional"),
+            root: document,
+            locales: LOCALES,
+            display: {
+                ...UTC_DISPLAY,
+                pattern: "yyyy-MM-dd HH:mm:ss",
+            },
+        });
+        const script = document.createElement("script");
+        script.id = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
+        script.type = "application/json";
+        script.textContent = JSON.stringify({
+            itemInfo: { itemStruct: { id, createTime: "1778774880" } },
+        });
+
+        try {
+            controller.start();
+            expect(outputAfter(link).textContent).toBe("2026-05-14 16:07:50");
+
+            document.head.append(script);
+            await flushMutations();
+            expect(outputAfter(link).textContent).toBe("2026-05-14 16:08:00");
+
+            script.textContent = JSON.stringify({
+                itemInfo: { itemStruct: { id, createTime: "1778774940" } },
+            });
+            await flushMutations();
+            expect(outputAfter(link).textContent).toBe("2026-05-14 16:09:00");
+        } finally {
+            controller.teardown();
+        }
+    });
+
     it("uses the current URL and ignores stale hydration during SPA changes", async () => {
         const firstId = publicationId(1_778_774_870, 1);
         const secondId = publicationId(1_778_861_280, 2);

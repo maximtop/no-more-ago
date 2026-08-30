@@ -18,6 +18,8 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
+const CONTEXT = { url: new URL("https://web.telegram.org/k/#@example") } as const;
+
 describe("Telegram Web K source contract", () => {
     it.each([
         ["https://web.telegram.org/k/", true],
@@ -89,7 +91,7 @@ describe("Telegram Web K source contract", () => {
             throw new Error("Expected Telegram source and clock text");
         }
 
-        expect(telegramWebKAdapter.extract(source)).toEqual({
+        expect(telegramWebKAdapter.extract(source, CONTEXT)).toEqual({
             ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
@@ -115,7 +117,8 @@ describe("Telegram Web K source contract", () => {
             throw new Error("Expected malformed Telegram source");
         }
 
-        expect(telegramWebKAdapter.extract(source)?.rawDatetime).toBe(" not-numeric ");
+        expect(telegramWebKAdapter.extract(source, CONTEXT)?.rawDatetime)
+            .toBe(" not-numeric ");
     });
 
     it("ignores forwarding labels and clocks owned by nested bubbles", () => {
@@ -133,7 +136,7 @@ describe("Telegram Web K source contract", () => {
             throw new Error("Expected nested Telegram bubbles");
         }
 
-        expect(telegramWebKAdapter.extract(source)?.presentation).toMatchObject({
+        expect(telegramWebKAdapter.extract(source, CONTEXT)?.presentation).toMatchObject({
             kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
             target: clock.firstChild,
         });
@@ -154,7 +157,7 @@ describe("Telegram Web K source contract", () => {
         document.body.append(source);
 
         expect(telegramWebKAdapter.discover(document)).toEqual([]);
-        expect(telegramWebKAdapter.extract(source)).toBeNull();
+        expect(telegramWebKAdapter.extract(source, CONTEXT)).toBeNull();
     });
 
     it("rejects non-source elements", () => {
@@ -162,6 +165,6 @@ describe("Telegram Web K source contract", () => {
         source.className = "bubble";
         source.innerHTML = '<span class="time-inner"><span class="i18n">16:08</span></span>';
 
-        expect(telegramWebKAdapter.extract(source)).toBeNull();
+        expect(telegramWebKAdapter.extract(source, CONTEXT)).toBeNull();
     });
 });

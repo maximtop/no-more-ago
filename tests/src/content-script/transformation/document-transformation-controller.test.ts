@@ -843,7 +843,9 @@ describe("DocumentTransformationController", () => {
                 ...hackerNewsAdapter,
                 extract: (element) => {
                     visits.push(element);
-                    return hackerNewsAdapter.extract(element);
+                    return hackerNewsAdapter.extract(element, {
+                        url: new URL("https://news.ycombinator.com/item?id=1"),
+                    });
                 },
             };
             const controller = new DocumentTransformationController({

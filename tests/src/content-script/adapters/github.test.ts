@@ -11,6 +11,8 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
 
+const CONTEXT = { url: new URL("https://github.com/example/repository") } as const;
+
 describe("GitHub adapter registry", () => {
     it("selects only exact GitHub HTTP(S) URLs", () => {
         expect(defaultRegistry.matching(new URL("https://github.com/org/repo")).map((r) => r.id))
@@ -42,7 +44,7 @@ describe("GitHub adapter registry", () => {
             throw new Error("Expected one discovered relative-time element");
         }
 
-        expect(adapter.extract(element)).toMatchObject({
+        expect(adapter.extract(element, CONTEXT)).toMatchObject({
             ruleId: "github",
             rawDatetime: "2026-08-23T10:15:00Z",
             sourceKind: "relative-time",
@@ -79,7 +81,7 @@ describe("GitHub adapter registry", () => {
             throw new Error("Expected an approved source element");
         }
         expect(adapter?.discover(document)).toEqual([element]);
-        expect(adapter?.extract(element)).toEqual({
+        expect(adapter?.extract(element, CONTEXT)).toEqual({
             ruleId: "github",
             source: element,
             sourceKind,
@@ -106,7 +108,7 @@ describe("GitHub adapter registry", () => {
         const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
         expect(adapter).not.toBeNull();
         for (const element of adapter?.discover(document) ?? []) {
-            expect(adapter?.extract(element)).toBeNull();
+            expect(adapter?.extract(element, CONTEXT)).toBeNull();
         }
         expect(document.body.innerHTML).toBe(original);
     });

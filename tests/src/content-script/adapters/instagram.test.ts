@@ -18,6 +18,8 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
+
+const CONTEXT = { url: new URL("https://www.instagram.com/example/") } as const;
 import { OWNED_OUTPUT_ATTRIBUTE } from
     "../../../../src/content-script/ownership-markers";
 
@@ -41,7 +43,7 @@ describe("instagramAdapter", () => {
             throw new Error("Expected Instagram time label");
         }
 
-        expect(instagramAdapter.extract(source)).toEqual({
+        expect(instagramAdapter.extract(source, CONTEXT)).toEqual({
             ruleId: INSTAGRAM_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
@@ -68,9 +70,9 @@ describe("instagramAdapter", () => {
         if (!complex || !owned) {
             throw new Error("Expected complex and owned time sources");
         }
-        expect(instagramAdapter.extract(complex)).toBeNull();
-        expect(instagramAdapter.extract(owned)).toBeNull();
-        expect(genericTimeRule.extract(complex)?.presentation.kind).toBe(
+        expect(instagramAdapter.extract(complex, CONTEXT)).toBeNull();
+        expect(instagramAdapter.extract(owned, CONTEXT)).toBeNull();
+        expect(genericTimeRule.extract(complex, CONTEXT)?.presentation.kind).toBe(
             TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME,
         );
         expect(instagramAdapter.discover(document)).toEqual([complex]);

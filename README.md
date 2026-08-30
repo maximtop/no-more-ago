@@ -129,11 +129,12 @@ replace one simple publication-date label in place. Profile grids add one
 removable exact date beneath each unambiguous video or photo card while
 preserving the card link.
 
-For a current publication, the extension first uses a valid `createTime` from
-the page's universal hydration JSON when the same record's scalar `id` exactly
-matches the current post ID. Otherwise it accepts a strict 19-digit decimal
-post ID and derives Unix seconds as `BigInt(postId) >> 32n`. Both sources must
-fall between `2016-01-01T00:00:00Z` and the browser's current time plus 24
+For a current publication, the extension first uses a string-valued
+`createTime` from the page's universal hydration JSON when the same record's
+string-valued `id` exactly matches the current post ID. Otherwise it accepts a
+strict 19-digit decimal post ID and derives Unix seconds as
+`BigInt(postId) >> 32n`. Both sources must fall between
+`2016-01-01T00:00:00Z` and the browser's current time plus 24
 hours. The ID-derived value is suitable for date-and-minute display, but its
 seconds are not claimed to be TikTok's exact publication second. A custom
 format that includes seconds still formats the decoded instant normally.

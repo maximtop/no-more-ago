@@ -2,12 +2,25 @@
  * @file Resolves trusted TikTok publication timestamps from embedded state and post IDs.
  */
 
-const HYDRATION_SELECTOR =
-    'script#__UNIVERSAL_DATA_FOR_REHYDRATION__[type="application/json"]' as const;
+import { isHtmlElement } from "./html-element";
+
+/**
+ * Exact ID of the supported TikTok hydration script.
+ */
+export const TIKTOK_HYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__" as const;
+
+/**
+ * Exact selector of the supported TikTok hydration script.
+ */
+export const TIKTOK_HYDRATION_SELECTOR =
+    `script#${TIKTOK_HYDRATION_SCRIPT_ID}[type="application/json"]` as const;
+
 const POST_ID_PATTERN = /^[1-9]\d{18}$/u;
 const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
 const MINIMUM_TIMESTAMP_MS = Date.parse("2016-01-01T00:00:00Z");
 const FUTURE_TOLERANCE_MS = 86_400_000;
+const MAXIMUM_HYDRATION_TEXT_LENGTH = 5_000_000;
+const MAXIMUM_HYDRATION_NODE_COUNT = 100_000;
 
 /**
  * Cached index tied to one exact hydration script snapshot.
@@ -43,6 +56,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Checks the one exact script whose JSON may supply TikTok publication evidence.
+ *
+ * @param element - Candidate page element.
+ * @returns - Whether the element is the supported hydration script.
+ */
+export function isTikTokHydrationScript(element: Element): element is HTMLScriptElement {
+    return isHtmlElement(element)
+        && element.localName === "script"
+        && element.id === TIKTOK_HYDRATION_SCRIPT_ID
+        && element.getAttribute("type") === "application/json";
+}
+
+/**
  * Indexes scalar id/createTime pairs found in the confirmed hydration script.
  *
  * @param value - Parsed hydration JSON root.
@@ -51,10 +77,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
     const index = new Map<string, string | null>();
     const pending: unknown[] = [value];
+    let scheduledNodes = 1;
     while (pending.length > 0) {
         const current = pending.pop();
         if (Array.isArray(current)) {
-            pending.push(...(current as readonly unknown[]));
+            for (const child of current as readonly unknown[]) {
+                scheduledNodes += 1;
+                if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
+                    return EMPTY_INDEX;
+                }
+                pending.push(child);
+            }
             continue;
         }
         if (!isRecord(current)) {
@@ -70,7 +103,13 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
                 index.set(id, null);
             }
         }
-        pending.push(...Object.values(current));
+        for (const child of Object.values(current)) {
+            scheduledNodes += 1;
+            if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
+                return EMPTY_INDEX;
+            }
+            pending.push(child);
+        }
     }
     return index;
 }
@@ -84,7 +123,7 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
 function readHydrationIndex(
     document: Document,
 ): ReadonlyMap<string, string | null> {
-    const scripts = document.querySelectorAll<HTMLScriptElement>(HYDRATION_SELECTOR);
+    const scripts = document.querySelectorAll<HTMLScriptElement>(TIKTOK_HYDRATION_SELECTOR);
     if (scripts.length !== 1) {
         return EMPTY_INDEX;
     }
@@ -97,13 +136,15 @@ function readHydrationIndex(
     if (cached?.script === script && cached.text === text) {
         return cached.createTimeByPostId;
     }
-    let parsed: unknown;
+    let createTimeByPostId = EMPTY_INDEX;
     try {
-        parsed = JSON.parse(text) as unknown;
+        if (text.length <= MAXIMUM_HYDRATION_TEXT_LENGTH) {
+            const parsed = JSON.parse(text) as unknown;
+            createTimeByPostId = indexHydration(parsed);
+        }
     } catch {
-        return EMPTY_INDEX;
+        /* malformed page data remains empty until the exact script snapshot changes */
     }
-    const createTimeByPostId = indexHydration(parsed);
     hydrationCache.set(document, { script, text, createTimeByPostId });
     return createTimeByPostId;
 }
