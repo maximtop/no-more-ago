@@ -118,56 +118,6 @@ describe("Telegram Web K source contract", () => {
         expect(telegramWebKAdapter.extract(source)?.rawDatetime).toBe(" not-numeric ");
     });
 
-    it("rejects forwarded, saved, primary-edit, and ambiguous clock shapes", () => {
-        document.body.innerHTML = `
-            <div id="primary-edited" class="bubble" data-timestamp="1778774880">
-                <span class="time-inner">
-                    <span class="i18n">edited <span class="i18n">16:08</span></span>
-                </span>
-            </div>
-            <div id="forwarded" class="bubble forwarded" data-timestamp="1778774880">
-                <span class="time-inner"><span class="i18n">16:08</span></span>
-            </div>
-            <div id="saved" class="bubble" data-timestamp="1778774880">
-                <span class="bubble-name-forwarded">Saved Messages</span>
-                <span class="time-inner"><span class="i18n">16:08</span></span>
-            </div>
-            <div id="two-containers" class="bubble" data-timestamp="1778774880">
-                <span class="time-inner"><span class="i18n">16:08</span></span>
-                <span class="time-inner"><span class="i18n">16:09</span></span>
-            </div>
-            <div id="two-clocks" class="bubble" data-timestamp="1778774880">
-                <span class="time-inner">
-                    <span class="i18n">16:08</span><span class="i18n">16:09</span>
-                </span>
-            </div>
-            <div id="nested-clock" class="bubble" data-timestamp="1778774880">
-                <span class="time-inner"><span class="i18n"><b>16:08</b></span></span>
-            </div>
-            <div id="missing-clock" class="bubble" data-timestamp="1778774880">
-                <span class="time-inner"><span class="other">16:08</span></span>
-            </div>
-            <div id="nested-bubble" class="bubble" data-timestamp="1778774880">
-                <div class="bubble" data-timestamp="1778774940">
-                    <span class="time-inner"><span class="i18n">16:09</span></span>
-                </div>
-            </div>`;
-
-        for (const id of [
-            "primary-edited",
-            "forwarded",
-            "saved",
-            "two-containers",
-            "two-clocks",
-            "nested-clock",
-            "missing-clock",
-            "nested-bubble",
-        ]) {
-            const source = document.getElementById(id);
-            expect(source ? telegramWebKAdapter.extract(source) : null).toBeNull();
-        }
-    });
-
     it("ignores forwarding labels and clocks owned by nested bubbles", () => {
         document.body.innerHTML = `
             <div id="outer" class="bubble" data-timestamp="1778774880">

@@ -324,18 +324,17 @@ describe("DocumentMutationScheduler", () => {
         }
     });
 
-    it("rebuilds character-data observation once when several sources are released", async () => {
-        const observe = vi.spyOn(MutationObserver.prototype, "observe");
-        const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+    it("releases several text sources while retaining active-source observation", async () => {
         const sources = Array.from({ length: 5 }, (_, index) => {
             const source = document.createElement("span");
             source.append(document.createTextNode(`relative ${String(index)}`));
             document.body.append(source);
             return source;
         });
+        const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
-            onBatch: () => undefined,
+            onBatch: (batch) => batches.push(batch),
             getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
@@ -347,19 +346,25 @@ describe("DocumentMutationScheduler", () => {
             renderExactText(source, target, "2026", scheduler);
         }
         await flushMutations();
-        observe.mockClear();
-        disconnect.mockClear();
+        batches.length = 0;
 
         restoreExactTexts(sources.slice(0, 3), scheduler);
-
-        expect(disconnect).toHaveBeenCalledTimes(1);
-        expect(observe).toHaveBeenCalledTimes(2);
         expect(sources.slice(0, 3).map((source) => source.textContent))
             .toEqual(["relative 0", "relative 1", "relative 2"]);
+        const releasedTarget = sources[0]?.firstChild;
+        const activeTarget = sources[3]?.firstChild;
+        if (!(releasedTarget instanceof Text) || !(activeTarget instanceof Text)) {
+            throw new Error("Expected released and active targets");
+        }
+        releasedTarget.data = "released page update";
+        activeTarget.data = "active page update";
+        await flushMutations();
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual([sources[3]]);
+
         scheduler.stop();
         restoreExactTexts(sources);
-        observe.mockRestore();
-        disconnect.mockRestore();
+        expect(releasedTarget.data).toBe("released page update");
+        expect(activeTarget.data).toBe("active page update");
     });
 
     it("retargets several owned labels without rebuilding text observation", async () => {

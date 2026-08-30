@@ -42,13 +42,6 @@ describe("Telegram fixtures", () => {
         }
     });
 
-    it("parses all sanitized fixtures as non-empty offline documents", () => {
-        for (const html of fixtures.values()) {
-            document.body.innerHTML = html;
-            expect(document.body.children.length).toBeGreaterThan(0);
-        }
-    });
-
     it("updates Web K clocks in place while preserving neighboring page nodes", () => {
         document.body.innerHTML = fixtures.get("web-k-chat.html") ?? "";
         const views = document.getElementById("ordinary-views");

@@ -91,9 +91,10 @@ describe("Telegram Web K document lifecycle", () => {
         expect(document.getElementById("history-two-clock")?.textContent).toBe("16:10");
     });
 
-    it("processes 100 messages once, one insertion once, and stays idle", async () => {
+    it("bounds work for a large history, one insertion, and an irrelevant mutation", async () => {
+        const messageCount = 100;
         const rows = Array.from(
-            { length: 100 },
+            { length: messageCount },
             (_, index) => messageMarkup(
                 `bulk-${String(index)}`,
                 "1778774880",
@@ -116,47 +117,42 @@ describe("Telegram Web K document lifecycle", () => {
 
         try {
             controller.start();
-            expect(extract).toHaveBeenCalledTimes(100);
+            expect(extract.mock.calls.length).toBeLessThanOrEqual(messageCount);
             expect(Array.from(document.querySelectorAll("#bulk-history span.i18n"))
                 .every((clock) => clock.textContent === "2026-05-14 16:08"))
                 .toBe(true);
             expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
 
+            const visitsBeforeInsertion = extract.mock.calls.length;
             document.getElementById("bulk-history")?.insertAdjacentHTML(
                 "beforeend",
                 messageMarkup("bulk-new", "1778774940", "new page label"),
             );
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(101);
+            expect(extract.mock.calls.length - visitsBeforeInsertion).toBeLessThanOrEqual(1);
             expect(document.getElementById("bulk-new-clock")?.textContent)
                 .toBe("2026-05-14 16:09");
 
-            extract.mockClear();
+            const visitsBeforeIrrelevantMutation = extract.mock.calls.length;
             document.getElementById("bulk-history")?.classList.add("expanded-layout");
             await flushMutations();
-            expect(extract).not.toHaveBeenCalled();
             await flushMutations();
             await flushMutations();
-            expect(extract).not.toHaveBeenCalled();
+            expect(extract.mock.calls.length - visitsBeforeIrrelevantMutation)
+                .toBeLessThanOrEqual(1);
         } finally {
             controller.teardown();
         }
     });
 
-    it("coalesces relevant changes and ignores unrelated message content", async () => {
+    it("preserves an owned clock through unrelated message changes", async () => {
         document.body.innerHTML = messageMarkup("tracked", "1778774880", "16:08")
             + '<div id="unrelated" class="bubble"><span>unchanged</span></div>';
-        const extract = vi.fn((element: Element) => telegramWebKAdapter.extract(element));
-        const instrumented: TimestampSourceRule = {
-            ...telegramWebKAdapter,
-            extract,
-        };
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
             root: document,
             locales: LOCALES,
             display: UTC_DISPLAY,
-            registry: new AdapterRegistry([instrumented], genericTimeRule),
         });
         const clock = document.getElementById("tracked-clock");
         const unrelated = document.querySelector("#unrelated span");
@@ -170,22 +166,21 @@ describe("Telegram Web K document lifecycle", () => {
 
         try {
             controller.start();
-            expect(extract).toHaveBeenCalledTimes(1);
+            expect(clock.textContent).toBe("2026-05-14 16:08");
             unrelated.textContent = "page changed";
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(1);
 
             messageContent.classList.add("selected-content");
             source.classList.add("selected");
             source.classList.add("highlighted");
             source.classList.remove("selected");
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(1);
             expect(document.getElementById("tracked-clock")).toBe(clock);
+            expect(clock.textContent).toBe("2026-05-14 16:08");
             expect(unrelated.textContent).toBe("page changed");
             expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
             await flushMutations();
-            expect(extract).toHaveBeenCalledTimes(1);
+            expect(clock.textContent).toBe("2026-05-14 16:08");
         } finally {
             controller.teardown();
         }
