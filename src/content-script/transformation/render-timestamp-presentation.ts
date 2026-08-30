@@ -123,13 +123,18 @@ export function restoreTimestampPresentation(
 /**
  * Restores all owned presentations within a document or subtree.
  *
- * @param root - Root whose owned sources are restored.
+ * @param root - Root or batch of roots whose owned sources are restored.
  * @param mutations - Optional observer acknowledgement sink.
  */
 export function restoreTimestampPresentations(
-    root: ParentNode,
+    root: ParentNode | readonly ParentNode[],
     mutations?: OwnedDomMutationSink,
 ): void {
-    restoreExactTimes(root, mutations);
-    restoreExactTexts(root, mutations);
+    const roots: readonly ParentNode[] = Array.isArray(root)
+        ? root as readonly ParentNode[]
+        : [root as ParentNode];
+    for (const candidate of roots) {
+        restoreExactTimes(candidate, mutations);
+    }
+    restoreExactTexts(roots, mutations);
 }

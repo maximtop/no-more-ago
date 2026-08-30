@@ -131,6 +131,7 @@ export const DIAGNOSTIC_EVENT_OPTIONAL_KEYS = [
     "extensionVersion",
     "browserFamily",
     "stack",
+    "sourceTimestamp",
 ] as const;
 
 /**
@@ -176,3 +177,13 @@ export const DIAGNOSTIC_MAX_DURATION_MS = 86_400_000;
  * Largest number of redacted frames retained in one diagnostic entry.
  */
 export const DIAGNOSTIC_MAX_STACK_FRAMES = 16;
+
+/**
+ * Largest rejected numeric source value retained in diagnostics.
+ */
+export const DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH = 20;
+
+/**
+ * Numeric source syntax permitted as bounded failure evidence.
+ */
+export const DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN = /^\d+$/u;

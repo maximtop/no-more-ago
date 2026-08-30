@@ -5,6 +5,10 @@
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
+import {
     CLEAR_DIAGNOSTICS_MESSAGE,
     GET_DEBUG_STATE_MESSAGE,
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
@@ -76,6 +80,30 @@ describe("background message contracts", () => {
         expect(v.is(diagnosticsSnapshotSchema, {
             ...snapshot,
             entries: [{ ...snapshot.entries[0], currentUrl: "https://github.com/private" }],
+        })).toBe(false);
+        expect(v.is(diagnosticsSnapshotSchema, {
+            ...snapshot,
+            entries: [{
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                timestamp: 2,
+                hostname: "web.telegram.org",
+                pageCategory: "other",
+                incognito: false,
+                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                sourceTimestamp: "123456789",
+            }],
+        })).toBe(true);
+        expect(v.is(diagnosticsSnapshotSchema, {
+            ...snapshot,
+            entries: [{
+                category: DIAGNOSTIC_CATEGORY.ADAPTER,
+                timestamp: 2,
+                hostname: "web.telegram.org",
+                pageCategory: "other",
+                incognito: false,
+                reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+                sourceTimestamp: "1778774880",
+            }],
         })).toBe(false);
         expect(v.is(clearDiagnosticsResponseSchema, { ok: true })).toBe(true);
         expect(v.is(clearDiagnosticsResponseSchema, {

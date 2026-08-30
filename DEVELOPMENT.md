@@ -169,12 +169,22 @@ Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
 including GitHub's relative-time widgets, Hacker News age widgets, and
-approved Stack Exchange title widgets, remain content-side rules and take
-precedence when they accept the same source. GitHub uses the adjacent
-generated-time presentation. Hacker News and Stack Exchange use in-place
-presentation: they retain an existing simple timestamp label and own only that
-text until restoration. Adding or changing a specialized source should not
-require background adapter registration or site-policy logic.
+approved Stack Exchange title widgets and Telegram Web K message clocks,
+remain content-side rules and take precedence when they accept the same
+source. GitHub uses the adjacent generated-time presentation. Hacker News,
+Stack Exchange, and Telegram Web K use in-place presentation: they retain an
+existing simple timestamp label and own only that text until restoration.
+Public `https://t.me/s/*` pages stay on generic `time[datetime]` processing.
+Adding or changing a specialized source should not require background adapter
+registration or site-policy logic.
+
+The Telegram Web K adapter applies only below
+`https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
+from the owning message bubble's `data-timestamp`, selects one direct ordinary
+clock, and observes `class` and `data-timestamp` changes. It does not guess
+numeric units or parse visible/localized Telegram text. Primary edit-time and
+ambiguous forwarded or saved-message shapes fail closed. Web A remains outside
+the supported source contract.
 
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
 frames, Shadow DOM, arbitrary page labels without a registered specialized
@@ -243,6 +253,12 @@ To add or update a specialized source:
 Do not add site-specific background activation or registration. The universal
 runtime already reaches every accessible HTTP(S) document and frame.
 
+For in-place numeric sources such as Telegram Web K, keep lexical validation
+in shared timestamp resolution and keep site-specific source and target
+knowledge in the adapter. Observe only attributes that can change extraction
+or eligibility; reuse the existing mutation scheduler rather than adding a
+site loop or polling path.
+
 Follow the adapter and shared-contract rules in [AGENTS.md](AGENTS.md).
 
 ### Debug the Extension
@@ -260,6 +276,8 @@ Follow the adapter and shared-contract rules in [AGENTS.md](AGENTS.md).
 
 Diagnostic failures are intentionally isolated from timestamp processing. A
 missing diagnostic event does not by itself mean the content script failed.
+Invalid timestamp diagnostics may retain only a one-to-twenty-digit rejected
+source value. Successful events never retain raw source timestamps.
 
 ## Troubleshooting
 
@@ -275,12 +293,14 @@ missing diagnostic event does not by itself mean the content script failed.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, or Stack Exchange timestamp is no longer
-  replaced:** check the page with Debug logs enabled. For specialized markup
-  changes, update the matching offline fixture and its content-side rule;
-  generic processing continues to accept only standard `time[datetime]`
-  values. Stack Exchange title widgets render in place, so also verify that
-  the source still contains one unambiguous text label.
+- **A standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K
+  timestamp is no longer replaced:** check the page with Debug logs enabled.
+  For specialized markup changes, update the matching offline fixture and its
+  content-side rule; generic processing continues to accept only standard
+  `time[datetime]` values. In-place adapters require one unambiguous simple
+  label. For Web K, also verify an HTML `div.bubble[data-timestamp]`, one
+  bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
+  ten-digit seconds value. Do not recover by parsing localized UI text.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

@@ -21,6 +21,7 @@ import {
 } from "./render-timestamp-presentation";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
 import { defaultRegistry } from "../adapters/registry";
+import type { TimestampSourceAttribute } from "../adapters/types";
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -114,7 +115,7 @@ export class DocumentTransformationController {
             getOwnedSourceForOutput,
             capturePageOwnedTextChange,
             sourceAttributes,
-            getSourceMutationRoots: (element, attributeName) => {
+            getSourceMutationRoots: (element, attributeName, oldValue, wasTracked) => {
                 const applicableRules = attributeName
                     ? rules.filter((rule) =>
                         rule.mutationAttributes.some(
@@ -122,9 +123,22 @@ export class DocumentTransformationController {
                         ))
                     : rules;
                 if (attributeName) {
-                    return applicableRules.some((rule) => rule.matchesElement(element))
-                        ? [element]
-                        : [];
+                    const sources: Element[] = [];
+                    const seen = new Set<Element>();
+                    for (const rule of applicableRules) {
+                        const mutationSources = rule.getMutationSources?.(
+                            element,
+                            attributeName as TimestampSourceAttribute,
+                            oldValue ?? null,
+                        ) ?? (rule.matchesElement(element) || wasTracked ? [element] : []);
+                        for (const source of mutationSources) {
+                            if (!seen.has(source)) {
+                                seen.add(source);
+                                sources.push(source);
+                            }
+                        }
+                    }
+                    return sources;
                 }
                 const roots: Element[] = [];
                 let current: Element | null = element;
@@ -215,10 +229,11 @@ export class DocumentTransformationController {
      * @param scheduler - Mutation scheduler coordinating owned DOM changes.
      */
     private reconcile(batch: AffectedMutationBatch, scheduler: DocumentMutationScheduler): void {
-        for (const root of batch.removedRoots) {
-            if (!isConnectedToDocument(root, this.input.root)) {
-                restoreTimestampPresentations(root, scheduler);
-            }
+        const removedRoots = batch.removedRoots.filter(
+            (root) => !isConnectedToDocument(root, this.input.root),
+        );
+        if (removedRoots.length > 0) {
+            restoreTimestampPresentations(removedRoots, scheduler);
         }
 
         for (const root of batch.addedRoots) {

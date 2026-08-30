@@ -15,6 +15,7 @@ import {
 import {
     renderExactText,
     restoreExactText,
+    restoreExactTexts,
 } from "../../../../src/content-script/transformation/render-exact-text";
 import {
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -321,6 +322,49 @@ describe("DocumentMutationScheduler", () => {
         } finally {
             vi.unstubAllGlobals();
         }
+    });
+
+    it("releases several text sources while retaining active-source observation", async () => {
+        const sources = Array.from({ length: 5 }, (_, index) => {
+            const source = document.createElement("span");
+            source.append(document.createTextNode(`relative ${String(index)}`));
+            document.body.append(source);
+            return source;
+        });
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        for (const source of sources) {
+            const target = source.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected text target");
+            }
+            renderExactText(source, target, "2026", scheduler);
+        }
+        await flushMutations();
+        batches.length = 0;
+
+        restoreExactTexts(sources.slice(0, 3), scheduler);
+        expect(sources.slice(0, 3).map((source) => source.textContent))
+            .toEqual(["relative 0", "relative 1", "relative 2"]);
+        const releasedTarget = sources[0]?.firstChild;
+        const activeTarget = sources[3]?.firstChild;
+        if (!(releasedTarget instanceof Text) || !(activeTarget instanceof Text)) {
+            throw new Error("Expected released and active targets");
+        }
+        releasedTarget.data = "released page update";
+        activeTarget.data = "active page update";
+        await flushMutations();
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual([sources[3]]);
+
+        scheduler.stop();
+        restoreExactTexts(sources);
+        expect(releasedTarget.data).toBe("released page update");
+        expect(activeTarget.data).toBe("active page update");
     });
 
     it("retargets several owned labels without rebuilding text observation", async () => {

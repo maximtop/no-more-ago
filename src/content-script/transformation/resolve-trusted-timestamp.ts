@@ -22,6 +22,25 @@ const FRACTION = "(?:[.,]\\d+)";
 const TIME = `(?:\\d{2}:\\d{2}(?:${FRACTION}|:\\d{2}(?:${FRACTION})?)?`
     + `|\\d{4}(?:${FRACTION}|\\d{2}(?:${FRACTION})?)?)`;
 const COMPLETE_DATE_TIME = new RegExp(`^${DATE}[T ]${TIME}$`);
+const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
+
+/**
+ * Resolves one exact ten-digit Unix-seconds value without guessing its unit.
+ *
+ * @param value - Raw adapter value.
+ * @returns - Valid absolute instant, or null for an unsupported value.
+ */
+function resolveUnixSeconds(value: string): Date | null {
+    if (!UNIX_SECONDS_PATTERN.test(value)) {
+        return null;
+    }
+    const milliseconds = Number(value) * 1_000;
+    if (!Number.isSafeInteger(milliseconds)) {
+        return null;
+    }
+    const instant = new Date(milliseconds);
+    return isValid(instant) ? instant : null;
+}
 
 /**
  * Validates that a presentation target belongs to its source document.
@@ -146,55 +165,47 @@ export function resolveTrustedTimestamp(
     }
     const validationRule: unknown = candidate.validationRule;
     const rawDatetime = candidate.rawDatetime;
-    if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
-        const instant = parseHtmlGlobalDatetime(rawDatetime);
-        return instant
-            ? {
-                source: candidate.source,
-                sourceDatetime: rawDatetime,
-                instant,
-                validationRule,
-                visibilityPolicy,
-                presentation,
-            }
-            : null;
-    }
-    if (
-        validationRule !== TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE
-    ) {
+    let instant: Date | null;
+    if (validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS) {
+        instant = resolveUnixSeconds(rawDatetime);
+    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
+        instant = parseHtmlGlobalDatetime(rawDatetime);
+    } else if (validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE) {
+        if (
+            rawDatetime.length === 0
+            || rawDatetime !== rawDatetime.trim()
+            || hasControlCharacter(rawDatetime)
+        ) {
+            return null;
+        }
+        const zoneMatch = rawDatetime.match(ZONE);
+        if (!zoneMatch) {
+            return null;
+        }
+        const zone = zoneMatch[0];
+        if (!hasKnownNumericZone(zone)) {
+            return null;
+        }
+        const dateTime = rawDatetime.slice(0, -zone.length);
+        if (!COMPLETE_DATE_TIME.test(dateTime)) {
+            return null;
+        }
+        const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
+        const time = dateTime.slice(separatorIndex + 1);
+        if (/[Z+-]/.test(time)) {
+            return null;
+        }
+        const parsed = parseISO(rawDatetime);
+        instant = isValid(parsed) ? parsed : null;
+    } else {
         return null;
     }
-    if (
-        rawDatetime.length === 0 ||
-        rawDatetime !== rawDatetime.trim() ||
-        hasControlCharacter(rawDatetime)
-    ) {
-        return null;
-    }
-    const zoneMatch = rawDatetime.match(ZONE);
-    if (!zoneMatch) {
-        return null;
-    }
-    const zone = zoneMatch[0];
-    if (!hasKnownNumericZone(zone)) {
-        return null;
-    }
-    const dateTime = rawDatetime.slice(0, -zone.length);
-    if (!COMPLETE_DATE_TIME.test(dateTime)) {
-        return null;
-    }
-    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
-    const time = dateTime.slice(separatorIndex + 1);
-    if (/[Z+-]/.test(time)) {
-        return null;
-    }
-    const instant = parseISO(candidate.rawDatetime);
-    if (!isValid(instant)) {
+    if (!instant) {
         return null;
     }
     return {
         source: candidate.source,
-        sourceDatetime: candidate.rawDatetime,
+        sourceDatetime: rawDatetime,
         instant,
         validationRule,
         visibilityPolicy,

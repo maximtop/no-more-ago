@@ -2,9 +2,15 @@
  * @file Verifies diagnostic context derivation and privacy-preserving normalization.
  */
 
+import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from "../../../../src/shared/diagnostics/contracts";
+import {
     createDiagnosticEvent,
+    diagnosticEventSchema,
     deriveDiagnosticContext,
 } from "../../../../src/shared/diagnostics/events";
 
@@ -62,5 +68,97 @@ describe("diagnostic events", () => {
             { url: "ftp://github.com/acme/project" },
             1,
         )).toBeNull();
+    });
+
+    it("retains bounded numeric source evidence only for invalid timestamps", () => {
+        const failed = createDiagnosticEvent(
+            {
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                count: 1,
+                sourceTimestamp: "123456789",
+            },
+            { url: "https://web.telegram.org/k/?private=query#fragment" },
+            123,
+        );
+        expect(failed).toMatchObject({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+            hostname: "web.telegram.org",
+            pageCategory: "other",
+            sourceTimestamp: "123456789",
+        });
+        expect(JSON.stringify(failed)).not.toMatch(/private|query|fragment/u);
+
+        const successful = createDiagnosticEvent(
+            {
+                category: DIAGNOSTIC_CATEGORY.ADAPTER,
+                reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+                sourceTimestamp: "1778774880",
+            },
+            { url: "https://web.telegram.org/k/" },
+            124,
+        );
+        expect(successful).not.toHaveProperty("sourceTimestamp");
+    });
+
+    it.each([
+        "0",
+        "123456789",
+        "12345678901234567890",
+    ])("retains approved numeric source value %s", (sourceTimestamp) => {
+        expect(createDiagnosticEvent(
+            {
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                sourceTimestamp,
+            },
+            { url: "https://web.telegram.org/k/" },
+            1,
+        )).toHaveProperty("sourceTimestamp", sourceTimestamp);
+    });
+
+    it.each([
+        "",
+        "+123",
+        "-123",
+        " 123",
+        "123 ",
+        "12.3",
+        "1e3",
+        "12\n3",
+        "not-a-timestamp",
+        "<time>123</time>",
+        "123456789012345678901",
+    ])("omits unsafe source value %j", (sourceTimestamp) => {
+        expect(createDiagnosticEvent(
+            {
+                category: DIAGNOSTIC_CATEGORY.SKIP,
+                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                sourceTimestamp,
+            },
+            { url: "https://web.telegram.org/k/" },
+            1,
+        )).not.toHaveProperty("sourceTimestamp");
+    });
+
+    it("rejects persisted success events that carry raw source evidence", () => {
+        const base = {
+            timestamp: 1,
+            hostname: "web.telegram.org",
+            pageCategory: "other",
+            incognito: false,
+            sourceTimestamp: "1778774880",
+        } as const;
+        expect(v.is(diagnosticEventSchema, {
+            ...base,
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+        })).toBe(true);
+        expect(v.is(diagnosticEventSchema, {
+            ...base,
+            category: DIAGNOSTIC_CATEGORY.ADAPTER,
+            reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
+        })).toBe(false);
     });
 });

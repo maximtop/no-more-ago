@@ -8,6 +8,7 @@
 export const TIMESTAMP_VALIDATION_RULE = {
     EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
     HTML_GLOBAL: "datetime:html-global",
+    UNIX_SECONDS: "datetime:unix-seconds",
 } as const;
 
 /**
@@ -20,6 +21,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     STANDARD_TIME: "time",
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
+    TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
 } as const;
 
 /**
@@ -27,6 +29,7 @@ export const TIMESTAMP_SOURCE_KIND = {
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
+    DATA_TIMESTAMP: "data-timestamp",
     DATETIME: "datetime",
     FORMAT: "format",
     HREF: "href",
@@ -156,6 +159,23 @@ export interface TimestampSourceRule {
      * Attributes that can change whether or how this rule extracts an existing source.
      */
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
+
+    /**
+     * Maps an adapter-relevant attribute change back to affected source elements.
+     *
+     * Rules may use this when eligibility depends on descendant attributes or when
+     * the mutation removes the source's current matching shape.
+     *
+     * @param element - Element whose attribute changed.
+     * @param attributeName - Adapter-declared attribute that changed.
+     * @param oldValue - Attribute value before the mutation.
+     * @returns - Exact source elements that require re-evaluation.
+     */
+    readonly getMutationSources?: (
+        element: Element,
+        attributeName: TimestampSourceAttribute,
+        oldValue: string | null,
+    ) => readonly Element[];
 
     /**
      * Determines whether the source rule applies to the page URL.
