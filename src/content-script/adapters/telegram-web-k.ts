@@ -4,6 +4,7 @@
 
 import { discoverElements } from "./discover-elements";
 import { findSimpleTextTarget } from "./simple-text-target";
+import { isHtmlElement } from "./html-element";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -14,7 +15,6 @@ import {
     type TimestampSourceRule,
 } from "./types";
 
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const MESSAGE_SELECTOR = "div.bubble[data-timestamp]" as const;
 const MESSAGE_CLASS = "bubble" as const;
 const TIME_INNER_SELECTOR = ".time-inner" as const;
@@ -60,7 +60,7 @@ export function matchesTelegramWebKUrl(url: URL): boolean {
  * @returns - Whether the element can carry a Web K candidate.
  */
 function isTelegramWebKMessage(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === "div"
         && element.classList.contains(MESSAGE_CLASS)
         && element.hasAttribute("data-timestamp");
@@ -73,7 +73,7 @@ function isTelegramWebKMessage(element: Element): boolean {
  * @returns - Whether the element has the stable HTML and timestamp shape.
  */
 function isMessageContainer(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === "div"
         && element.hasAttribute("data-timestamp");
 }
@@ -143,7 +143,7 @@ function getMutationSources(
     oldValue: string | null,
 ): readonly Element[] {
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP) {
-        return element.namespaceURI === HTML_NAMESPACE
+        return isHtmlElement(element)
             && element.localName === "div"
             && element.classList.contains(MESSAGE_CLASS)
             && (element.hasAttribute("data-timestamp") || oldValue !== null)
@@ -186,7 +186,7 @@ function findClockTarget(source: Element): Text | null {
         return null;
     }
     const clocks = Array.from(container.children).filter(
-        (child) => child.namespaceURI === HTML_NAMESPACE
+        (child) => isHtmlElement(child)
             && child.localName === "span"
             && child.classList.contains(CLOCK_CLASS),
     );
