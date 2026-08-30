@@ -10,7 +10,6 @@ import {
     reconcileDocumentRegion,
     reconcileDocumentSources,
     processDocument,
-    applyTimestampCandidate,
     type DocumentDiagnosticSink,
     type ProcessInput,
     type ReconcileInput,
@@ -21,9 +20,6 @@ import {
     getOwnedTimestampSourceEntries,
     restoreTimestampPresentations,
 } from "./render-timestamp-presentation";
-import {
-    getOwnedSourceEntries as getOwnedTimeSourceEntries,
-} from "./render-exact-time";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
 import { defaultRegistry } from "../adapters/registry";
 import {
@@ -34,11 +30,7 @@ import {
     type DocumentRouteHandoffSession,
     type DocumentRouteHandoffTransition,
 } from "./route-handoff";
-import type { DeferredTimestampResolver } from "./deferred-timestamp-resolution";
-import type {
-    TimestampCandidate,
-    TimestampSourceAttribute,
-} from "../adapters/types";
+import type { TimestampSourceAttribute } from "../adapters/types";
 
 /**
  * Controller construction dependencies beyond one document processing pass.
@@ -50,39 +42,9 @@ export interface DocumentTransformationControllerInput extends ProcessInput {
     readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
 
     /**
-     * Optional delayed resolver supplied only by deterministic tests.
+     * Optional live URL sampler used to close DOM-before-route-signal races.
      */
-    readonly deferredResolver?: DeferredTimestampResolver;
-}
-
-/**
- * Exact current request retained for one unresolved source.
- */
-interface PendingDeferredResolution {
-    /**
-     * Exact source offered to the resolver.
-     */
-    readonly source: Element;
-
-    /**
-     * Opaque source identity captured before resolution.
-     */
-    readonly identity: string;
-
-    /**
-     * Exact route href captured before resolution.
-     */
-    readonly href: string;
-
-    /**
-     * Controller generation captured before resolution.
-     */
-    readonly generation: number;
-
-    /**
-     * Exact request token preventing superseded completion.
-     */
-    readonly token: object;
+    readonly urlProvider?: () => URL;
 }
 
 /**
@@ -142,9 +104,9 @@ export class DocumentTransformationController {
     private readonly routeHandoffClassifier: DocumentRouteHandoffClassifier;
 
     /**
-     * Optional test-injected delayed resolver; production supplies none.
+     * Live route sampler used before every page-authored mutation batch.
      */
-    private readonly deferredResolver: DeferredTimestampResolver | undefined;
+    private readonly urlProvider: (() => URL) | undefined;
 
     /**
      * Cloned current URL used by every processing pass.
@@ -167,21 +129,16 @@ export class DocumentTransformationController {
     private routeGeneration = 0;
 
     /**
-     * Current or terminal request per source for this exact route generation.
-     */
-    private pendingDeferred = new WeakMap<Element, PendingDeferredResolution>();
-
-    /**
      * Captures processing and route dependencies before activation.
      *
      * @param input - Document, adapter, presentation, observer, and route dependencies.
      */
     constructor(input: DocumentTransformationControllerInput) {
-        const { routeHandoffClassifier, deferredResolver, ...processInput } = input;
+        const { routeHandoffClassifier, urlProvider, ...processInput } = input;
         this.input = processInput;
         this.currentUrl = new URL(input.url.href);
         this.routeHandoffClassifier = routeHandoffClassifier ?? clearDocumentRouteHandoff;
-        this.deferredResolver = deferredResolver;
+        this.urlProvider = urlProvider;
         this.diagnosticSink = input.diagnosticSink;
     }
 
@@ -210,6 +167,7 @@ export class DocumentTransformationController {
             return this.outputs;
         }
 
+        this.synchronizeCurrentRoute();
         const rules = (this.input.registry ?? defaultRegistry).matching(this.currentUrl);
         const sourceAttributes = [
             ...new Set(rules.flatMap((rule) => rule.mutationAttributes)),
@@ -257,6 +215,14 @@ export class DocumentTransformationController {
                 return roots;
             },
             onBatch: (batch) => {
+                try {
+                    if (this.synchronizeCurrentRoute()) {
+                        return;
+                    }
+                } catch {
+                    this.failClosed();
+                    return;
+                }
                 this.handoffSession?.noteStructure({
                     addedRoots: batch.addedRoots,
                     removedRoots: batch.removedRoots,
@@ -345,9 +311,20 @@ export class DocumentTransformationController {
      * @returns - Outputs generated for the new current route.
      */
     reconcileRoute(url: URL): readonly HTMLTimeElement[] {
+        this.applyRouteChange(url);
+        return this.outputs;
+    }
+
+    /**
+     * Applies one sampled route change and reports whether it ran a full active pass.
+     *
+     * @param url - Current document URL sampled by a trusted local capability.
+     * @returns - Whether active output was restored and fully reprocessed.
+     */
+    private applyRouteChange(url: URL): boolean {
         const nextUrl = new URL(url.href);
         if (nextUrl.href === this.currentUrl.href) {
-            return this.outputs;
+            return false;
         }
 
         let transition: DocumentRouteHandoffTransition;
@@ -363,13 +340,18 @@ export class DocumentTransformationController {
             throw error;
         }
 
+        if (transition.kind === DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP) {
+            this.currentUrl = nextUrl;
+            return false;
+        }
+
         const generation = this.advanceRouteGeneration();
         this.handoffSession?.dispose();
         this.handoffSession = undefined;
         if (this.phase !== "active") {
             this.currentUrl = nextUrl;
             this.applyRouteTransition(transition);
-            return this.outputs;
+            return false;
         }
 
         const scheduler = this.scheduler;
@@ -384,11 +366,24 @@ export class DocumentTransformationController {
         try {
             this.activateHandoffSession(generation);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
-            return this.outputs;
+            return true;
         } catch (error) {
             this.failClosed();
             throw error;
         }
+    }
+
+    /**
+     * Reconciles the lazily sampled live route before page-authored DOM work.
+     *
+     * @returns - Whether the sampled change already ran a full active pass.
+     */
+    private synchronizeCurrentRoute(): boolean {
+        if (!this.urlProvider) {
+            return false;
+        }
+        const sampledUrl = this.urlProvider();
+        return this.applyRouteChange(new URL(sampledUrl.href));
     }
 
     /**
@@ -398,7 +393,6 @@ export class DocumentTransformationController {
      */
     private advanceRouteGeneration(): number {
         this.routeGeneration += 1;
-        this.pendingDeferred = new WeakMap<Element, PendingDeferredResolution>();
         return this.routeGeneration;
     }
 
@@ -409,6 +403,8 @@ export class DocumentTransformationController {
      */
     private applyRouteTransition(transition: DocumentRouteHandoffTransition): void {
         switch (transition.kind) {
+            case DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP:
+                break;
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE:
                 break;
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR:
@@ -463,138 +459,6 @@ export class DocumentTransformationController {
     }
 
     /**
-     * Starts or reuses one exact current deferred request for an unresolved source.
-     *
-     * @param source - Exact unresolved source.
-     * @param url - Current route URL supplied by the processing pass.
-     * @returns - Whether the source has a current or terminal request.
-     */
-    private scheduleDeferredResolution(source: Element, url: URL): boolean {
-        const resolver = this.deferredResolver;
-        if (
-            !resolver
-            || source.ownerDocument !== this.input.root
-            || !source.isConnected
-            || url.href !== this.currentUrl.href
-        ) {
-            return false;
-        }
-        let identity: string | null;
-        try {
-            identity = resolver.identify(source, new URL(url.href));
-        } catch {
-            return false;
-        }
-        if (identity === null) {
-            return false;
-        }
-        const previous = this.pendingDeferred.get(source);
-        if (
-            previous
-            && previous.identity === identity
-            && previous.href === url.href
-            && previous.generation === this.routeGeneration
-        ) {
-            return true;
-        }
-        const pending: PendingDeferredResolution = {
-            source,
-            identity,
-            href: url.href,
-            generation: this.routeGeneration,
-            token: {},
-        };
-        this.pendingDeferred.set(source, pending);
-        let request: Promise<TimestampCandidate | null>;
-        try {
-            request = resolver.resolve(source, new URL(url.href), identity);
-        } catch {
-            return true;
-        }
-        void Promise.resolve(request).then(
-            (candidate) => {
-                this.applyDeferredCompletion(pending, candidate);
-            },
-            () => undefined,
-        );
-        return true;
-    }
-
-    /**
-     * Applies one delayed candidate only after every current-context guard passes.
-     *
-     * @param pending - Exact request record captured before resolution.
-     * @param candidate - Candidate or terminal no-op returned by the resolver.
-     */
-    private applyDeferredCompletion(
-        pending: PendingDeferredResolution,
-        candidate: TimestampCandidate | null,
-    ): void {
-        const source = pending.source;
-        const scheduler = this.scheduler;
-        if (
-            candidate === null
-            || this.phase !== "active"
-            || !scheduler
-            || this.pendingDeferred.get(source)?.token !== pending.token
-            || this.routeGeneration !== pending.generation
-            || this.currentUrl.href !== pending.href
-            || source.ownerDocument !== this.input.root
-            || !source.isConnected
-            || candidate.source !== source
-        ) {
-            return;
-        }
-        try {
-            if (
-                this.handoffPolicy
-                && !this.handoffPolicy.allowsDeferred(source)
-            ) {
-                return;
-            }
-            const identity = this.deferredResolver?.identify(
-                source,
-                new URL(this.currentUrl.href),
-            );
-            if (identity !== pending.identity) {
-                return;
-            }
-            const locales = this.input.localesProvider?.() ?? this.input.locales ?? [];
-            const display = this.input.displayProvider?.() ?? this.input.display;
-            const output = applyTimestampCandidate(
-                candidate,
-                source,
-                locales,
-                display,
-                this.diagnosticSink,
-                scheduler,
-            );
-            if (output) {
-                this.outputs = getOwnedTimeSourceEntries(this.input.root)
-                    .map((entry) => entry.output);
-            }
-        } catch {
-            /* delayed resolution failures are terminal no-ops */
-        }
-    }
-
-    /**
-     * Invalidates pending records owned by one detached bounded subtree.
-     *
-     * @param root - Detached mutation root.
-     */
-    private invalidateDeferredRoot(root: Node): void {
-        if (root.nodeType !== 1) {
-            return;
-        }
-        const element = root as Element;
-        this.pendingDeferred.delete(element);
-        for (const descendant of element.querySelectorAll("*")) {
-            this.pendingDeferred.delete(descendant);
-        }
-    }
-
-    /**
      * Creates one full-document processing input from the retained current context.
      *
      * @param scheduler - Active renderer mutation sink.
@@ -609,18 +473,11 @@ export class DocumentTransformationController {
         };
         const mutable = result as unknown as {
             extractionPolicy?: DocumentRouteHandoffPolicy;
-            unresolvedTimestampScheduler?: ProcessInput["unresolvedTimestampScheduler"];
         };
         if (this.handoffPolicy) {
             mutable.extractionPolicy = this.handoffPolicy;
         } else {
             Reflect.deleteProperty(mutable, "extractionPolicy");
-        }
-        if (this.deferredResolver) {
-            mutable.unresolvedTimestampScheduler = (source, url) =>
-                this.scheduleDeferredResolution(source, url);
-        } else {
-            Reflect.deleteProperty(mutable, "unresolvedTimestampScheduler");
         }
         return result;
     }
@@ -644,18 +501,11 @@ export class DocumentTransformationController {
         };
         const mutable = result as unknown as {
             extractionPolicy?: DocumentRouteHandoffPolicy;
-            unresolvedTimestampScheduler?: ReconcileInput["unresolvedTimestampScheduler"];
         };
         if (this.handoffPolicy) {
             mutable.extractionPolicy = this.handoffPolicy;
         } else {
             Reflect.deleteProperty(mutable, "extractionPolicy");
-        }
-        if (this.deferredResolver) {
-            mutable.unresolvedTimestampScheduler = (source, url) =>
-                this.scheduleDeferredResolution(source, url);
-        } else {
-            Reflect.deleteProperty(mutable, "unresolvedTimestampScheduler");
         }
         return result;
     }
@@ -681,9 +531,6 @@ export class DocumentTransformationController {
      * @param scheduler - Mutation scheduler coordinating owned DOM changes.
      */
     private reconcile(batch: AffectedMutationBatch, scheduler: DocumentMutationScheduler): void {
-        for (const root of batch.removedRoots) {
-            this.invalidateDeferredRoot(root);
-        }
         const removedRoots = batch.removedRoots.filter(
             (root) => !isConnectedToDocument(root, this.input.root),
         );

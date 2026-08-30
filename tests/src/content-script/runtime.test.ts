@@ -16,7 +16,6 @@ import {
     DOCUMENT_PHASE,
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_TORN_DOWN_MESSAGE,
-    DOCUMENT_ROUTE_RECONCILED_MESSAGE,
     RECONCILE_DOCUMENT_ROUTE_MESSAGE,
     SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
@@ -25,13 +24,7 @@ import {
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
 import { classifyYouTubeWatchRouteHandoff } from
     "../../../src/content-script/adapters/youtube-watch-route-handoff";
-import { AdapterRegistry } from "../../../src/content-script/adapters/registry";
-import type {
-    TimestampCandidate,
-    TimestampSourceRule,
-} from "../../../src/content-script/adapters/types";
-import type { DeferredTimestampResolver } from
-    "../../../src/content-script/transformation/deferred-timestamp-resolution";
+import { youtubePlayerResponseAssignment } from "./adapters/youtube-test-data";
 
 const WATCH_A = "https://www.youtube.com/watch?v=testVID0001";
 const WATCH_B = "https://www.youtube.com/watch?v=testVID0002";
@@ -121,15 +114,10 @@ function routeEvents() {
 function setWatchMarkup(videoId: string, publication: string, includePlayer = true): void {
     document.head.innerHTML = `<meta itemprop="datePublished" content="${publication}">`
         + (includePlayer
-            ? `<script>var ytInitialPlayerResponse = ${JSON.stringify({
-                videoDetails: { videoId },
-                microformat: {
-                    playerMicroformatRenderer: {
-                        externalVideoId: videoId,
-                        publishDate: publication,
-                    },
-                },
-            })};</script>`
+            ? `<script>${youtubePlayerResponseAssignment(
+                publication,
+                videoId,
+            )}</script>`
             : "");
     document.body.innerHTML = `
         <ytd-watch-metadata>
@@ -145,15 +133,7 @@ function setWatchMarkup(videoId: string, publication: string, includePlayer = tr
  */
 function setWatchPlayer(videoId: string, publication: string): void {
     const script = document.head.querySelector("script") ?? document.createElement("script");
-    script.textContent = `var ytInitialPlayerResponse = ${JSON.stringify({
-        videoDetails: { videoId },
-        microformat: {
-            playerMicroformatRenderer: {
-                externalVideoId: videoId,
-                publishDate: publication,
-            },
-        },
-    })};`;
+    script.textContent = youtubePlayerResponseAssignment(publication, videoId);
     if (!script.isConnected) {
         document.head.append(script);
     }
@@ -706,81 +686,6 @@ describe("installContentRuntime", () => {
         },
     );
 
-    it("keeps stale deferred route completion offline and out of diagnostics", async () => {
-        document.body.innerHTML = '<span data-identity="private-video-id">private page text</span>';
-        const timestampSource = document.querySelector("span");
-        if (!timestampSource) {
-            throw new Error("Expected deferred runtime source");
-        }
-        const noMatch: TimestampSourceRule = {
-            id: "no-match",
-            mutationAttributes: [],
-            matches: () => false,
-            matchesElement: () => false,
-            discover: () => [],
-            extract: () => null,
-        };
-        const unresolved: TimestampSourceRule = {
-            id: "runtime-unresolved",
-            mutationAttributes: [],
-            matches: () => true,
-            matchesElement: (element) => element === timestampSource,
-            discover: () => [timestampSource],
-            extract: () => null,
-        };
-        const rejections: Array<(error: Error) => void> = [];
-        const resolveDeferred = vi.fn(() =>
-            new Promise<TimestampCandidate | null>((_resolve, reject) => {
-                rejections.push(reject);
-            }));
-        const resolver: DeferredTimestampResolver = {
-            identify: (element, url) => {
-                const identity = element.getAttribute("data-identity");
-                return identity === null ? null : `${identity}:${url.pathname}`;
-            },
-            resolve: resolveDeferred,
-        };
-        const forbiddenFetch = vi.fn<typeof fetch>(() => {
-            throw new Error("Network access is forbidden");
-        });
-        vi.stubGlobal("fetch", forbiddenFetch);
-        const reportDiagnostic = vi.fn(async () => undefined);
-        let currentHref = "https://example.test/private-a";
-        const source = messages();
-        installContentRuntime({
-            document,
-            url: new URL(currentHref),
-            urlProvider: () => new URL(currentHref),
-            locales: ["en-US"],
-            registry: new AdapterRegistry([unresolved], noMatch),
-            deferredResolver: resolver,
-            loadDocumentState: async () => ({ ...state(), debugEnabled: true }),
-            reportDiagnostic,
-            messages: source,
-        });
-        await flushMutations();
-        expect(resolveDeferred).toHaveBeenCalledOnce();
-
-        currentHref = "https://example.test/private-b";
-        source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE });
-        expect(resolveDeferred).toHaveBeenCalledTimes(2);
-        rejections[0]?.(new Error("private rejection text"));
-        await flushMutations();
-
-        expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
-        expect(forbiddenFetch).not.toHaveBeenCalled();
-        const payload = JSON.stringify(reportDiagnostic.mock.calls);
-        for (const forbidden of [
-            "private-video-id",
-            "private page text",
-            "private-a",
-            "private-b",
-            "private rejection text",
-        ]) {
-            expect(payload).not.toContain(forbidden);
-        }
-    });
-
     it(
         "handles active signal-first, DOM-first, duplicate, and metadata-only Watch handoffs",
         async () => {
@@ -839,6 +744,34 @@ describe("installContentRuntime", () => {
         },
     );
 
+    it("samples the live Watch route before the first DOM-before-signal batch", async () => {
+        setWatchMarkup("testVID0001", "2026-08-01");
+        let currentHref = WATCH_A;
+        const source = messages();
+        installContentRuntime({
+            document,
+            url: new URL(currentHref),
+            urlProvider: () => new URL(currentHref),
+            routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
+            locales: ["en-US"],
+            loadDocumentState: async () => state(),
+            messages: source,
+        });
+        await flushMutations();
+        expect(watchOutput()?.dateTime).toBe("2026-08-01");
+
+        currentHref = WATCH_B;
+        setWatchPlayer("testVID0002", "2026-08-02");
+        const label = requireWatchLabel();
+        label.textContent = "new video relative label";
+        await flushMutations();
+        await flushMutations();
+
+        expect(watchOutput()?.dateTime).toBe("2026-08-02");
+        expect(document.head.querySelector("meta")?.getAttribute("content"))
+            .toBe("2026-08-01");
+    });
+
     it.each(["before", "after"] as const)(
         "retains a Watch handoff while waiting and resolves loaded data %s activation",
         async (order) => {
@@ -858,9 +791,7 @@ describe("installContentRuntime", () => {
                 messages: source,
             });
             currentHref = WATCH_B;
-            expect(source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE })).toEqual({
-                type: DOCUMENT_ROUTE_RECONCILED_MESSAGE,
-            });
+            expect(source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE })).toBeUndefined();
             if (order === "after") {
                 setWatchPlayer("testVID0002", "2026-08-02");
             }

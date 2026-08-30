@@ -1,10 +1,11 @@
 # YouTube source fixtures
 
-The structural paths represented by these fixtures were observed in an
-unauthenticated public YouTube watch response on 2026-08-29. They retain only
-the approved `ytInitialPlayerResponse` assignment, `datePublished` metadata,
-and watch publication label needed by the source contract. Unrelated markup,
-identifiers, and payload fields were removed.
+The two Watch fixtures were derived from an unauthenticated public YouTube
+watch response observed on 2026-08-29. They retain only the approved
+`ytInitialPlayerResponse` assignment, `datePublished` metadata, and watch
+publication label needed by the source contract. Unrelated markup, identifiers,
+and payload fields were removed. The Home, Search, and Channel sections below
+document separate list-page captures and their individual provenance.
 
 `watch-calendar-date.html` isolates metadata fallback behavior.
 `watch-local-sources.html` deliberately contains a loaded zoned instant and a

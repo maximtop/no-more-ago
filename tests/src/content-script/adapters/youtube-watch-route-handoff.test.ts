@@ -30,11 +30,16 @@ async function flushMutations(): Promise<void> {
 }
 
 describe("classifyYouTubeWatchRouteHandoff", () => {
-    it("returns a total preserve, clear, or replace transition", () => {
+    it("returns a total no-op, clear, or replace transition", () => {
         expect(classifyYouTubeWatchRouteHandoff({
             previousUrl: new URL(WATCH_A),
             currentUrl: new URL(`${WATCH_A}&list=fixture`),
-        })).toEqual({ kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE });
+        })).toEqual({ kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP });
+
+        expect(classifyYouTubeWatchRouteHandoff({
+            previousUrl: new URL("https://www.youtube.com/"),
+            currentUrl: new URL("https://www.youtube.com/results?search_query=fixture"),
+        })).toEqual({ kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP });
 
         for (const target of [
             "https://www.youtube.com/",
@@ -87,9 +92,7 @@ describe("classifyYouTubeWatchRouteHandoff", () => {
             watchSource,
         )).toBe(true);
         expect(transition.policy.allowsRule(YOUTUBE_ADAPTER_ID, watchSource)).toBe(false);
-        expect(transition.policy.allowsDeferred(watchSource)).toBe(false);
         expect(transition.policy.allowsRule(YOUTUBE_ADAPTER_ID, genericSource)).toBe(true);
-        expect(transition.policy.allowsDeferred(genericSource)).toBe(true);
     });
 });
 

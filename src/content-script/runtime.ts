@@ -12,7 +12,6 @@ import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
     DOCUMENT_POLICY_REFRESHED_MESSAGE,
-    DOCUMENT_ROUTE_RECONCILED_MESSAGE,
     DOCUMENT_TORN_DOWN_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
     isDebugPolicyUpdateMessage,
@@ -34,8 +33,6 @@ import {
     type DisplaySettings,
 } from "../shared/settings/snapshot";
 import type { DocumentRouteHandoffClassifier } from "./transformation/route-handoff";
-import type { DeferredTimestampResolver } from
-    "./transformation/deferred-timestamp-resolution";
 
 /**
  * Global symbol used to retain the single content-runtime instance for a document.
@@ -463,7 +460,6 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input.urlProvider - Lazy current page URL source used for route signals.
  * @param input.routeEvents - Optional same-document route event source.
  * @param input.routeHandoffClassifier - Optional total retained-policy classifier.
- * @param input.deferredResolver - Optional delayed resolver supplied only by tests.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
@@ -478,7 +474,6 @@ export function installContentRuntime(input: {
     readonly urlProvider?: () => URL;
     readonly routeEvents?: ContentRouteEventSource;
     readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
-    readonly deferredResolver?: DeferredTimestampResolver;
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
@@ -502,14 +497,12 @@ export function installContentRuntime(input: {
         root: input.document,
         locales: input.locales,
         displayProvider: () => slot.presentation ?? DEFAULT_DISPLAY_SETTINGS,
+        urlProvider: () => slot.urlProvider(),
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
         ...(input.routeHandoffClassifier === undefined
             ? {}
             : { routeHandoffClassifier: input.routeHandoffClassifier }),
-        ...(input.deferredResolver === undefined
-            ? {}
-            : { deferredResolver: input.deferredResolver }),
     };
     slot.document = input.document;
     slot.messages = input.messages;
@@ -551,9 +544,7 @@ export function installContentRuntime(input: {
         }
         if (isReconcileDocumentRouteMessage(message)) {
             reconcileCurrentRoute(slot);
-            const response = { type: DOCUMENT_ROUTE_RECONCILED_MESSAGE };
-            sendResponse?.(response);
-            return response;
+            return undefined;
         }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };

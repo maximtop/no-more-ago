@@ -127,7 +127,6 @@ function activateWatchHandoff(
 const YOUTUBE_WATCH_HANDOFF_POLICY: DocumentRouteHandoffPolicy = Object.freeze({
     allowsRule: (ruleId: string, source: Element) =>
         ruleId !== YOUTUBE_ADAPTER_ID || !isYouTubeWatchPublicationSource(source),
-    allowsDeferred: (source: Element) => !isYouTubeWatchPublicationSource(source),
     activate: activateWatchHandoff,
 });
 
@@ -142,10 +141,14 @@ export const classifyYouTubeWatchRouteHandoff: DocumentRouteHandoffClassifier = 
     const previousVideoId = getYouTubeWatchVideoId(previousUrl);
     const currentVideoId = getYouTubeWatchVideoId(currentUrl);
     if (currentVideoId === null) {
-        return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR };
+        return {
+            kind: previousVideoId === null
+                ? DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP
+                : DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR,
+        };
     }
     if (previousVideoId === currentVideoId) {
-        return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.PRESERVE };
+        return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP };
     }
     return {
         kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,

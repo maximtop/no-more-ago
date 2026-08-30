@@ -81,7 +81,7 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
     extract: (element, url) => {
-        if (url === undefined || !isYouTubeWatchPublicationSource(element)) {
+        if (!isYouTubeWatchPublicationSource(element)) {
             return null;
         }
         const videoId = getYouTubeWatchVideoId(url);
@@ -113,8 +113,7 @@ export const youtubeAdapter: TimestampSourceRule = {
     discover: discoverYouTubeWatchPublicationSources,
     extract: (element, url) => {
         if (
-            url === undefined
-            || !isYouTubeWatchPublicationSource(element)
+            !isYouTubeWatchPublicationSource(element)
             || getYouTubeWatchVideoId(url) === null
         ) {
             return null;

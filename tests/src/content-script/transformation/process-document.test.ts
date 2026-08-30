@@ -554,7 +554,7 @@ describe("processDocument", () => {
     });
 
     it(
-        "quarantines a blocked source without extraction, deferred work, or invalid diagnostics",
+        "quarantines a blocked source without extraction or invalid diagnostics",
         () => {
             document.body.innerHTML = '<span id="source">relative</span>';
             const source = document.getElementById("source");
@@ -590,7 +590,6 @@ describe("processDocument", () => {
             restoreExactTimes(document);
             higherExtract.mockClear();
             lowerExtract.mockClear();
-            const deferred = vi.fn(() => true);
             const diagnosticSink = vi.fn();
 
             expect(processDocument({
@@ -599,15 +598,12 @@ describe("processDocument", () => {
                 registry,
                 extractionPolicy: {
                     allowsRule: (ruleId) => ruleId !== "lower",
-                    allowsDeferred: () => true,
                 },
-                unresolvedTimestampScheduler: deferred,
                 diagnosticSink,
             })).toEqual([]);
 
             expect(higherExtract).toHaveBeenCalledOnce();
             expect(lowerExtract).not.toHaveBeenCalled();
-            expect(deferred).not.toHaveBeenCalled();
             expect(source.hasAttribute("hidden")).toBe(false);
             expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
             expect(diagnosticSink.mock.calls.flat()).not.toContainEqual({
@@ -652,20 +648,15 @@ describe("processDocument", () => {
                 extract: lowerExtract,
             },
         );
-        const deferred = vi.fn(() => true);
-
         expect(processDocument({
             url: new URL("https://example.test/"),
             root: document,
             registry,
             extractionPolicy: {
                 allowsRule: () => true,
-                allowsDeferred: () => true,
             },
-            unresolvedTimestampScheduler: deferred,
         })[0]?.dateTime).toBe("2026-08-24T10:15Z");
         expect(lowerExtract).not.toHaveBeenCalled();
-        expect(deferred).not.toHaveBeenCalled();
         restoreExactTimes(document);
     });
 

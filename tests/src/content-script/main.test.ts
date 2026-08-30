@@ -176,7 +176,7 @@ describe("content entrypoint", () => {
     });
 
     it(
-        "samples the current location from one popstate listener without network resolution",
+        "keeps output across a route-irrelevant popstate without network resolution",
         async () => {
             const sendMessage = vi.fn(async () => state());
             const chrome = installChromeMock(sendMessage);
@@ -213,7 +213,7 @@ describe("content entrypoint", () => {
             currentHref = "https://example.test/later?private=ignored";
             popstate?.();
 
-            expect(document.querySelector("[data-no-more-ago-output]")).not.toBe(initialOutput);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBe(initialOutput);
             expect(forbiddenFetch).not.toHaveBeenCalled();
             expect(chrome.onMessage.addListener).toHaveBeenCalledTimes(1);
         },

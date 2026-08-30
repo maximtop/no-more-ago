@@ -14,7 +14,6 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASES,
     DIAGNOSTIC_EVENT_MESSAGE,
-    DOCUMENT_ROUTE_RECONCILED_MESSAGE,
     RECONCILE_DOCUMENT_ROUTE_MESSAGE,
     REFRESH_DOCUMENT_POLICY_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
@@ -27,7 +26,6 @@ import {
     isDocumentStatusMessage,
     isDocumentStatusResponse,
     isDiagnosticEventMessage,
-    isDocumentRouteReconciledAcknowledgement,
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
     isRefreshDocumentPolicyMessage,
@@ -110,14 +108,9 @@ describe("document policy messages", () => {
 });
 
 describe("document route messages", () => {
-    it("accepts only payload-free route commands and acknowledgements", () => {
+    it("accepts only payload-free route commands", () => {
         expect(
             isReconcileDocumentRouteMessage({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE }),
-        ).toBe(true);
-        expect(
-            isDocumentRouteReconciledAcknowledgement({
-                type: DOCUMENT_ROUTE_RECONCILED_MESSAGE,
-            }),
         ).toBe(true);
 
         for (const property of ["url", "query", "videoId", "generation", "pageData"]) {
@@ -127,17 +120,10 @@ describe("document route messages", () => {
                     [property]: "forbidden",
                 }),
             ).toBe(false);
-            expect(
-                isDocumentRouteReconciledAcknowledgement({
-                    type: DOCUMENT_ROUTE_RECONCILED_MESSAGE,
-                    [property]: "forbidden",
-                }),
-            ).toBe(false);
         }
 
         for (const value of [null, [], {}, { type: "other" }]) {
             expect(isReconcileDocumentRouteMessage(value)).toBe(false);
-            expect(isDocumentRouteReconciledAcknowledgement(value)).toBe(false);
         }
     });
 });

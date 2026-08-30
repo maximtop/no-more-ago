@@ -47,11 +47,6 @@ import type { TimestampExtractionPolicy } from "./route-handoff";
 export type DocumentDiagnosticSink = (event: DiagnosticEventInput) => void;
 
 /**
- * Offers one unresolved source to controller-owned deferred resolution.
- */
-export type UnresolvedTimestampScheduler = (source: Element, url: URL) => boolean;
-
-/**
  * Emits one bounded skip event for a candidate that cannot be rendered.
  *
  * @param diagnosticSink - Optional diagnostic event sink.
@@ -142,50 +137,6 @@ function renderResolvedTimestamp(
 }
 
 /**
- * Validates and applies one current candidate through the shared presentation/rendering path.
- *
- * @param candidate - Untrusted candidate returned by an injected resolver.
- * @param source - Exact current source the candidate must retain.
- * @param locales - Current preferred locale tags.
- * @param display - Current validated presentation settings.
- * @param diagnosticSink - Optional bounded diagnostic sink.
- * @param ownedDomMutations - Optional renderer mutation sink.
- * @returns - Generated output, or null when validation, presentation, or ownership fails.
- */
-export function applyTimestampCandidate(
-    candidate: TimestampCandidate,
-    source: Element,
-    locales: readonly string[],
-    display: DisplaySettings | undefined,
-    diagnosticSink?: DocumentDiagnosticSink,
-    ownedDomMutations?: OwnedDomMutationSink,
-): HTMLTimeElement | null {
-    if (candidate.source !== source) {
-        return null;
-    }
-    const resolved = resolveTrustedTimestamp(candidate);
-    if (!resolved) {
-        restoreTimestampPresentation(source, ownedDomMutations);
-        diagnosticSink?.({
-            category: DIAGNOSTIC_CATEGORY.SKIP,
-            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-            count: 1,
-        });
-        return null;
-    }
-    const result = renderResolvedTimestamp(
-        resolved,
-        locales,
-        display,
-        diagnosticSink,
-        ownedDomMutations,
-    );
-    return result?.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME
-        ? result.output
-        : null;
-}
-
-/**
  * Dependencies for a full document pass, including snapshots that may be refreshed through
  * providers.
  */
@@ -236,14 +187,9 @@ export interface ProcessInput {
     readonly ownedDomMutations?: OwnedDomMutationSink;
 
     /**
-     * Optional route provenance policy restricting extraction and deferred work.
+     * Optional route provenance policy restricting extraction.
      */
     readonly extractionPolicy?: TimestampExtractionPolicy;
-
-    /**
-     * Optional controller-owned scheduler for unresolved sources.
-     */
-    readonly unresolvedTimestampScheduler?: UnresolvedTimestampScheduler;
 }
 
 /**
@@ -296,14 +242,9 @@ export interface ReconcileInput {
     readonly diagnosticSink?: DocumentDiagnosticSink;
 
     /**
-     * Optional route provenance policy restricting extraction and deferred work.
+     * Optional route provenance policy restricting extraction.
      */
     readonly extractionPolicy?: TimestampExtractionPolicy;
-
-    /**
-     * Optional controller-owned scheduler for unresolved sources.
-     */
-    readonly unresolvedTimestampScheduler?: UnresolvedTimestampScheduler;
 }
 
 /**
@@ -331,14 +272,19 @@ interface CandidateCollection {
     readonly candidatesBySource: ReadonlyMap<Element, readonly TimestampCandidate[]>;
 
     /**
+     * First valid candidate per source, resolved once during precedence selection.
+     */
+    readonly resolvedBySource: ReadonlyMap<Element, ResolvedTimestamp>;
+
+    /**
      * Ordered sources that must be rendered or restored.
      */
     readonly discoveredSources: readonly Element[];
 
     /**
-     * Sources withheld from deferred work by the active route provenance policy.
+     * Sources withheld from extraction by the active route provenance policy.
      */
-    readonly quarantinedSources: ReadonlySet<Element>;
+    readonly blockedSources: ReadonlySet<Element>;
 }
 
 /**
@@ -393,9 +339,12 @@ function processCandidateCollection(
     const display = input.displayProvider?.() ?? input.display;
     const ownedDomMutations = input.ownedDomMutations;
     const diagnosticSink = input.diagnosticSink;
-    const extractionPolicy = input.extractionPolicy;
-    const unresolvedTimestampScheduler = input.unresolvedTimestampScheduler;
-    const { candidatesBySource, discoveredSources, quarantinedSources } = collection;
+    const {
+        candidatesBySource,
+        resolvedBySource,
+        discoveredSources,
+        blockedSources,
+    } = collection;
 
     if (diagnosticSink && discoveredSources.length > 0) {
         diagnosticSink({
@@ -409,20 +358,11 @@ function processCandidateCollection(
     let renderedCount = 0;
     for (const source of discoveredSources) {
         const candidates = candidatesBySource.get(source) ?? [];
-        const resolved = candidates
-            .map(resolveTrustedTimestamp)
-            .find((candidate) => candidate !== null) ?? null;
+        const resolved = resolvedBySource.get(source);
         if (!resolved) {
             ownedDomMutations?.untrackSource?.(source);
             restoreTimestampPresentation(source, ownedDomMutations);
-            if (quarantinedSources.has(source)) {
-                continue;
-            }
-            if (
-                unresolvedTimestampScheduler
-                && (extractionPolicy?.allowsDeferred(source) ?? true)
-                && unresolvedTimestampScheduler(source, input.url)
-            ) {
+            if (blockedSources.has(source)) {
                 continue;
             }
             const sourceTimestamp = getFailureSourceTimestamp(candidates);
@@ -473,10 +413,10 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
+    const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
-    const resolvedSources = new Set<Element>();
-    const quarantinedSources = new Set<Element>();
+    const blockedSources = new Set<Element>();
     for (const rule of rules) {
         for (const element of rule.discover(root)) {
             if (!discovered.has(element)) {
@@ -484,17 +424,18 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 discoveredSources.push(element);
             }
             if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, element)) {
-                quarantinedSources.add(element);
+                blockedSources.add(element);
                 continue;
             }
-            if (resolvedSources.has(element)) {
+            if (resolvedBySource.has(element)) {
                 continue;
             }
             const candidate = rule.extract(element, input.url);
             if (candidate?.source === element) {
                 addCandidate(candidatesBySource, candidate);
-                if (resolveTrustedTimestamp(candidate)) {
-                    resolvedSources.add(element);
+                const resolved = resolveTrustedTimestamp(candidate);
+                if (resolved) {
+                    resolvedBySource.set(element, resolved);
                 }
             }
         }
@@ -522,7 +463,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 
     return processCandidateCollection(
         input,
-        { candidatesBySource, discoveredSources, quarantinedSources },
+        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
         started,
     );
 }
@@ -542,10 +483,10 @@ export function reconcileDocumentSources(
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
+    const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
-    const resolvedSources = new Set<Element>();
-    const quarantinedSources = new Set<Element>();
+    const blockedSources = new Set<Element>();
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -561,24 +502,25 @@ export function reconcileDocumentSources(
                 continue;
             }
             if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
-                quarantinedSources.add(source);
+                blockedSources.add(source);
                 continue;
             }
-            if (resolvedSources.has(source)) {
+            if (resolvedBySource.has(source)) {
                 continue;
             }
             const candidate = rule.extract(source, input.url);
             if (candidate?.source === source) {
                 addCandidate(candidatesBySource, candidate);
-                if (resolveTrustedTimestamp(candidate)) {
-                    resolvedSources.add(source);
+                const resolved = resolveTrustedTimestamp(candidate);
+                if (resolved) {
+                    resolvedBySource.set(source, resolved);
                 }
             }
         }
     }
     return processCandidateCollection(
         input,
-        { candidatesBySource, discoveredSources, quarantinedSources },
+        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
         started,
     );
 }
@@ -597,7 +539,6 @@ export function reconcileDocumentSources(
  * @param input.diagnosticSink - Optional bounded processing event sink.
  * @param input.ownedDomMutations - Optional renderer mutation sink.
  * @param input.extractionPolicy - Optional route provenance policy.
- * @param input.unresolvedTimestampScheduler - Optional deferred-work scheduler.
  * @param input.registry - Trusted adapter registry.
  * @returns - Extension-owned time elements generated by the pass.
  */
@@ -611,7 +552,6 @@ export function processDocument({
     diagnosticSink,
     ownedDomMutations,
     extractionPolicy,
-    unresolvedTimestampScheduler,
     registry = defaultRegistry,
 }: ProcessInput): readonly HTMLTimeElement[] {
     return processRegion({
@@ -625,9 +565,6 @@ export function processDocument({
         ...(diagnosticSink === undefined ? {} : { diagnosticSink }),
         ...(ownedDomMutations === undefined ? {} : { ownedDomMutations }),
         ...(extractionPolicy === undefined ? {} : { extractionPolicy }),
-        ...(unresolvedTimestampScheduler === undefined
-            ? {}
-            : { unresolvedTimestampScheduler }),
     });
 }
 

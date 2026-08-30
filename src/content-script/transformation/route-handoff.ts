@@ -3,7 +3,7 @@
  */
 
 /**
- * Controls source tiers and deferred work for one document route context.
+ * Controls source tiers for one document route context.
  */
 export interface TimestampExtractionPolicy {
     /**
@@ -14,14 +14,6 @@ export interface TimestampExtractionPolicy {
      * @returns - Whether extraction is allowed.
      */
     allowsRule(ruleId: string, source: Element): boolean;
-
-    /**
-     * Checks whether deferred work may resolve one exact source.
-     *
-     * @param source - Unresolved exact source.
-     * @returns - Whether deferred resolution is allowed.
-     */
-    allowsDeferred(source: Element): boolean;
 }
 
 /**
@@ -94,6 +86,7 @@ export interface DocumentRouteHandoffPolicy extends TimestampExtractionPolicy {
  * Complete route-policy transition operations.
  */
 export const DOCUMENT_ROUTE_HANDOFF_TRANSITION = {
+    NOOP: "noop",
     PRESERVE: "preserve",
     CLEAR: "clear",
     REPLACE: "replace",
@@ -103,6 +96,12 @@ export const DOCUMENT_ROUTE_HANDOFF_TRANSITION = {
  * Total operation applied to retained route provenance after a changed URL.
  */
 export type DocumentRouteHandoffTransition =
+    | {
+        /**
+         * Updates the retained URL without restarting extraction or route observation.
+         */
+        readonly kind: typeof DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP;
+    }
     | {
         /**
          * Keeps the retained optional policy unchanged.

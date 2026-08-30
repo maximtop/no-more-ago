@@ -199,8 +199,8 @@ export interface TimestampSourceRule {
      * Extracts at most one candidate for the exact discovered source.
      *
      * @param element - Discovered source that the candidate must retain by identity.
-     * @param url - Current page URL already considered during rule matching, when available.
+     * @param url - Current page URL already considered during rule matching.
      * @returns - Candidate for `element`, or null when this source tier is unusable.
      */
-    extract(element: Element, url?: URL): TimestampCandidate | null;
+    extract(element: Element, url: URL): TimestampCandidate | null;
 }

@@ -19,6 +19,7 @@ import {
     YOUTUBE_PLAYER_RESPONSE_RULE_ID,
     getYouTubeWatchVideoId,
 } from "../../../../src/shared/adapters/youtube-contract";
+import { youtubePlayerResponseAssignment } from "./youtube-test-data";
 
 const WATCH_URL = new URL("https://www.youtube.com/watch?v=testVID0001");
 
@@ -53,15 +54,11 @@ function appendPlayerAssignment(
 ): void {
     const script = document.createElement("script");
     document.head.append(script);
-    script.textContent = `var ytInitialPlayerResponse = ${JSON.stringify({
-        videoDetails: { videoId },
-        microformat: {
-            playerMicroformatRenderer: {
-                externalVideoId,
-                publishDate: publication,
-            },
-        },
-    })};`;
+    script.textContent = youtubePlayerResponseAssignment(
+        publication,
+        videoId,
+        externalVideoId,
+    );
 }
 
 describe("youtubeAdapter", () => {

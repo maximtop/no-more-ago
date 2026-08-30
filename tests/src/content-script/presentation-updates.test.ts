@@ -13,6 +13,7 @@ import {
 } from "../../../src/shared/messaging/document-messages";
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
 import type { DisplaySettings } from "../../../src/shared/settings/snapshot";
+import { youtubePlayerResponseAssignment } from "./adapters/youtube-test-data";
 
 const WATCH_URL = "https://www.youtube.com/watch?v=testVID0001";
 const forbiddenFetch = vi.fn<typeof fetch>(() => {
@@ -63,15 +64,10 @@ const documentState = {
  * @returns - Page-owned Watch label.
  */
 function setWatchMarkup(publication: string): Element {
-    document.head.innerHTML = `<script>var ytInitialPlayerResponse = ${JSON.stringify({
-        videoDetails: { videoId: "testVID0001" },
-        microformat: {
-            playerMicroformatRenderer: {
-                externalVideoId: "testVID0001",
-                publishDate: publication,
-            },
-        },
-    })};</script>`;
+    document.head.innerHTML = `<script>${youtubePlayerResponseAssignment(
+        publication,
+        "testVID0001",
+    )}</script>`;
     document.body.innerHTML = `
         <ytd-watch-metadata>
             <div id="info-strings">

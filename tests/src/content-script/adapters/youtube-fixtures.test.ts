@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises";
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { youtubePlayerResponseAssignment } from "./youtube-test-data";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import { youtubeAdapter } from "../../../../src/content-script/adapters/youtube";
@@ -103,15 +104,11 @@ describe("offline YouTube watch fixture", () => {
         externalVideoId: unknown = "testVID0001",
     ): void {
         const script = requirePlayerScript();
-        script.textContent = `var ytInitialPlayerResponse = ${JSON.stringify({
-            videoDetails: { videoId },
-            microformat: {
-                playerMicroformatRenderer: {
-                    externalVideoId,
-                    publishDate: publication,
-                },
-            },
-        })};`;
+        script.textContent = youtubePlayerResponseAssignment(
+            publication,
+            videoId,
+            externalVideoId,
+        );
     }
 
     it("uses valid loaded data without invoking metadata extraction", () => {

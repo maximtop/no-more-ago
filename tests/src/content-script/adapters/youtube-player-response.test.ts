@@ -8,6 +8,7 @@ import {
     YOUTUBE_PLAYER_RESPONSE_MAX_CHARACTERS,
     createYouTubePlayerResponseReader,
 } from "../../../../src/content-script/adapters/youtube-player-response";
+import { youtubePlayerResponseAssignment } from "./youtube-test-data";
 
 const VIDEO_ID = "testVID0001";
 
@@ -24,15 +25,7 @@ function playerAssignment(
     videoId: unknown = VIDEO_ID,
     externalVideoId: unknown = VIDEO_ID,
 ): string {
-    return `var ytInitialPlayerResponse = ${JSON.stringify({
-        videoDetails: { videoId },
-        microformat: {
-            playerMicroformatRenderer: {
-                externalVideoId,
-                publishDate: publication,
-            },
-        },
-    })};`;
+    return youtubePlayerResponseAssignment(publication, videoId, externalVideoId);
 }
 
 /**

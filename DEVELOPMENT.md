@@ -196,14 +196,17 @@ zoned instant. Same-document changed-video handoffs admit only current dual-ID
 loaded data; unbound metadata remains quarantined. The content script never
 requests YouTube data.
 
-History-state updates produce a strict payload-free command for the exact
-frame, while `popstate` supplies the equivalent content-side signal. The
-content runtime samples its URL lazily; route or identity values never cross
-the message boundary. The controller owns the current URL and generation,
-classifies every changed href as `preserve`, `clear`, or `replace`, and retains
-that policy through active, waiting, and stopped phases. Exact duplicate hrefs
-are no-ops. Active transitions invalidate prior work and restore verified
-ownership before any current-route output is considered.
+YouTube history-state updates produce a strict payload-free command for the
+exact frame, coalesced to one in-flight and one pending-latest delivery per
+tab/frame. `popstate` supplies the equivalent content-side signal. The content
+runtime samples its URL lazily; route or identity values never cross the
+message boundary. The controller also samples the live URL before every
+page-authored mutation batch, closing the DOM-before-signal race. It classifies
+changed hrefs as `noop`, `preserve`, `clear`, or `replace` and retains route
+policy through active, waiting, and stopped phases. No-op changes update the
+retained URL without tearing down output. Active semantic transitions
+invalidate prior work and restore verified ownership before any current-route
+output is considered.
 
 Before hydrating a stopped runtime, including global or per-host re-enablement,
 sample the current URL exactly once and reconcile it through the same total
@@ -213,8 +216,8 @@ without depending on an earlier history signal. If URL sampling or
 classification fails, restore ownership and fail closed without starting
 hydration.
 
-A changed-video Watch policy blocks metadata and deferred publication sources
-for the life of that same-document route. Its active session observes only
+A changed-video Watch policy blocks unbound metadata for the life of that
+same-document route. Its active session observes only
 exact recognized player-assignment script nodes and coalesces relevant
 replacement or text changes into a current-generation pass. Route replacement,
 failure, or teardown disposes the session and makes queued callbacks inert.
@@ -339,16 +342,6 @@ pnpm test tests/src/content-script/adapters/youtube.test.ts \
   tests/src/content-script/adapters/youtube-fixtures.test.ts
 ~~~
 
-The optional delayed timestamp resolver is an injection seam for deterministic
-tests only; production composition supplies no resolver or network capability.
-Keep at most one current request per exact source. Before applying a completion,
-verify its token, generation, href, document, connection, source, opaque
-identity, current policy, and trusted value. Null, rejected, superseded,
-detached, replaced, and teardown-stale results are terminal no-ops. Exercise
-these boundaries through the runtime/controller APIs with offline data and a
-throwing `fetch` guard; never expose request data through diagnostics or
-storage.
-
 #### Qualify a YouTube list shape
 
 List qualification starts with one provenance-backed capture that joins the
@@ -364,12 +357,8 @@ records contain no approved absolute publication value, so production behavior
 is intentionally unchanged. Relative text, arbitrary date-looking fields, and
 the unrelated `replicateAsTimestamp` boolean are not approved sources.
 
-Home fixture tests replace `fetch` with a synchronously throwing fake and
-assert zero calls after every case. Run the focused qualification with:
-
-~~~sh
-pnpm test tests/src/content-script/adapters/youtube-home-fixtures.test.ts
-~~~
+The list fixture test replaces `fetch` with a synchronously throwing fake and
+asserts that this page remains unchanged through the public document boundary.
 
 The sanitized `search-legacy-relative-only.html` fixture independently records
 one captured legacy Search main-result shape. It traverses only:
@@ -392,13 +381,8 @@ set are not eligible records.
 Every captured Search publication value was relative. Relative `simpleText`,
 synthetic absolute-looking values, watch-only data, arbitrary DOM attributes,
 and values inserted into mixed outer shapes are not approved sources. Search
-fixture tests replace `fetch` with a synchronously throwing fake, assert zero
-calls after every case, and exercise the document only through the existing
-public processing boundary. Run them with:
-
-~~~sh
-pnpm test tests/src/content-script/adapters/youtube-search-fixtures.test.ts
-~~~
+fixture tests exercise the document only through the existing public processing
+boundary.
 
 The sanitized `channel-videos-modern-relative-only.html` fixture records one
 captured modern Channel Videos grid. Its selected-tab loaded boundary is:
@@ -424,29 +408,26 @@ continuation shell; neither establishes adjacent or nested eligibility.
 Every captured Channel publication value was relative. Relative text,
 synthetic absolute-looking values, the unrelated `replicateAsTimestamp`
 boolean, and values injected into a continuation outer are not approved
-sources. Channel fixture tests replace `fetch` with a synchronously throwing
-fake, assert zero calls after every case, and exercise only the public document
-boundary. Run them with:
+sources. Channel fixture tests exercise only the public document boundary. Run
+the compact no-output and zero-network checks for all three list captures with:
 
 ~~~sh
-pnpm test tests/src/content-script/adapters/youtube-channel-fixtures.test.ts
+pnpm test tests/src/content-script/adapters/youtube-list-fixtures.test.ts
 ~~~
 
-The three completed representative list qualifications are:
+All three representative list captures contain only relative publication data.
+Production support therefore remains Watch-only, and no request, provider,
+permission, persistence rule, or fallback implementation exists for list pages.
 
-| Surface fixture | Qualification |
-| --- | --- |
-| Modern Home lockup | `unsupported-local` |
-| Legacy Search main result | `unsupported-local` |
-| Channel Videos modern grid lockup | `unsupported-local` |
+For manual verification, load a built artifact from `dist/dev/<browser>`, then:
 
-The evidence gate remains `locallyDeliveredSurface: null`. The explicit
-`9-HITL` choice was `local-only`; Branch B evidence work was not authorized and
-no contract, request, provider, permission, persistence rule, or fallback
-implementation exists. Canonical Watch is still the only positive YouTube
-surface. This matches the finalized Watch-only PRD; positive list replacement
-remains future scope. The assembled-product browser check remains deferred to
-the user's final review and is not part of the offline evidence.
+1. Open a canonical desktop Watch page and confirm that its publication label
+   becomes an exact localized value.
+2. Navigate to another Watch video without a full reload and confirm that the
+   first video's output is restored before identity-matched data for the second
+   video can render.
+3. Navigate to Home, Search, and a Channel Videos page and confirm that list
+   publication labels remain unchanged.
 
 New positive list support must begin with new representative evidence that
 already binds DOM identity, visible label, loaded record, and an approved

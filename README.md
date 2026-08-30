@@ -286,21 +286,15 @@ Choose **Reset all settings** on the options page to restore:
 | Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
 | Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
 | Same-document navigation to a list or unsupported route | Obsolete Watch output is restored and the unsupported route remains unchanged. |
-| Captured modern YouTube Home lockup with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
-| Captured legacy YouTube Search main-result shape with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
-| Captured Channel Videos modern grid lockup with relative-only local data | It remains unchanged; this shape is evidenced as `unsupported-local`. |
+| YouTube Home, Search, or Channel list page | Publication labels remain unchanged. |
 | Generic date-only `time[datetime]` | Page content remains unchanged because generic processing is instant-only. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
 | Format or time zone changes | Existing output is reformatted when reachable. |
 
-The completed capture-backed list matrix classifies the investigated modern
-Home lockup, legacy Search main result, and Channel Videos modern grid lockup
-as `unsupported-local`. Therefore no captured local list surface is delivered.
-The finalized Watch-only scope keeps those captures as safe no-op research
-evidence. Canonical Watch remains the only positive YouTube surface; no
-fallback request, provider, permission, or runtime behavior exists.
+YouTube support is Watch-only. Home, Search, and Channel list pages remain
+unchanged, and the extension makes no fallback request for publication data.
 
 ## Permissions and Privacy
 
@@ -312,8 +306,8 @@ The extension requests:
 - **Scripting:** registers, updates, and removes one universal content runtime
   at document start for all frames.
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
-  can verify each frame's revision acknowledgement, and sends a payload-free
-  route-reconciliation signal to the exact frame after a history-state update.
+  can verify each frame's revision acknowledgement, and coalesces YouTube
+  history-state updates into payload-free route signals for the exact frame.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
 No More Ago does not derive dates from visible relative or absolute labels,
@@ -365,24 +359,8 @@ source types are deferred.
   Custom mode projects only the configured calendar fields and falls back to
   that localized date-only style when the projection is unusable. It never
   adds a time or applies the configured time zone.
-- Canonical Watch is the only positive YouTube source. The captured Home,
-  Search, and Channel list shapes remain `unsupported-local`. The selected
-  local-only outcome adds no player request; positive list replacement remains
-  outside the finalized Watch-only scope.
-- The recorded modern YouTube Home lockup shape contains relative-only local
-  data and remains unchanged. Its `unsupported-local` qualification applies
-  only to that captured shape; it is not Home replacement support or a promise
-  about other experiments, future markup, or all list surfaces.
-- The recorded legacy YouTube Search main-result shape also contains only
-  relative local publication data and remains unchanged. Its
-  `unsupported-local` qualification is not positive Search replacement
-  support and does not generalize to shelves, the three excluded DOM
-  identities, other Search experiments, future markup, or every list surface.
-- The recorded Channel Videos modern grid lockup also contains relative-only
-  local publication data and remains unchanged. Its `unsupported-local`
-  qualification is not positive Channel replacement support and does not
-  generalize to other Channel tabs, routes, shelves, Shorts, experiments,
-  future markup, or all Channel pages.
+- YouTube support is Watch-only. Home, Search, and Channel list publication
+  labels remain unchanged, and no fallback request is made for them.
 - The interface is available in English only.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.

@@ -165,11 +165,12 @@ unpacked or temporary extension when manual browser verification is needed.
 - Scope dynamic-route provenance to the current URL and lifecycle generation.
   Identity-bound loaded data may remain live when its identity matches the
   current route, but unbound reused data must fail closed until a full-document
-  boundary or another real identity relation exists. On every changed route,
-  invalidate prior asynchronous work and restore verified ownership before
-  producing current-route output. Accept delayed output only for the exact
-  current token, generation, URL, document, connected element, opaque identity,
-  policy, candidate source, and trusted value.
+  boundary or another real identity relation exists. Sample the live URL before
+  mutation processing. When a route change alters adapter provenance, advance
+  the generation and restore verified ownership before producing current-route
+  output; route-irrelevant changes must not tear down existing output. Accept
+  queued route-observer work only for the exact current generation, URL,
+  document, session, source, and trusted value.
 - Qualify a third-party list shape from one provenance-backed capture that
   joins route and card identity, the visible source, and its loaded record.
   Keep eligibility inside that capture's evidenced loaded record set. Outer

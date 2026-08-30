@@ -19,6 +19,10 @@ import {
 import {
     TELEGRAM_WEB_K_ADAPTER_ID,
 } from "../../../../src/content-script/adapters/telegram-web-k";
+import {
+    YOUTUBE_ADAPTER_ID,
+    YOUTUBE_PLAYER_RESPONSE_RULE_ID,
+} from "../../../../src/shared/adapters/youtube-contract";
 
 const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
 
@@ -134,7 +138,7 @@ describe("resolveTrustedTimestamp", () => {
     });
 
     const calendarCandidate = (rawDatetime: string): TimestampCandidate => ({
-        ruleId: "youtube",
+        ruleId: YOUTUBE_ADAPTER_ID,
         source: document.createElement("yt-formatted-string"),
         sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
         rawDatetime,
@@ -146,7 +150,7 @@ describe("resolveTrustedTimestamp", () => {
     it("preserves a trusted calendar date as a non-instant value", () => {
         const source = document.createElement("yt-formatted-string");
         const result = resolveTrustedTimestamp({
-            ruleId: "youtube",
+            ruleId: YOUTUBE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
             rawDatetime: "2024-02-29",
@@ -178,7 +182,7 @@ describe("resolveTrustedTimestamp", () => {
     });
 
     const combinedCandidate = (rawDatetime: string): TimestampCandidate => ({
-        ruleId: "youtube-player-response",
+        ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
         source: document.createElement("yt-formatted-string"),
         sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
         rawDatetime,

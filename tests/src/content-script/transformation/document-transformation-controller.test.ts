@@ -24,9 +24,6 @@ import {
     type DocumentRouteHandoffPolicy,
     type DocumentRouteHandoffSession,
 } from "../../../../src/content-script/transformation/route-handoff";
-import type { DeferredTimestampResolver } from
-    "../../../../src/content-script/transformation/deferred-timestamp-resolution";
-import type { TimestampCandidate } from "../../../../src/content-script/adapters/types";
 
 const noMatchRule: TimestampSourceRule = {
     id: "no-match",
@@ -73,28 +70,6 @@ function createGenericControllerFixture(
             root: document,
             locales: ["en-US"],
         }),
-    };
-}
-
-/**
- * Creates one valid synthetic deferred candidate for an exact source.
- *
- * @param source - Exact unresolved source.
- * @param rawDatetime - Explicit zoned datetime to render.
- * @returns - Trusted-boundary candidate for the source.
- */
-function deferredCandidate(
-    source: Element,
-    rawDatetime = "2026-08-30T10:15Z",
-): TimestampCandidate {
-    return {
-        ruleId: "deferred-test",
-        source,
-        sourceKind: "time",
-        rawDatetime,
-        presentation: ADJACENT_TIME_PRESENTATION,
-        validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
-        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
     };
 }
 
@@ -871,9 +846,9 @@ describe("DocumentTransformationController", () => {
             const visits: Element[] = [];
             const instrumented: TimestampSourceRule = {
                 ...hackerNewsAdapter,
-                extract: (element) => {
+                extract: (element, url) => {
                     visits.push(element);
-                    return hackerNewsAdapter.extract(element);
+                    return hackerNewsAdapter.extract(element, url);
                 },
             };
             const controller = new DocumentTransformationController({
@@ -1103,7 +1078,7 @@ describe("DocumentTransformationController", () => {
         }
     });
 
-    it("applies preserve, clear, and replace as total observable route transitions", () => {
+    it("applies no-op, preserve, clear, and replace as total route transitions", () => {
         document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
         const source = document.querySelector("time");
         if (!source) {
@@ -1121,10 +1096,12 @@ describe("DocumentTransformationController", () => {
         });
         const quarantine: DocumentRouteHandoffPolicy = {
             allowsRule: () => false,
-            allowsDeferred: () => false,
             activate,
         };
         const classifier = vi.fn(({ currentUrl }: { readonly currentUrl: URL }) => {
+            if (currentUrl.pathname === "/noop") {
+                return { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP } as const;
+            }
             if (currentUrl.pathname === "/replace") {
                 return {
                     kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
@@ -1145,6 +1122,11 @@ describe("DocumentTransformationController", () => {
 
         const initial = controller.start();
         expect(initial).toHaveLength(1);
+        const initialOutput = initial[0];
+        controller.reconcileRoute(new URL("https://example.test/noop"));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBe(initialOutput);
+        expect(activate).not.toHaveBeenCalled();
+
         controller.reconcileRoute(new URL("https://example.test/replace"));
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         expect(source.hasAttribute("hidden")).toBe(false);
@@ -1184,7 +1166,6 @@ describe("DocumentTransformationController", () => {
         const events: string[] = [];
         const firstPolicy: DocumentRouteHandoffPolicy = {
             allowsRule: () => true,
-            allowsDeferred: () => true,
             activate: () => ({
                 noteStructure: () => undefined,
                 dispose: () => events.push("dispose"),
@@ -1192,7 +1173,6 @@ describe("DocumentTransformationController", () => {
         };
         const secondPolicy: DocumentRouteHandoffPolicy = {
             allowsRule: () => true,
-            allowsDeferred: () => true,
             activate: () => {
                 events.push("activate");
                 expect(source.hasAttribute("hidden")).toBe(false);
@@ -1267,188 +1247,4 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
-    it("deduplicates a current deferred request and applies its valid completion", async () => {
-        document.body.innerHTML = '<span data-identity="alpha">relative</span>';
-        const source = document.querySelector("span");
-        if (!source) {
-            throw new Error("Expected deferred source");
-        }
-        let complete: ((candidate: TimestampCandidate | null) => void) | undefined;
-        const resolveDeferred = vi.fn(() => new Promise<TimestampCandidate | null>((resolve) => {
-            complete = resolve;
-        }));
-        const resolver: DeferredTimestampResolver = {
-            identify: (element) => element.getAttribute("data-identity"),
-            resolve: resolveDeferred,
-        };
-        const unresolved: TimestampSourceRule = {
-            id: "unresolved",
-            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.CLASS],
-            matches: () => true,
-            matchesElement: (element) => element === source,
-            discover: (root) => [
-                ...(root instanceof Element && root.matches("span") ? [root] : []),
-                ...root.querySelectorAll("span"),
-            ],
-            extract: () => null,
-        };
-        const controller = new DocumentTransformationController({
-            url: new URL("https://example.test/a"),
-            root: document,
-            locales: ["en-US"],
-            registry: new AdapterRegistry([unresolved], noMatchRule),
-            deferredResolver: resolver,
-        });
-        controller.start();
-        expect(resolveDeferred).toHaveBeenCalledOnce();
-
-        source.classList.add("layout-change");
-        await flushMutations();
-        expect(resolveDeferred).toHaveBeenCalledOnce();
-
-        complete?.(deferredCandidate(source));
-        await flushMutations();
-        expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
-        expect((source.nextElementSibling as HTMLTimeElement).dateTime)
-            .toBe("2026-08-30T10:15Z");
-        controller.teardown();
-    });
-
-    it("rejects stale work across every lifecycle boundary", async () => {
-        document.body.innerHTML = '<span data-identity="alpha">relative</span>';
-        const source = document.querySelector("span");
-        if (!source) {
-            throw new Error("Expected deferred source");
-        }
-        const completions: Array<(candidate: TimestampCandidate | null) => void> = [];
-        const resolver: DeferredTimestampResolver = {
-            identify: (element, url) => {
-                const identity = element.getAttribute("data-identity");
-                return identity === null ? null : `${identity}:${url.pathname}`;
-            },
-            resolve: vi.fn(() => new Promise<TimestampCandidate | null>((resolve) => {
-                completions.push(resolve);
-            })),
-        };
-        const unresolved: TimestampSourceRule = {
-            id: "unresolved",
-            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.CLASS],
-            matches: () => true,
-            matchesElement: (element) => element === source,
-            discover: (root) => [
-                ...(root instanceof Element && root.matches("span") ? [root] : []),
-                ...root.querySelectorAll("span"),
-            ],
-            extract: () => null,
-        };
-        const controller = new DocumentTransformationController({
-            url: new URL("https://example.test/a"),
-            root: document,
-            locales: ["en-US"],
-            registry: new AdapterRegistry([unresolved], noMatchRule),
-            deferredResolver: resolver,
-        });
-        controller.start();
-        controller.reconcileRoute(new URL("https://example.test/b"));
-        controller.reconcileRoute(new URL("https://example.test/a"));
-        expect(completions).toHaveLength(3);
-
-        completions[0]?.(deferredCandidate(source, "2026-08-01T10:15Z"));
-        await flushMutations();
-        expect(source.nextElementSibling).toBeNull();
-
-        source.setAttribute("data-identity", "beta");
-        source.classList.add("identity-change");
-        await flushMutations();
-        expect(completions).toHaveLength(4);
-        completions[2]?.(deferredCandidate(source, "2026-08-02T10:15Z"));
-        await flushMutations();
-        expect(source.nextElementSibling).toBeNull();
-
-        source.remove();
-        completions[3]?.(deferredCandidate(source, "2026-08-03T10:15Z"));
-        await flushMutations();
-        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
-
-        document.body.append(source);
-        await flushMutations();
-        expect(completions).toHaveLength(5);
-
-        source.remove();
-        document.body.append(source);
-        await flushMutations();
-        expect(completions).toHaveLength(6);
-        completions[4]?.(deferredCandidate(source, "2026-08-04T10:15Z"));
-        await flushMutations();
-        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
-
-        const replacement = document.createElement("span");
-        replacement.dataset.identity = "beta";
-        replacement.textContent = "replacement";
-        source.replaceWith(replacement);
-        await flushMutations();
-        expect(completions).toHaveLength(7);
-        completions[5]?.(deferredCandidate(source, "2026-08-05T10:15Z"));
-        await flushMutations();
-        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
-
-        controller.teardown();
-        completions[6]?.(deferredCandidate(replacement, "2026-08-06T10:15Z"));
-        await flushMutations();
-        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
-    });
-
-    it("makes null, rejection, invalid, and wrong-source outcomes terminal", async () => {
-        for (const outcome of ["null", "reject", "invalid", "wrong-source"] as const) {
-            document.body.innerHTML = '<span data-identity="alpha">relative</span>'
-                + '<span id="foreign">foreign</span>';
-            const source = document.querySelector("span[data-identity]");
-            const foreign = document.getElementById("foreign");
-            if (!source || !foreign) {
-                throw new Error("Expected deferred sources");
-            }
-            let complete: ((candidate: TimestampCandidate | null) => void) | undefined;
-            let reject: ((error: Error) => void) | undefined;
-            const resolveDeferred = vi.fn(() =>
-                new Promise<TimestampCandidate | null>((resolve, fail) => {
-                    complete = resolve;
-                    reject = fail;
-                }));
-            const resolver: DeferredTimestampResolver = {
-                identify: (element) => element.getAttribute("data-identity"),
-                resolve: resolveDeferred,
-            };
-            const unresolved: TimestampSourceRule = {
-                id: "unresolved",
-                mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.CLASS],
-                matches: () => true,
-                matchesElement: (element) => element === source,
-                discover: () => [source],
-                extract: () => null,
-            };
-            const controller = new DocumentTransformationController({
-                url: new URL("https://example.test/a"),
-                root: document,
-                registry: new AdapterRegistry([unresolved], noMatchRule),
-                deferredResolver: resolver,
-            });
-            controller.start();
-            if (outcome === "reject") {
-                reject?.(new Error("private rejection text"));
-            } else if (outcome === "invalid") {
-                complete?.(deferredCandidate(source, "invalid"));
-            } else if (outcome === "wrong-source") {
-                complete?.(deferredCandidate(foreign));
-            } else {
-                complete?.(null);
-            }
-            await flushMutations();
-            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
-
-            source.classList.add("later-layout-change");
-            await flushMutations();
-            expect(resolveDeferred).toHaveBeenCalledOnce();
-            controller.teardown();
-        }
-    });
 });
