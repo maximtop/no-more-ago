@@ -18,6 +18,7 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
+
 import { OWNED_OUTPUT_ATTRIBUTE } from
     "../../../../src/content-script/ownership-markers";
 

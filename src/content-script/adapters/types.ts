@@ -25,6 +25,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     HACKER_NEWS_AGE: "hacker-news-age",
     STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
     TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
+    TIKTOK_PUBLICATION: "tiktok-publication",
     LINKEDIN_TIMESTAMP: "linkedin-timestamp",
     YT_FORMATTED_STRING: "yt-formatted-string",
 } as const;
@@ -34,11 +35,13 @@ export const TIMESTAMP_SOURCE_KIND = {
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     CLASS: "class",
+    DATA_E2E: "data-e2e",
     ARIA_HIDDEN: "aria-hidden",
     DATA_TIMESTAMP: "data-timestamp",
     DATETIME: "datetime",
     FORMAT: "format",
     HREF: "href",
+    ID: "id",
     TITLE: "title",
     DATA_ID: "data-id",
     DATA_URN: "data-urn",
@@ -60,6 +63,7 @@ export const TIMESTAMP_MUTATION_KIND = {
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
     ADJACENT_TIME: "adjacent-time",
+    APPENDED_TIME: "appended-time",
     IN_PLACE_TEXT: "in-place-text",
 } as const;
 
@@ -71,10 +75,18 @@ export const ADJACENT_TIME_PRESENTATION = {
 } as const;
 
 /**
+ * Shared presentation descriptor for generated output that preserves its source.
+ */
+export const APPENDED_TIME_PRESENTATION = {
+    kind: TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME,
+} as const;
+
+/**
  * Validated presentation strategy carried from adapter extraction to rendering.
  */
 export type TimestampPresentation =
     | typeof ADJACENT_TIME_PRESENTATION
+    | typeof APPENDED_TIME_PRESENTATION
     | {
         /**
          * In-place strategy discriminant.
@@ -131,7 +143,7 @@ export type TimestampVisibilityPolicy =
     (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
 
 /**
- * Fields shared by page-datetime and derived timestamp candidates.
+ * Fields shared by validated-string and derived timestamp candidates.
  */
 interface TimestampCandidateBase {
     /**
@@ -161,16 +173,16 @@ interface TimestampCandidateBase {
 }
 
 /**
- * Candidate backed by a page-authored datetime string.
+ * Candidate backed by an adapter-supplied datetime string.
  */
-export interface PageDatetimeTimestampCandidate extends TimestampCandidateBase {
+export interface ValidatedStringTimestampCandidate extends TimestampCandidateBase {
     /**
-     * Unparsed datetime attribute supplied by the source.
+     * Adapter-supplied timestamp evidence before shared validation and parsing.
      */
     readonly rawDatetime: string;
 
     /**
-     * Page-datetime validation rule.
+     * String-datetime validation rule.
      */
     readonly validationRule:
         | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
@@ -214,7 +226,7 @@ export interface DerivedUnixMillisecondsTimestampCandidate
  * Canonical candidate emitted by a timestamp source rule.
  */
 export type TimestampCandidate =
-    | PageDatetimeTimestampCandidate
+    | ValidatedStringTimestampCandidate
     | DerivedUnixMillisecondsTimestampCandidate;
 
 /**
@@ -231,6 +243,28 @@ export interface TimestampExtractionContext {
      */
     readonly readPageText: (target: Text) => string;
 }
+
+/**
+ * Explicit ownership result for an adapter-specific mutation mapper.
+ */
+export interface TimestampMutationSourceResult {
+    /**
+     * Whether the custom mapper fully handled the mutation, including a deliberate no-op.
+     */
+    readonly handled: boolean;
+
+    /**
+     * Exact sources selected by the custom mapper.
+     */
+    readonly sources: readonly Element[];
+}
+
+/**
+ * Mutation sources with optional explicit handled/delegate semantics.
+ */
+export type TimestampMutationSourceSelection =
+    | readonly Element[]
+    | TimestampMutationSourceResult;
 
 /**
  * Generic or site-specific source rule for trusted timestamp candidates.
@@ -262,7 +296,8 @@ export interface TimestampSourceRule {
      * @param oldValue - Attribute value before the mutation.
      * @param context - Read-only page extraction context.
      * @param mutationKind - Kind of DOM mutation being mapped.
-     * @returns - Exact source elements that require re-evaluation.
+     * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
+     * delegates to normal ancestor matching.
      */
     readonly getMutationSources?: (
         element: Element,
@@ -270,7 +305,22 @@ export interface TimestampSourceRule {
         oldValue: string | null,
         context: TimestampExtractionContext,
         mutationKind: TimestampMutationKind,
-    ) => readonly Element[];
+    ) => TimestampMutationSourceSelection;
+
+    /**
+     * Maps child membership changes back to sources whose eligibility or evidence changed.
+     *
+     * @param element - Element whose direct child list changed.
+     * @param addedNodes - Nodes added by the page-authored mutation.
+     * @param removedNodes - Nodes removed by the page-authored mutation.
+     * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
+     * delegates to normal ancestor matching.
+     */
+    readonly getChildMutationSources?: (
+        element: Element,
+        addedNodes: readonly Node[],
+        removedNodes: readonly Node[],
+    ) => TimestampMutationSourceSelection;
 
     /**
      * Determines whether the rule applies to the page URL.

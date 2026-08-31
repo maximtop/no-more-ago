@@ -402,7 +402,17 @@ export class SettingsService {
     public async resetAll(): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
-            const defaults = DEFAULT_SETTINGS_SNAPSHOT;
+            const loaded = await this.load();
+            const previous = loaded.ok
+                ? loaded.snapshot
+                : this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
+            const defaults = createSettingsSnapshot(
+                previous.revision + 1,
+                DEFAULT_SETTINGS_SNAPSHOT.globalEnabled,
+                DEFAULT_SETTINGS_SNAPSHOT.sitePreferences,
+                DEFAULT_SETTINGS_SNAPSHOT.display,
+                DEFAULT_SETTINGS_SNAPSHOT.debugEnabled,
+            );
             try {
                 await this.storage.set(this.pair(defaults, defaults));
             } catch {

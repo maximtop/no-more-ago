@@ -9,7 +9,7 @@ import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
-    type PageDatetimeTimestampCandidate,
+    type ValidatedStringTimestampCandidate,
     type TimestampCandidate,
     type TimestampPresentation,
     type TimestampVisibilityPolicy,
@@ -64,7 +64,10 @@ function resolvePresentation(
     presentation: TimestampPresentation,
 ): TimestampPresentation | null {
     const kind: string = presentation.kind;
-    if (kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
+    if (
+        kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME
+        || kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME
+    ) {
         return presentation;
     }
     if (
@@ -201,7 +204,7 @@ interface ResolvedPageTimestampBase extends ResolvedTimestampBase {
     /**
      * Page-value validation rule that accepted the candidate.
      */
-    readonly validationRule: PageDatetimeTimestampCandidate["validationRule"];
+    readonly validationRule: ValidatedStringTimestampCandidate["validationRule"];
 }
 
 /**

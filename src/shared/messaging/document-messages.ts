@@ -8,30 +8,14 @@ import type { DisplaySettings } from "../settings/snapshot";
 import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 
 /**
- * Requests that a document runtime stop and release its controller.
+ * Reconciles a document runtime with one effective, revisioned activation policy.
  */
-export const TEARDOWN_DOCUMENT_MESSAGE = "no-more-ago:teardown";
+export const RECONCILE_DOCUMENT_POLICY_MESSAGE = "no-more-ago:reconcile-document-policy";
 
 /**
- * Requests a document runtime to refresh its top-level policy.
+ * Acknowledges the policy revision retained by a document runtime.
  */
-export const REFRESH_DOCUMENT_POLICY_MESSAGE = "no-more-ago:refresh-document-policy";
-
-/**
- * Requests a document runtime to synchronously suspend before refreshing policy.
- */
-export const SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE =
-    "no-more-ago:suspend-and-refresh-document-policy";
-
-/**
- * Acknowledges delivery of a document policy refresh command.
- */
-export const DOCUMENT_POLICY_REFRESHED_MESSAGE = "no-more-ago:document-policy-refreshed";
-
-/**
- * Acknowledges synchronous restoration and teardown of a document runtime.
- */
-export const DOCUMENT_TORN_DOWN_MESSAGE = "no-more-ago:document-torn-down";
+export const DOCUMENT_POLICY_RECONCILED_MESSAGE = "no-more-ago:document-policy-reconciled";
 
 /**
  * Requests that a document runtime sample and reconcile its current route.
@@ -94,24 +78,20 @@ const presentationDisplaySchema = v.pipe(
 );
 
 /**
- * Schema for a command that stops a document runtime.
+ * Schema for a convergent document-policy command.
  */
-const teardownDocumentMessageSchema = v.strictObject({
-    type: v.literal(TEARDOWN_DOCUMENT_MESSAGE),
+const reconcileDocumentPolicyMessageSchema = v.strictObject({
+    type: v.literal(RECONCILE_DOCUMENT_POLICY_MESSAGE),
+    revision: v.nullable(nonNegativeSafeIntegerSchema),
+    enabled: v.boolean(),
 });
 
 /**
- * Schema for a command that refreshes the document policy.
+ * Schema for a document-policy acknowledgement.
  */
-const refreshDocumentPolicyMessageSchema = v.strictObject({
-    type: v.literal(REFRESH_DOCUMENT_POLICY_MESSAGE),
-});
-
-/**
- * Schema for a command that suspends and refreshes the document policy.
- */
-const suspendAndRefreshDocumentPolicyMessageSchema = v.strictObject({
-    type: v.literal(SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE),
+const documentPolicyReconciledMessageSchema = v.strictObject({
+    type: v.literal(DOCUMENT_POLICY_RECONCILED_MESSAGE),
+    revision: v.nullable(nonNegativeSafeIntegerSchema),
 });
 
 /**
@@ -184,20 +164,17 @@ const diagnosticEventMessageSchema = v.strictObject({
 });
 
 /**
- * Command that stops a document runtime.
+ * Command that reconciles the document's effective top-level policy.
  */
-type TeardownDocumentMessage = v.InferOutput<typeof teardownDocumentMessageSchema>;
+export type ReconcileDocumentPolicyMessage = v.InferOutput<
+    typeof reconcileDocumentPolicyMessageSchema
+>;
 
 /**
- * Command that refreshes the document's effective top-level policy.
+ * Reply confirming the document-policy revision retained by the runtime.
  */
-type RefreshDocumentPolicyMessage = v.InferOutput<typeof refreshDocumentPolicyMessageSchema>;
-
-/**
- * Command that suspends the document before refreshing its effective policy.
- */
-type SuspendAndRefreshDocumentPolicyMessage = v.InferOutput<
-    typeof suspendAndRefreshDocumentPolicyMessageSchema
+export type DocumentPolicyReconciledMessage = v.InferOutput<
+    typeof documentPolicyReconciledMessageSchema
 >;
 
 /**
@@ -252,37 +229,30 @@ export type DocumentPhase = v.InferOutput<typeof documentPhaseSchema>;
 type DocumentStatusResponse = v.InferOutput<typeof documentStatusResponseSchema>;
 
 /**
- * Recognizes an object containing only the document-teardown command.
+ * Recognizes an exact revisioned document-policy command.
  *
  * @param value - Runtime message.
- * @returns - Whether the value is an exact teardown command.
+ * @returns - Whether the value is a document-policy reconciliation command.
  */
-export function isTeardownDocumentMessage(value: unknown): value is TeardownDocumentMessage {
-    return v.safeParse(teardownDocumentMessageSchema, value).success;
+export function isReconcileDocumentPolicyMessage(
+    value: unknown,
+): value is ReconcileDocumentPolicyMessage {
+    return v.safeParse(reconcileDocumentPolicyMessageSchema, value).success;
 }
 
 /**
- * Recognizes an exact policy-refresh command.
+ * Recognizes a document-policy acknowledgement for one expected revision.
  *
- * @param value - Runtime message.
- * @returns - Whether the value is a policy-refresh command.
+ * @param value - Runtime response.
+ * @param expectedRevision - Revision the acknowledgement must retain.
+ * @returns - Whether the value acknowledges the expected document policy.
  */
-export function isRefreshDocumentPolicyMessage(
+export function isDocumentPolicyReconciledMessage(
     value: unknown,
-): value is RefreshDocumentPolicyMessage {
-    return v.safeParse(refreshDocumentPolicyMessageSchema, value).success;
-}
-
-/**
- * Recognizes an exact suspend-and-refresh command.
- *
- * @param value - Runtime message.
- * @returns - Whether the value is a suspend-and-refresh command.
- */
-export function isSuspendAndRefreshDocumentPolicyMessage(
-    value: unknown,
-): value is SuspendAndRefreshDocumentPolicyMessage {
-    return v.safeParse(suspendAndRefreshDocumentPolicyMessageSchema, value).success;
+    expectedRevision: number | null,
+): value is DocumentPolicyReconciledMessage {
+    const parsed = v.safeParse(documentPolicyReconciledMessageSchema, value);
+    return parsed.success && parsed.output.revision === expectedRevision;
 }
 
 /**

@@ -13,9 +13,8 @@ import {
 import { DOCUMENT_RUNTIME_SLOT } from "../../../src/content-script/runtime";
 import { GET_DOCUMENT_STATE_MESSAGE } from "../../../src/shared/messaging/contracts";
 import {
-    DOCUMENT_POLICY_REFRESHED_MESSAGE,
-    REFRESH_DOCUMENT_POLICY_MESSAGE,
-    SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
+    DOCUMENT_POLICY_RECONCILED_MESSAGE,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
 } from "../../../src/shared/messaging/document-messages";
 import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
 import {
@@ -94,12 +93,13 @@ function expectLocalOnlyDocument(
  * Creates a ready document-state response.
  *
  * @param enabled - Effective top-level policy.
+ * @param revision - Settings revision carried by the state.
  * @returns - Ready document state.
  */
-function state(enabled = true) {
+function state(enabled = true, revision = 2) {
     return {
         availability: "ready" as const,
-        revision: 2,
+        revision,
         enabled,
         display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
         debugEnabled: false,
@@ -220,9 +220,10 @@ describe("content entrypoint", () => {
             expect(originalLabelText.length).toBeGreaterThan(0);
 
             let enabled = true;
+            let revision = 2;
             const sendMessage = vi.fn(async (message: unknown) => {
                 expect(message).toEqual({ type: GET_DOCUMENT_STATE_MESSAGE });
-                return state(enabled);
+                return state(enabled, revision);
             });
             const chrome = installChromeMock(sendMessage);
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
@@ -241,23 +242,32 @@ describe("content entrypoint", () => {
             expect(forbiddenFetch).not.toHaveBeenCalled();
 
             enabled = false;
+            revision = 3;
             expect(chrome.dispatch({
-                type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-            })).toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision,
+                enabled,
+            })).toEqual({ type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision });
             await flushRuntime();
 
             expectLocalOnlyDocument(originalMarkup, labelSelector, originalLabelText);
             expect(forbiddenFetch).not.toHaveBeenCalled();
 
             enabled = true;
-            expect(chrome.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE })).toEqual({
-                type: DOCUMENT_POLICY_REFRESHED_MESSAGE,
+            revision = 4;
+            expect(chrome.dispatch({
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision,
+                enabled,
+            })).toEqual({
+                type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
+                revision,
             });
             await flushRuntime();
 
             expectLocalOnlyDocument(originalMarkup, labelSelector, originalLabelText);
             expect(forbiddenFetch).not.toHaveBeenCalled();
-            expect(sendMessage).toHaveBeenCalledTimes(3);
+            expect(sendMessage).toHaveBeenCalledTimes(2);
             expect(chrome.onMessage.addListener).toHaveBeenCalledOnce();
         },
     );

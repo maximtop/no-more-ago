@@ -20,6 +20,7 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
     type TimestampMutationKind,
+    type TimestampMutationSourceResult,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
@@ -802,7 +803,7 @@ function getMutationSources(
     oldValue: string | null,
     context: TimestampExtractionContext,
     mutationKind: TimestampMutationKind,
-): readonly Element[] {
+): TimestampMutationSourceResult {
     if (
         mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
         && (
@@ -810,16 +811,16 @@ function getMutationSources(
             || !resolvePresentation(element, context)
         )
     ) {
-        return [];
+        return { handled: true, sources: [] };
     }
     if (
         attributeName
         && !isRelevantAttributeMutation(element, attributeName, oldValue)
     ) {
-        return [];
+        return { handled: true, sources: [] };
     }
     const source = findPotentialAssociationSource(element, context);
-    return source ? [source] : [];
+    return { handled: true, sources: source ? [source] : [] };
 }
 
 /**

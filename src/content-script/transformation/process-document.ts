@@ -297,12 +297,14 @@ interface CandidateCollection {
  * Selects active rules and reports an unsupported URL through the bounded diagnostic contract.
  *
  * @param input - Processing dependencies carrying URL, registry, and diagnostics.
+ * @param url - Current URL snapshot used for this pass.
  * @returns - Matching rules in source precedence order.
  */
 function getMatchingRules(
     input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+    url: URL,
 ): readonly TimestampSourceRule[] {
-    const rules = (input.registry ?? defaultRegistry).matching(input.url);
+    const rules = (input.registry ?? defaultRegistry).matching(url);
     if (rules.length === 0) {
         input.diagnosticSink?.({
             category: DIAGNOSTIC_CATEGORY.SKIP,
@@ -402,7 +404,7 @@ function processCandidateCollection(
         );
         if (result) {
             renderedCount += 1;
-            if (result.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
+            if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
                 outputs.push(result.output);
             }
         }
@@ -426,7 +428,8 @@ function processCandidateCollection(
  */
 function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeElement[] {
     const { root } = input;
-    const rules = getMatchingRules(input);
+    const url = input.url;
+    const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
     }
@@ -437,7 +440,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
-    const extractionContext = createExtractionContext(input.url);
+    const extractionContext = createExtractionContext(url);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
             if (!discovered.has(element)) {
@@ -498,7 +501,8 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 export function reconcileDocumentSources(
     input: ReconcileSourcesInput,
 ): readonly HTMLTimeElement[] {
-    const rules = getMatchingRules(input);
+    const url = input.url;
+    const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
     }
@@ -509,7 +513,7 @@ export function reconcileDocumentSources(
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
-    const extractionContext = createExtractionContext(input.url);
+    const extractionContext = createExtractionContext(url);
     for (const source of input.sources) {
         if (
             discovered.has(source)

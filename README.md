@@ -8,13 +8,14 @@ state for restoration.
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
 GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
-LinkedIn have specialized sources for trusted or best-effort timestamp inputs.
-These integrations preserve page-owned elements and links while updating
-simple labels in place when needed. Instagram uses the standard timestamp
-source with a specialized in-place presentation rule that preserves styling
-hooks. Site markup support is best-effort and may change independently of the
-extension. Canonical desktop YouTube watch pages also have specialized local
-publication sources for calendar dates and explicitly zoned instants.
+TikTok and LinkedIn have specialized sources for trusted or best-effort
+timestamp inputs. These integrations preserve page-owned elements and links
+while updating simple labels in place when needed. Instagram uses the standard
+timestamp source with a specialized in-place presentation rule that preserves
+styling hooks. Canonical desktop YouTube watch pages also have specialized
+local publication sources for calendar dates and explicitly zoned instants.
+Site markup support is best-effort and may change independently of the
+extension.
 
 ## Key Concepts
 
@@ -26,8 +27,8 @@ publication sources for calendar dates and explicitly zoned instants.
   calendar day without becoming an instant or receiving a time-zone shift.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange and Telegram Web K timestamps, or the approved YouTube watch label
-  and identity-matched loaded data or initial-document metadata, plus
+  Exchange, Telegram Web K, and TikTok timestamps; the approved YouTube watch
+  label and identity-matched loaded data or initial-document metadata; or
   best-effort LinkedIn ID timestamps. Specialized rules take precedence over
   the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
@@ -67,13 +68,13 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-Telegram Web K, and best-effort LinkedIn ID timestamps can also become exact
-dates. Instagram's simple standard timestamp labels retain their page-owned
-elements and styles. A supported YouTube watch calendar date becomes a
-localized date without a time, while a supported zoned publication instant
-becomes a localized date and time. Instant output follows the selected format,
-browser locale, and time zone; calendar-date output preserves the same day in
-every configured time zone.
+Telegram Web K, supported TikTok timestamps, and best-effort LinkedIn ID
+timestamps can also become exact dates. Instagram's simple standard timestamp
+labels retain their page-owned elements and styles. A supported YouTube watch
+calendar date becomes a localized date without a time, while a supported zoned
+publication instant becomes a localized date and time. Instant output follows
+the selected format, browser locale, and time zone; calendar-date output
+preserves the same day in every configured time zone.
 
 ## Features
 
@@ -147,6 +148,31 @@ Primary edit-time labels and ambiguous forwarded or saved-message shapes are
 left unchanged. Telegram Web A is unsupported because it does not expose the
 same safe machine-readable instant. The extension never parses Telegram's
 visible or localized clock text as timestamp evidence.
+
+TikTok support applies only to HTTPS `www.tiktok.com` user profiles and direct
+`/@handle/video/<post-id>` or `/@handle/photo/<post-id>` pages whose markup
+matches the tested guest or authenticated shapes. Direct video and photo pages
+replace one simple publication-date label in place. Profile grids add one
+removable exact date beneath each unambiguous video or photo card while
+preserving the card link.
+
+For a current publication, the extension first uses a string-valued
+`createTime` from the page's universal hydration JSON when the same record's
+string-valued `id` exactly matches the current post ID. Otherwise it accepts a
+strict 19-digit decimal post ID and derives Unix seconds as
+`BigInt(postId) >> 32n`. Both sources must fall between
+`2016-01-01T00:00:00Z` and the browser's current time plus 24
+hours. The ID-derived value is suitable for date-and-minute display, but its
+seconds are not claimed to be TikTok's exact publication second. A custom
+format that includes seconds still formats the decoded instant normally.
+
+TikTok processing reads only the current URL, supported DOM shapes, and the
+already loaded universal hydration script. It does not request TikTok data,
+inspect response bodies, or replace page `fetch` or `XMLHttpRequest`. Initial
+hydration can be stale after in-page navigation, so an embedded timestamp is
+never used for another post ID. Unsupported or ambiguous shapes are left
+unchanged. As with every site adapter, compatibility is best-effort because
+TikTok can change its markup independently.
 
 On a canonical `www.youtube.com/watch?v=<video-id>` URL, YouTube processing
 pairs the approved visible publication label with recognized data already
@@ -304,6 +330,7 @@ Choose **Reset all settings** on the options page to restore:
 | Situation | Result |
 | --- | --- |
 | Eligible zoned standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or LinkedIn timestamp | The trusted or best-effort ID instant is shown with the configured exact-date presentation. |
+| Supported TikTok profile card or direct video/photo publication | A matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is appended to the card or rendered in place. |
 | Eligible canonical YouTube watch calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
 | Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
 | Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
@@ -339,16 +366,22 @@ shape. The Stack Exchange source reads `title` only from its listed timestamp
 widgets and accepts only strict explicit-zone values plus the known
 comment-license suffix. LinkedIn is the best-effort derived-ID exception: it
 accepts only explicit supported IDs in approved local URL, URN, component-key,
-or data-anchor evidence and makes no network request. In-place sources change
-only their selected label text; link destinations, element identity,
-attributes, and event listeners remain intact. Standard processing remains
-limited to ordinary light-DOM `time[datetime]` elements.
+or data-anchor evidence and makes no network request. TikTok is the documented
+exception for link destinations: it accepts only a strict post ID from an exact
+supported current URL or profile-card link. In-place sources change only their
+selected label text; titles, link destinations, element identity, attributes,
+and event listeners remain intact. Standard processing remains limited to
+ordinary light-DOM `time[datetime]` elements.
 
 The Telegram Web K source trusts only a matching message bubble's ten-digit
 Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It
 does not inspect message text, authors, identifiers, localized titles, or full
 Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
 processing.
+
+TikTok support adds no permissions, settings, accounts, network requests, or
+external service. Successful processing does not retain post IDs, raw source
+timestamps, URL paths, authors, titles, or page content in diagnostics.
 
 YouTube publication processing reads only recognized values already present
 in the document. It does not make a network request or perform a player lookup.
@@ -364,13 +397,20 @@ source types are deferred.
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, LinkedIn, and
-  YouTube
+- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, TikTok,
+  LinkedIn, and YouTube
   are best-effort integrations whose markup can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
   may still use the universal generic rule.
+- TikTok support is limited to tested `www.tiktok.com/@...` profile, direct
+  video, and direct photo shapes. For You, Following, search, embeds, LIVE,
+  TikTok Studio, short/mobile links, other subdomains, and non-HTTPS pages do
+  not receive TikTok-specialized processing.
+- A timestamp decoded from a TikTok post ID is a validated fallback with
+  date-and-minute precision, not proof of TikTok's exact publication second.
+  TikTok markup and embedded-state compatibility remain best-effort.
 - YouTube support is limited to canonical desktop
   `www.youtube.com/watch?v=<11-character-video-id>` pages with the approved
   visible label and recognized loaded publication data, or one

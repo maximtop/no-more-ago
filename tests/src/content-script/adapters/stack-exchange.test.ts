@@ -148,8 +148,7 @@ describe("Stack Exchange source contract", () => {
 
         for (const id of ["license", "complex", "generic"]) {
             const source = document.getElementById(id);
-            expect(source ? stackExchangeAdapter.extract(source) : null)
-                .toBeNull();
+            expect(source ? stackExchangeAdapter.extract(source) : null).toBeNull();
         }
     });
 

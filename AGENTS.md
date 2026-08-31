@@ -24,12 +24,13 @@ No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized timestamps with exact, localized values. It ships
 a generic instant-only `time[datetime]` source for HTTP(S) documents,
 specialized sources for GitHub, Hacker News, supported Stack Exchange Q&A
-sites, Telegram Web K, and best-effort LinkedIn timestamps, plus a best-effort
-canonical YouTube watch publication source for calendar dates or explicitly
-zoned instants. Instagram uses a site-specific presentation rule for its
-standard timestamps. Public `https://t.me/s/*` pages use the generic source.
-Extraction remains separate from shared semantic validation, presentation,
-and rendering.
+sites, Telegram Web K, TikTok, and best-effort LinkedIn timestamps, plus a
+best-effort canonical YouTube watch publication source for calendar dates or
+explicitly zoned instants. Instagram uses a site-specific presentation rule for
+its standard timestamps. TikTok direct pages use in-place presentation and
+profile grids use appended generated-time presentation. Public
+`https://t.me/s/*` pages use the generic source. Extraction remains separate
+from shared semantic validation, presentation, and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -57,9 +58,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and best-effort
-  LinkedIn and canonical desktop YouTube watch-page publication sources, plus
-  an Instagram in-place presentation rule for standard timestamps.
+  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, TikTok, and
+  best-effort LinkedIn and canonical desktop YouTube watch-page publication
+  sources, plus an Instagram in-place presentation rule for standard
+  timestamps.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -409,9 +411,11 @@ Known architectural exclusions to improve when their area changes:
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
 - Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
-  LinkedIn- and YouTube-specific selectors, timestamp sources, and presentation
-  rules inside their respective adapters so adding or repairing a source
-  changes minimal shared business logic. Public `t.me/s/*` support remains on
+  TikTok-, LinkedIn-, and YouTube-specific selectors, timestamp sources,
+  presentation rules, and trusted evidence logic inside their respective
+  adapters so adding or repairing a source changes minimal shared business
+  logic. Keep TikTok URL, selector, hydration, and ID-decoding knowledge in
+  `src/content-script/adapters/tiktok*.ts`. Public `t.me/s/*` support remains on
   the generic standard timestamp source.
 - Keep YouTube route matching, selectors, loaded publication properties, and
   metadata provenance inside the YouTube contract and adapter. Treat its

@@ -12,6 +12,7 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceAttribute,
+    type TimestampMutationSourceResult,
     type TimestampSourceRule,
 } from "./types";
 
@@ -141,27 +142,27 @@ function getMutationSources(
     element: Element,
     attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
-): readonly Element[] {
+): TimestampMutationSourceResult {
     if (attributeName === undefined) {
         const source = findMutationSource(element, oldValue);
-        return source ? [source] : [];
+        return { handled: true, sources: source ? [source] : [] };
     }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP) {
-        return isHtmlElement(element)
+        return { handled: true, sources: isHtmlElement(element)
             && element.localName === "div"
             && element.classList.contains(MESSAGE_CLASS)
             && (element.hasAttribute("data-timestamp") || oldValue !== null)
             ? [element]
-            : [];
+            : [] };
     }
     if (
         attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.CLASS
         || !changedRelevantClass(element, oldValue)
     ) {
-        return [];
+        return { handled: true, sources: [] };
     }
     const source = findMutationSource(element, oldValue);
-    return source ? [source] : [];
+    return { handled: true, sources: source ? [source] : [] };
 }
 
 /**

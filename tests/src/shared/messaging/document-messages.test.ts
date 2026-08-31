@@ -13,25 +13,23 @@ import {
     DOCUMENT_PHASE,
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASES,
+    DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DIAGNOSTIC_EVENT_MESSAGE,
     RECONCILE_DOCUMENT_ROUTE_MESSAGE,
-    REFRESH_DOCUMENT_POLICY_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
-    SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    TEARDOWN_DOCUMENT_MESSAGE,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
     isDebugPolicyUpdateAcknowledgement,
     isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
     isDocumentStatusResponse,
+    isDocumentPolicyReconciledMessage,
     isDiagnosticEventMessage,
     isPresentationUpdateAcknowledgement,
     isPresentationUpdateMessage,
-    isRefreshDocumentPolicyMessage,
+    isReconcileDocumentPolicyMessage,
     isReconcileDocumentRouteMessage,
-    isSuspendAndRefreshDocumentPolicyMessage,
-    isTeardownDocumentMessage,
 } from "../../../../src/shared/messaging/document-messages";
 
 const display = { formatMode: "system" as const, timeZone: { mode: "utc" as const } };
@@ -40,22 +38,6 @@ const customDisplay = {
     pattern: "yyyy-MM-dd",
     timeZone: { mode: "utc" as const },
 };
-
-describe("teardown document message", () => {
-    it("accepts only the exact teardown object", () => {
-        expect(isTeardownDocumentMessage({ type: TEARDOWN_DOCUMENT_MESSAGE })).toBe(true);
-        for (const value of [
-            null,
-            [],
-            TEARDOWN_DOCUMENT_MESSAGE,
-            {},
-            { type: "other" },
-            { type: TEARDOWN_DOCUMENT_MESSAGE, extra: true },
-        ]) {
-            expect(isTeardownDocumentMessage(value)).toBe(false);
-        }
-    });
-});
 
 describe("document status message", () => {
     it("accepts only the exact request and guarded response phases", () => {
@@ -86,24 +68,46 @@ describe("document status message", () => {
 });
 
 describe("document policy messages", () => {
-    it("accepts exact refresh commands", () => {
-        expect(
-            isRefreshDocumentPolicyMessage({ type: REFRESH_DOCUMENT_POLICY_MESSAGE }),
-        ).toBe(true);
-        expect(
-            isSuspendAndRefreshDocumentPolicyMessage({
-                type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-            }),
-        ).toBe(true);
-        expect(
-            isRefreshDocumentPolicyMessage({ type: REFRESH_DOCUMENT_POLICY_MESSAGE, extra: true }),
-        ).toBe(false);
-        expect(
-            isSuspendAndRefreshDocumentPolicyMessage({
-                type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
+    it("accepts only complete revisioned reconciliation commands", () => {
+        expect(isReconcileDocumentPolicyMessage({
+            type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+            revision: 3,
+            enabled: true,
+        })).toBe(true);
+        expect(isReconcileDocumentPolicyMessage({
+            type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+            revision: null,
+            enabled: false,
+        })).toBe(true);
+        for (const value of [
+            null,
+            RECONCILE_DOCUMENT_POLICY_MESSAGE,
+            { type: RECONCILE_DOCUMENT_POLICY_MESSAGE, enabled: true },
+            { type: RECONCILE_DOCUMENT_POLICY_MESSAGE, revision: -1, enabled: true },
+            {
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision: 3,
+                enabled: true,
                 extra: true,
-            }),
-        ).toBe(false);
+            },
+        ]) {
+            expect(isReconcileDocumentPolicyMessage(value)).toBe(false);
+        }
+    });
+
+    it("acknowledges only the expected retained revision", () => {
+        expect(isDocumentPolicyReconciledMessage({
+            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
+            revision: 3,
+        }, 3)).toBe(true);
+        expect(isDocumentPolicyReconciledMessage({
+            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
+            revision: null,
+        }, null)).toBe(true);
+        expect(isDocumentPolicyReconciledMessage({
+            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
+            revision: 4,
+        }, 3)).toBe(false);
     });
 });
 

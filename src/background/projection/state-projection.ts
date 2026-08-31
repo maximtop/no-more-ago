@@ -29,6 +29,7 @@ import {
 import type { ActivationManager } from "../application/activation-manager";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
+import { settleBrowserOperation } from "../runtime/settle";
 
 /**
  * Maps a reconciliation failure to the popup failure vocabulary.
@@ -246,18 +247,20 @@ export class StateProjection {
                 failure: POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
             });
         }
-        try {
-            const response = await this.tabs.sendMessage(
-                current.tab.id,
+        const tabId = current.tab.id;
+        const status = await settleBrowserOperation(
+            () => this.tabs.sendMessage(
+                tabId,
                 { type: DOCUMENT_STATUS_MESSAGE },
                 { frameId: 0 },
-            );
-            if (!isDocumentStatusResponse(response) ||
-                (response.phase !== DOCUMENT_PHASE.WAITING
-                    && response.phase !== DOCUMENT_PHASE.ACTIVE)) {
-                throw new Error("invalid status");
-            }
-        } catch {
+            ),
+        );
+        if (
+            !status.ok
+            || !isDocumentStatusResponse(status.value)
+            || (status.value.phase !== DOCUMENT_PHASE.WAITING
+                && status.value.phase !== DOCUMENT_PHASE.ACTIVE)
+        ) {
             return this.ready(snapshot.revision, true, url.hostname, true, {
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: POPUP_RUNTIME_FAILURE.DOCUMENT_STATUS,
@@ -326,12 +329,13 @@ export class StateProjection {
         readonly tab: RuntimeTab | undefined;
         readonly error: boolean;
     }> {
-        try {
-            const tabs = await this.tabs.query({ active: true, currentWindow: true });
-            return { tab: tabs[0], error: false };
-        } catch {
+        const result = await settleBrowserOperation(
+            () => this.tabs.query({ active: true, currentWindow: true }),
+        );
+        if (!result.ok) {
             return { tab: undefined, error: true };
         }
+        return { tab: result.value[0], error: false };
     }
 
     /**

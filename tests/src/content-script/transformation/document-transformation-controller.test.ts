@@ -165,6 +165,77 @@ describe("DocumentTransformationController", () => {
         expect(target.data).toBe("1w •");
     });
 
+    it("uses ancestor matching when an optional custom mapper delegates", async () => {
+        document.body.innerHTML = '<div id="source"><span id="evidence">pending</span></div>';
+        const source = document.getElementById("source");
+        const evidence = document.getElementById("evidence");
+        if (!source || !evidence) {
+            throw new Error("Expected delegated mapper fixture");
+        }
+        const rule: TimestampSourceRule = {
+            id: "delegating-mapper",
+            mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.TITLE],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            getMutationSources: () => [],
+            discover: () => [source],
+            extract: (element) => evidence.title === "ready"
+                ? {
+                    ruleId: "delegating-mapper",
+                    source: element,
+                    sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                    rawDatetime: "2026-08-23T10:15:00Z",
+                    presentation: ADJACENT_TIME_PRESENTATION,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                    visibilityPolicy:
+                        TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+                }
+                : null,
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            registry: new AdapterRegistry([rule], noMatchRule),
+        });
+
+        controller.start();
+        expect(source.nextElementSibling).toBeNull();
+
+        evidence.title = "ready";
+        await flushMutations();
+
+        expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        controller.teardown();
+    });
+
+    it("scopes document-wide character observation to current route rules", () => {
+        document.body.innerHTML = "<main></main>";
+        const observe = vi.spyOn(MutationObserver.prototype, "observe");
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+
+        try {
+            controller.start();
+            const documentOptions = (): MutationObserverInit | undefined =>
+                observe.mock.calls.filter(([target]) => target === document).at(-1)?.[1];
+            expect(documentOptions()?.characterData).toBeUndefined();
+
+            controller.reconcileRoute(new URL("https://www.linkedin.com/feed/"));
+            expect(documentOptions()?.characterData).toBe(true);
+            expect(documentOptions()?.characterDataOldValue).toBe(true);
+
+            controller.reconcileRoute(new URL("https://example.test/next"));
+            expect(documentOptions()?.characterData).toBeUndefined();
+        } finally {
+            controller.teardown();
+            observe.mockRestore();
+        }
+    });
+
     it("activates an unowned LinkedIn source when ambiguity is removed", async () => {
         document.body.innerHTML = `
             <article id="post">

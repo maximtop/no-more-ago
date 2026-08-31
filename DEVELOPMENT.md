@@ -168,17 +168,18 @@ own URL to select applicable content rules.
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
-including GitHub's relative-time widgets, Hacker News age widgets, and
-approved Stack Exchange title widgets and Telegram Web K message clocks,
-remain content-side rules and take precedence when they accept the same
+including GitHub's relative-time widgets, Hacker News age widgets, approved
+Stack Exchange title widgets, Telegram Web K message clocks, and TikTok
+publications, remain content-side rules and take precedence when they accept
 source. Rules extract and resolve values strictly in registry order; after one
 source resolves, lower extractors are not called for that element. GitHub uses
-the adjacent generated-time presentation. Hacker News,
-Stack Exchange, and Telegram Web K use in-place presentation: they retain an
-existing simple timestamp label and own only that text until restoration.
-Public `https://t.me/s/*` pages stay on generic `time[datetime]` processing.
-Adding or changing a specialized source should not require background adapter
-registration or site-policy logic.
+the adjacent generated-time presentation. Hacker News, Stack Exchange,
+Telegram Web K, and direct TikTok pages use in-place presentation: they retain
+an existing simple timestamp label and own only that text until restoration.
+TikTok profile grids use appended generated-time presentation, which keeps
+each card link visible. Public `https://t.me/s/*` pages stay on generic
+`time[datetime]` processing. Adding or changing a specialized source should not
+require background adapter registration or site-policy logic.
 
 The Telegram Web K adapter applies only below
 `https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
@@ -187,6 +188,23 @@ clock, and observes `class` and `data-timestamp` changes. It does not guess
 numeric units or parse visible/localized Telegram text. Primary edit-time and
 ambiguous forwarded or saved-message shapes fail closed. Web A remains outside
 the supported source contract.
+
+The TikTok adapter applies only to HTTPS `www.tiktok.com/@...` profile grids
+and exact direct `video` or `photo` paths. It obtains the publication ID from
+the current URL or an unambiguous profile-card link. It prefers a valid
+same-record `createTime` from
+`#__UNIVERSAL_DATA_FOR_REHYDRATION__[type="application/json"]`; otherwise it
+decodes strict decimal IDs with `BigInt(id) >> 32n`. Both results are bounded
+from 2016-01-01 through the current time plus 24 hours. Do not add visible-text
+parsing, legacy hydration containers, page-world hooks, polling, or network
+fallbacks without new evidence and a revised specification.
+
+Direct TikTok sources use the shared in-place text presentation. Profile cards
+use the shared appended-time presentation, which preserves the source link and
+owns one block `<time>` sibling. Keep TikTok URL rules, selectors, embedded
+state traversal, and post-ID semantics inside `adapters/tiktok*.ts`; shared
+formatting, ownership, restoration, and mutation code must remain
+site-agnostic.
 
 LinkedIn is a best-effort specialized in-place source with a different value
 provenance: its adapter accepts one strict local content ID and emits a derived
@@ -321,6 +339,12 @@ in shared timestamp resolution and keep site-specific source and target
 knowledge in the adapter. Observe only attributes that can change extraction
 or eligibility; reuse the existing mutation scheduler rather than adding a
 site loop or polling path.
+
+For TikTok fixture changes, keep handles, post IDs, labels, routes, and
+hydration records synthetic. Cover matching and stale `createTime`, BigInt ID
+fallback, URL exclusions, direct target simplicity, ambiguous cards, SPA
+reconciliation, card reuse, and restoration through public adapter and
+controller boundaries.
 
 For canonical YouTube watch pages, keep URL matching and DOM provenance in the
 YouTube contract and adapter. The loaded boundary is exactly one script whose
@@ -481,8 +505,8 @@ source value. Successful events never retain raw source timestamps.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, LinkedIn,
-  or supported YouTube watch
+- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, TikTok,
+  LinkedIn, or supported YouTube watch
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard
@@ -493,6 +517,12 @@ source value. Successful events never retain raw source timestamps.
   accepted local ID evidence and timestamp-label relationship before changing
   selectors. Do not recover from markup drift by parsing localized or relative
   UI text or adding a network fallback.
+- **A supported TikTok publication is unchanged:** confirm the page uses HTTPS
+  `www.tiktok.com`, an exact profile/video/photo path, an unambiguous tested
+  card or direct label shape, and a plausible 19-digit post ID. A universal
+  hydration record is optional, but it is used only when its string-valued
+  `id` matches the current post. Do not diagnose the issue by parsing visible
+  text or adding a request; capture a privacy-safe minimized fixture instead.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.

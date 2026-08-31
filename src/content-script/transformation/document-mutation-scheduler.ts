@@ -62,6 +62,21 @@ interface SchedulerInput {
     readonly onBatch: (batch: AffectedMutationBatch) => void;
 
     /**
+     * Requests a flush even when the current records produce no element targets.
+     *
+     * This lets callers reconcile document-wide context such as an SPA URL change while
+     * retaining a stable observer attribute filter.
+     */
+    readonly shouldFlush?: () => boolean;
+
+    /**
+     * Reconciles external context before mutation records are mapped.
+     *
+     * @returns - Whether the current records should continue through mapping.
+     */
+    readonly beforeBatch?: () => boolean;
+
+    /**
      * Resolves an extension-owned output node back to its source, if ownership is still valid.
      */
     readonly getOwnedSourceForOutput: (node: Node) => Element | null;
@@ -84,6 +99,8 @@ interface SchedulerInput {
      * @param oldValue - Attribute value before the mutation, when present.
      * @param trackedSources - Retained source ancestors owning the mutation.
      * @param mutationKind - Kind of DOM mutation being mapped.
+     * @param addedNodes - Direct children added by a child-list mutation.
+     * @param removedNodes - Direct children removed by a child-list mutation.
      * @returns - Matching target for an attribute or matching ancestors for a child-list change.
      */
     readonly getSourceMutationRoots?: (
@@ -92,6 +109,8 @@ interface SchedulerInput {
         oldValue: string | null | undefined,
         trackedSources: readonly Element[],
         mutationKind: TimestampMutationKind,
+        addedNodes?: readonly Node[],
+        removedNodes?: readonly Node[],
     ) => readonly Element[];
 
     /**
@@ -173,6 +192,11 @@ export class DocumentMutationScheduler {
     private generation = 0;
 
     /**
+     * Whether the document-wide observer currently receives character-data changes.
+     */
+    private observeCharacterData: boolean;
+
+    /**
      * Maps page-removed output nodes to their generation so restoration is not reported twice.
      */
     private readonly suppressedRemovals = new Map<Node, number>();
@@ -243,7 +267,36 @@ export class DocumentMutationScheduler {
      *
      * @param input - Document, observer, callbacks, and scheduling dependencies.
      */
-    constructor(private readonly input: SchedulerInput) {}
+    constructor(private readonly input: SchedulerInput) {
+        this.observeCharacterData = input.observeCharacterData === true;
+    }
+
+    /**
+     * Builds the current document-wide observer options.
+     *
+     * @returns - Bounded observer options for the active route.
+     */
+    private observationOptions(): MutationObserverInit {
+        const attributeFilter = [
+            ...new Set([
+                ...(this.input.sourceAttributes ?? []),
+                ...VISIBILITY_ATTRIBUTES,
+            ]),
+        ];
+        return {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter,
+            attributeOldValue: true,
+            ...(this.observeCharacterData
+                ? {
+                    characterData: true,
+                    characterDataOldValue: true,
+                }
+                : {}),
+        };
+    }
 
     /**
      * Starts observing the document and batches later mutation records.
@@ -264,31 +317,28 @@ export class DocumentMutationScheduler {
             this.handle(records);
         });
         try {
-            const attributeFilter = [
-                ...new Set([
-                    ...(this.input.sourceAttributes ?? []),
-                    ...VISIBILITY_ATTRIBUTES,
-                ]),
-            ];
-            observer.observe(this.input.document, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter,
-                attributeOldValue: true,
-                ...(this.input.observeCharacterData
-                    ? {
-                        characterData: true,
-                        characterDataOldValue: true,
-                    }
-                    : {}),
-            });
+            observer.observe(this.input.document, this.observationOptions());
         } catch (error) {
             observer.disconnect();
             throw error;
         }
         this.observer = observer;
         this.phase = "observing";
+    }
+
+    /**
+     * Reconfigures document-wide text observation when route applicability changes.
+     *
+     * @param enabled - Whether current matching rules discover text-only sources.
+     */
+    setObserveCharacterData(enabled: boolean): void {
+        if (this.observeCharacterData === enabled) {
+            return;
+        }
+        this.observeCharacterData = enabled;
+        if (this.phase === "observing" && this.observer) {
+            this.observer.observe(this.input.document, this.observationOptions());
+        }
     }
 
     /**
@@ -494,7 +544,7 @@ export class DocumentMutationScheduler {
         }
         const changes = this.expectedTextChanges.get(target) ?? [];
         changes.push({
-            documentObserved: this.input.observeCharacterData === true
+            documentObserved: this.observeCharacterData
                 && target.isConnected,
             oldValue: target.data,
             text,
@@ -735,6 +785,9 @@ export class DocumentMutationScheduler {
      * @param records - Mutation records delivered by the observer.
      */
     private handle(records: readonly MutationRecord[]): void {
+        if (this.input.beforeBatch && !this.input.beforeBatch()) {
+            return;
+        }
         const addedRoots: Element[] = [];
         const sourceTargets: Element[] = [];
         const visibilityRoots: Element[] = [];
@@ -754,7 +807,7 @@ export class DocumentMutationScheduler {
         for (const record of records) {
             if (record.type === "characterData") {
                 if (
-                    !this.input.observeCharacterData
+                    !this.observeCharacterData
                     || record.target.nodeType !== Node.TEXT_NODE
                 ) {
                     continue;
@@ -865,6 +918,8 @@ export class DocumentMutationScheduler {
                     null,
                     this.findTrackedSources(record.target as Element),
                     TIMESTAMP_MUTATION_KIND.CHILD_LIST,
+                    Array.from(record.addedNodes),
+                    Array.from(record.removedNodes),
                 ) ?? []) {
                     addUnique(sourceTargets, sourceTargetSet, source);
                 }
@@ -943,7 +998,8 @@ export class DocumentMutationScheduler {
             normalizedTargets.length === 0 &&
             normalizedVisibility.length === 0 &&
             normalizedRemoved.length === 0 &&
-            normalizedDisplaced.length === 0
+            normalizedDisplaced.length === 0 &&
+            !this.input.shouldFlush?.()
         ) {
             return;
         }

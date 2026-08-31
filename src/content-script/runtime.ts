@@ -11,17 +11,15 @@ import type { DocumentDiagnosticSink } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
-    DOCUMENT_POLICY_REFRESHED_MESSAGE,
-    DOCUMENT_TORN_DOWN_MESSAGE,
+    DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
     isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
+    isReconcileDocumentPolicyMessage,
     isReconcileDocumentRouteMessage,
-    isRefreshDocumentPolicyMessage,
-    isSuspendAndRefreshDocumentPolicyMessage,
     isPresentationUpdateMessage,
-    isTeardownDocumentMessage,
     PRESENTATION_UPDATED_MESSAGE,
+    type DocumentPolicyReconciledMessage,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
@@ -142,6 +140,16 @@ interface RuntimeSlot {
     debugRevision: number | undefined;
 
     /**
+     * Effective activation policy applied by the latest revisioned command or hydration.
+     */
+    policyEnabled: boolean | undefined;
+
+    /**
+     * Latest persisted settings revision accepted for activation policy.
+     */
+    policyRevision: number | undefined;
+
+    /**
      * Background reporter used only while diagnostic forwarding is enabled.
      */
     reportDiagnostic: ((event: Record<string, unknown>) => Promise<unknown>) | undefined;
@@ -238,7 +246,8 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (
         slot.phase !== DOCUMENT_PHASE.WAITING ||
         slot.generation !== generation ||
-        slot.presentation === undefined
+        slot.presentation === undefined ||
+        slot.policyEnabled === false
     ) {
         return;
     }
@@ -274,6 +283,8 @@ function beginHydration(
         = DOCUMENT_PHASE.FAILED,
 ): void {
     if (!loader) {
+        slot.policyEnabled = true;
+        slot.policyRevision ??= 0;
         applyPresentation(slot, DEFAULT_DISPLAY_SETTINGS, 0);
         applyDebugPolicy(slot, false, 0);
         maybeStart(slot, generation);
@@ -303,6 +314,15 @@ function beginHydration(
                     failHydration(slot, generation, failurePhase);
                     return;
                 }
+                if (
+                    slot.policyRevision !== undefined
+                    && response.revision < slot.policyRevision
+                ) {
+                    failHydration(slot, generation, failurePhase);
+                    return;
+                }
+                slot.policyRevision = response.revision;
+                slot.policyEnabled = response.enabled;
                 const previousRevision = Math.max(
                     slot.presentationRevision ?? -1,
                     slot.debugRevision ?? -1,
@@ -404,14 +424,21 @@ function activate(
  * Starts a policy hydration generation without disrupting an active controller.
  *
  * @param slot - Singleton runtime state for the current document.
+ * @param failurePhase - Phase used when the refreshed state cannot be loaded.
  */
-function refreshPolicy(slot: RuntimeSlot): void {
+function refreshPolicy(
+    slot: RuntimeSlot,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    > = DOCUMENT_PHASE.FAILED,
+): void {
     if (slot.phase !== DOCUMENT_PHASE.ACTIVE && slot.phase !== DOCUMENT_PHASE.WAITING) {
-        activate(slot, slot.loadDocumentState);
+        activate(slot, slot.loadDocumentState, failurePhase);
         return;
     }
     slot.generation += 1;
-    beginHydration(slot, slot.generation, slot.loadDocumentState);
+    beginHydration(slot, slot.generation, slot.loadDocumentState, failurePhase);
 }
 
 /**
@@ -429,6 +456,77 @@ function teardown(slot: RuntimeSlot): void {
     slot.debugRevision = undefined;
     slot.controller.setDiagnosticSink(undefined);
     slot.hydration = undefined;
+}
+
+/**
+ * Creates an acknowledgement for the policy revision retained by the runtime.
+ *
+ * @param revision - Retained settings revision, or null for an unversioned fail-closed refresh.
+ * @returns - Policy reconciliation acknowledgement.
+ */
+function policyAcknowledgement(
+    revision: number | null,
+): DocumentPolicyReconciledMessage {
+    return { type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision };
+}
+
+/**
+ * Applies one revisioned effective policy without allowing older commands to win later.
+ *
+ * Unversioned fail-closed commands synchronously restore page ownership before they reload
+ * current background state. Authoritative hydration may replace a provisional same-revision
+ * command, allowing reinjection after a cross-document navigation to converge on the new host.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param revision - Persisted settings revision, or null while settings are unavailable.
+ * @param enabled - Effective top-level activation policy carried by the command.
+ * @returns - Revision retained for acknowledgement.
+ */
+function reconcilePolicy(
+    slot: RuntimeSlot,
+    revision: number | null,
+    enabled: boolean,
+): number | null {
+    if (revision === null) {
+        slot.policyEnabled = false;
+        if (slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        if (slot.loadDocumentState) {
+            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
+        }
+        return null;
+    }
+    if (slot.policyRevision !== undefined && revision < slot.policyRevision) {
+        return slot.policyRevision;
+    }
+    if (
+        slot.policyRevision === revision
+        && slot.policyEnabled !== undefined
+        && slot.policyEnabled !== enabled
+    ) {
+        slot.policyEnabled = enabled;
+        if (!enabled && slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        refreshPolicy(slot);
+        return revision;
+    }
+    const repeated = slot.policyRevision === revision && slot.policyEnabled === enabled;
+    slot.policyRevision = revision;
+    slot.policyEnabled = enabled;
+    if (!enabled) {
+        if (slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        return revision;
+    }
+    if (slot.phase !== DOCUMENT_PHASE.ACTIVE && slot.phase !== DOCUMENT_PHASE.WAITING) {
+        activate(slot, slot.loadDocumentState);
+    } else if (!repeated) {
+        refreshPolicy(slot);
+    }
+    return revision;
 }
 
 /**
@@ -488,7 +586,8 @@ export function installContentRuntime(input: {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
         existing.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
-        activate(existing, input.loadDocumentState);
+        existing.loadDocumentState = input.loadDocumentState;
+        refreshPolicy(existing);
         return existing.handle;
     }
     const slot = {} as RuntimeSlot;
@@ -514,6 +613,8 @@ export function installContentRuntime(input: {
     slot.presentationRevision = undefined;
     slot.debugEnabled = false;
     slot.debugRevision = undefined;
+    slot.policyEnabled = undefined;
+    slot.policyRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.loadDocumentState = input.loadDocumentState;
     slot.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
@@ -523,22 +624,13 @@ export function installContentRuntime(input: {
         },
     };
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
-        if (isTeardownDocumentMessage(message)) {
-            teardown(slot);
-            const response = { type: DOCUMENT_TORN_DOWN_MESSAGE };
-            sendResponse?.(response);
-            return response;
-        }
-        if (isRefreshDocumentPolicyMessage(message)) {
-            refreshPolicy(slot);
-            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
-            sendResponse?.(response);
-            return response;
-        }
-        if (isSuspendAndRefreshDocumentPolicyMessage(message)) {
-            teardown(slot);
-            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
-            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
+        if (isReconcileDocumentPolicyMessage(message)) {
+            const retainedRevision = reconcilePolicy(
+                slot,
+                message.revision,
+                message.enabled,
+            );
+            const response = policyAcknowledgement(retainedRevision);
             sendResponse?.(response);
             return response;
         }
