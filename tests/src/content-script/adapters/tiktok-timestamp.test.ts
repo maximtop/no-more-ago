@@ -173,6 +173,50 @@ describe("TikTok timestamp evidence", () => {
         expect(parse).toHaveBeenCalledTimes(2);
     });
 
+    it("uses a bounded marker for oversized hydration and accepts a later replacement", () => {
+        document.head.innerHTML = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" '
+            + 'type="application/json"></script>';
+        const script = document.querySelector("script");
+        if (!(script instanceof HTMLScriptElement)) {
+            throw new Error("Expected oversized hydration script");
+        }
+        script.textContent = "x".repeat(5_000_001);
+        const parse = vi.spyOn(JSON, "parse");
+
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+        expect(parse).not.toHaveBeenCalled();
+
+        script.remove();
+        installHydration({
+            itemInfo: { itemStruct: { id: VIDEO_ID, createTime: VIDEO_CREATE_TIME } },
+        });
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID))
+            .toBe("2026-05-14T16:08:00.000Z");
+        expect(parse).toHaveBeenCalledOnce();
+    });
+
+    it("rebuilds evidence after zero and multiple matching scripts", () => {
+        installHydration({ id: VIDEO_ID, createTime: VIDEO_CREATE_TIME });
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID))
+            .toBe("2026-05-14T16:08:00.000Z");
+        const first = document.querySelector("script");
+        if (!(first instanceof HTMLScriptElement)) {
+            throw new Error("Expected first hydration script");
+        }
+        const duplicate = first.cloneNode(true) as HTMLScriptElement;
+        document.head.append(duplicate);
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+
+        first.remove();
+        duplicate.remove();
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID)).toBe(VIDEO_ID_DATETIME);
+
+        installHydration({ id: VIDEO_ID, createTime: "1778774940" });
+        expect(resolveTikTokPublicationDatetime(document, VIDEO_ID))
+            .toBe("2026-05-14T16:09:00.000Z");
+    });
+
     it("falls back without throwing when hydration exceeds the traversal budget", () => {
         installHydration(Array.from({ length: 100_001 }, () => ({})));
 

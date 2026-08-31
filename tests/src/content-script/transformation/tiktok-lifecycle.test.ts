@@ -10,6 +10,8 @@ import type { DisplaySettings } from
     "../../../../src/shared/settings/snapshot";
 import { DocumentTransformationController } from
     "../../../../src/content-script/transformation/document-transformation-controller";
+import { classifyYouTubeWatchRouteHandoff } from
+    "../../../../src/content-script/adapters/youtube-watch-route-handoff";
 
 const LOCALES = ["en-US"] as const;
 const UTC_DISPLAY = {
@@ -254,6 +256,7 @@ describe("TikTok document lifecycle", () => {
         const controller = new DocumentTransformationController({
             url: currentUrl,
             urlProvider: () => currentUrl,
+            routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
             root: document,
             locales: LOCALES,
             display: UTC_DISPLAY,

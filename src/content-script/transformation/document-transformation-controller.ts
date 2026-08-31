@@ -34,8 +34,29 @@ import {
 import {
     TIMESTAMP_MUTATION_KIND,
     type TimestampExtractionContext,
+    type TimestampMutationSourceSelection,
     type TimestampSourceAttribute,
 } from "../adapters/types";
+
+/**
+ * Normalizes legacy source arrays and explicit handled/delegate mapper results.
+ *
+ * Empty legacy arrays delegate to ancestor matching. Explicit results may deliberately handle
+ * a mutation without selecting any source.
+ *
+ * @param selection - Adapter-specific mutation mapping result.
+ * @returns - Explicit handled state and exact source collection.
+ */
+function normalizeMutationSources(selection: TimestampMutationSourceSelection): {
+    readonly handled: boolean;
+    readonly sources: readonly Element[];
+} {
+    if (Array.isArray(selection)) {
+        return { handled: selection.length > 0, sources: selection };
+    }
+    const result = selection as Exclude<TimestampMutationSourceSelection, readonly Element[]>;
+    return { handled: result.handled, sources: result.sources };
+}
 
 /**
  * Controller construction dependencies beyond one document processing pass.
@@ -175,6 +196,7 @@ export class DocumentTransformationController {
         this.synchronizeCurrentRoute();
         const registry = this.input.registry ?? defaultRegistry;
         const observableRules = registry.all();
+        const currentRules = registry.matching(this.currentUrl);
         const sourceAttributes = [
             ...new Set(observableRules.flatMap((rule) => rule.mutationAttributes)),
         ];
@@ -187,7 +209,15 @@ export class DocumentTransformationController {
             shouldFlush: () => this.urlProvider
                 ? this.urlProvider().href !== this.currentUrl.href
                 : false,
-            observeCharacterData: observableRules.some(
+            beforeBatch: () => {
+                try {
+                    return !this.synchronizeCurrentRoute();
+                } catch {
+                    this.failClosed();
+                    return false;
+                }
+            },
+            observeCharacterData: currentRules.some(
                 (rule) => rule.observesCharacterData === true,
             ),
             getSourceMutationRoots: (
@@ -230,29 +260,36 @@ export class DocumentTransformationController {
                 for (const rule of applicableRules) {
                     let hasCustomMapping = false;
                     if (rule.getMutationSources) {
-                        for (const source of rule.getMutationSources(
-                            element,
-                            attributeName as TimestampSourceAttribute | undefined,
-                            oldValue ?? null,
-                            extractionContext,
-                            mutationKind,
-                        )) {
+                        const mutationSelection = normalizeMutationSources(
+                            rule.getMutationSources(
+                                element,
+                                attributeName as TimestampSourceAttribute | undefined,
+                                oldValue ?? null,
+                                extractionContext,
+                                mutationKind,
+                            ),
+                        );
+                        for (const source of mutationSelection.sources) {
                             addSource(source);
                         }
-                        hasCustomMapping = true;
+                        hasCustomMapping = mutationSelection.handled;
                     }
                     if (
                         mutationKind === TIMESTAMP_MUTATION_KIND.CHILD_LIST
                         && rule.getChildMutationSources
                     ) {
-                        for (const source of rule.getChildMutationSources(
-                            element,
-                            addedNodes,
-                            removedNodes,
-                        )) {
+                        const childMutationSelection = normalizeMutationSources(
+                            rule.getChildMutationSources(
+                                element,
+                                addedNodes,
+                                removedNodes,
+                            ),
+                        );
+                        for (const source of childMutationSelection.sources) {
                             addSource(source);
                         }
-                        hasCustomMapping = true;
+                        hasCustomMapping = hasCustomMapping
+                            || childMutationSelection.handled;
                     }
                     if (hasCustomMapping) {
                         continue;
@@ -396,6 +433,13 @@ export class DocumentTransformationController {
             throw error;
         }
 
+        if (
+            transition.kind === DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP
+            && !this.hasSameRuleSelection(this.currentUrl, nextUrl)
+        ) {
+            transition = { kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR };
+        }
+
         if (transition.kind === DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP) {
             this.currentUrl = nextUrl;
             return false;
@@ -420,6 +464,7 @@ export class DocumentTransformationController {
         this.currentUrl = nextUrl;
         this.applyRouteTransition(transition);
         try {
+            scheduler.setObserveCharacterData(this.observesCharacterData(nextUrl));
             this.activateHandoffSession(generation);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
             return true;
@@ -440,6 +485,33 @@ export class DocumentTransformationController {
         }
         const sampledUrl = this.urlProvider();
         return this.applyRouteChange(new URL(sampledUrl.href));
+    }
+
+    /**
+     * Checks whether two routes select the same ordered adapter rules.
+     *
+     * @param previousUrl - Route currently owned by the controller.
+     * @param currentUrl - Newly sampled route.
+     * @returns - Whether both routes have identical rule applicability.
+     */
+    private hasSameRuleSelection(previousUrl: URL, currentUrl: URL): boolean {
+        const registry = this.input.registry ?? defaultRegistry;
+        const previousRules = registry.matching(previousUrl);
+        const currentRules = registry.matching(currentUrl);
+        return previousRules.length === currentRules.length
+            && previousRules.every((rule, index) => rule.id === currentRules[index]?.id);
+    }
+
+    /**
+     * Checks whether current route rules require document-wide text observation.
+     *
+     * @param url - Route whose matching rules are inspected.
+     * @returns - Whether at least one current rule discovers text-only sources.
+     */
+    private observesCharacterData(url: URL): boolean {
+        return (this.input.registry ?? defaultRegistry).matching(url).some(
+            (rule) => rule.observesCharacterData === true,
+        );
     }
 
     /**

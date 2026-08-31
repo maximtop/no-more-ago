@@ -321,14 +321,6 @@ function beginHydration(
                     failHydration(slot, generation, failurePhase);
                     return;
                 }
-                if (
-                    slot.policyRevision === response.revision
-                    && slot.policyEnabled !== undefined
-                    && slot.policyEnabled !== response.enabled
-                ) {
-                    failHydration(slot, generation, failurePhase);
-                    return;
-                }
                 slot.policyRevision = response.revision;
                 slot.policyEnabled = response.enabled;
                 const previousRevision = Math.max(
@@ -481,8 +473,9 @@ function policyAcknowledgement(
 /**
  * Applies one revisioned effective policy without allowing older commands to win later.
  *
- * Unversioned fail-closed commands always reload current background state. This makes a late
- * command converge on a recovered worker instead of blindly tearing down a newer enabled state.
+ * Unversioned fail-closed commands synchronously restore page ownership before they reload
+ * current background state. Authoritative hydration may replace a provisional same-revision
+ * command, allowing reinjection after a cross-document navigation to converge on the new host.
  *
  * @param slot - Singleton runtime state for the current document.
  * @param revision - Persisted settings revision, or null while settings are unavailable.
@@ -495,7 +488,13 @@ function reconcilePolicy(
     enabled: boolean,
 ): number | null {
     if (revision === null) {
-        refreshPolicy(slot, DOCUMENT_PHASE.STOPPED);
+        slot.policyEnabled = false;
+        if (slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        if (slot.loadDocumentState) {
+            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
+        }
         return null;
     }
     if (slot.policyRevision !== undefined && revision < slot.policyRevision) {
@@ -506,6 +505,10 @@ function reconcilePolicy(
         && slot.policyEnabled !== undefined
         && slot.policyEnabled !== enabled
     ) {
+        slot.policyEnabled = enabled;
+        if (!enabled && slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
         refreshPolicy(slot);
         return revision;
     }

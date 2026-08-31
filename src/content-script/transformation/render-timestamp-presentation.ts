@@ -87,7 +87,7 @@ export function getOwnedTimestampSourceEntries(
  * Renders one validated timestamp using its adapter-selected strategy.
  *
  * @param source - Trusted timestamp source.
- * @param datetime - Original page datetime, or null for derived in-place output.
+ * @param datetime - Adapter-supplied validated datetime, or null for derived in-place output.
  * @param presentation - Validated presentation descriptor.
  * @param text - Formatted exact label.
  * @param mutations - Optional observer acknowledgement sink.

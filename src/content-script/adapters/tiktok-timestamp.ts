@@ -15,7 +15,7 @@ export const TIKTOK_HYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__" a
 export const TIKTOK_HYDRATION_SELECTOR =
     `script#${TIKTOK_HYDRATION_SCRIPT_ID}[type="application/json"]` as const;
 
-const POST_ID_PATTERN = /^[1-9]\d{18}$/u;
+const TIKTOK_POST_ID_PATTERN = /^[1-9]\d{18}$/u;
 const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
 const MINIMUM_TIMESTAMP_MS = Date.parse("2016-01-01T00:00:00Z");
 const FUTURE_TOLERANCE_MS = 86_400_000;
@@ -25,7 +25,12 @@ const MAXIMUM_HYDRATION_NODE_COUNT = 100_000;
 /**
  * Cached index tied to one exact hydration script snapshot.
  */
-interface HydrationCacheEntry {
+interface ParsedHydrationCacheEntry {
+    /**
+     * Parsed-cache discriminant.
+     */
+    readonly kind: "parsed";
+
     /**
      * Exact parsed script element.
      */
@@ -42,8 +47,42 @@ interface HydrationCacheEntry {
     readonly createTimeByPostId: ReadonlyMap<string, string | null>;
 }
 
+/**
+ * Bounded marker for a script that is too large to parse or retain.
+ */
+interface OversizedHydrationCacheEntry {
+    /**
+     * Oversized-cache discriminant.
+     */
+    readonly kind: "oversized";
+
+    /**
+     * Exact script element rejected by the size limit.
+     */
+    readonly script: HTMLScriptElement;
+
+    /**
+     * Rejected text length used to recognize another oversized snapshot.
+     */
+    readonly textLength: number;
+}
+
+/**
+ * Bounded document cache entry for either parsed or oversized hydration.
+ */
+type HydrationCacheEntry = ParsedHydrationCacheEntry | OversizedHydrationCacheEntry;
+
 const hydrationCache = new WeakMap<Document, HydrationCacheEntry>();
 const EMPTY_INDEX: ReadonlyMap<string, string | null> = new Map();
+
+/**
+ * Releases cached hydration evidence after a page-authored script mutation.
+ *
+ * @param document - TikTok document whose exact script snapshot changed.
+ */
+export function invalidateTikTokHydrationCache(document: Document): void {
+    hydrationCache.delete(document);
+}
 
 /**
  * Narrows page-derived JSON objects without accepting primitives.
@@ -69,7 +108,17 @@ export function isTikTokHydrationScript(element: Element): element is HTMLScript
 }
 
 /**
- * Indexes scalar id/createTime pairs found in the confirmed hydration script.
+ * Checks the strict decimal grammar shared by TikTok paths, wrappers, and decoding.
+ *
+ * @param value - Candidate publication ID.
+ * @returns - Whether the value is one supported TikTok post ID.
+ */
+export function isTikTokPostId(value: string): boolean {
+    return TIKTOK_POST_ID_PATTERN.test(value);
+}
+
+/**
+ * Indexes string-valued id/createTime pairs found in the confirmed hydration script.
  *
  * @param value - Parsed hydration JSON root.
  * @returns - Create-time values keyed by exact string post IDs.
@@ -125,6 +174,7 @@ function readHydrationIndex(
 ): ReadonlyMap<string, string | null> {
     const scripts = document.querySelectorAll<HTMLScriptElement>(TIKTOK_HYDRATION_SELECTOR);
     if (scripts.length !== 1) {
+        hydrationCache.delete(document);
         return EMPTY_INDEX;
     }
     const script = scripts[0];
@@ -133,19 +183,31 @@ function readHydrationIndex(
     }
     const text = script.textContent;
     const cached = hydrationCache.get(document);
-    if (cached?.script === script && cached.text === text) {
+    if (text.length > MAXIMUM_HYDRATION_TEXT_LENGTH) {
+        if (
+            cached?.kind !== "oversized"
+            || cached.script !== script
+            || cached.textLength !== text.length
+        ) {
+            hydrationCache.set(document, {
+                kind: "oversized",
+                script,
+                textLength: text.length,
+            });
+        }
+        return EMPTY_INDEX;
+    }
+    if (cached?.kind === "parsed" && cached.script === script && cached.text === text) {
         return cached.createTimeByPostId;
     }
     let createTimeByPostId = EMPTY_INDEX;
     try {
-        if (text.length <= MAXIMUM_HYDRATION_TEXT_LENGTH) {
-            const parsed = JSON.parse(text) as unknown;
-            createTimeByPostId = indexHydration(parsed);
-        }
+        const parsed = JSON.parse(text) as unknown;
+        createTimeByPostId = indexHydration(parsed);
     } catch {
         /* malformed page data remains empty until the exact script snapshot changes */
     }
-    hydrationCache.set(document, { script, text, createTimeByPostId });
+    hydrationCache.set(document, { kind: "parsed", script, text, createTimeByPostId });
     return createTimeByPostId;
 }
 
@@ -178,7 +240,7 @@ function canonicalizeUnixSeconds(value: string, nowMs: number): string | null {
  * @returns - Unix seconds encoded in the high bits, or null for invalid shape.
  */
 function decodePostIdSeconds(postId: string): string | null {
-    if (!POST_ID_PATTERN.test(postId)) {
+    if (!isTikTokPostId(postId)) {
         return null;
     }
     return (BigInt(postId) >> 32n).toString();
@@ -200,7 +262,7 @@ export function resolveTikTokPublicationDatetime(
     postId: string,
     nowMs = Date.now(),
 ): string | null {
-    if (!POST_ID_PATTERN.test(postId)) {
+    if (!isTikTokPostId(postId)) {
         return null;
     }
     const createTime = readHydrationIndex(document).get(postId);

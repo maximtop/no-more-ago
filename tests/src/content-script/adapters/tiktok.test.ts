@@ -197,4 +197,29 @@ describe("TikTok adapter", () => {
             new URL("https://www.tiktok.com/foryou"),
         ).map(({ id }) => id)).toEqual([GENERIC_TIME_RULE_ID]);
     });
+
+    it("bounds the sources reconsidered after a hydration replacement", () => {
+        const fragment = document.createDocumentFragment();
+        for (let index = 0; index < 2_100; index += 1) {
+            const owner = document.createElement("div");
+            owner.setAttribute("data-e2e", "user-post-item");
+            const link = document.createElement("a");
+            link.href = `/@fictional/video/${VIDEO_ID}`;
+            owner.append(link);
+            fragment.append(owner);
+        }
+        document.body.append(fragment);
+        const script = document.createElement("script");
+        script.id = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
+        script.type = "application/json";
+        const selection = tiktokProfileAdapter.getChildMutationSources?.(
+            document.head,
+            [script],
+            [],
+        ) ?? [];
+        const sources = "sources" in selection ? selection.sources : selection;
+
+        expect(sources).toHaveLength(2_000);
+        expect(sources.every((source) => source instanceof HTMLAnchorElement)).toBe(true);
+    });
 });

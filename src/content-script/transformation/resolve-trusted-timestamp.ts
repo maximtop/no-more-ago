@@ -9,7 +9,7 @@ import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
-    type PageDatetimeTimestampCandidate,
+    type ValidatedStringTimestampCandidate,
     type TimestampCandidate,
     type TimestampPresentation,
     type TimestampVisibilityPolicy,
@@ -204,7 +204,7 @@ interface ResolvedPageTimestampBase extends ResolvedTimestampBase {
     /**
      * Page-value validation rule that accepted the candidate.
      */
-    readonly validationRule: PageDatetimeTimestampCandidate["validationRule"];
+    readonly validationRule: ValidatedStringTimestampCandidate["validationRule"];
 }
 
 /**

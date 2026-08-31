@@ -147,11 +147,11 @@ function fakes(urls: readonly string[]) {
             return acknowledgePolicy(args[1]);
         }),
     };
-    return { scripting, tabs };
+    return { scripting, tabs, registered };
 }
 
 describe("DocumentActivationCoordinator", () => {
-    it("registers universally and broadcasts before all-frame ensure", async () => {
+    it("registers universally and targets every frame before all-frame ensure", async () => {
         const fake = fakes(["https://example.test/page"]);
         fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
         const coordinator = new DocumentActivationCoordinator(fake);
@@ -169,6 +169,16 @@ describe("DocumentActivationCoordinator", () => {
                 revision: 1,
                 enabled: true,
             },
+            { frameId: 0 },
+        );
+        expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
+            1,
+            {
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision: 1,
+                enabled: true,
+            },
+            { frameId: 1 },
         );
         expect(fake.scripting.executeScript).toHaveBeenCalledWith({
             target: { tabId: 1, allFrames: true },
@@ -192,6 +202,16 @@ describe("DocumentActivationCoordinator", () => {
                 revision: 2,
                 enabled: false,
             },
+            { frameId: 0 },
+        );
+        expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
+            1,
+            {
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision: 2,
+                enabled: false,
+            },
+            { frameId: 1 },
         );
         expect(fake.scripting.executeScript).toHaveBeenCalledTimes(1);
     });
@@ -212,8 +232,45 @@ describe("DocumentActivationCoordinator", () => {
                 revision: 3,
                 enabled: false,
             },
+            { frameId: 0 },
+        );
+        expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
+            1,
+            {
+                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+                revision: 3,
+                enabled: false,
+            },
+            { frameId: 1 },
         );
         expect(fake.scripting.executeScript).not.toHaveBeenCalled();
+    });
+
+    it("reports global teardown failure unless every reachable frame acknowledges", async () => {
+        const fake = fakes(["https://example.test/page"]);
+        fake.tabs.sendMessage.mockImplementation(async (_tabId, message, options) => {
+            if (options?.frameId === 1) {
+                throw new Error("frame unavailable");
+            }
+            return acknowledgePolicy(message);
+        });
+        const coordinator = new DocumentActivationCoordinator(fake);
+
+        const result = await coordinator.reconcile({
+            revision: 3,
+            policy: ACTIVATION_POLICY.DISABLED,
+        });
+
+        expect(fake.tabs.sendMessage).toHaveBeenCalledTimes(2);
+        expect(result.tabs).toEqual([
+            { tabId: 1, hostname: "example.test", action: TAB_ACTION.TEARDOWN, ok: false },
+        ]);
+        expect(result.failures).toContainEqual({
+            scope: RECONCILE_FAILURE_SCOPE.TAB,
+            tabId: 1,
+            hostname: "example.test",
+            action: TAB_ACTION.TEARDOWN,
+        });
     });
 
     it("retains sibling recovery when one tab ensure fails", async () => {
@@ -293,6 +350,88 @@ describe("DocumentActivationCoordinator", () => {
         },
     );
 
+    it.each(["registration-read", "registration-write", "tabs-query"] as const)(
+        "does not let a pending %s block lifecycle reconciliation",
+        async (pendingOperation) => {
+            vi.useFakeTimers();
+            try {
+                const fake = fakes(["https://example.test/page"]);
+                if (pendingOperation === "registration-read") {
+                    fake.scripting.getRegisteredContentScripts.mockImplementation(
+                        () => new Promise<never>(() => undefined),
+                    );
+                } else if (pendingOperation === "registration-write") {
+                    fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
+                    fake.scripting.registerContentScripts.mockImplementation(
+                        () => new Promise<never>(() => undefined),
+                    );
+                } else {
+                    fake.tabs.query.mockImplementation(
+                        () => new Promise<never>(() => undefined),
+                    );
+                }
+                const coordinator = new DocumentActivationCoordinator(fake);
+                const reconciliation = coordinator.reconcile({
+                    revision: 7,
+                    policy: ACTIVATION_POLICY.ENABLED,
+                    sitePreferences: {},
+                });
+
+                await vi.advanceTimersByTimeAsync(1_000);
+
+                const result = await reconciliation;
+                expect(result.revision).toBe(7);
+                expect(result.failures.length).toBeGreaterThan(0);
+            } finally {
+                vi.useRealTimers();
+            }
+        },
+    );
+
+    it("repairs a registration write that succeeds after a newer disable intent", async () => {
+        vi.useFakeTimers();
+        try {
+            const fake = fakes([]);
+            fake.registered.clear();
+            let completeRegister: (() => void) | undefined;
+            fake.scripting.registerContentScripts.mockImplementation((scripts) =>
+                new Promise<void>((resolve) => {
+                    completeRegister = () => {
+                        for (const script of scripts) {
+                            fake.registered.set(script.id, script);
+                        }
+                        resolve();
+                    };
+                }));
+            const coordinator = new DocumentActivationCoordinator(fake);
+            const enabling = coordinator.reconcile({
+                revision: 8,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            });
+            await vi.advanceTimersByTimeAsync(1_000);
+            await enabling;
+
+            await coordinator.reconcile({
+                revision: 9,
+                policy: ACTIVATION_POLICY.DISABLED,
+            });
+            expect(fake.registered.size).toBe(0);
+
+            completeRegister?.();
+            for (let index = 0; index < 10; index += 1) {
+                await Promise.resolve();
+            }
+
+            expect(fake.scripting.unregisterContentScripts).toHaveBeenCalledWith({
+                ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
+            });
+            expect(fake.registered.size).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("contains synchronous browser API failures and still reconciles siblings", async () => {
         const fake = fakes([
             "https://first.test/page",
@@ -333,13 +472,14 @@ describe("DocumentActivationCoordinator", () => {
             const frames = [first, second];
             const fake = fakes(["https://example.test/page"]);
             let rejectedBroadcasts = 1;
-            fake.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
-                const responses = frames.map((frame) => frame.messages.dispatch(message));
+            fake.tabs.sendMessage.mockImplementation(async (_tabId, message, options) => {
+                const frame = frames[options?.frameId ?? -1];
+                const response = frame?.messages.dispatch(message);
                 if (rejectedBroadcasts > 0) {
                     rejectedBroadcasts -= 1;
                     throw new Error("nondeterministic broadcast response");
                 }
-                return responses[0] as ReturnType<typeof acknowledgePolicy>;
+                return response as ReturnType<typeof acknowledgePolicy>;
             });
             fake.scripting.executeScript.mockResolvedValue([
                 { frameId: 0 },

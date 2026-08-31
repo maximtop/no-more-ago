@@ -14,7 +14,7 @@ captions, authors, credentials, cookies, authenticated URLs, or personal data.
 | `direct-video.html` | Prefer matching `createTime` in the legacy direct metadata shape. |
 | `direct-feed-video.html` | Replace only the current publication's simple author-row date in the direct feed shape. |
 | `direct-photo.html` | Prefer matching `createTime` across a UTC day boundary. |
-| `profile.html` | Append one owned date per unambiguous video/photo link and use ID fallback when hydration is absent. |
+| `profile.html` | Append one owned date per unambiguous video/photo link and use ID fallback when the matching hydration record is absent. |
 | `eligibility-matrix.html` | Reject ambiguous/complex TikTok shapes while retaining generic `time[datetime]` behavior. |
 
 TikTok owns the production markup and may change it independently. These

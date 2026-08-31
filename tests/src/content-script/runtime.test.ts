@@ -483,6 +483,42 @@ describe("installContentRuntime", () => {
         });
     });
 
+    it("restores synchronously while an unversioned policy refresh remains pending", async () => {
+        const source = messages();
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 5))
+            .mockImplementationOnce(() => new Promise<never>(() => undefined));
+        install(source, load);
+        await settleRuntime();
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+
+        expect(source.dispatch(policy(null, false))).toEqual(policyAcknowledgement(null));
+
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(load).toHaveBeenCalledTimes(2);
+    });
+
+    it("lets reinjection hydration replace a stale same-revision document policy", async () => {
+        let completeStaleHydration: ((value: unknown) => void) | undefined;
+        const source = messages();
+        const staleLoader = () => new Promise<unknown>((resolve) => {
+            completeStaleHydration = resolve;
+        });
+        const first = install(source, staleLoader);
+
+        expect(source.dispatch(policy(5, false))).toEqual(policyAcknowledgement(5));
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+
+        const second = install(source, async () => state(true, 5));
+        expect(second).toBe(first);
+        await settleRuntime();
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+
+        completeStaleHydration?.(state(false, 5));
+        await settleRuntime();
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+    });
+
     it("restores and reprocesses Hacker News across site policy refreshes", async () => {
         document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07.000000Z">`
             + `<a id="hn-policy-link" href="item?id=1">1 hour ago</a></span>`;

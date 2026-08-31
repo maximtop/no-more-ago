@@ -153,11 +153,6 @@ export interface ProcessInput {
     readonly url: URL;
 
     /**
-     * Lazily supplies the current document URL for SPA reconciliation.
-     */
-    readonly urlProvider?: () => URL;
-
-    /**
      * Document subtree whose eligible timestamp sources are processed.
      */
     readonly root: Document;
@@ -211,11 +206,6 @@ export interface ReconcileInput {
      * Trusted sender URL used to derive diagnostic context.
      */
     readonly url: URL;
-
-    /**
-     * Lazily supplies the current document URL for SPA reconciliation.
-     */
-    readonly urlProvider?: () => URL;
 
     /**
      * Document subtree whose eligible timestamp sources are processed.
@@ -301,18 +291,6 @@ interface CandidateCollection {
      * Sources withheld from extraction by the active route provenance policy.
      */
     readonly blockedSources: ReadonlySet<Element>;
-}
-
-/**
- * Resolves the current URL once for one processing or reconciliation pass.
- *
- * @param input - Processing input carrying a static URL and optional provider.
- * @returns - Current URL snapshot used consistently by the pass.
- */
-function getCurrentUrl(
-    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
-): URL {
-    return input.urlProvider?.() ?? input.url;
 }
 
 /**
@@ -450,7 +428,7 @@ function processCandidateCollection(
  */
 function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeElement[] {
     const { root } = input;
-    const url = getCurrentUrl(input);
+    const url = input.url;
     const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
@@ -523,7 +501,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 export function reconcileDocumentSources(
     input: ReconcileSourcesInput,
 ): readonly HTMLTimeElement[] {
-    const url = getCurrentUrl(input);
+    const url = input.url;
     const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
@@ -577,7 +555,6 @@ export function reconcileDocumentSources(
  *
  * @param input - Full-document processing inputs.
  * @param input.url - Current page URL used to select an adapter.
- * @param input.urlProvider - Dynamic source of the current page URL.
  * @param input.root - Document to discover and transform.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
@@ -591,7 +568,6 @@ export function reconcileDocumentSources(
  */
 export function processDocument({
     url,
-    urlProvider,
     root,
     locales,
     localesProvider,
@@ -604,7 +580,6 @@ export function processDocument({
 }: ProcessInput): readonly HTMLTimeElement[] {
     return processRegion({
         url,
-        ...(urlProvider === undefined ? {} : { urlProvider }),
         root,
         registry,
         ...(locales === undefined ? {} : { locales }),

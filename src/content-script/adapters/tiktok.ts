@@ -7,6 +7,8 @@ import { isHtmlElement } from "./html-element";
 import { findSimpleTextTarget } from "./simple-text-target";
 import {
     isTikTokHydrationScript,
+    isTikTokPostId,
+    invalidateTikTokHydrationCache,
     resolveTikTokPublicationDatetime,
     TIKTOK_HYDRATION_SELECTOR,
 } from "./tiktok-timestamp";
@@ -31,9 +33,10 @@ const LEGACY_DIRECT_SOURCE_SELECTOR = `[data-e2e="${LEGACY_DIRECT_MARKER}"]` as 
 const DIRECT_FEED_SOURCE_SELECTOR =
     `article[data-e2e="${DIRECT_FEED_MARKER}"]` as const;
 const PROFILE_PATH = /^\/@[^/]+\/?$/u;
-const PUBLICATION_PATH = /^\/(@[^/]+)\/(video|photo)\/([1-9]\d{18})\/?$/u;
-const DIRECT_FEED_WRAPPER_ID = /^xgwrapper-\d+-([1-9]\d{18})$/u;
+const PUBLICATION_PATH = /^\/(@[^/]+)\/(video|photo)\/([^/]+)\/?$/u;
+const DIRECT_FEED_WRAPPER_ID = /^xgwrapper-\d+-(.+)$/u;
 const MAXIMUM_HYDRATION_RECONCILIATION_SOURCES = 2_000;
+const MAXIMUM_HYDRATION_RECONCILIATION_VISITS = 100_000;
 
 /**
  * Stable identifier for TikTok profile-card timestamps.
@@ -69,10 +72,6 @@ interface TikTokPublication {
      */
     readonly id: string;
 
-    /**
-     * Publication path kind.
-     */
-    readonly kind: "video" | "photo";
 }
 
 /**
@@ -99,9 +98,20 @@ function parsePublication(url: URL): TikTokPublication | null {
     const author = match?.[1];
     const kind = match?.[2];
     const id = match?.[3];
-    return author && (kind === "video" || kind === "photo") && id
-        ? { authorPath: `/${author}`, id, kind }
+    return author && (kind === "video" || kind === "photo") && id && isTikTokPostId(id)
+        ? { authorPath: `/${author}`, id }
         : null;
+}
+
+/**
+ * Extracts a strict TikTok post ID from one direct-feed wrapper ID.
+ *
+ * @param value - Candidate wrapper ID.
+ * @returns - Supported post ID, or null for another wrapper shape.
+ */
+function getDirectFeedPostId(value: string): string | null {
+    const id = value.match(DIRECT_FEED_WRAPPER_ID)?.[1];
+    return id && isTikTokPostId(id) ? id : null;
 }
 
 /**
@@ -277,7 +287,7 @@ function findDirectFeedDateTarget(
     publication: TikTokPublication,
 ): Text | null {
     const ownsPublication = Array.from(source.querySelectorAll("[id]")).some((element) =>
-        element.id.match(DIRECT_FEED_WRAPPER_ID)?.[1] === publication.id
+        getDirectFeedPostId(element.id) === publication.id
     );
     if (!ownsPublication) {
         return null;
@@ -347,9 +357,13 @@ function changesHydration(
     addedNodes: readonly Node[],
     removedNodes: readonly Node[],
 ): boolean {
-    return isTikTokHydrationScript(element)
+    const changed = isTikTokHydrationScript(element)
         || addedNodes.some(containsHydrationScript)
         || removedNodes.some(containsHydrationScript);
+    if (changed) {
+        invalidateTikTokHydrationCache(element.ownerDocument);
+    }
+    return changed;
 }
 
 /**
@@ -366,7 +380,16 @@ function discoverHydrationSources(
     predicate: (element: Element) => boolean,
 ): readonly Element[] {
     const sources: Element[] = [];
-    for (const element of document.querySelectorAll(selector)) {
+    const walker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT);
+    let visited = 0;
+    let node = walker.nextNode();
+    while (node && visited < MAXIMUM_HYDRATION_RECONCILIATION_VISITS) {
+        visited += 1;
+        const element = node as Element;
+        node = walker.nextNode();
+        if (!element.matches(selector)) {
+            continue;
+        }
         if (predicate(element)) {
             sources.push(element);
             if (sources.length === MAXIMUM_HYDRATION_RECONCILIATION_SOURCES) {
@@ -519,8 +542,8 @@ function getDirectFeedMutationSources(
     }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.ID) {
         if (
-            DIRECT_FEED_WRAPPER_ID.test(element.id)
-            || (oldValue !== null && DIRECT_FEED_WRAPPER_ID.test(oldValue))
+            getDirectFeedPostId(element.id) !== null
+            || (oldValue !== null && getDirectFeedPostId(oldValue) !== null)
         ) {
             const source = element.closest(DIRECT_FEED_SOURCE_SELECTOR);
             return source ? [source] : [];

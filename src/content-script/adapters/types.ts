@@ -143,7 +143,7 @@ export type TimestampVisibilityPolicy =
     (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
 
 /**
- * Fields shared by page-datetime and derived timestamp candidates.
+ * Fields shared by validated-string and derived timestamp candidates.
  */
 interface TimestampCandidateBase {
     /**
@@ -173,16 +173,16 @@ interface TimestampCandidateBase {
 }
 
 /**
- * Candidate backed by a page-authored datetime string.
+ * Candidate backed by an adapter-supplied datetime string.
  */
-export interface PageDatetimeTimestampCandidate extends TimestampCandidateBase {
+export interface ValidatedStringTimestampCandidate extends TimestampCandidateBase {
     /**
      * Adapter-supplied timestamp evidence before shared validation and parsing.
      */
     readonly rawDatetime: string;
 
     /**
-     * Page-datetime validation rule.
+     * String-datetime validation rule.
      */
     readonly validationRule:
         | typeof TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
@@ -226,7 +226,7 @@ export interface DerivedUnixMillisecondsTimestampCandidate
  * Canonical candidate emitted by a timestamp source rule.
  */
 export type TimestampCandidate =
-    | PageDatetimeTimestampCandidate
+    | ValidatedStringTimestampCandidate
     | DerivedUnixMillisecondsTimestampCandidate;
 
 /**
@@ -243,6 +243,28 @@ export interface TimestampExtractionContext {
      */
     readonly readPageText: (target: Text) => string;
 }
+
+/**
+ * Explicit ownership result for an adapter-specific mutation mapper.
+ */
+export interface TimestampMutationSourceResult {
+    /**
+     * Whether the custom mapper fully handled the mutation, including a deliberate no-op.
+     */
+    readonly handled: boolean;
+
+    /**
+     * Exact sources selected by the custom mapper.
+     */
+    readonly sources: readonly Element[];
+}
+
+/**
+ * Mutation sources with optional explicit handled/delegate semantics.
+ */
+export type TimestampMutationSourceSelection =
+    | readonly Element[]
+    | TimestampMutationSourceResult;
 
 /**
  * Generic or site-specific source rule for trusted timestamp candidates.
@@ -274,7 +296,8 @@ export interface TimestampSourceRule {
      * @param oldValue - Attribute value before the mutation.
      * @param context - Read-only page extraction context.
      * @param mutationKind - Kind of DOM mutation being mapped.
-     * @returns - Exact source elements that require re-evaluation.
+     * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
+     * delegates to normal ancestor matching.
      */
     readonly getMutationSources?: (
         element: Element,
@@ -282,7 +305,7 @@ export interface TimestampSourceRule {
         oldValue: string | null,
         context: TimestampExtractionContext,
         mutationKind: TimestampMutationKind,
-    ) => readonly Element[];
+    ) => TimestampMutationSourceSelection;
 
     /**
      * Maps child membership changes back to sources whose eligibility or evidence changed.
@@ -290,13 +313,14 @@ export interface TimestampSourceRule {
      * @param element - Element whose direct child list changed.
      * @param addedNodes - Nodes added by the page-authored mutation.
      * @param removedNodes - Nodes removed by the page-authored mutation.
-     * @returns - Exact source elements that require re-evaluation.
+     * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
+     * delegates to normal ancestor matching.
      */
     readonly getChildMutationSources?: (
         element: Element,
         addedNodes: readonly Node[],
         removedNodes: readonly Node[],
-    ) => readonly Element[];
+    ) => TimestampMutationSourceSelection;
 
     /**
      * Determines whether the rule applies to the page URL.
