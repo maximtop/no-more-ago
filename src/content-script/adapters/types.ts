@@ -18,6 +18,7 @@ export const TIMESTAMP_VALIDATION_RULE = {
  * Source kinds recognized by timestamp extraction rules.
  */
 export const TIMESTAMP_SOURCE_KIND = {
+    BLUESKY_POST: "bluesky-post",
     RELATIVE_TIME: "relative-time",
     TIME_AGO: "time-ago",
     TIME_UNTIL: "time-until",
@@ -35,7 +36,9 @@ export const TIMESTAMP_SOURCE_KIND = {
  * Source attributes whose page-authored changes can affect adapter eligibility or extraction.
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
+    ARIA_LABEL: "aria-label",
     CLASS: "class",
+    DATA_TOOLTIP: "data-tooltip",
     DATA_E2E: "data-e2e",
     ARIA_HIDDEN: "aria-hidden",
     DATA_TIMESTAMP: "data-timestamp",

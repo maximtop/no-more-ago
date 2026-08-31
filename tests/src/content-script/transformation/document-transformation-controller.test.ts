@@ -3,7 +3,15 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+/* eslint-disable @typescript-eslint/require-await */
 
+import {
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+} from "../../../../src/content-script/adapters/bluesky-appview";
+import {
+    createBlueskyCoordinator,
+} from "../../../../src/content-script/adapters/bluesky-coordinator";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
 import { linkedinAdapter } from "../../../../src/content-script/adapters/linkedin";
@@ -19,6 +27,9 @@ import {
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
+import type {
+    DocumentTransformationParticipantFactory,
+} from "../../../../src/content-script/transformation/document-transformation-participant";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
 import {
@@ -35,6 +46,26 @@ const noMatchRule: TimestampSourceRule = {
     discover: () => [],
     extract: () => null,
 };
+
+/**
+ * Composes one Bluesky participant for a controller test URL.
+ *
+ * @param appView - Deterministic AppView capability.
+ * @param url - Document URL owned by the participant.
+ * @returns - Generic document-participant factory.
+ */
+function blueskyParticipantFactory(
+    appView: BlueskyAppView,
+    url: URL,
+): DocumentTransformationParticipantFactory {
+    return (host) => createBlueskyCoordinator({
+        document,
+        url,
+        appView,
+        getDiagnosticSink: host.getDiagnosticSink,
+        onSourcesChanged: host.onSourcesChanged,
+    });
+}
 
 /**
  * Generic timestamp fixture shared by visibility lifecycle tests.
@@ -80,6 +111,104 @@ describe("DocumentTransformationController", () => {
         await Promise.resolve();
         await Promise.resolve();
     };
+
+    it("resolves Bluesky in place after startup and restores exact page content", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-controller-source"
+            href="/profile/alice.example/post/3controller"
+            aria-label="localized date" data-tooltip="localized date">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = document.getElementById("bluesky-controller-source");
+        const target = source?.lastChild;
+        if (!source || !(target instanceof Text)) {
+            throw new Error("Expected Bluesky controller source");
+        }
+        const attributes = [...source.attributes].map(({ name, value }) => [name, value]);
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+        }));
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        const appView: BlueskyAppView = { getProfiles, getPosts };
+        const url = new URL("https://bsky.app/");
+        const controller = new DocumentTransformationController({
+            url,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "utc" },
+            },
+            participantFactory: blueskyParticipantFactory(appView, url),
+        });
+
+        expect(controller.start()).toEqual([]);
+        expect(target.data).toBe("2h");
+        await vi.waitFor(() => {
+            expect(target.data).toBe("2026-08-31 10:15");
+        });
+        expect([...source.attributes].map(({ name, value }) => [name, value]))
+            .toEqual(attributes);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+
+        controller.teardown();
+        expect(target.data).toBe("2h");
+        expect(document.getElementById("bluesky-controller-source")).toBe(source);
+    });
+
+    it("never calls Bluesky enrichment on another host", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-31T10:15:00Z">relative</time>';
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>();
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>();
+        const url = new URL("https://example.test/");
+        const controller = new DocumentTransformationController({
+            url,
+            root: document,
+            locales: ["en-US"],
+            participantFactory: blueskyParticipantFactory(
+                { getProfiles, getPosts },
+                url,
+            ),
+        });
+
+        controller.start();
+        await flushMutations();
+        expect(getProfiles).not.toHaveBeenCalled();
+        expect(getPosts).not.toHaveBeenCalled();
+        controller.teardown();
+    });
+
+    it("keeps a frozen participant input reusable", () => {
+        const participant = {
+            rule: noMatchRule,
+            start: vi.fn(),
+            inspect: vi.fn(),
+            inspectSources: vi.fn(),
+            release: vi.fn(),
+            stop: vi.fn(),
+        };
+        const participantFactory = vi.fn(() => participant);
+        const input = Object.freeze({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            participantFactory,
+        });
+
+        expect(() => {
+            new DocumentTransformationController(input);
+            new DocumentTransformationController(input);
+        }).not.toThrow();
+        expect(participantFactory).toHaveBeenCalledTimes(2);
+        expect(Object.keys(input)).not.toContain("registry");
+    });
 
     it("reconciles a LinkedIn source when descendant ID evidence changes", async () => {
         document.body.innerHTML = `

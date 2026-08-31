@@ -12,6 +12,9 @@ import {
     REFRESH_FAILURE_REASONS,
     SETTINGS_STATE_FAILURES,
     STATE_AVAILABILITY,
+    SETTINGS_STATE_FAILURE,
+    POPUP_STATUS,
+    type SettingsStateFailure,
 } from "./view-state-values";
 
 const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
@@ -144,6 +147,28 @@ export const refreshFailuresSchema = v.pipe(
  * Popup view inferred from its runtime validation schema.
  */
 export type PopupState = v.InferOutput<typeof popupStateSchema>;
+
+/**
+ * Builds the shared fail-closed popup projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable popup state.
+ */
+export function createUnavailablePopupState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): PopupState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        globalEnabled: null,
+        hostname: null,
+        siteEnabled: null,
+        status: failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+            ? POPUP_STATUS.RUNTIME_FAILED
+            : POPUP_STATUS.SETTINGS_UNAVAILABLE,
+        failure,
+    };
+}
 
 /**
  * Site-list entry inferred from its runtime validation schema.

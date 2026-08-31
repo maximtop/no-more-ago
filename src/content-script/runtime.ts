@@ -4,10 +4,19 @@
 
 import type { AdapterRegistry } from "./adapters/registry";
 import {
+    createBlueskyAppView,
+    type BlueskyAppView,
+} from "./adapters/bluesky-appview";
+import { createBlueskyCoordinator } from "./adapters/bluesky-coordinator";
+import { matchesBlueskyUrl } from "./adapters/bluesky";
+import {
     DocumentTransformationController,
     type DocumentTransformationControllerInput,
 } from "./transformation/document-transformation-controller";
-import type { DocumentDiagnosticSink } from "./transformation/process-document";
+import type { DocumentDiagnosticSink } from "./diagnostics";
+import type {
+    DocumentTransformationParticipantFactory,
+} from "./transformation/document-transformation-participant";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -613,6 +622,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
+ * @param input.blueskyAppView - Optional deterministic AppView replacement for tests.
  * @param input.loadDocumentState - Background document-state loader.
  * @param input.reportDiagnostic - Background diagnostic event reporter.
  * @param input.onActivityChanged - Optional site lifecycle listener.
@@ -628,6 +638,7 @@ export function installContentRuntime(input: {
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
+    readonly blueskyAppView?: BlueskyAppView;
     readonly loadDocumentState?: () => Promise<unknown>;
     readonly reportDiagnostic?: (event: Record<string, unknown>) => Promise<unknown>;
     readonly onActivityChanged?: (active: boolean) => void;
@@ -646,6 +657,16 @@ export function installContentRuntime(input: {
         refreshPolicy(existing);
         return existing.handle;
     }
+    const participantFactory: DocumentTransformationParticipantFactory | undefined =
+        matchesBlueskyUrl(input.url)
+            ? (host) => createBlueskyCoordinator({
+                document: input.document,
+                url: input.url,
+                appView: input.blueskyAppView ?? createBlueskyAppView(),
+                getDiagnosticSink: host.getDiagnosticSink,
+                onSourcesChanged: host.onSourcesChanged,
+            })
+            : undefined;
     const slot = {} as RuntimeSlot;
     const processInput: DocumentTransformationControllerInput = {
         url: input.url,
@@ -655,6 +676,7 @@ export function installContentRuntime(input: {
         urlProvider: () => slot.urlProvider(),
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
+        ...(participantFactory === undefined ? {} : { participantFactory }),
         ...(input.routeHandoffClassifier === undefined
             ? {}
             : { routeHandoffClassifier: input.routeHandoffClassifier }),

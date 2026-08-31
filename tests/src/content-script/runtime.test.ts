@@ -6,6 +6,12 @@ import { readFile } from "node:fs/promises";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
+import {
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+    type BlueskyLookupResult,
+    type BlueskyProfileRecord,
+} from "../../../src/content-script/adapters/bluesky-appview";
 import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../../src/content-script/runtime";
 import {
     OWNED_OUTPUT_ATTRIBUTE,
@@ -17,10 +23,13 @@ import {
     DOCUMENT_PHASE,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
+    PRESENTATION_UPDATED_MESSAGE,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     RECONCILE_DOCUMENT_ROUTE_MESSAGE,
+    UPDATE_PRESENTATION_MESSAGE,
 } from "../../../src/shared/messaging/document-messages";
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
+import type { TimeZoneSelection } from "../../../src/shared/settings/snapshot";
 import { classifyYouTubeWatchRouteHandoff } from
     "../../../src/content-script/adapters/youtube-watch-route-handoff";
 import {
@@ -722,6 +731,148 @@ describe("installContentRuntime", () => {
                 expect(document.getElementById("tiktok-policy-date")).toBe(date);
             },
         });
+    });
+
+    it("reuses resolved Bluesky time across presentation changes", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-runtime-source"
+            href="/profile/alice.example/post/3runtime"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = messages();
+        const label = document.getElementById("bluesky-runtime-source")?.lastChild;
+        if (!(label instanceof Text)) {
+            throw new Error("Expected Bluesky runtime label");
+        }
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+        }));
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        const appView: BlueskyAppView = { getProfiles, getPosts };
+        const initialTimeZone: TimeZoneSelection = { mode: "utc" };
+        installContentRuntime({
+            document,
+            url: new URL("https://bsky.app/"),
+            locales: ["en-US"],
+            loadDocumentState: async () => ({
+                ...state(true, 1),
+                display: {
+                    formatMode: "custom" as const,
+                    pattern: "yyyy-MM-dd HH:mm",
+                    timeZone: initialTimeZone,
+                },
+            }),
+            messages: source,
+            blueskyAppView: appView,
+        });
+
+        await vi.waitFor(() => {
+            expect(label.data).toBe("2026-08-31 10:15");
+        });
+        expect(source.dispatch({
+            type: UPDATE_PRESENTATION_MESSAGE,
+            revision: 2,
+            display: {
+                formatMode: "custom",
+                pattern: "dd/MM/yyyy HH:mm",
+                timeZone: initialTimeZone,
+            },
+        })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
+        expect(label.data).toBe("31/08/2026 10:15");
+
+        expect(source.dispatch({
+            type: UPDATE_PRESENTATION_MESSAGE,
+            revision: 3,
+            display: {
+                formatMode: "custom",
+                pattern: "dd/MM/yyyy HH:mm",
+                timeZone: { mode: "iana", identifier: "America/New_York" },
+            },
+        })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 3 });
+        expect(label.data).toBe("31/08/2026 06:15");
+        expect(getProfiles).toHaveBeenCalledTimes(1);
+        expect(getPosts).toHaveBeenCalledTimes(1);
+    });
+
+    it("makes a disabled Bluesky generation inert before fresh reactivation", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-policy-source"
+            href="/profile/alice.example/post/3policy"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = messages();
+        const label = document.getElementById("bluesky-policy-source")?.lastChild;
+        if (!(label instanceof Text)) {
+            throw new Error("Expected Bluesky policy label");
+        }
+        let enabled = true;
+        let revision = 1;
+        let resolveFirst: ((value: BlueskyLookupResult<BlueskyProfileRecord>) => void)
+            | undefined;
+        const firstProfiles = new Promise<BlueskyLookupResult<BlueskyProfileRecord>>(
+            (resolve) => {
+                resolveFirst = resolve;
+            },
+        );
+        let profileInvocation = 0;
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => {
+            profileInvocation += 1;
+            if (profileInvocation === 1) {
+                return firstProfiles;
+            }
+            return {
+                status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+                records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+            };
+        });
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        installContentRuntime({
+            document,
+            url: new URL("https://bsky.app/"),
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+            blueskyAppView: { getProfiles, getPosts },
+        });
+        await vi.waitFor(() => {
+            expect(getProfiles).toHaveBeenCalledTimes(1);
+        });
+
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch(policy(revision, false)))
+            .toEqual(policyAcknowledgement(revision));
+        expect(label.data).toBe("2h");
+        resolveFirst?.({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: [{ actor: "alice.example", did: "did:plc:alice" }],
+        });
+        await settleRuntime();
+        expect(label.data).toBe("2h");
+        expect(getPosts).not.toHaveBeenCalled();
+
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch(policy(revision, true)))
+            .toEqual(policyAcknowledgement(revision));
+        await vi.waitFor(() => {
+            expect(label.data).not.toBe("2h");
+        });
+        expect(getProfiles).toHaveBeenCalledTimes(2);
+        expect(getPosts).toHaveBeenCalledTimes(1);
     });
     it.each(["global", "per-host"] as const)(
         "restores synchronously and re-enables current Watch identity for %s policy",

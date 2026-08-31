@@ -22,7 +22,10 @@ import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
-import type { PopupState } from "../shared/messaging/view-state-schemas";
+import {
+    createUnavailablePopupState,
+    type PopupState,
+} from "../shared/messaging/view-state-schemas";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
@@ -31,6 +34,8 @@ import {
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
 import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
+
+const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
 
 /**
  * Optional dependencies and initial state for the popup UI.
@@ -172,12 +177,20 @@ export function PopupApp({
             return;
         }
         let mounted = true;
+        const loadTimeout = globalThis.setTimeout(() => {
+            if (!mounted) {
+                return;
+            }
+            setState(createUnavailablePopupState());
+            setLoading(false);
+        }, POPUP_STATE_LOAD_TIMEOUT_MS);
         void client
             .getState()
             .then((next) => {
                 if (!mounted) {
                     return;
                 }
+                globalThis.clearTimeout(loadTimeout);
                 setState(next);
                 setLoading(false);
             })
@@ -185,19 +198,13 @@ export function PopupApp({
                 if (!mounted) {
                     return;
                 }
-                setState({
-                    availability: STATE_AVAILABILITY.UNAVAILABLE,
-                    revision: null,
-                    globalEnabled: null,
-                    hostname: null,
-                    siteEnabled: null,
-                    status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                });
+                globalThis.clearTimeout(loadTimeout);
+                setState(createUnavailablePopupState());
                 setLoading(false);
             });
         return () => {
             mounted = false;
+            globalThis.clearTimeout(loadTimeout);
         };
     }, [client, initialState]);
 
