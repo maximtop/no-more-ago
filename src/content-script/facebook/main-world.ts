@@ -6,15 +6,16 @@ import { isFacebookHostname, isFacebookUrl } from "../../shared/url/facebook";
 import {
     FACEBOOK_BRIDGE_LEASE_ID,
     FACEBOOK_BRIDGE_SECRET,
+    FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY,
     type FacebookBridgeLeaseCommand,
 } from "../../shared/messaging/facebook-bridge";
 import {
     FACEBOOK_PAYLOAD_LIMIT,
     createFacebookPayloadMessage,
 } from "./contracts";
-import { extractFacebookTimestampRecords } from "./payload-parser";
+import { extractFacebookTimestampUpdate } from "./payload-parser";
 
-const FACEBOOK_PAYLOAD_BRIDGE_SLOT = Symbol.for("no-more-ago.facebook-payload-bridge");
+const FACEBOOK_PAYLOAD_BRIDGE_SLOT = Symbol.for(FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY);
 const FACEBOOK_PAYLOAD_BRIDGE_VERSION = 2 as const;
 const FACEBOOK_GRAPHQL_PATHNAME = "/api/graphql/" as const;
 const FACEBOOK_QUERY_NAME = /^[\dA-Za-z_]+Query$/u;
@@ -35,6 +36,7 @@ const FACEBOOK_STORY_QUERY_CUES = [
  */
 export const FACEBOOK_TRANSPORT_LIMIT = {
     MAX_REQUEST_BODY_CHARACTERS: 100_000,
+    MAX_REQUEST_PARAMETERS: 1_000,
     MAX_CONCURRENT_INSPECTIONS: 2,
 } as const;
 
@@ -163,38 +165,55 @@ function unknownProperty(value: object, property: string): unknown {
 }
 
 /**
- * Converts a supported request body into bounded text without consuming streams or blobs.
+ * Reads the friendly operation name from a bounded form body without serializing it.
  *
  * @param body - Page-provided fetch or XMLHttpRequest body.
- * @returns - Bounded serialized form data, or null when synchronous inspection is unsafe.
+ * @returns - Friendly operation name, or null when synchronous inspection is unsafe.
  */
-function requestBodyText(body: unknown): string | null {
-    const value = typeof body === "string"
-        ? body
-        : body instanceof URLSearchParams
-            ? body.toString()
-            : null;
-    return value !== null && value.length <= FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_BODY_CHARACTERS
-        ? value
-        : null;
+function requestFriendlyName(body: unknown): string | null {
+    let parameters: URLSearchParams;
+    if (typeof body === "string") {
+        if (body.length > FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_BODY_CHARACTERS) {
+            return null;
+        }
+        parameters = new URLSearchParams(body);
+    } else if (body instanceof URLSearchParams) {
+        parameters = body;
+    } else {
+        return null;
+    }
+    let characters = 0;
+    let count = 0;
+    let friendlyName: string | null = null;
+    for (const [name, value] of parameters) {
+        count += 1;
+        characters += name.length + value.length;
+        if (
+            count > FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_PARAMETERS
+            || characters > FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_BODY_CHARACTERS
+        ) {
+            return null;
+        }
+        if (name === "fb_api_req_friendly_name" && friendlyName === null) {
+            friendlyName = value;
+        }
+    }
+    return friendlyName;
 }
 
 /**
  * Checks whether one request is a Facebook Story-bearing GraphQL operation.
  *
  * @param requestUrl - Fetch input URL resolved by the page.
- * @param body - Synchronously inspectable request body.
+ * @param body - Synchronously inspectable raw request body.
  * @param baseHref - Current Facebook document URL used for relative requests.
  * @returns - Whether the response is worth bounded Story parsing.
  */
 export function shouldInspectFacebookGraphqlRequest(
     requestUrl: string,
-    body: string | null,
+    body: unknown,
     baseHref: string,
 ): boolean {
-    if (body === null || body.length > FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_BODY_CHARACTERS) {
-        return false;
-    }
     let url: URL;
     try {
         url = new URL(requestUrl, baseHref);
@@ -204,7 +223,7 @@ export function shouldInspectFacebookGraphqlRequest(
     if (!isFacebookHostname(url.hostname) || url.pathname !== FACEBOOK_GRAPHQL_PATHNAME) {
         return false;
     }
-    const queryName = new URLSearchParams(body).get("fb_api_req_friendly_name");
+    const queryName = requestFriendlyName(body);
     return queryName !== null
         && FACEBOOK_QUERY_NAME.test(queryName)
         && FACEBOOK_STORY_QUERY_CUES.some((cue) => queryName.includes(cue));
@@ -220,7 +239,7 @@ export function shouldInspectFacebookGraphqlRequest(
 function fetchRequestDetails(
     input: RequestInfo | URL,
     init: RequestInit | undefined,
-): { readonly url: string; readonly body: string | null } {
+): { readonly url: string; readonly body: unknown } {
     const url = typeof input === "string"
         ? input
         : input instanceof URL
@@ -228,7 +247,7 @@ function fetchRequestDetails(
             : input.url;
     return {
         url,
-        body: requestBodyText(init?.body),
+        body: init?.body,
     };
 }
 
@@ -328,14 +347,20 @@ async function emitPayloadRecords(
     if (!isCurrent() || payloadText.length > FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS) {
         return;
     }
-    const records = extractFacebookTimestampRecords(payloadText);
-    if (records.length === 0 || !isCurrent()) {
+    const update = extractFacebookTimestampUpdate(payloadText);
+    if (
+        (
+            update.records.length === 0
+            && update.invalidatedTrackingTokens.length === 0
+        )
+        || !isCurrent()
+    ) {
         return;
     }
     const sequence = lease.sequence;
     lease.sequence += 1;
     const message = await createFacebookPayloadMessage(
-        records,
+        update,
         lease.leaseId,
         sequence,
         lease.secret,
@@ -434,11 +459,10 @@ function installTransportWrappers(
         const lease = getLease();
         const request = requests.get(this);
         if (lease && request?.lease === lease) {
-            const body = requestBodyText(args[0]);
             const inspect = request.method.toUpperCase() === "POST"
                 && shouldInspectFacebookGraphqlRequest(
                     request.url,
-                    body,
+                    args[0],
                     target.location.href,
                 );
             if (inspect) {
@@ -544,6 +568,9 @@ function isFacebookBridgeLeaseCommand(value: unknown): value is FacebookBridgeLe
         typeof candidate.leaseId !== "string"
         || !FACEBOOK_BRIDGE_LEASE_ID.test(candidate.leaseId)
         || typeof candidate.active !== "boolean"
+        || typeof candidate.generation !== "number"
+        || !Number.isSafeInteger(candidate.generation)
+        || candidate.generation < 0
     ) {
         return false;
     }
@@ -567,10 +594,18 @@ function isFacebookBridgeLeaseCommand(value: unknown): value is FacebookBridgeLe
 export function installFacebookPayloadBridge(target: Window): void {
     const mutableTarget = target as Window & Record<symbol, unknown>;
     const existing = mutableTarget[FACEBOOK_PAYLOAD_BRIDGE_SLOT];
+    const existingDescriptor = Object.getOwnPropertyDescriptor(
+        mutableTarget,
+        FACEBOOK_PAYLOAD_BRIDGE_SLOT,
+    );
     if (
         existing !== null
         && typeof existing === "object"
         && !Array.isArray(existing)
+        && existingDescriptor?.value === existing
+        && !existingDescriptor.configurable
+        && !existingDescriptor.writable
+        && Object.isFrozen(existing)
         && unknownProperty(existing, "version") === FACEBOOK_PAYLOAD_BRIDGE_VERSION
         && typeof unknownProperty(existing, "reconcileLease") === "function"
     ) {
@@ -590,17 +625,15 @@ export function installFacebookPayloadBridge(target: Window): void {
                 return;
             }
         }
-        const descriptor = Object.getOwnPropertyDescriptor(
-            mutableTarget,
-            FACEBOOK_PAYLOAD_BRIDGE_SLOT,
-        );
-        if (descriptor && !descriptor.configurable) {
+        if (existingDescriptor && !existingDescriptor.configurable) {
             return;
         }
     }
 
-    let disposed = false;
     let generation = 0;
+    let lastCommandGeneration = -1;
+    let lastCommand: FacebookBridgeLeaseCommand | null = null;
+    let lastCommandResult = false;
     let activeLease: ActiveFacebookBridgeLease | null = null;
     let expirationTimer: ReturnType<typeof setTimeout> | undefined;
     let wrappers: InstalledFacebookTransportWrappers | undefined;
@@ -608,7 +641,7 @@ export function installFacebookPayloadBridge(target: Window): void {
     const activeReaders = new Set<ReadableStreamDefaultReader<Uint8Array>>();
 
     const getLease = (): ActiveFacebookBridgeLease | null => {
-        if (disposed || activeLease === null || activeLease.expiresAt <= Date.now()) {
+        if (activeLease === null || activeLease.expiresAt <= Date.now()) {
             return null;
         }
         return activeLease;
@@ -674,11 +707,7 @@ export function installFacebookPayloadBridge(target: Window): void {
             activeInspections -= 1;
         });
     };
-    const dispose = (): void => {
-        if (disposed) {
-            return;
-        }
-        disposed = true;
+    const deactivate = (): void => {
         generation += 1;
         activeLease = null;
         cancelActiveReaders();
@@ -690,22 +719,48 @@ export function installFacebookPayloadBridge(target: Window): void {
             restoreTransportWrappers(target, wrappers);
             wrappers = undefined;
         }
-        if (mutableTarget[FACEBOOK_PAYLOAD_BRIDGE_SLOT] === slot) {
-            Reflect.deleteProperty(mutableTarget, FACEBOOK_PAYLOAD_BRIDGE_SLOT);
-        }
     };
+    const dispose = (): void => {
+        deactivate();
+    };
+    const isSameCommand = (
+        left: FacebookBridgeLeaseCommand,
+        right: FacebookBridgeLeaseCommand,
+    ): boolean => left.active === right.active
+        && left.generation === right.generation
+        && left.leaseId === right.leaseId
+        && (!left.active || (
+            right.active
+            && left.secret === right.secret
+            && left.expiresAt === right.expiresAt
+        ));
     const reconcileLease = (command: FacebookBridgeLeaseCommand): boolean => {
-        if (disposed || !isFacebookBridgeLeaseCommand(command)) {
+        if (!isFacebookBridgeLeaseCommand(command)) {
             return false;
         }
+        if (command.generation < lastCommandGeneration) {
+            return false;
+        }
+        if (command.generation === lastCommandGeneration) {
+            return lastCommand !== null
+                && isSameCommand(command, lastCommand)
+                && lastCommandResult;
+        }
+        lastCommandGeneration = command.generation;
+        lastCommand = command;
         if (!command.active) {
-            if (activeLease?.leaseId !== command.leaseId) {
-                return false;
+            if (activeLease === null) {
+                lastCommandResult = true;
+                return true;
             }
-            dispose();
-            return true;
+            lastCommandResult = activeLease.leaseId === command.leaseId;
+            if (lastCommandResult) {
+                deactivate();
+            }
+            return lastCommandResult;
         }
         if (command.expiresAt <= Date.now()) {
+            lastCommandResult = false;
             return false;
         }
         generation += 1;
@@ -732,9 +787,10 @@ export function installFacebookPayloadBridge(target: Window): void {
         expirationTimer = setTimeout(() => {
             expirationTimer = undefined;
             if (activeLease === lease) {
-                dispose();
+                deactivate();
             }
         }, Math.max(0, command.expiresAt - Date.now()));
+        lastCommandResult = true;
         return true;
     };
     const slot: FacebookPayloadBridgeSlot = Object.freeze({
@@ -745,7 +801,7 @@ export function installFacebookPayloadBridge(target: Window): void {
     try {
         Object.defineProperty(mutableTarget, FACEBOOK_PAYLOAD_BRIDGE_SLOT, {
             value: slot,
-            configurable: true,
+            configurable: false,
             enumerable: false,
             writable: false,
         });

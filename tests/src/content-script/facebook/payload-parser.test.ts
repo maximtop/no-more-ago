@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { FACEBOOK_PAYLOAD_LIMIT } from
     "../../../../src/content-script/facebook/contracts";
-import { extractFacebookTimestampRecords } from
+import { extractFacebookTimestampRecords, extractFacebookTimestampUpdate } from
     "../../../../src/content-script/facebook/payload-parser";
 
 const TRACKING_TOKEN = "AZ-facebook-story-tracking-token-1234567890";
@@ -195,6 +195,18 @@ describe("Facebook payload parser", () => {
 
         expect(extractFacebookTimestampRecords(`${first}\n${padding}\n${conflict}`))
             .toEqual([]);
+    });
+
+    it("reports a token contradicted within one bounded payload", () => {
+        const payload = JSON.stringify([
+            story(TRACKING_TOKEN),
+            { ...story(TRACKING_TOKEN), creation_time: 1_787_933_302 },
+        ]);
+
+        expect(extractFacebookTimestampUpdate(payload)).toEqual({
+            records: [],
+            invalidatedTrackingTokens: [TRACKING_TOKEN],
+        });
     });
 
     it("emits no more than the configured record limit from one payload", () => {

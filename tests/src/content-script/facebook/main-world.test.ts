@@ -25,6 +25,7 @@ const SECRET = "ab".repeat(32);
 const SECOND_SECRET = "cd".repeat(32);
 const BRIDGE_SLOT = Symbol.for("no-more-ago.facebook-payload-bridge");
 const installedTargets: Window[] = [];
+let leaseCommandGeneration = 0;
 
 /**
  * Minimal controllable XMLHttpRequest used at the public bridge boundary.
@@ -138,7 +139,14 @@ function activate(
     secret = SECRET,
     expiresAt = Date.now() + 60_000,
 ): boolean {
-    return command(target, { active: true, leaseId, secret, expiresAt });
+    leaseCommandGeneration += 1;
+    return command(target, {
+        active: true,
+        generation: leaseCommandGeneration,
+        leaseId,
+        secret,
+        expiresAt,
+    });
 }
 
 /**
@@ -188,6 +196,7 @@ async function flushAsync(): Promise<void> {
 }
 
 afterEach(() => {
+    leaseCommandGeneration = 0;
     for (const target of installedTargets.splice(0)) {
         const slot = (target as unknown as Record<symbol, unknown>)[BRIDGE_SLOT];
         const dispose = slot !== null && typeof slot === "object"
@@ -386,16 +395,22 @@ describe("Facebook main-world bridge", () => {
             expect(read).toHaveBeenCalledOnce();
         });
 
-        expect(command(target, { active: false, leaseId: LEASE_ID })).toBe(true);
+        leaseCommandGeneration += 1;
+        expect(command(target, {
+            active: false,
+            generation: leaseCommandGeneration,
+            leaseId: LEASE_ID,
+        })).toBe(true);
         expect(cancel).toHaveBeenCalledOnce();
     });
 
-    it("expires without renewal and restores only wrappers it still owns", async () => {
+    it("expires without renewal, preserves its immutable slot, and can reactivate", async () => {
         vi.useFakeTimers();
         const { target } = harness();
         const originalOpen: unknown = Reflect.get(TestXmlHttpRequest.prototype, "open");
         const originalSend: unknown = Reflect.get(TestXmlHttpRequest.prototype, "send");
         installFacebookPayloadBridge(target);
+        const installedSlot = (target as unknown as Record<symbol, unknown>)[BRIDGE_SLOT];
         activate(target, LEASE_ID, SECRET, Date.now() + 1_000);
         const pageFetch = vi.fn<Window["fetch"]>(() => Promise.resolve(new Response("{}")));
         target.fetch = pageFetch;
@@ -405,7 +420,38 @@ describe("Facebook main-world bridge", () => {
         expect(Reflect.get(target, "fetch")).toBe(pageFetch);
         expect(Reflect.get(TestXmlHttpRequest.prototype, "open")).toBe(originalOpen);
         expect(Reflect.get(TestXmlHttpRequest.prototype, "send")).toBe(originalSend);
-        expect((target as unknown as Record<symbol, unknown>)[BRIDGE_SLOT]).toBeUndefined();
+        expect((target as unknown as Record<symbol, unknown>)[BRIDGE_SLOT])
+            .toBe(installedSlot);
+        expect(Object.getOwnPropertyDescriptor(target, BRIDGE_SLOT)?.configurable)
+            .toBe(false);
+        expect(activate(target, SECOND_LEASE_ID, SECOND_SECRET)).toBe(true);
+        expect(Reflect.get(target, "fetch")).not.toBe(pageFetch);
+    });
+
+    it("rejects an older active command after a newer release", () => {
+        const { target, fetch } = harness();
+        installFacebookPayloadBridge(target);
+        expect(command(target, {
+            active: true,
+            generation: 2,
+            leaseId: LEASE_ID,
+            secret: SECRET,
+            expiresAt: Date.now() + 60_000,
+        })).toBe(true);
+        expect(command(target, {
+            active: false,
+            generation: 4,
+            leaseId: LEASE_ID,
+        })).toBe(true);
+
+        expect(command(target, {
+            active: true,
+            generation: 3,
+            leaseId: SECOND_LEASE_ID,
+            secret: SECOND_SECRET,
+            expiresAt: Date.now() + 60_000,
+        })).toBe(false);
+        expect(Reflect.get(target, "fetch")).toBe(fetch);
     });
 
     it("preserves XHR returns and accepts only current POST text responses", async () => {
@@ -486,5 +532,43 @@ describe("Facebook main-world bridge", () => {
             body,
             `${FACEBOOK_ORIGIN}/home`,
         )).toBe(false);
+    });
+
+    it("inspects URLSearchParams without serializing an unbounded body", () => {
+        const body = selectedBody();
+        const toString = vi.spyOn(body, "toString").mockImplementation(() => {
+            throw new Error("must not serialize");
+        });
+
+        expect(shouldInspectFacebookGraphqlRequest(
+            `${FACEBOOK_ORIGIN}/api/graphql/`,
+            body,
+            `${FACEBOOK_ORIGIN}/home`,
+        )).toBe(true);
+        expect(toString).not.toHaveBeenCalled();
+
+        for (let index = 0; index < FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_PARAMETERS; index += 1) {
+            body.append("", "");
+        }
+        expect(shouldInspectFacebookGraphqlRequest(
+            `${FACEBOOK_ORIGIN}/api/graphql/`,
+            body,
+            `${FACEBOOK_ORIGIN}/home`,
+        )).toBe(false);
+    });
+
+    it("rejects a non-GraphQL URL before inspecting its request body", async () => {
+        const { target } = harness();
+        const body = selectedBody();
+        const toString = vi.spyOn(body, "toString");
+        installFacebookPayloadBridge(target);
+        activate(target);
+
+        await target.fetch(`${FACEBOOK_ORIGIN}/not-graphql`, {
+            method: "POST",
+            body,
+        });
+
+        expect(toString).not.toHaveBeenCalled();
     });
 });

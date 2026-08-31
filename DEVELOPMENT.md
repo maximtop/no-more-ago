@@ -32,7 +32,7 @@ Install these tools before working on the project:
 - pnpm 10.34.5, installed directly. Do not use Corepack.
 - Git with access to the private
   `git@github.com:maximtop/no-more-ago.git` repository.
-- Chrome, Firefox, or Edge for manual extension testing.
+- Chrome or Edge 102+, or Firefox 128+, for manual extension testing.
 - GNU Make only if you want to use the optional Makefile aliases.
 
 Confirm the active versions:
@@ -175,8 +175,9 @@ frames whose own URL is a Facebook URL. Registration comparison tolerates
 browser APIs omitting optional returned fields but corrects every explicit
 mismatch. The universal runtime and Facebook bridge registrations reconcile
 independently, so a bridge-specific browser rejection does not prevent the core
-runtime from registering. Firefox builds require version 128 or later for
-registered `MAIN`-world content scripts.
+runtime from registering. Chrome and Edge builds require version 102 or later,
+and Firefox builds require version 128 or later, for registered `MAIN`-world
+content scripts.
 
 The Facebook bridge starts inert without wrapping page transports. The isolated
 runtime uses the shared controller's activity lifecycle to request a short-lived

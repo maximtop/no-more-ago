@@ -65,6 +65,21 @@ export interface FacebookTimestampRecord {
 }
 
 /**
+ * One bounded payload update, including associations invalidated by conflicts.
+ */
+export interface FacebookTimestampPayloadUpdate {
+    /**
+     * Conflict-free Story timestamp associations found in the payload.
+     */
+    readonly records: readonly FacebookTimestampRecord[];
+
+    /**
+     * Tracking tokens contradicted within the same payload.
+     */
+    readonly invalidatedTrackingTokens: readonly string[];
+}
+
+/**
  * Cross-world message emitted by the Facebook response bridge.
  */
 export interface FacebookPayloadMessage {
@@ -92,6 +107,11 @@ export interface FacebookPayloadMessage {
      * Bounded story timestamp records extracted in the main world.
      */
     readonly records: readonly FacebookTimestampRecord[];
+
+    /**
+     * Tokens whose prior associations must be invalidated after payload conflicts.
+     */
+    readonly invalidatedTrackingTokens: readonly string[];
 
     /**
      * HMAC over the complete canonical envelope and minimal records.
@@ -154,10 +174,25 @@ export function isFacebookPayloadMessage(value: unknown): value is FacebookPaylo
         && Number.isSafeInteger(value.sequence)
         && value.sequence >= 0
         && Array.isArray(value.records)
-        && value.records.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
+        && Array.isArray(value.invalidatedTrackingTokens)
+        && value.records.length + value.invalidatedTrackingTokens.length
+            <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
         && value.records.every(isFacebookTimestampRecord)
+        && value.invalidatedTrackingTokens.every(isTrackingToken)
         && typeof value.signature === "string"
         && FACEBOOK_PAYLOAD_SIGNATURE.test(value.signature);
+}
+
+/**
+ * Validates one bounded Facebook tracking token.
+ *
+ * @param value - Candidate token supplied by the page.
+ * @returns - Whether the token fits the opaque association-key contract.
+ */
+function isTrackingToken(value: unknown): value is string {
+    return typeof value === "string"
+        && value.length >= FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS
+        && value.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS;
 }
 
 /**
@@ -165,20 +200,21 @@ export function isFacebookPayloadMessage(value: unknown): value is FacebookPaylo
  *
  * @param leaseId - Browser-mediated lease identity.
  * @param sequence - Per-lease message identity.
- * @param records - Minimal Story timestamp records.
+ * @param update - Minimal Story timestamp records and conflict invalidations.
  * @returns - Canonical UTF-8 input for HMAC signing and verification.
  */
 function facebookPayloadSignatureInput(
     leaseId: string,
     sequence: number,
-    records: readonly FacebookTimestampRecord[],
+    update: FacebookTimestampPayloadUpdate,
 ): string {
     return JSON.stringify({
         source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
         type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
         leaseId,
         sequence,
-        records,
+        records: update.records,
+        invalidatedTrackingTokens: update.invalidatedTrackingTokens,
     });
 }
 
@@ -235,19 +271,19 @@ async function importFacebookPayloadKey(
 /**
  * Creates one authenticated cross-world message from extracted Story records.
  *
- * @param records - Valid records to transfer into the isolated world.
+ * @param update - Valid records and invalidations to transfer into the isolated world.
  * @param leaseId - Browser-mediated lease identity.
  * @param sequence - Unique per-lease message identity.
  * @param secret - Per-lease HMAC secret unavailable to page scripts.
  * @returns - Canonical signed Facebook payload message.
  */
 export async function createFacebookPayloadMessage(
-    records: readonly FacebookTimestampRecord[],
+    update: FacebookTimestampPayloadUpdate,
     leaseId: string,
     sequence: number,
     secret: string,
 ): Promise<FacebookPayloadMessage> {
-    const input = facebookPayloadSignatureInput(leaseId, sequence, records);
+    const input = facebookPayloadSignatureInput(leaseId, sequence, update);
     const key = await importFacebookPayloadKey(secret, "sign");
     const signature = hexadecimal(await crypto.subtle.sign(
         "HMAC",
@@ -259,7 +295,8 @@ export async function createFacebookPayloadMessage(
         type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
         leaseId,
         sequence,
-        records,
+        records: update.records,
+        invalidatedTrackingTokens: update.invalidatedTrackingTokens,
         signature,
     };
 }
@@ -284,7 +321,7 @@ export async function verifyFacebookPayloadMessage(
             new TextEncoder().encode(facebookPayloadSignatureInput(
                 message.leaseId,
                 message.sequence,
-                message.records,
+                message,
             )),
         );
     } catch {

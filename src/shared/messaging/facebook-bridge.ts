@@ -9,6 +9,12 @@ export const FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE =
     "no-more-ago:facebook-bridge-lease-request" as const;
 
 /**
+ * Global-symbol key for the immutable main-world bridge command surface.
+ */
+export const FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY =
+    "no-more-ago.facebook-payload-bridge" as const;
+
+/**
  * Duration of one main-world inspection lease before automatic disposal.
  */
 export const FACEBOOK_BRIDGE_LEASE_DURATION_MS = 30_000 as const;
@@ -134,6 +140,11 @@ export type FacebookBridgeLeaseCommand =
         readonly active: true;
 
         /**
+         * Monotonic per-background command generation used to reject late execution.
+         */
+        readonly generation: number;
+
+        /**
          * Opaque identity for the new lease generation.
          */
         readonly leaseId: string;
@@ -153,6 +164,11 @@ export type FacebookBridgeLeaseCommand =
          * Releases the named lease and its owned wrappers.
          */
         readonly active: false;
+
+        /**
+         * Monotonic per-background command generation used to reject late execution.
+         */
+        readonly generation: number;
 
         /**
          * Current lease identity required to reject stale releases.
@@ -188,28 +204,4 @@ export function isFacebookBridgeLeaseRequest(
             && keys[2] === "type"
             && typeof candidate.leaseId === "string"
             && FACEBOOK_BRIDGE_LEASE_ID.test(candidate.leaseId);
-}
-
-/**
- * Validates one active lease response at the isolated-world boundary.
- *
- * @param value - Candidate response from the extension background.
- * @returns - Whether the response carries complete bounded lease credentials.
- */
-export function isFacebookBridgeLease(
-    value: unknown,
-): value is FacebookBridgeLease {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-        return false;
-    }
-    const candidate = value as Record<string, unknown>;
-    return candidate.ok === true
-        && candidate.active === true
-        && typeof candidate.leaseId === "string"
-        && FACEBOOK_BRIDGE_LEASE_ID.test(candidate.leaseId)
-        && typeof candidate.secret === "string"
-        && FACEBOOK_BRIDGE_SECRET.test(candidate.secret)
-        && typeof candidate.expiresAt === "number"
-        && Number.isSafeInteger(candidate.expiresAt)
-        && candidate.expiresAt > 0;
 }

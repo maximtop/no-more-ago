@@ -33,6 +33,8 @@ import {
     type ContentRuntimeHandle,
 } from "../../../../src/content-script/runtime";
 import { STATE_AVAILABILITY } from "../../../../src/shared/messaging/view-state-values";
+import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
+    "../../../../src/shared/extension-files";
 
 /**
  * Creates an independently dispatchable content-runtime message source.
@@ -292,7 +294,7 @@ describe("DocumentActivationCoordinator", () => {
         });
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [0] },
-            files: ["facebook-payload-bridge.js"],
+            files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
             world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
@@ -321,7 +323,7 @@ describe("DocumentActivationCoordinator", () => {
         }]);
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [2] },
-            files: ["facebook-payload-bridge.js"],
+            files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
             world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
@@ -344,7 +346,7 @@ describe("DocumentActivationCoordinator", () => {
 
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [0, 2] },
-            files: ["facebook-payload-bridge.js"],
+            files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
             world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });

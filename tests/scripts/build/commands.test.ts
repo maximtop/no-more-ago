@@ -65,6 +65,9 @@ describe("build commands", () => {
                     expect(manifest.browser_specific_settings).toEqual({
                         gecko: { strict_min_version: "128.0" },
                     });
+                    expect(manifest.minimum_chrome_version).toBeUndefined();
+                } else {
+                    expect(manifest.minimum_chrome_version).toBe("102");
                 }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
                 expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))

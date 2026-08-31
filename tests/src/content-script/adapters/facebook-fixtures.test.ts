@@ -212,7 +212,7 @@ async function dispatchFixtureRecords(
     const records = extractFacebookTimestampRecords(fixture(name));
     window.dispatchEvent(new MessageEvent("message", {
         data: await createFacebookPayloadMessage(
-            records,
+            { records, invalidatedTrackingTokens: [] },
             LEASE_ID,
             payloadSequence,
             LEASE_SECRET,
@@ -381,7 +381,7 @@ describe("Facebook offline fixture matrix", () => {
         await flushRuntime();
         window.dispatchEvent(new MessageEvent("message", {
             data: await createFacebookPayloadMessage(
-                records,
+                { records, invalidatedTrackingTokens: [] },
                 LEASE_ID,
                 payloadSequence,
                 LEASE_SECRET,

@@ -10,16 +10,26 @@ import type { FacebookBridgeLeaseCommand } from "../messaging/facebook-bridge";
  * This function deliberately has no runtime closure dependencies because Chrome
  * serializes it before main-world execution.
  *
+ * @param slotKey - Shared serializable key for the immutable bridge slot.
  * @param command - Background-created lease command.
  * @returns - Whether a compatible installed bridge accepted the command.
  */
 export function applyFacebookBridgeLeaseCommand(
+    slotKey: string,
     command: FacebookBridgeLeaseCommand,
 ): boolean {
-    const slot = (window as unknown as Window & Record<symbol, unknown>)[
-        Symbol.for("no-more-ago.facebook-payload-bridge")
-    ];
+    const slotSymbol = Symbol.for(slotKey);
+    const slot = (window as unknown as Window & Record<symbol, unknown>)[slotSymbol];
     if (slot === null || typeof slot !== "object" || Array.isArray(slot)) {
+        return false;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(window, slotSymbol);
+    if (
+        descriptor?.value !== slot
+        || descriptor.configurable
+        || descriptor.writable
+        || !Object.isFrozen(slot)
+    ) {
         return false;
     }
     const reconcileLease = (slot as {

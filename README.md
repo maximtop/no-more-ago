@@ -45,6 +45,8 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 ### Chrome and Edge
 
+Requires Chrome or Edge 102 or later.
+
 1. Obtain and extract the `chrome.zip` or `edge.zip` release artifact.
 2. Open the browser's extension management page.
 3. Enable Developer mode.
@@ -52,6 +54,8 @@ from source, follow the [development guide](DEVELOPMENT.md).
 5. Select the extracted artifact directory.
 
 ### Firefox
+
+Requires Firefox 128 or later.
 
 1. Obtain and extract the `firefox.zip` release artifact.
 2. Open `about:debugging#/runtime/this-firefox`.

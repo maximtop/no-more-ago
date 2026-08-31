@@ -19,10 +19,13 @@ const SECRET = "ab".repeat(32);
 
 describe("Facebook cross-world contracts", () => {
     it("creates and verifies a complete authenticated minimal record message", async () => {
-        const message = await createFacebookPayloadMessage([{
-            trackingToken: TRACKING_TOKEN,
-            rawDatetime: "1787933301",
-        }], LEASE_ID, 3, SECRET);
+        const message = await createFacebookPayloadMessage({
+            records: [{
+                trackingToken: TRACKING_TOKEN,
+                rawDatetime: "1787933301",
+            }],
+            invalidatedTrackingTokens: [],
+        }, LEASE_ID, 3, SECRET);
 
         expect(isFacebookPayloadMessage(message)).toBe(true);
         await expect(verifyFacebookPayloadMessage(message, SECRET)).resolves.toBe(true);
@@ -33,6 +36,10 @@ describe("Facebook cross-world contracts", () => {
         await expect(verifyFacebookPayloadMessage({
             ...message,
             records: [{ ...record, rawDatetime: "1787933302" }],
+        }, SECRET)).resolves.toBe(false);
+        await expect(verifyFacebookPayloadMessage({
+            ...message,
+            invalidatedTrackingTokens: [TRACKING_TOKEN],
         }, SECRET)).resolves.toBe(false);
     });
 
@@ -49,6 +56,7 @@ describe("Facebook cross-world contracts", () => {
             leaseId: LEASE_ID,
             sequence: 0,
             records,
+            invalidatedTrackingTokens: [],
             signature: "00".repeat(32),
         };
 
@@ -82,6 +90,7 @@ describe("Facebook cross-world contracts", () => {
             leaseId: LEASE_ID,
             sequence: 0,
             records: [record],
+            invalidatedTrackingTokens: [],
             signature: "00".repeat(32),
         })).toBe(false);
     });
@@ -96,6 +105,7 @@ describe("Facebook cross-world contracts", () => {
             source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
             type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
             records: [],
+            invalidatedTrackingTokens: [],
             ...authentication,
         })).toBe(false);
     });

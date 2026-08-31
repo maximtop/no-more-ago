@@ -4,14 +4,17 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { FacebookTimestampRecord } from
+import { FACEBOOK_PAYLOAD_LIMIT, type FacebookTimestampRecord } from
     "../../../../src/content-script/facebook/contracts";
+import { extractFacebookTimestampUpdate } from
+    "../../../../src/content-script/facebook/payload-parser";
 import {
     FACEBOOK_TIMESTAMP_RECORD_CHANGE,
     clearFacebookTimestampRecords,
     getFacebookTimestampRecord,
     ingestFacebookPayloadScripts,
     storeFacebookTimestampRecords,
+    storeFacebookTimestampUpdate,
 } from "../../../../src/content-script/facebook/timestamp-store";
 
 /**
@@ -76,15 +79,40 @@ describe("Facebook timestamp store", () => {
         expect(getFacebookTimestampRecord(source(token(1)))).toBeNull();
     });
 
+    it("invalidates an existing record after a conflict within one later payload", () => {
+        storeFacebookTimestampRecords(document, [record(1)]);
+        const update = extractFacebookTimestampUpdate(JSON.stringify([
+            {
+                __typename: "Story",
+                creation_time: 1_787_933_301,
+                encrypted_click_tracking: token(1),
+            },
+            {
+                __typename: "Story",
+                creation_time: 1_787_933_302,
+                encrypted_click_tracking: token(1),
+            },
+        ]));
+
+        expect(storeFacebookTimestampUpdate(document, update)).toEqual([{
+            trackingToken: token(1),
+            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+        }]);
+        expect(getFacebookTimestampRecord(source(token(1)))).toBeNull();
+    });
+
     it("invalidates the oldest association when document capacity is exceeded", () => {
         storeFacebookTimestampRecords(
             document,
-            Array.from({ length: 2_000 }, (_, index) => record(index)),
+            Array.from({
+                length: FACEBOOK_PAYLOAD_LIMIT.MAX_ASSOCIATIONS_PER_DOCUMENT,
+            }, (_, index) => record(index)),
         );
+        const overflowIndex = FACEBOOK_PAYLOAD_LIMIT.MAX_ASSOCIATIONS_PER_DOCUMENT;
 
-        expect(storeFacebookTimestampRecords(document, [record(2_000)])).toEqual([
+        expect(storeFacebookTimestampRecords(document, [record(overflowIndex)])).toEqual([
             {
-                trackingToken: token(2_000),
+                trackingToken: token(overflowIndex),
                 state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
             },
             {
@@ -93,7 +121,8 @@ describe("Facebook timestamp store", () => {
             },
         ]);
         expect(getFacebookTimestampRecord(source(token(0)))).toBeNull();
-        expect(getFacebookTimestampRecord(source(token(2_000)))).toEqual(record(2_000));
+        expect(getFacebookTimestampRecord(source(token(overflowIndex))))
+            .toEqual(record(overflowIndex));
     });
 
     it("counts conflicts toward the shared document capacity", () => {
@@ -101,9 +130,13 @@ describe("Facebook timestamp store", () => {
         storeFacebookTimestampRecords(document, [record(0, "1787933302")]);
         storeFacebookTimestampRecords(
             document,
-            Array.from({ length: 1_999 }, (_, index) => record(index + 1)),
+            Array.from({
+                length: FACEBOOK_PAYLOAD_LIMIT.MAX_ASSOCIATIONS_PER_DOCUMENT - 1,
+            }, (_, index) => record(index + 1)),
         );
-        storeFacebookTimestampRecords(document, [record(2_000)]);
+        storeFacebookTimestampRecords(document, [
+            record(FACEBOOK_PAYLOAD_LIMIT.MAX_ASSOCIATIONS_PER_DOCUMENT),
+        ]);
 
         expect(storeFacebookTimestampRecords(document, [record(0)])).toEqual([
             {

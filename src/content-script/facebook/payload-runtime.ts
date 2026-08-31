@@ -11,9 +11,9 @@ import {
 import {
     FACEBOOK_BRIDGE_LEASE_RENEWAL_MS,
     FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-    isFacebookBridgeLease,
     type FacebookBridgeLease,
     type FacebookBridgeLeaseRequest,
+    type FacebookBridgeLeaseResponse,
 } from "../../shared/messaging/facebook-bridge";
 import { isFacebookTimestampElement } from "../adapters/facebook";
 import {
@@ -22,7 +22,7 @@ import {
     findFacebookTimestampSources,
     getFacebookTrackingToken,
     ingestFacebookPayloadScripts,
-    storeFacebookTimestampRecords,
+    storeFacebookTimestampUpdate,
     type FacebookTimestampRecordChange,
 } from "./timestamp-store";
 
@@ -58,7 +58,9 @@ interface FacebookPayloadRuntimeSlot {
     /**
      * Current browser-mediated bridge lease requester.
      */
-    requestBridgeLease: ((request: FacebookBridgeLeaseRequest) => Promise<unknown>) | undefined;
+    requestBridgeLease: ((
+        request: FacebookBridgeLeaseRequest,
+    ) => Promise<FacebookBridgeLeaseResponse>) | undefined;
 
     /**
      * Stable public lifecycle handle returned by duplicate installations.
@@ -102,19 +104,29 @@ function hasPayloadScript(record: MutationRecord): boolean {
  * @param record - Child-list mutation to inspect.
  * @returns - Whether pending timestamp records should be retried.
  */
-function affectsTrackedLink(record: MutationRecord): boolean {
-    const affects = (node: Node): boolean => {
-        const element = node.nodeType === Node.ELEMENT_NODE
-            ? node as Element
-            : node.parentElement;
-        return element !== null
-            && (
-                element.matches(FACEBOOK_TRACKED_LINK_SELECTOR)
-                || element.closest(FACEBOOK_TRACKED_LINK_SELECTOR) !== null
-                || element.querySelector(FACEBOOK_TRACKED_LINK_SELECTOR) !== null
-            );
+function trackedLinkCandidates(record: MutationRecord): readonly Element[] {
+    const candidates = new Set<Element>();
+    const addClosest = (node: Node): void => {
+        const element = node instanceof Element ? node : node.parentElement;
+        const closest = element?.closest(FACEBOOK_TRACKED_LINK_SELECTOR);
+        if (closest) {
+            candidates.add(closest);
+        }
     };
-    return affects(record.target) || [...record.addedNodes].some(affects);
+    addClosest(record.target);
+    for (const node of record.addedNodes) {
+        addClosest(node);
+        if (!(node instanceof Element)) {
+            continue;
+        }
+        if (node.matches(FACEBOOK_TRACKED_LINK_SELECTOR)) {
+            candidates.add(node);
+        }
+        for (const element of node.querySelectorAll(FACEBOOK_TRACKED_LINK_SELECTOR)) {
+            candidates.add(element);
+        }
+    }
+    return [...candidates];
 }
 
 /**
@@ -131,7 +143,9 @@ export function installFacebookPayloadRuntime(input: {
     readonly window: Window;
     readonly document: Document;
     readonly onSourcesChanged: (sources: readonly Element[]) => void;
-    readonly requestBridgeLease?: (request: FacebookBridgeLeaseRequest) => Promise<unknown>;
+    readonly requestBridgeLease?: (
+        request: FacebookBridgeLeaseRequest,
+    ) => Promise<FacebookBridgeLeaseResponse>;
 }): FacebookPayloadRuntimeHandle {
     const runtimeDocument = input.document as Document & Record<
         symbol,
@@ -155,13 +169,13 @@ export function installFacebookPayloadRuntime(input: {
     const acceptedSequences = new Set<number>();
     const pendingSequences = new Set<number>();
 
-    const retryPending = (): void => {
+    const retryPending = (candidates?: readonly Element[]): void => {
         if (!slot.enabled) {
             return;
         }
         const changes = [...pendingChanges.values()];
         const changeByToken = new Map(changes.map((change) => [change.trackingToken, change]));
-        const sources = findFacebookTimestampSources(
+        const sources = candidates ?? findFacebookTimestampSources(
             input.document,
             [...changeByToken.keys()],
         );
@@ -241,12 +255,22 @@ export function installFacebookPayloadRuntime(input: {
         }
     };
 
+    const abandonLease = (abandoned: FacebookBridgeLease): void => {
+        if (lease !== abandoned) {
+            return;
+        }
+        lease = null;
+        acceptedSequences.clear();
+        pendingSequences.clear();
+        releaseLease(abandoned);
+    };
+
     const requestLease = (generation: number): void => {
         const requester = slot.requestBridgeLease;
         if (!slot.enabled || slot.disposed || !requester) {
             return;
         }
-        let pending: Promise<unknown>;
+        let pending: Promise<FacebookBridgeLeaseResponse>;
         try {
             pending = Promise.resolve(requester({
                 type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
@@ -261,16 +285,23 @@ export function installFacebookPayloadRuntime(input: {
                 || slot.disposed
                 || lifecycleGeneration !== generation
             ) {
-                if (isFacebookBridgeLease(response)) {
+                if (response.ok && response.active) {
                     releaseLease(response);
                 }
                 return;
             }
             clearRenewal();
-            if (isFacebookBridgeLease(response) && response.expiresAt > Date.now()) {
+            if (response.ok && response.active && response.expiresAt > Date.now()) {
                 lease = response;
                 acceptedSequences.clear();
                 pendingSequences.clear();
+            } else {
+                if (response.ok && response.active) {
+                    releaseLease(response);
+                }
+                if (lease) {
+                    abandonLease(lease);
+                }
             }
             renewalTimer = input.window.setTimeout(() => {
                 renewalTimer = undefined;
@@ -278,6 +309,9 @@ export function installFacebookPayloadRuntime(input: {
             }, FACEBOOK_BRIDGE_LEASE_RENEWAL_MS);
         }, () => {
             if (slot.enabled && !slot.disposed && lifecycleGeneration === generation) {
+                if (lease) {
+                    abandonLease(lease);
+                }
                 clearRenewal();
                 renewalTimer = input.window.setTimeout(() => {
                     renewalTimer = undefined;
@@ -301,11 +335,15 @@ export function installFacebookPayloadRuntime(input: {
         const message = event.data;
         if (
             !currentLease
+            || currentLease.expiresAt <= Date.now()
             || message.leaseId !== currentLease.leaseId
             || acceptedSequences.has(message.sequence)
             || pendingSequences.has(message.sequence)
             || pendingSequences.size >= 4
         ) {
+            if (currentLease && currentLease.expiresAt <= Date.now()) {
+                abandonLease(currentLease);
+            }
             return;
         }
         pendingSequences.add(message.sequence);
@@ -315,17 +353,21 @@ export function installFacebookPayloadRuntime(input: {
                 !verified
                 || !slot.enabled
                 || lease !== currentLease
+                || currentLease.expiresAt <= Date.now()
                 || acceptedSequences.has(message.sequence)
             ) {
+                if (lease === currentLease && currentLease.expiresAt <= Date.now()) {
+                    abandonLease(currentLease);
+                }
                 return;
             }
             acceptedSequences.add(message.sequence);
-            acceptChanges(storeFacebookTimestampRecords(
-                input.document,
-                message.records,
-            ));
+            acceptChanges(storeFacebookTimestampUpdate(input.document, message));
         }, () => {
             pendingSequences.delete(message.sequence);
+            if (lease === currentLease && currentLease.expiresAt <= Date.now()) {
+                abandonLease(currentLease);
+            }
         });
     };
 
@@ -336,8 +378,9 @@ export function installFacebookPayloadRuntime(input: {
         if (records.some(hasPayloadScript)) {
             acceptChanges(ingestFacebookPayloadScripts(input.document));
         }
-        if (records.some(affectsTrackedLink)) {
-            retryPending();
+        const candidates = [...new Set(records.flatMap(trackedLinkCandidates))];
+        if (candidates.length > 0) {
+            retryPending(candidates);
         }
     });
 

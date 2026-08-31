@@ -5,8 +5,14 @@
 import {
     FACEBOOK_PAYLOAD_LIMIT,
     FACEBOOK_UNIX_SECONDS,
+    type FacebookTimestampPayloadUpdate,
     type FacebookTimestampRecord,
 } from "./contracts";
+
+const EMPTY_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate = {
+    records: [],
+    invalidatedTrackingTokens: [],
+};
 
 const FACEBOOK_STORY_TYPENAME = "Story" as const;
 const XSSI_PREFIX = "for (;;);" as const;
@@ -149,23 +155,23 @@ function retainRecord(
     if (existing && existing.rawDatetime !== storyTime) {
         records.delete(trackingToken);
         conflicts.add(trackingToken);
-    } else if (!existing && records.size < FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE) {
+    } else if (
+        !existing
+        && records.size + conflicts.size < FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
+    ) {
         records.set(trackingToken, { trackingToken, rawDatetime: storyTime });
     }
 }
 
 /**
- * Extracts bounded, conflict-free Story timestamps from a Facebook JSON payload.
- *
- * Records are keyed by the encrypted tracking token also carried by Facebook's
- * timestamp link. Conflicting timestamps for one token are discarded.
+ * Extracts a bounded Story timestamp update from one Facebook JSON payload.
  *
  * @param payloadText - Serialized initial-page or GraphQL payload.
- * @returns - Minimal records suitable for cross-world transfer and DOM matching.
+ * @returns - Conflict-free records plus tokens contradicted within the payload.
  */
-export function extractFacebookTimestampRecords(
+export function extractFacebookTimestampUpdate(
     payloadText: string,
-): readonly FacebookTimestampRecord[] {
+): FacebookTimestampPayloadUpdate {
     if (
         payloadText.length === 0
         || payloadText.length > FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS
@@ -173,7 +179,7 @@ export function extractFacebookTimestampRecords(
         || !payloadText.includes("encrypted_click_tracking")
         || !payloadText.includes(FACEBOOK_STORY_TYPENAME)
     ) {
-        return [];
+        return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
     }
     const records = new Map<string, FacebookTimestampRecord>();
     const conflicts = new Set<string>();
@@ -182,7 +188,7 @@ export function extractFacebookTimestampRecords(
         const stack: unknown[] = [root];
         while (stack.length > 0) {
             if (visited >= FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES) {
-                return [];
+                return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
             }
             const value = stack.pop();
             visited += 1;
@@ -192,7 +198,7 @@ export function extractFacebookTimestampRecords(
                     - visited
                     - stack.length;
                 if (children.length > remaining) {
-                    return [];
+                    return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
                 }
                 stack.push(...children);
                 continue;
@@ -213,10 +219,28 @@ export function extractFacebookTimestampRecords(
                 - visited
                 - stack.length;
             if (children.length > remaining) {
-                return [];
+                return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
             }
             stack.push(...children);
         }
     }
-    return [...records.values()];
+    return {
+        records: [...records.values()],
+        invalidatedTrackingTokens: [...conflicts],
+    };
+}
+
+/**
+ * Extracts bounded, conflict-free Story timestamps from a Facebook JSON payload.
+ *
+ * Records are keyed by the encrypted tracking token also carried by Facebook's
+ * timestamp link. Conflicting timestamps for one token are discarded.
+ *
+ * @param payloadText - Serialized initial-page or GraphQL payload.
+ * @returns - Minimal records suitable for cross-world transfer and DOM matching.
+ */
+export function extractFacebookTimestampRecords(
+    payloadText: string,
+): readonly FacebookTimestampRecord[] {
+    return extractFacebookTimestampUpdate(payloadText).records;
 }

@@ -7,6 +7,8 @@ import { installFacebookPayloadRuntime } from "./facebook/payload-runtime";
 import { isFacebookUrl } from "../shared/url/facebook";
 import { GET_DOCUMENT_STATE_MESSAGE } from "../shared/messaging/contracts";
 import { DIAGNOSTIC_EVENT_MESSAGE } from "../shared/messaging/document-messages";
+import type { FacebookBridgeLeaseResponse } from
+    "../shared/messaging/facebook-bridge";
 import { classifyYouTubeWatchRouteHandoff } from
     "./adapters/youtube-watch-route-handoff";
 
@@ -23,7 +25,8 @@ const facebookRuntime = isFacebookUrl(documentUrl)
         },
         ...(typeof chrome.runtime.sendMessage === "function"
             ? {
-                requestBridgeLease: (request) => chrome.runtime.sendMessage(request),
+                requestBridgeLease: async (request): Promise<FacebookBridgeLeaseResponse> =>
+                    await chrome.runtime.sendMessage(request),
             }
             : {}),
     })

@@ -23,7 +23,9 @@ import {
 } from "../../../../src/content-script/transformation/render-timestamp-presentation";
 import {
     FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+    FACEBOOK_BRIDGE_LEASE_RENEWAL_MS,
     type FacebookBridgeLeaseRequest,
+    type FacebookBridgeLeaseResponse,
 } from "../../../../src/shared/messaging/facebook-bridge";
 
 const TRACKING_TOKEN = "AZ-facebook-payload-runtime-token-1234567890";
@@ -98,7 +100,7 @@ async function dispatchRecords(
     secret = SECRET,
 ): Promise<void> {
     const message = await createFacebookPayloadMessage(
-        records,
+        { records, invalidatedTrackingTokens: [] },
         LEASE_ID,
         sequence,
         secret,
@@ -130,7 +132,9 @@ async function flushMutations(): Promise<void> {
  */
 function install(
     onSourcesChanged: (sources: readonly Element[]) => void = vi.fn(),
-    requestBridgeLease: (request: FacebookBridgeLeaseRequest) => Promise<unknown>
+    requestBridgeLease: (
+        request: FacebookBridgeLeaseRequest,
+    ) => Promise<FacebookBridgeLeaseResponse>
         = leaseBoundary().request,
 ): FacebookPayloadRuntimeHandle {
     return installFacebookPayloadRuntime({
@@ -143,6 +147,7 @@ function install(
 
 afterEach(() => {
     sequence = 0;
+    vi.useRealTimers();
     vi.restoreAllMocks();
     restoreTimestampPresentations(document);
     clearFacebookTimestampRecords(document);
@@ -207,6 +212,26 @@ describe("Facebook isolated payload runtime", () => {
         const source = timestampSource();
         await flushMutations();
 
+        expect(callback).toHaveBeenCalledWith([source]);
+        handle.teardown();
+    });
+
+    it("does not rescan the document after an unrelated mutation", async () => {
+        const callback = vi.fn<(sources: readonly Element[]) => void>();
+        const handle = install(callback);
+        handle.setEnabled(true);
+        await flushMutations();
+        await dispatchRecords([RECORD]);
+        const querySelectorAll = vi.spyOn(document, "querySelectorAll");
+
+        const unrelated = document.createElement("div");
+        unrelated.textContent = "ordinary feed mutation";
+        document.body.append(unrelated);
+        await flushMutations();
+
+        expect(querySelectorAll).not.toHaveBeenCalled();
+        const source = timestampSource();
+        await flushMutations();
         expect(callback).toHaveBeenCalledWith([source]);
         handle.teardown();
     });
@@ -336,6 +361,86 @@ describe("Facebook isolated payload runtime", () => {
 
         await dispatchRecords([RECORD]);
         expect(callback).toHaveBeenCalledWith([source]);
+        handle.teardown();
+    });
+
+    it("drops old credentials when lease renewal fails", async () => {
+        vi.useFakeTimers();
+        let activeRequests = 0;
+        const request = vi.fn((message: FacebookBridgeLeaseRequest) => {
+            if (!message.active) {
+                return Promise.resolve({ ok: true, active: false } as const);
+            }
+            activeRequests += 1;
+            return Promise.resolve<FacebookBridgeLeaseResponse>(activeRequests === 1
+                ? {
+                    ok: true,
+                    active: true,
+                    leaseId: LEASE_ID,
+                    secret: SECRET,
+                    expiresAt: Date.now() + 60_000,
+                }
+                : { ok: false });
+        });
+        const source = timestampSource(SECOND_TRACKING_TOKEN);
+        const handle = install(vi.fn(), request);
+        handle.setEnabled(true);
+        await vi.advanceTimersByTimeAsync(0);
+
+        await vi.advanceTimersByTimeAsync(FACEBOOK_BRIDGE_LEASE_RENEWAL_MS);
+        expect(activeRequests).toBe(2);
+        expect(request).toHaveBeenCalledWith({
+            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+            active: false,
+            leaseId: LEASE_ID,
+        });
+
+        vi.useRealTimers();
+        await dispatchRecords([{
+            trackingToken: SECOND_TRACKING_TOKEN,
+            rawDatetime: "1787933302",
+        }]);
+        expect(getFacebookTimestampRecord(source)).toBeNull();
+        handle.teardown();
+    });
+
+    it("rejects a payload whose lease expires during asynchronous verification", async () => {
+        const message = await createFacebookPayloadMessage(
+            { records: [RECORD], invalidatedTrackingTokens: [] },
+            LEASE_ID,
+            sequence,
+            SECRET,
+        );
+        sequence += 1;
+        vi.useFakeTimers();
+        vi.setSystemTime(1_000);
+        const source = timestampSource();
+        const request = vi.fn((leaseRequest: FacebookBridgeLeaseRequest) => Promise.resolve(
+            leaseRequest.active
+                ? {
+                    ok: true as const,
+                    active: true as const,
+                    leaseId: LEASE_ID,
+                    secret: SECRET,
+                    expiresAt: 1_001,
+                }
+                : { ok: true as const, active: false as const },
+        ));
+        const handle = install(vi.fn(), request);
+        handle.setEnabled(true);
+        await vi.advanceTimersByTimeAsync(0);
+
+        dispatchBridgeMessage(message);
+        vi.setSystemTime(1_002);
+        vi.useRealTimers();
+        await flushMutations();
+
+        expect(getFacebookTimestampRecord(source)).toBeNull();
+        expect(request).toHaveBeenCalledWith({
+            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+            active: false,
+            leaseId: LEASE_ID,
+        });
         handle.teardown();
     });
 
