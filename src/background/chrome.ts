@@ -33,16 +33,12 @@ import { SettingsService, type SettingsStorage } from "./settings/service";
 import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
 import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
 import { DocumentActivationCoordinator } from "./runtime/document-activation";
-import { FacebookBridgeLeaseCoordinator } from "./runtime/facebook-bridge";
 import type { ScriptingRuntime } from "./runtime/scripting";
 import type { TabsRuntime } from "./runtime/tabs";
 import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 import { LIFECYCLE_REASON } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 import { parseHttpUrl } from "../shared/url/http";
-import { isFacebookUrl } from "../shared/url/facebook";
-import { isFacebookBridgeLeaseRequest } from
-    "../shared/messaging/facebook-bridge";
 import type {
     DisplaySettings,
     SettingsSnapshotV5,
@@ -58,10 +54,7 @@ import {
  *
  * @returns - Configured application, or undefined when required Chrome APIs are unavailable.
  */
-function installApplication(): {
-    readonly application: BackgroundApplication;
-    readonly facebookBridge: FacebookBridgeLeaseCoordinator;
-} | undefined {
+function installApplication(): BackgroundApplication | undefined {
     const candidate = chrome as unknown as {
         readonly storage?: {
             readonly local?: Pick<DiagnosticStorage, "get" | "set"> & {
@@ -179,49 +172,16 @@ function installApplication(): {
         browserFamily,
         ...(extensionVersion === undefined ? {} : { extensionVersion }),
     };
-    return {
-        application: new BackgroundApplication({
-            settings: new SettingsService(storage),
-            coordinator,
-            tabs,
-            journal: new DiagnosticJournal(storage),
-            diagnosticEnvironment,
-        }),
-        facebookBridge: new FacebookBridgeLeaseCoordinator({ scripting }),
-    };
+    return new BackgroundApplication({
+        settings: new SettingsService(storage),
+        coordinator,
+        tabs,
+        journal: new DiagnosticJournal(storage),
+        diagnosticEnvironment,
+    });
 }
 
-const installed = installApplication();
-const application = installed?.application;
-
-/**
- * Resolves an authenticated Facebook content-script sender to its exact browser frame.
- *
- * @param sender - Runtime sender metadata supplied by the browser.
- * @returns - Tab and frame identifiers, or null for non-Facebook/non-extension senders.
- */
-function facebookBridgeSender(
-    sender: chrome.runtime.MessageSender,
-): { readonly tabId: number; readonly frameId: number } | null {
-    let extensionId: string;
-    try {
-        extensionId = chrome.runtime.id;
-    } catch {
-        return null;
-    }
-    const url = parseHttpUrl(sender.url);
-    const tabId = sender.tab?.id;
-    const frameId = sender.frameId;
-    return sender.id === extensionId
-        && url !== null
-        && isFacebookUrl(url)
-        && typeof tabId === "number"
-        && Number.isSafeInteger(tabId)
-        && typeof frameId === "number"
-        && Number.isSafeInteger(frameId)
-        ? { tabId, frameId }
-        : null;
-}
+const application = installApplication();
 
 /**
  * Accepts only messages sent from this extension's options page.
@@ -250,19 +210,6 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             responseSent = true;
             sendResponse(value);
         };
-        if (isFacebookBridgeLeaseRequest(message)) {
-            const target = facebookBridgeSender(sender);
-            if (!target || !installed) {
-                sendOnce({ ok: false });
-                return false;
-            }
-            void installed.facebookBridge.reconcile(
-                target.tabId,
-                target.frameId,
-                message,
-            ).then(sendOnce, () => sendOnce({ ok: false }));
-            return true;
-        }
         if (isDiagnosticEventMessage(message)) {
             void application.recordDocumentEvent(message.event, sender).then(
                 (accepted) => sendOnce({ ok: accepted }),

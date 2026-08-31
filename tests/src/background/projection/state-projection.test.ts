@@ -14,6 +14,7 @@ import type {
 import {
     ACTIVATION_POLICY,
     RECONCILE_FAILURE_SCOPE,
+    REGISTRATION_OPERATION,
     REGISTRATION_OUTCOME,
     TAB_ACTION,
 } from "../../../../src/background/runtime/document-activation";
@@ -28,8 +29,54 @@ import {
 } from "../../../../src/shared/messaging/view-state-values";
 import { DEFAULT_SETTINGS_SNAPSHOT } from "../../../../src/shared/settings/snapshot";
 import type { TabsRuntime } from "../../../../src/background/runtime/tabs";
+import { FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID } from
+    "../../../../src/background/runtime/register-documents";
 
 describe("StateProjection", () => {
+    it("scopes Facebook bridge registration failures to Facebook tabs", async () => {
+        const result: ActivationReconcileResult = {
+            revision: 1,
+            policy: ACTIVATION_POLICY.ENABLED,
+            failures: [{
+                scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
+                operation: REGISTRATION_OPERATION.REGISTER,
+                registrationId: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
+            }],
+            registration: REGISTRATION_OUTCOME.FAILED,
+            registrations: [],
+            tabs: [],
+        };
+        const activation = new ActivationManager({
+            reconcile: vi.fn(() => Promise.resolve(result)),
+        });
+        await activation.reconcile(ACTIVATION_POLICY.ENABLED, 1, {});
+        let tabUrl = "https://example.test/page";
+        const tabs: TabsRuntime = {
+            query: vi.fn(() => Promise.resolve([{ id: 1, url: tabUrl }])),
+            getAllFrames: vi.fn(() => Promise.resolve([])),
+            sendMessage: vi.fn(() => Promise.resolve({
+                type: DOCUMENT_STATUS_MESSAGE,
+                phase: DOCUMENT_PHASE.ACTIVE,
+            })),
+        };
+        const projection = new StateProjection(tabs, activation);
+        const state: ApplicationStateView = {
+            phase: APPLICATION_PHASE.READY,
+            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
+            failure: undefined,
+        };
+
+        const unrelated = await projection.derivePopup(state);
+        tabUrl = "https://www.facebook.com/home";
+        const facebook = await projection.derivePopup(state);
+
+        expect(unrelated).toMatchObject({ status: POPUP_STATUS.ACTIVE });
+        expect(facebook).toMatchObject({
+            status: POPUP_STATUS.RUNTIME_FAILED,
+            failure: POPUP_RUNTIME_FAILURE.REGISTRATION,
+        });
+    });
+
     it("does not apply a stale failure after a tab navigates", async () => {
         const result: ActivationReconcileResult = {
             revision: 1,

@@ -179,23 +179,22 @@ runtime from registering. Chrome and Edge builds require version 102 or later,
 and Firefox builds require version 128 or later, for registered `MAIN`-world
 content scripts.
 
-The Facebook bridge starts inert without wrapping page transports. The isolated
-runtime uses the shared controller's activity lifecycle to request a short-lived
-per-frame lease through extension runtime messaging. The background ensures the
-bridge and injects the lease command in `MAIN`; the bridge signs every minimal
-record message, and the isolated runtime accepts only the active lease and HMAC.
-Lease renewal advances the activation generation. Release, expiry, or renewal
-makes older request completions inert, and disposal restores only wrappers the
-bridge still owns.
+The Facebook bridge installs bounded page-transport wrappers in an inert state.
+The isolated runtime uses the shared controller's activity lifecycle to send
+same-window enable or disable coordination messages. The page world is not an
+authentication boundary, so the bridge contains no secrets or privileged
+operations. Lifecycle changes advance a local generation, making older request
+completions inert; disposal restores only wrappers the bridge still owns.
 
 On enable the isolated runtime parses initial payload scripts before the
 controller's first discovery pass, then reconciles only sources affected by
 dynamic token records. On disable it detaches temporary listeners and observers,
 clears bounded document associations, and lets the shared controller restore
 every owned source. Only bounded tracking-token and Unix-seconds pairs plus
-authentication metadata cross worlds; payloads and page content are not
-persisted or diagnosed. The adapter itself remains a pure source rule backed by
-that temporary store.
+bounded invalidation state cross worlds; payloads and page content are not
+persisted or diagnosed. Cross-world records are structurally validated as
+untrusted page-derived input. The adapter itself remains a pure source rule
+backed by that temporary store.
 
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
@@ -582,12 +581,12 @@ source value. Successful events never retain raw source timestamps.
   global/site policy. For dynamic Facebook evidence, also verify the exact
   `/api/graphql/` URL, a synchronously inspectable bounded request body, an
   anchored Story-bearing `fb_api_req_friendly_name`, and—for XHR—a POST request
-  with an empty or `text` response type. A lease or signature rejection points
-  to background/main/isolated lifecycle coordination rather than selector
+  with an empty or `text` response type. If dynamic records stop arriving,
+  verify main/isolated lifecycle coordination before treating it as selector
   drift. For best-effort LinkedIn support, verify the accepted local ID evidence
   and timestamp-label relationship before changing selectors. Do not recover
-  from markup drift by parsing localized or relative UI text or adding a
-  network fallback.
+  from markup drift by parsing localized or relative UI text or adding a network
+  fallback.
 - **A supported TikTok publication is unchanged:** confirm the page uses HTTPS
   `www.tiktok.com`, an exact profile/video/photo path, an unambiguous tested
   card or direct label shape, and a plausible 19-digit post ID. A universal

@@ -10,7 +10,7 @@ import {
     createFacebookPayloadMessage,
     type FacebookTimestampRecord,
 } from "../../../../src/content-script/facebook/contracts";
-import { extractFacebookTimestampRecords } from
+import { extractFacebookTimestampUpdate } from
     "../../../../src/content-script/facebook/payload-parser";
 import {
     installFacebookPayloadRuntime,
@@ -33,8 +33,6 @@ import {
 } from "../../../../src/shared/messaging/document-messages";
 import { STATE_AVAILABILITY } from
     "../../../../src/shared/messaging/view-state-values";
-import type { FacebookBridgeLeaseRequest } from
-    "../../../../src/shared/messaging/facebook-bridge";
 
 const FACEBOOK_URL = new URL("https://www.facebook.com/fixture-feed");
 const INITIAL_TIMESTAMP = "1787933301" as const;
@@ -42,12 +40,9 @@ const DYNAMIC_TIMESTAMP = "1787343300" as const;
 const INITIAL_TEXT = "2026-08-28 16:08:21" as const;
 const DYNAMIC_TEXT = "2026-08-21 20:15:00" as const;
 const OWNED_SELECTOR = `[${OWNED_SOURCE_ATTRIBUTE}], [${OWNED_OUTPUT_ATTRIBUTE}]`;
-const LEASE_ID = "12345678-1234-1234-1234-123456789abc";
-const LEASE_SECRET = "ab".repeat(32);
 
 let contentRuntime: ContentRuntimeHandle | undefined;
 let payloadRuntime: FacebookPayloadRuntimeHandle | undefined;
-let payloadSequence = 0;
 
 /**
  * Reads one deterministic Facebook fixture adjacent to this test directory.
@@ -176,16 +171,6 @@ function installRuntimes(
         onSourcesChanged: (sources) => {
             contentRuntime?.reconcileSources(sources);
         },
-        requestBridgeLease: (request: FacebookBridgeLeaseRequest) => Promise.resolve(
-            request.active ? {
-                ok: true,
-                active: true,
-                leaseId: LEASE_ID,
-                secret: LEASE_SECRET,
-                expiresAt: Date.now() + 60_000,
-            }
-                : { ok: true, active: false },
-        ),
     });
     contentRuntime = installContentRuntime({
         document,
@@ -206,22 +191,16 @@ function installRuntimes(
  * @param name - Response fixture filename.
  * @returns - Minimal parsed records sent across the bridge boundary.
  */
-async function dispatchFixtureRecords(
+function dispatchFixtureRecords(
     name: string,
 ): Promise<readonly FacebookTimestampRecord[]> {
-    const records = extractFacebookTimestampRecords(fixture(name));
+    const update = extractFacebookTimestampUpdate(fixture(name));
     window.dispatchEvent(new MessageEvent("message", {
-        data: await createFacebookPayloadMessage(
-            { records, invalidatedTrackingTokens: [] },
-            LEASE_ID,
-            payloadSequence,
-            LEASE_SECRET,
-        ),
+        data: createFacebookPayloadMessage(update),
         origin: window.location.origin,
         source: window,
     }));
-    payloadSequence += 1;
-    return records;
+    return Promise.resolve(update.records);
 }
 
 /**
@@ -257,7 +236,6 @@ afterEach(() => {
     payloadRuntime?.teardown();
     contentRuntime = undefined;
     payloadRuntime = undefined;
-    payloadSequence = 0;
     const runtimeDocument = document as Document & Record<symbol, unknown>;
     Reflect.deleteProperty(runtimeDocument, DOCUMENT_RUNTIME_SLOT);
     clearFacebookTimestampRecords(document);
@@ -380,16 +358,14 @@ describe("Facebook offline fixture matrix", () => {
         installRuntimes(source, () => Promise.resolve(state(true, 1)));
         await flushRuntime();
         window.dispatchEvent(new MessageEvent("message", {
-            data: await createFacebookPayloadMessage(
-                { records, invalidatedTrackingTokens: [] },
-                LEASE_ID,
-                payloadSequence,
-                LEASE_SECRET,
-            ),
+            data: createFacebookPayloadMessage({
+                records,
+                invalidatedTrackingTokens: [],
+                invalidateAll: false,
+            }),
             origin: window.location.origin,
             source: window,
         }));
-        payloadSequence += 1;
         await flushRuntime();
         await vi.waitFor(() => {
             expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`))

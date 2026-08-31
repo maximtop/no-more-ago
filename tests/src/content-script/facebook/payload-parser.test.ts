@@ -4,9 +4,9 @@
 
 import { describe, expect, it } from "vitest";
 
-import { FACEBOOK_PAYLOAD_LIMIT } from
+import { FACEBOOK_PAYLOAD_LIMIT, type FacebookTimestampRecord } from
     "../../../../src/content-script/facebook/contracts";
-import { extractFacebookTimestampRecords, extractFacebookTimestampUpdate } from
+import { extractFacebookTimestampUpdate } from
     "../../../../src/content-script/facebook/payload-parser";
 
 const TRACKING_TOKEN = "AZ-facebook-story-tracking-token-1234567890";
@@ -24,6 +24,16 @@ function story(trackingToken: string): Record<string, unknown> {
         creation_time: 1_787_933_301,
         encrypted_click_tracking: trackingToken,
     };
+}
+
+/**
+ * Reads records through the complete update contract.
+ *
+ * @param payload - Serialized Facebook payload.
+ * @returns - Conflict-free records retained by the update.
+ */
+function extractFacebookTimestampRecords(payload: string): readonly FacebookTimestampRecord[] {
+    return extractFacebookTimestampUpdate(payload).records;
 }
 
 describe("Facebook payload parser", () => {
@@ -206,18 +216,45 @@ describe("Facebook payload parser", () => {
         expect(extractFacebookTimestampUpdate(payload)).toEqual({
             records: [],
             invalidatedTrackingTokens: [TRACKING_TOKEN],
+            invalidateAll: false,
         });
     });
 
-    it("emits no more than the configured record limit from one payload", () => {
+    it("fails closed when one payload exceeds the record transfer limit", () => {
         const payload = JSON.stringify(Array.from({
             length: FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE + 1,
         }, (_, index) =>
             story(`${TRACKING_TOKEN}-${String(index).padStart(4, "0")}`)));
 
-        expect(extractFacebookTimestampRecords(payload)).toHaveLength(
-            FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE,
-        );
+        expect(extractFacebookTimestampUpdate(payload)).toEqual({
+            records: [],
+            invalidatedTrackingTokens: [],
+            invalidateAll: true,
+        });
+    });
+
+    it("fails closed when a conflict appears after the record transfer limit", () => {
+        const stories = Array.from({
+            length: FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE,
+        }, (_, index) => story(`${TRACKING_TOKEN}-${String(index).padStart(4, "0")}`));
+        stories.push({
+            ...story(TRACKING_TOKEN),
+            creation_time: 1_787_933_302,
+        });
+
+        expect(extractFacebookTimestampUpdate(JSON.stringify(stories))).toEqual({
+            records: [],
+            invalidatedTrackingTokens: [],
+            invalidateAll: true,
+        });
+    });
+
+    it("bounds newline scanning even when every stream entry is empty", () => {
+        const padding = "\n".repeat(FACEBOOK_PAYLOAD_LIMIT.MAX_STREAM_LINES + 1);
+        const payload = `${JSON.stringify(story(TRACKING_TOKEN))}${padding}`
+            + JSON.stringify(story(VISIBLE_TRACKING_TOKEN));
+
+        expect(extractFacebookTimestampUpdate(payload).invalidateAll).toBe(true);
     });
 
     it("accepts only tracking tokens inside the inclusive character bounds", () => {

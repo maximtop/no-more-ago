@@ -11,10 +11,14 @@ import {
 } from "../facebook/timestamp-store";
 import {
     ADJACENT_TIME_PRESENTATION,
+    TIMESTAMP_MUTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampExtractionContext,
+    type TimestampMutationKind,
+    type TimestampMutationSourceResult,
     type TimestampSourceRule,
 } from "./types";
 
@@ -59,12 +63,43 @@ export function isFacebookTimestampElement(element: Element): boolean {
 }
 
 /**
+ * Maps descendant text changes back to the owning Facebook timestamp link.
+ *
+ * The link is returned even after the new text makes it ineligible so shared
+ * reconciliation can restore any previously rendered adjacent output.
+ *
+ * @param element - Parent of the page-authored text node that changed.
+ * @param attributeName - Changed attribute, unused for character data.
+ * @param oldValue - Previous attribute value, unused for character data.
+ * @param context - Current extraction context, unused for local ownership mapping.
+ * @param mutationKind - Mutation kind supplied by shared reconciliation.
+ * @returns - Explicit local source mapping for character-data mutations.
+ */
+function getMutationSources(
+    element: Element,
+    attributeName: string | undefined,
+    oldValue: string | null,
+    context: TimestampExtractionContext,
+    mutationKind: TimestampMutationKind,
+): TimestampMutationSourceResult {
+    void attributeName;
+    void oldValue;
+    void context;
+    if (mutationKind !== TIMESTAMP_MUTATION_KIND.CHARACTER_DATA) {
+        return { handled: false, sources: [] };
+    }
+    const source = element.closest(FACEBOOK_TRACKED_LINK_SELECTOR);
+    return { handled: true, sources: source ? [source] : [] };
+}
+
+/**
  * Facebook Story source rule backed by structured initial-page or GraphQL payloads.
  */
 export const facebookAdapter: TimestampSourceRule = {
     id: FACEBOOK_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.HREF],
     observesCharacterData: true,
+    getMutationSources,
     matches: isFacebookUrl,
     matchesElement: isFacebookTimestampElement,
     discover: (root) => discoverElements(

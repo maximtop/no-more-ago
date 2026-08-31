@@ -4,14 +4,13 @@
 
 import {
     FACEBOOK_PAYLOAD_LIMIT,
+    FACEBOOK_PAYLOAD_SCRIPT_SELECTOR,
     FACEBOOK_TRACKED_LINK_SELECTOR,
     FACEBOOK_TRACKING_QUERY_PARAMETER,
     type FacebookTimestampPayloadUpdate,
     type FacebookTimestampRecord,
 } from "./contracts";
 import { extractFacebookTimestampUpdate } from "./payload-parser";
-
-const FACEBOOK_PAYLOAD_SCRIPT_SELECTOR = "script[type='application/json'][data-sjs]" as const;
 
 /**
  * Observable association changes consumed by targeted Facebook reconciliation.
@@ -157,23 +156,6 @@ export function getFacebookTrackingToken(element: Element): string | null {
 }
 
 /**
- * Stores new records while rejecting cross-payload conflicts and bounding retained history.
- *
- * @param document - Document receiving the records.
- * @param records - Structurally validated Story timestamps.
- * @returns - Availability changes requiring targeted source reconciliation.
- */
-export function storeFacebookTimestampRecords(
-    document: Document,
-    records: readonly FacebookTimestampRecord[],
-): readonly FacebookTimestampRecordChange[] {
-    return storeFacebookTimestampUpdate(document, {
-        records,
-        invalidatedTrackingTokens: [],
-    });
-}
-
-/**
  * Stores one payload update while preserving conflict invalidations across payloads.
  *
  * @param document - Document receiving the update.
@@ -186,6 +168,16 @@ export function storeFacebookTimestampUpdate(
 ): readonly FacebookTimestampRecordChange[] {
     const store = getStore(document);
     const changed = new Map<string, FacebookTimestampRecordChange>();
+    if (update.invalidateAll) {
+        for (const trackingToken of store.associations.keys()) {
+            changed.set(trackingToken, {
+                trackingToken,
+                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+            });
+        }
+        store.associations.clear();
+        return [...changed.values()];
+    }
     for (const record of update.records) {
         const existing = store.associations.get(record.trackingToken);
         if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
@@ -235,14 +227,20 @@ export function storeFacebookTimestampUpdate(
  * Parses every newly observed initial-page Facebook JSON script once.
  *
  * @param document - Facebook document whose scripts are inspected.
+ * @param scripts - Exact mutated scripts, or all matching scripts during startup.
  * @returns - Availability changes produced by newly parsed scripts.
  */
 export function ingestFacebookPayloadScripts(
     document: Document,
+    scripts?: readonly HTMLScriptElement[],
 ): readonly FacebookTimestampRecordChange[] {
     const store = getStore(document);
     const changed = new Map<string, FacebookTimestampRecordChange>();
-    for (const element of document.querySelectorAll(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR)) {
+    const candidates = scripts
+        ?? [...document.querySelectorAll(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR)].filter(
+            (element): element is HTMLScriptElement => element instanceof HTMLScriptElement,
+        );
+    for (const element of candidates) {
         if (!(element instanceof HTMLScriptElement) || store.parsedScripts.has(element)) {
             continue;
         }

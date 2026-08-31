@@ -20,7 +20,7 @@ import {
 } from "../../../../src/content-script/adapters/types";
 import {
     clearFacebookTimestampRecords,
-    storeFacebookTimestampRecords,
+    storeFacebookTimestampUpdate,
 } from "../../../../src/content-script/facebook/timestamp-store";
 import { OWNED_OUTPUT_ATTRIBUTE } from
     "../../../../src/content-script/ownership-markers";
@@ -28,6 +28,10 @@ import { processDocument } from
     "../../../../src/content-script/transformation/process-document";
 import { restoreTimestampPresentations } from
     "../../../../src/content-script/transformation/render-timestamp-presentation";
+import { DocumentTransformationController } from
+    "../../../../src/content-script/transformation/document-transformation-controller";
+import type { FacebookTimestampRecord } from
+    "../../../../src/content-script/facebook/contracts";
 
 const TRACKING_TOKEN = "AZ-facebook-story-tracking-token-1234567890";
 const FACEBOOK_URL = new URL("https://www.facebook.com/Meta");
@@ -44,6 +48,19 @@ const extractionContext: TimestampExtractionContext = {
  */
 function trackedUrl(suffix = ""): string {
     return `https://www.facebook.com/Meta${suffix}?__cft__[0]=${TRACKING_TOKEN}`;
+}
+
+/**
+ * Stores records through the complete payload-update boundary.
+ *
+ * @param records - Minimal Story timestamp records.
+ */
+function storeFacebookTimestampRecords(records: readonly FacebookTimestampRecord[]): void {
+    storeFacebookTimestampUpdate(document, {
+        records,
+        invalidatedTrackingTokens: [],
+        invalidateAll: false,
+    });
 }
 
 afterEach(() => {
@@ -68,7 +85,7 @@ describe("Facebook Story adapter", () => {
                 <a id="comment" aria-label="August 29, 2026 at 1:53 AM"
                     href="${trackedUrl("/reel/123/comment")}">1d</a>
             </article>`;
-        storeFacebookTimestampRecords(document, [{
+        storeFacebookTimestampRecords([{
             trackingToken: TRACKING_TOKEN,
             rawDatetime: "1787933301",
         }]);
@@ -97,7 +114,7 @@ describe("Facebook Story adapter", () => {
                 <a id="comment" aria-label="August 29, 2026 at 1:53 AM"
                     href="${trackedUrl("/reel/123/comment")}">1d</a>
             </article>`;
-        storeFacebookTimestampRecords(document, [{
+        storeFacebookTimestampRecords([{
             trackingToken: TRACKING_TOKEN,
             rawDatetime: "1787933301",
         }]);
@@ -130,7 +147,7 @@ describe("Facebook Story adapter", () => {
                 </span></span>
             </a>
             <span id="timestamp-label">2d</span>`;
-        storeFacebookTimestampRecords(document, [{
+        storeFacebookTimestampRecords([{
             trackingToken: TRACKING_TOKEN,
             rawDatetime: "1787343300",
         }]);
@@ -156,5 +173,40 @@ describe("Facebook Story adapter", () => {
             <a id="timestamp" href="${trackedUrl()}"><span>1͏d͏</span></a>`;
 
         expect(facebookAdapter.discover(document, extractionContext)).toEqual([]);
+    });
+
+    it("restores output when page text makes a rendered source ineligible", async () => {
+        document.body.innerHTML = `
+            <a id="timestamp" href="${trackedUrl()}"><span>1͏d͏</span></a>`;
+        storeFacebookTimestampRecords([{
+            trackingToken: TRACKING_TOKEN,
+            rawDatetime: "1787933301",
+        }]);
+        const controller = new DocumentTransformationController({
+            url: FACEBOOK_URL,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm:ss",
+                timeZone: { mode: "utc" },
+            },
+        });
+        controller.start();
+        const timestamp = document.getElementById("timestamp");
+        const text = timestamp?.querySelector("span")?.firstChild;
+        if (!timestamp || !(text instanceof Text)) {
+            throw new Error("Expected Facebook timestamp fixture");
+        }
+        expect(timestamp.hidden).toBe(true);
+
+        text.data = "1d";
+        await new Promise<void>((resolve) => {
+            setTimeout(resolve, 0);
+        });
+
+        expect(timestamp.hidden).toBe(false);
+        expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
+        controller.teardown();
     });
 });

@@ -4,19 +4,20 @@
 
 import { isFacebookHostname, isFacebookUrl } from "../../shared/url/facebook";
 import {
-    FACEBOOK_BRIDGE_LEASE_ID,
-    FACEBOOK_BRIDGE_SECRET,
+    FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY,
     FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY,
-    type FacebookBridgeLeaseCommand,
-} from "../../shared/messaging/facebook-bridge";
-import {
     FACEBOOK_PAYLOAD_LIMIT,
+    createFacebookPayloadBridgeReadyMessage,
     createFacebookPayloadMessage,
+    isFacebookPayloadBridgeControlMessage,
 } from "./contracts";
 import { extractFacebookTimestampUpdate } from "./payload-parser";
 
 const FACEBOOK_PAYLOAD_BRIDGE_SLOT = Symbol.for(FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY);
-const FACEBOOK_PAYLOAD_BRIDGE_VERSION = 2 as const;
+const FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT = Symbol.for(
+    FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY,
+);
+const FACEBOOK_PAYLOAD_BRIDGE_VERSION = 3 as const;
 const FACEBOOK_GRAPHQL_PATHNAME = "/api/graphql/" as const;
 const FACEBOOK_QUERY_NAME = /^[\dA-Za-z_]+Query$/u;
 const FACEBOOK_STORY_QUERY_CUES = [
@@ -41,54 +42,16 @@ export const FACEBOOK_TRANSPORT_LIMIT = {
 } as const;
 
 /**
- * One active browser-mediated lease retained only in the bridge closure.
- */
-interface ActiveFacebookBridgeLease {
-    /**
-     * Opaque lease identity included in signed record messages.
-     */
-    readonly leaseId: string;
-
-    /**
-     * HMAC secret shared only with the isolated world through the background.
-     */
-    readonly secret: string;
-
-    /**
-     * Absolute expiration enforced independently from isolated-world teardown.
-     */
-    readonly expiresAt: number;
-
-    /**
-     * Monotonic lifecycle generation captured by each selected request.
-     */
-    readonly generation: number;
-
-    /**
-     * Next replay-resistant record-message sequence.
-     */
-    sequence: number;
-}
-
-/**
- * Versioned main-world lifecycle surface invoked through browser scripting.
+ * Main-world singleton marker for one installed bridge version.
  */
 interface FacebookPayloadBridgeSlot {
     /**
-     * Bridge contract version used to reject stale document singletons.
+     * Bridge contract version used for duplicate-install detection.
      */
     readonly version: typeof FACEBOOK_PAYLOAD_BRIDGE_VERSION;
 
     /**
-     * Applies one active or release lease command.
-     *
-     * @param command - Browser-injected lease command.
-     * @returns - Whether the command was accepted.
-     */
-    readonly reconcileLease: (command: FacebookBridgeLeaseCommand) => boolean;
-
-    /**
-     * Expires the lease and restores only transport wrappers still owned by this bridge.
+     * Stops inspection and restores transport properties still owned by this bridge.
      */
     readonly dispose: () => void;
 }
@@ -108,9 +71,9 @@ interface FacebookXhrRequest {
     readonly url: string;
 
     /**
-     * Exact activation generation that observed the open call.
+     * Exact enabled lifecycle generation that observed the open call.
      */
-    readonly lease: ActiveFacebookBridgeLease;
+    readonly generation: number;
 }
 
 /**
@@ -269,7 +232,7 @@ async function cancelReader(reader: ReadableStreamDefaultReader<Uint8Array>): Pr
  * Reads at most the configured payload limit from a response clone.
  *
  * @param response - Successful selected fetch response.
- * @param isCurrent - Checks the captured activation generation between chunks.
+ * @param isCurrent - Checks the captured lifecycle generation between chunks.
  * @param registerReader - Retains the reader for immediate lifecycle cancellation.
  * @returns - Complete bounded response text, or null after limit/lifecycle rejection.
  */
@@ -330,86 +293,71 @@ async function readBoundedResponseText(
 }
 
 /**
- * Extracts, signs, and transfers minimal records for one current lease generation.
+ * Extracts and transfers minimal records for one current lifecycle generation.
  *
- * @param target - Facebook page window receiving the authenticated record envelope.
+ * @param target - Facebook page window receiving the bounded record envelope.
  * @param payloadText - Complete bounded selected response text.
- * @param lease - Exact activation generation captured by the request.
- * @param isCurrent - Confirms the lease before and after asynchronous signing.
- * @returns - Promise settled after optional record emission.
+ * @param isCurrent - Confirms the lifecycle generation before emission.
  */
-async function emitPayloadRecords(
+function emitPayloadRecords(
     target: Window,
     payloadText: string,
-    lease: ActiveFacebookBridgeLease,
     isCurrent: () => boolean,
-): Promise<void> {
+): void {
     if (!isCurrent() || payloadText.length > FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS) {
         return;
     }
     const update = extractFacebookTimestampUpdate(payloadText);
     if (
-        (
-            update.records.length === 0
-            && update.invalidatedTrackingTokens.length === 0
-        )
-        || !isCurrent()
+        !update.invalidateAll
+        && update.records.length === 0
+        && update.invalidatedTrackingTokens.length === 0
     ) {
         return;
     }
-    const sequence = lease.sequence;
-    lease.sequence += 1;
-    const message = await createFacebookPayloadMessage(
-        update,
-        lease.leaseId,
-        sequence,
-        lease.secret,
-    );
     if (isCurrent()) {
-        target.postMessage(message, target.location.origin);
+        target.postMessage(createFacebookPayloadMessage(update), target.location.origin);
     }
 }
 
 /**
- * Installs inert-until-leased fetch and XMLHttpRequest wrappers.
+ * Installs inert fetch and XMLHttpRequest wrappers.
  *
  * @param target - Facebook page window whose transports are wrapped.
- * @param getLease - Returns the current unexpired activation lease.
+ * @param getGeneration - Returns the current enabled generation, or null while inactive.
  * @param inspectFetchResponse - Bounded asynchronous fetch response inspector.
- * @param inspectTextResponse - Bounded asynchronous text response inspector.
+ * @param inspectTextResponse - Bounded text response inspector.
  * @returns - Wrapper ownership state used for safe restoration.
  */
 function installTransportWrappers(
     target: Window,
-    getLease: () => ActiveFacebookBridgeLease | null,
-    inspectFetchResponse: (response: Response, lease: ActiveFacebookBridgeLease) => void,
-    inspectTextResponse: (payloadText: string, lease: ActiveFacebookBridgeLease) => void,
+    getGeneration: () => number | null,
+    inspectFetchResponse: (response: Response, generation: number) => void,
+    inspectTextResponse: (payloadText: string, generation: number) => void,
 ): InstalledFacebookTransportWrappers {
     const originalFetch = unknownProperty(target, "fetch") as Window["fetch"];
     const wrappedFetch: Window["fetch"] = (input, init) => {
         const response = Reflect.apply(originalFetch, target, [input, init]);
-        const lease = getLease();
-        if (!lease) {
+        const generation = getGeneration();
+        if (generation === null) {
             return response;
         }
-        let inspect = false;
         try {
             const request = fetchRequestDetails(input, init);
-            inspect = shouldInspectFacebookGraphqlRequest(
+            if (shouldInspectFacebookGraphqlRequest(
                 request.url,
                 request.body,
                 target.location.href,
-            );
+            )) {
+                void response.then(
+                    (value) => {
+                        inspectFetchResponse(value, generation);
+                    },
+                    () => undefined,
+                );
+            }
         } catch {
             /* request selection must never alter the page request outcome */
-        }
-        if (inspect) {
-            void response.then(
-                (value) => {
-                    inspectFetchResponse(value, lease);
-                },
-                () => undefined,
-            );
         }
         return response;
     };
@@ -441,40 +389,50 @@ function installTransportWrappers(
     }
     const requests = new WeakMap<XMLHttpRequest, FacebookXhrRequest>();
     const wrappedXhrOpen = function(this: XMLHttpRequest, ...args: unknown[]): unknown {
-        const lease = getLease();
-        const method = args[0];
-        const url = args[1];
-        if (
-            lease
-            && typeof method === "string"
-            && (typeof url === "string" || url instanceof URL)
-        ) {
-            requests.set(this, { method, url: String(url), lease });
-        } else {
-            requests.delete(this);
+        try {
+            const generation = getGeneration();
+            const method = args[0];
+            const url = args[1];
+            if (
+                generation !== null
+                && typeof method === "string"
+                && (typeof url === "string" || url instanceof URL)
+            ) {
+                requests.set(this, { method, url: String(url), generation });
+            } else {
+                requests.delete(this);
+            }
+        } catch {
+            /* request bookkeeping must never alter the page request outcome */
         }
         return Reflect.apply(originalOpen, this, args);
     };
     const wrappedXhrSend = function(this: XMLHttpRequest, ...args: unknown[]): unknown {
-        const lease = getLease();
-        const request = requests.get(this);
-        if (lease && request?.lease === lease) {
-            const inspect = request.method.toUpperCase() === "POST"
+        try {
+            const generation = getGeneration();
+            const request = requests.get(this);
+            if (
+                generation !== null
+                && request?.generation === generation
+                && request.method.toUpperCase() === "POST"
                 && shouldInspectFacebookGraphqlRequest(
                     request.url,
                     args[0],
                     target.location.href,
-                );
-            if (inspect) {
+                )
+            ) {
                 this.addEventListener("load", () => {
-                    if (getLease() !== lease || requests.get(this) !== request) {
+                    if (
+                        getGeneration() !== generation
+                        || requests.get(this) !== request
+                    ) {
                         return;
                     }
                     if (this.responseType === "" || this.responseType === "text") {
                         try {
                             const payloadText = this.responseText;
                             if (payloadText.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS) {
-                                inspectTextResponse(payloadText, lease);
+                                inspectTextResponse(payloadText, generation);
                             }
                         } catch {
                             /* response access can fail without affecting the page request */
@@ -482,6 +440,8 @@ function installTransportWrappers(
                     }
                 }, { once: true });
             }
+        } catch {
+            /* selection and listener installation must never block native send */
         }
         return Reflect.apply(originalSend, this, args);
     };
@@ -554,75 +514,61 @@ function restoreTransportWrappers(
 }
 
 /**
- * Validates a page-realm lease command before it reaches bridge state.
+ * Installs one versioned Facebook payload bridge in the page's main world.
  *
- * @param value - Candidate browser-injected or page-forged command.
- * @returns - Whether every credential and expiration field is bounded.
- */
-function isFacebookBridgeLeaseCommand(value: unknown): value is FacebookBridgeLeaseCommand {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-        return false;
-    }
-    const candidate = value as Record<string, unknown>;
-    if (
-        typeof candidate.leaseId !== "string"
-        || !FACEBOOK_BRIDGE_LEASE_ID.test(candidate.leaseId)
-        || typeof candidate.active !== "boolean"
-        || typeof candidate.generation !== "number"
-        || !Number.isSafeInteger(candidate.generation)
-        || candidate.generation < 0
-    ) {
-        return false;
-    }
-    return candidate.active
-        ? typeof candidate.secret === "string"
-            && FACEBOOK_BRIDGE_SECRET.test(candidate.secret)
-            && typeof candidate.expiresAt === "number"
-            && Number.isSafeInteger(candidate.expiresAt)
-        : true;
-}
-
-/**
- * Installs one versioned, leased Facebook payload bridge in the page's main world.
- *
- * Installation itself does not wrap or inspect requests. Browser-mediated lease
- * acquisition installs wrappers, and release or expiry restores only wrappers
- * still owned by this bridge.
+ * The page world is not an authentication boundary. The bridge therefore holds
+ * no secret or privileged capability: lifecycle messages only make its bounded
+ * wrappers active or inert, while the isolated consumer independently follows
+ * extension policy.
  *
  * @param target - Facebook page window whose selected responses may be observed.
  */
 export function installFacebookPayloadBridge(target: Window): void {
     const mutableTarget = target as Window & Record<symbol, unknown>;
-    const existing = mutableTarget[FACEBOOK_PAYLOAD_BRIDGE_SLOT];
+    const legacy = Object.getOwnPropertyDescriptor(
+        mutableTarget,
+        FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT,
+    )?.value as unknown;
+    const legacyObject = legacy !== null && typeof legacy === "object"
+        ? legacy
+        : undefined;
+    const legacyDispose = legacyObject
+        ? unknownProperty(legacyObject, "dispose")
+        : undefined;
+    if (typeof legacyDispose === "function" && legacyObject) {
+        try {
+            (legacyDispose as (this: object) => unknown).call(legacyObject);
+        } catch {
+            /* an obsolete bridge cannot prevent installation under the current key */
+        }
+    }
     const existingDescriptor = Object.getOwnPropertyDescriptor(
         mutableTarget,
         FACEBOOK_PAYLOAD_BRIDGE_SLOT,
     );
+    const existing = existingDescriptor?.value as unknown;
     if (
         existing !== null
         && typeof existing === "object"
         && !Array.isArray(existing)
-        && existingDescriptor?.value === existing
-        && !existingDescriptor.configurable
-        && !existingDescriptor.writable
-        && Object.isFrozen(existing)
         && unknownProperty(existing, "version") === FACEBOOK_PAYLOAD_BRIDGE_VERSION
-        && typeof unknownProperty(existing, "reconcileLease") === "function"
+        && typeof unknownProperty(existing, "dispose") === "function"
     ) {
+        target.postMessage(createFacebookPayloadBridgeReadyMessage(), target.location.origin);
         return;
     }
     if (existing !== undefined) {
         const existingObject = existing !== null && typeof existing === "object"
             ? existing
-            : null;
+            : undefined;
         const dispose = existingObject
             ? unknownProperty(existingObject, "dispose")
             : undefined;
-        if (typeof dispose === "function" && existingObject !== null) {
+        if (typeof dispose === "function" && existingObject) {
             try {
                 (dispose as (this: object) => unknown).call(existingObject);
             } catch {
-                return;
+                /* stale bridge cleanup is best-effort */
             }
         }
         if (existingDescriptor && !existingDescriptor.configurable) {
@@ -630,24 +576,14 @@ export function installFacebookPayloadBridge(target: Window): void {
         }
     }
 
+    let enabled = false;
     let generation = 0;
-    let lastCommandGeneration = -1;
-    let lastCommand: FacebookBridgeLeaseCommand | null = null;
-    let lastCommandResult = false;
-    let activeLease: ActiveFacebookBridgeLease | null = null;
-    let expirationTimer: ReturnType<typeof setTimeout> | undefined;
-    let wrappers: InstalledFacebookTransportWrappers | undefined;
+    let disposed = false;
     let activeInspections = 0;
     const activeReaders = new Set<ReadableStreamDefaultReader<Uint8Array>>();
-
-    const getLease = (): ActiveFacebookBridgeLease | null => {
-        if (activeLease === null || activeLease.expiresAt <= Date.now()) {
-            return null;
-        }
-        return activeLease;
-    };
-    const isCurrent = (lease: ActiveFacebookBridgeLease): boolean =>
-        getLease() === lease && lease.generation === generation;
+    const getGeneration = (): number | null => enabled && !disposed ? generation : null;
+    const isCurrent = (capturedGeneration: number): boolean =>
+        getGeneration() === capturedGeneration;
     const cancelActiveReaders = (): void => {
         for (const reader of activeReaders) {
             void cancelReader(reader);
@@ -656,30 +592,31 @@ export function installFacebookPayloadBridge(target: Window): void {
     };
     const inspectTextResponse = (
         payloadText: string,
-        lease: ActiveFacebookBridgeLease,
+        capturedGeneration: number,
     ): void => {
         if (
-            !isCurrent(lease)
+            !isCurrent(capturedGeneration)
             || activeInspections >= FACEBOOK_TRANSPORT_LIMIT.MAX_CONCURRENT_INSPECTIONS
         ) {
             return;
         }
         activeInspections += 1;
-        void emitPayloadRecords(
-            target,
-            payloadText,
-            lease,
-            () => isCurrent(lease),
-        ).catch(() => undefined).finally(() => {
+        try {
+            emitPayloadRecords(
+                target,
+                payloadText,
+                () => isCurrent(capturedGeneration),
+            );
+        } finally {
             activeInspections -= 1;
-        });
+        }
     };
     const inspectFetchResponse = (
         response: Response,
-        lease: ActiveFacebookBridgeLease,
+        capturedGeneration: number,
     ): void => {
         if (
-            !isCurrent(lease)
+            !isCurrent(capturedGeneration)
             || activeInspections >= FACEBOOK_TRANSPORT_LIMIT.MAX_CONCURRENT_INSPECTIONS
         ) {
             return;
@@ -687,127 +624,88 @@ export function installFacebookPayloadBridge(target: Window): void {
         activeInspections += 1;
         void readBoundedResponseText(
             response,
-            () => isCurrent(lease),
+            () => isCurrent(capturedGeneration),
             (reader) => {
                 activeReaders.add(reader);
                 return () => {
                     activeReaders.delete(reader);
                 };
             },
-        ).then(
-            (payloadText) => payloadText === null
-                ? undefined
-                : emitPayloadRecords(
+        ).then((payloadText) => {
+            if (payloadText !== null) {
+                emitPayloadRecords(
                     target,
                     payloadText,
-                    lease,
-                    () => isCurrent(lease),
-                ),
-        ).catch(() => undefined).finally(() => {
+                    () => isCurrent(capturedGeneration),
+                );
+            }
+        }).catch(() => undefined).finally(() => {
             activeInspections -= 1;
         });
     };
-    const deactivate = (): void => {
-        generation += 1;
-        activeLease = null;
-        cancelActiveReaders();
-        if (expirationTimer !== undefined) {
-            clearTimeout(expirationTimer);
-            expirationTimer = undefined;
+    const wrappers = installTransportWrappers(
+        target,
+        getGeneration,
+        inspectFetchResponse,
+        inspectTextResponse,
+    );
+    const messageListener = (event: MessageEvent): void => {
+        if (
+            event.source !== target
+            || event.origin !== target.location.origin
+            || !isFacebookPayloadBridgeControlMessage(event.data)
+            || enabled === event.data.enabled
+        ) {
+            return;
         }
-        if (wrappers) {
-            restoreTransportWrappers(target, wrappers);
-            wrappers = undefined;
+        generation += 1;
+        enabled = event.data.enabled;
+        if (!enabled) {
+            cancelActiveReaders();
         }
     };
+    target.addEventListener("message", messageListener);
+
     const dispose = (): void => {
-        deactivate();
-    };
-    const isSameCommand = (
-        left: FacebookBridgeLeaseCommand,
-        right: FacebookBridgeLeaseCommand,
-    ): boolean => left.active === right.active
-        && left.generation === right.generation
-        && left.leaseId === right.leaseId
-        && (!left.active || (
-            right.active
-            && left.secret === right.secret
-            && left.expiresAt === right.expiresAt
-        ));
-    const reconcileLease = (command: FacebookBridgeLeaseCommand): boolean => {
-        if (!isFacebookBridgeLeaseCommand(command)) {
-            return false;
+        if (disposed) {
+            return;
         }
-        if (command.generation < lastCommandGeneration) {
-            return false;
-        }
-        if (command.generation === lastCommandGeneration) {
-            return lastCommand !== null
-                && isSameCommand(command, lastCommand)
-                && lastCommandResult;
-        }
-        lastCommandGeneration = command.generation;
-        lastCommand = command;
-        if (!command.active) {
-            if (activeLease === null) {
-                lastCommandResult = true;
-                return true;
-            }
-            lastCommandResult = activeLease.leaseId === command.leaseId;
-            if (lastCommandResult) {
-                deactivate();
-            }
-            return lastCommandResult;
-        }
-        if (command.expiresAt <= Date.now()) {
-            lastCommandResult = false;
-            return false;
-        }
+        disposed = true;
+        enabled = false;
         generation += 1;
         cancelActiveReaders();
-        activeLease = {
-            leaseId: command.leaseId,
-            secret: command.secret,
-            expiresAt: command.expiresAt,
-            generation,
-            sequence: 0,
-        };
-        if (!wrappers) {
-            wrappers = installTransportWrappers(
-                target,
-                getLease,
-                inspectFetchResponse,
-                inspectTextResponse,
-            );
+        target.removeEventListener("message", messageListener);
+        restoreTransportWrappers(target, wrappers);
+        const descriptor = Object.getOwnPropertyDescriptor(
+            mutableTarget,
+            FACEBOOK_PAYLOAD_BRIDGE_SLOT,
+        );
+        const installed = descriptor?.value as unknown;
+        if (
+            installed !== null
+            && typeof installed === "object"
+            && unknownProperty(installed, "dispose") === dispose
+            && descriptor?.configurable === true
+        ) {
+            Reflect.deleteProperty(mutableTarget, FACEBOOK_PAYLOAD_BRIDGE_SLOT);
         }
-        if (expirationTimer !== undefined) {
-            clearTimeout(expirationTimer);
-        }
-        const lease = activeLease;
-        expirationTimer = setTimeout(() => {
-            expirationTimer = undefined;
-            if (activeLease === lease) {
-                deactivate();
-            }
-        }, Math.max(0, command.expiresAt - Date.now()));
-        lastCommandResult = true;
-        return true;
     };
     const slot: FacebookPayloadBridgeSlot = Object.freeze({
         version: FACEBOOK_PAYLOAD_BRIDGE_VERSION,
-        reconcileLease,
         dispose,
     });
     try {
         Object.defineProperty(mutableTarget, FACEBOOK_PAYLOAD_BRIDGE_SLOT, {
             value: slot,
-            configurable: false,
+            configurable: true,
             enumerable: false,
             writable: false,
         });
     } catch {
         dispose();
+        return;
     }
+    target.postMessage(createFacebookPayloadBridgeReadyMessage(), target.location.origin);
 }
 
 if (isFacebookUrl(new URL(window.location.href))) {

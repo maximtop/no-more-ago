@@ -1,11 +1,17 @@
 /**
- * @file Verifies authenticated Facebook payload lifecycle and targeted reconciliation.
+ * @file Verifies Facebook payload lifecycle and targeted reconciliation.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createFacebookPayloadMessage } from
-    "../../../../src/content-script/facebook/contracts";
+import {
+    FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE,
+    FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
+    FACEBOOK_PAYLOAD_SCRIPT_SELECTOR,
+    createFacebookPayloadBridgeReadyMessage,
+    createFacebookPayloadMessage,
+    type FacebookTimestampRecord,
+} from "../../../../src/content-script/facebook/contracts";
 import {
     installFacebookPayloadRuntime,
     type FacebookPayloadRuntimeHandle,
@@ -13,7 +19,6 @@ import {
 import {
     clearFacebookTimestampRecords,
     getFacebookTimestampRecord,
-    storeFacebookTimestampRecords,
 } from "../../../../src/content-script/facebook/timestamp-store";
 import {
     DocumentTransformationController,
@@ -21,23 +26,15 @@ import {
 import {
     restoreTimestampPresentations,
 } from "../../../../src/content-script/transformation/render-timestamp-presentation";
-import {
-    FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-    FACEBOOK_BRIDGE_LEASE_RENEWAL_MS,
-    type FacebookBridgeLeaseRequest,
-    type FacebookBridgeLeaseResponse,
-} from "../../../../src/shared/messaging/facebook-bridge";
 
 const TRACKING_TOKEN = "AZ-facebook-payload-runtime-token-1234567890";
 const SECOND_TRACKING_TOKEN = "AZ-facebook-second-runtime-token-0987654321";
 const FACEBOOK_URL = new URL("https://www.facebook.com/home");
-const LEASE_ID = "12345678-1234-1234-1234-123456789abc";
-const SECRET = "ab".repeat(32);
 const RECORD = {
     trackingToken: TRACKING_TOKEN,
     rawDatetime: "1787933301",
 } as const;
-let sequence = 0;
+let activeHandle: FacebookPayloadRuntimeHandle | undefined;
 
 /**
  * Creates one recognized or initially text-ineligible Facebook timestamp link.
@@ -58,28 +55,9 @@ function timestampSource(
 }
 
 /**
- * Creates a deterministic successful background lease boundary.
- *
- * @returns - Lease requester and its observable mock.
- */
-function leaseBoundary() {
-    const request = vi.fn((message: FacebookBridgeLeaseRequest) => Promise.resolve(
-        message.active ? {
-            ok: true as const,
-            active: true as const,
-            leaseId: LEASE_ID,
-            secret: SECRET,
-            expiresAt: Date.now() + 60_000,
-        }
-            : { ok: true as const, active: false as const },
-    ));
-    return { request };
-}
-
-/**
  * Dispatches one same-window Facebook bridge message.
  *
- * @param data - Structurally valid or forged bridge message payload.
+ * @param data - Structurally valid or malformed bridge message payload.
  */
 function dispatchBridgeMessage(data: unknown): void {
     window.dispatchEvent(new MessageEvent("message", {
@@ -90,28 +68,20 @@ function dispatchBridgeMessage(data: unknown): void {
 }
 
 /**
- * Signs and dispatches records under the active test lease.
+ * Dispatches records through the complete payload-update message.
  *
  * @param records - Minimal Story records to deliver.
- * @param secret - Signing secret used to test valid and forged evidence.
  */
-async function dispatchRecords(
-    records: readonly { readonly trackingToken: string; readonly rawDatetime: string }[],
-    secret = SECRET,
-): Promise<void> {
-    const message = await createFacebookPayloadMessage(
-        { records, invalidatedTrackingTokens: [] },
-        LEASE_ID,
-        sequence,
-        secret,
-    );
-    sequence += 1;
-    dispatchBridgeMessage(message);
-    await flushMutations();
+function dispatchRecords(records: readonly FacebookTimestampRecord[]): void {
+    dispatchBridgeMessage(createFacebookPayloadMessage({
+        records,
+        invalidatedTrackingTokens: [],
+        invalidateAll: false,
+    }));
 }
 
 /**
- * Allows native mutations, Web Crypto, and queued reconciliation to complete.
+ * Allows native mutation observers and queued reconciliation to complete.
  *
  * @returns - Promise resolved after pending tasks and microtasks.
  */
@@ -124,30 +94,25 @@ async function flushMutations(): Promise<void> {
 }
 
 /**
- * Installs a payload runtime with an authenticated lease requester.
+ * Installs a payload runtime.
  *
  * @param onSourcesChanged - Targeted reconciliation callback.
- * @param requestBridgeLease - Browser-mediated lease boundary.
  * @returns - Installed lifecycle handle.
  */
 function install(
     onSourcesChanged: (sources: readonly Element[]) => void = vi.fn(),
-    requestBridgeLease: (
-        request: FacebookBridgeLeaseRequest,
-    ) => Promise<FacebookBridgeLeaseResponse>
-        = leaseBoundary().request,
 ): FacebookPayloadRuntimeHandle {
-    return installFacebookPayloadRuntime({
+    activeHandle = installFacebookPayloadRuntime({
         window,
         document,
         onSourcesChanged,
-        requestBridgeLease,
     });
+    return activeHandle;
 }
 
 afterEach(() => {
-    sequence = 0;
-    vi.useRealTimers();
+    activeHandle?.teardown();
+    activeHandle = undefined;
     vi.restoreAllMocks();
     restoreTimestampPresentations(document);
     clearFacebookTimestampRecords(document);
@@ -155,8 +120,7 @@ afterEach(() => {
 });
 
 describe("Facebook isolated payload runtime", () => {
-    it("owns an idempotent acquire, release, re-enable, and teardown lifecycle", async () => {
-        const boundary = leaseBoundary();
+    it("owns an idempotent enable, disable, re-enable, and teardown lifecycle", async () => {
         const source = timestampSource();
         const payload = document.createElement("script");
         payload.type = "application/json";
@@ -167,61 +131,68 @@ describe("Facebook isolated payload runtime", () => {
             encrypted_click_tracking: TRACKING_TOKEN,
         });
         document.body.prepend(payload);
-        const callback = vi.fn<(sources: readonly Element[]) => void>();
-        const handle = install(callback, boundary.request);
+        const postMessage = vi.spyOn(window, "postMessage");
+        const handle = install();
 
         expect(getFacebookTimestampRecord(source)).toBeNull();
         handle.setEnabled(true);
         await flushMutations();
         expect(getFacebookTimestampRecord(source)).toEqual(RECORD);
-        expect(boundary.request).toHaveBeenCalledTimes(1);
-        expect(boundary.request).toHaveBeenLastCalledWith({
-            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-            active: true,
-        });
+        expect(postMessage).toHaveBeenCalledWith({
+            source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
+            type: FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE,
+            enabled: true,
+        }, window.location.origin);
 
         handle.setEnabled(true);
-        expect(boundary.request).toHaveBeenCalledTimes(1);
         handle.setEnabled(false);
         expect(getFacebookTimestampRecord(source)).toBeNull();
-        expect(boundary.request).toHaveBeenLastCalledWith({
-            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-            active: false,
-            leaseId: LEASE_ID,
-        });
+        expect(postMessage).toHaveBeenLastCalledWith({
+            source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
+            type: FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE,
+            enabled: false,
+        }, window.location.origin);
 
-        handle.setEnabled(false);
         handle.setEnabled(true);
         await flushMutations();
         expect(getFacebookTimestampRecord(source)).toEqual(RECORD);
-        handle.setEnabled(false);
         handle.teardown();
         const replacement = install();
         expect(replacement).not.toBe(handle);
-        replacement.teardown();
     });
 
-    it("reconciles when authenticated evidence arrives before the source", async () => {
+    it("resends active control when the main-world bridge becomes ready", () => {
+        const postMessage = vi.spyOn(window, "postMessage");
+        const handle = install();
+        handle.setEnabled(true);
+        postMessage.mockClear();
+
+        dispatchBridgeMessage(createFacebookPayloadBridgeReadyMessage());
+
+        expect(postMessage).toHaveBeenCalledWith({
+            source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
+            type: FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE,
+            enabled: true,
+        }, window.location.origin);
+    });
+
+    it("reconciles when bounded evidence arrives before the source", async () => {
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
         handle.setEnabled(true);
-        await flushMutations();
-        await dispatchRecords([RECORD]);
+        dispatchRecords([RECORD]);
         expect(callback).not.toHaveBeenCalled();
 
         const source = timestampSource();
         await flushMutations();
 
         expect(callback).toHaveBeenCalledWith([source]);
-        handle.teardown();
     });
 
-    it("does not rescan the document after an unrelated mutation", async () => {
-        const callback = vi.fn<(sources: readonly Element[]) => void>();
-        const handle = install(callback);
+    it("skips link searches when an unrelated mutation has no pending change", async () => {
+        const handle = install();
         handle.setEnabled(true);
         await flushMutations();
-        await dispatchRecords([RECORD]);
         const querySelectorAll = vi.spyOn(document, "querySelectorAll");
 
         const unrelated = document.createElement("div");
@@ -230,13 +201,9 @@ describe("Facebook isolated payload runtime", () => {
         await flushMutations();
 
         expect(querySelectorAll).not.toHaveBeenCalled();
-        const source = timestampSource();
-        await flushMutations();
-        expect(callback).toHaveBeenCalledWith([source]);
-        handle.teardown();
     });
 
-    it("ingests an initial payload script populated through character data", async () => {
+    it("ingests only a payload script populated through character data", async () => {
         const source = timestampSource();
         const payload = document.createElement("script");
         payload.type = "application/json";
@@ -248,6 +215,7 @@ describe("Facebook isolated payload runtime", () => {
         const handle = install(callback);
         handle.setEnabled(true);
         await flushMutations();
+        const querySelectorAll = vi.spyOn(document, "querySelectorAll");
 
         text.data = JSON.stringify({
             __typename: "Story",
@@ -258,39 +226,42 @@ describe("Facebook isolated payload runtime", () => {
 
         expect(getFacebookTimestampRecord(source)).toEqual(RECORD);
         expect(callback).toHaveBeenCalledWith([source]);
-        handle.teardown();
+        expect(querySelectorAll).not.toHaveBeenCalledWith(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR);
     });
 
-    it("reconciles one batch when several associations become available together", async () => {
+    it("reconciles one batch when several associations become available together", () => {
         const first = timestampSource();
         const second = timestampSource(SECOND_TRACKING_TOKEN);
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
         handle.setEnabled(true);
-        await flushMutations();
 
-        await dispatchRecords([
+        dispatchRecords([
             RECORD,
             { trackingToken: SECOND_TRACKING_TOKEN, rawDatetime: "1787933302" },
         ]);
 
         expect(callback).toHaveBeenCalledOnce();
         expect(callback).toHaveBeenCalledWith([first, second]);
-        handle.teardown();
     });
 
-    it("ignores a structurally valid record message without the active HMAC", async () => {
+    it("ignores malformed page messages", () => {
         const source = timestampSource();
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
         handle.setEnabled(true);
-        await flushMutations();
 
-        await dispatchRecords([RECORD], "cd".repeat(32));
+        dispatchBridgeMessage({
+            ...createFacebookPayloadMessage({
+                records: [RECORD],
+                invalidatedTrackingTokens: [],
+                invalidateAll: false,
+            }),
+            records: [{ ...RECORD, rawDatetime: "yesterday" }],
+        });
 
         expect(getFacebookTimestampRecord(source)).toBeNull();
         expect(callback).not.toHaveBeenCalled();
-        handle.teardown();
     });
 
     it("retries a pending association after the link href becomes eligible", async () => {
@@ -300,18 +271,16 @@ describe("Facebook isolated payload runtime", () => {
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
         handle.setEnabled(true);
-        await flushMutations();
-        await dispatchRecords([RECORD]);
+        dispatchRecords([RECORD]);
         expect(callback).not.toHaveBeenCalled();
 
         source.href = `https://www.facebook.com/story?__cft__[0]=${TRACKING_TOKEN}`;
         await flushMutations();
 
         expect(callback).toHaveBeenCalledWith([source]);
-        handle.teardown();
     });
 
-    it("routes in-place timestamp text changes through the shared controller", async () => {
+    it("routes newly eligible timestamp text through the shared controller", async () => {
         const source = timestampSource(TRACKING_TOKEN, "1d");
         const controller = new DocumentTransformationController({
             url: FACEBOOK_URL,
@@ -328,8 +297,7 @@ describe("Facebook isolated payload runtime", () => {
             controller.reconcileSources(sources);
         });
         handle.setEnabled(true);
-        await flushMutations();
-        await dispatchRecords([RECORD]);
+        dispatchRecords([RECORD]);
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
 
         const text = source.querySelector("span")?.firstChild;
@@ -341,112 +309,27 @@ describe("Facebook isolated payload runtime", () => {
 
         expect(source.hidden).toBe(true);
         expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
-        handle.teardown();
         controller.teardown();
     });
 
-    it("drops dynamic evidence across disable and requires a fresh signed update", async () => {
+    it("drops dynamic evidence across disable and requires a fresh update", async () => {
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
         handle.setEnabled(true);
-        await flushMutations();
-        await dispatchRecords([RECORD]);
+        dispatchRecords([RECORD]);
         handle.setEnabled(false);
         handle.setEnabled(true);
-        await flushMutations();
 
         const source = timestampSource();
         await flushMutations();
         expect(callback).not.toHaveBeenCalled();
 
-        await dispatchRecords([RECORD]);
+        dispatchRecords([RECORD]);
         expect(callback).toHaveBeenCalledWith([source]);
-        handle.teardown();
     });
 
-    it("drops old credentials when lease renewal fails", async () => {
-        vi.useFakeTimers();
-        let activeRequests = 0;
-        const request = vi.fn((message: FacebookBridgeLeaseRequest) => {
-            if (!message.active) {
-                return Promise.resolve({ ok: true, active: false } as const);
-            }
-            activeRequests += 1;
-            return Promise.resolve<FacebookBridgeLeaseResponse>(activeRequests === 1
-                ? {
-                    ok: true,
-                    active: true,
-                    leaseId: LEASE_ID,
-                    secret: SECRET,
-                    expiresAt: Date.now() + 60_000,
-                }
-                : { ok: false });
-        });
-        const source = timestampSource(SECOND_TRACKING_TOKEN);
-        const handle = install(vi.fn(), request);
-        handle.setEnabled(true);
-        await vi.advanceTimersByTimeAsync(0);
-
-        await vi.advanceTimersByTimeAsync(FACEBOOK_BRIDGE_LEASE_RENEWAL_MS);
-        expect(activeRequests).toBe(2);
-        expect(request).toHaveBeenCalledWith({
-            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-            active: false,
-            leaseId: LEASE_ID,
-        });
-
-        vi.useRealTimers();
-        await dispatchRecords([{
-            trackingToken: SECOND_TRACKING_TOKEN,
-            rawDatetime: "1787933302",
-        }]);
-        expect(getFacebookTimestampRecord(source)).toBeNull();
-        handle.teardown();
-    });
-
-    it("rejects a payload whose lease expires during asynchronous verification", async () => {
-        const message = await createFacebookPayloadMessage(
-            { records: [RECORD], invalidatedTrackingTokens: [] },
-            LEASE_ID,
-            sequence,
-            SECRET,
-        );
-        sequence += 1;
-        vi.useFakeTimers();
-        vi.setSystemTime(1_000);
+    it("restores rendered output when later evidence conflicts", () => {
         const source = timestampSource();
-        const request = vi.fn((leaseRequest: FacebookBridgeLeaseRequest) => Promise.resolve(
-            leaseRequest.active
-                ? {
-                    ok: true as const,
-                    active: true as const,
-                    leaseId: LEASE_ID,
-                    secret: SECRET,
-                    expiresAt: 1_001,
-                }
-                : { ok: true as const, active: false as const },
-        ));
-        const handle = install(vi.fn(), request);
-        handle.setEnabled(true);
-        await vi.advanceTimersByTimeAsync(0);
-
-        dispatchBridgeMessage(message);
-        vi.setSystemTime(1_002);
-        vi.useRealTimers();
-        await flushMutations();
-
-        expect(getFacebookTimestampRecord(source)).toBeNull();
-        expect(request).toHaveBeenCalledWith({
-            type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
-            active: false,
-            leaseId: LEASE_ID,
-        });
-        handle.teardown();
-    });
-
-    it("restores rendered output when later authenticated evidence conflicts", async () => {
-        const source = timestampSource();
-        storeFacebookTimestampRecords(document, [RECORD]);
         const controller = new DocumentTransformationController({
             url: FACEBOOK_URL,
             root: document,
@@ -457,19 +340,49 @@ describe("Facebook isolated payload runtime", () => {
                 timeZone: { mode: "utc" },
             },
         });
-        controller.start();
-        expect(source.hidden).toBe(true);
         const handle = install((sources) => {
             controller.reconcileSources(sources);
         });
         handle.setEnabled(true);
-        await flushMutations();
+        dispatchRecords([RECORD]);
+        controller.start();
+        expect(source.hidden).toBe(true);
 
-        await dispatchRecords([{ ...RECORD, rawDatetime: "1787933302" }]);
+        dispatchRecords([{ ...RECORD, rawDatetime: "1787933302" }]);
 
         expect(source.hidden).toBe(false);
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-        handle.teardown();
+        controller.teardown();
+    });
+
+    it("restores every rendered source after a fail-closed invalidation", () => {
+        const source = timestampSource();
+        const controller = new DocumentTransformationController({
+            url: FACEBOOK_URL,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm:ss",
+                timeZone: { mode: "utc" },
+            },
+        });
+        const handle = install((sources) => {
+            controller.reconcileSources(sources);
+        });
+        handle.setEnabled(true);
+        dispatchRecords([RECORD]);
+        controller.start();
+        expect(source.hidden).toBe(true);
+
+        dispatchBridgeMessage(createFacebookPayloadMessage({
+            records: [],
+            invalidatedTrackingTokens: [],
+            invalidateAll: true,
+        }));
+
+        expect(source.hidden).toBe(false);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         controller.teardown();
     });
 });

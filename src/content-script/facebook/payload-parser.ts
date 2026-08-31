@@ -12,6 +12,13 @@ import {
 const EMPTY_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate = {
     records: [],
     invalidatedTrackingTokens: [],
+    invalidateAll: false,
+};
+
+const INVALIDATE_ALL_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate = {
+    records: [],
+    invalidatedTrackingTokens: [],
+    invalidateAll: true,
 };
 
 const FACEBOOK_STORY_TYPENAME = "Story" as const;
@@ -31,32 +38,56 @@ function stripXssiPrefix(value: string): string {
 }
 
 /**
- * Lazily parses either one JSON document or Facebook's newline-delimited response stream.
+ * Visits either one JSON document or a bounded newline-delimited response stream.
  *
  * @param payloadText - Page-provided response or script payload.
- * @returns - Successfully parsed JSON roots in document order.
+ * @param visit - Visitor returning false when traversal must fail closed.
+ * @returns - Whether parsing and every root traversal stayed within bounds.
  */
-function* parsePayloadRoots(payloadText: string) {
+function visitPayloadRoots(
+    payloadText: string,
+    visit: (root: unknown) => boolean,
+): boolean {
     const normalized = stripXssiPrefix(payloadText);
     if (normalized === "") {
-        return;
+        return true;
     }
     try {
-        yield JSON.parse(normalized) as unknown;
-        return;
+        return visit(JSON.parse(normalized) as unknown);
     } catch {
-        for (const line of normalized.split(/\r?\n/u)) {
-            const document = stripXssiPrefix(line);
-            if (document === "") {
-                continue;
-            }
+        /* Facebook also returns newline-delimited JSON documents. */
+    }
+    let lineStart = 0;
+    let lineCount = 0;
+    while (lineStart <= normalized.length) {
+        lineCount += 1;
+        if (lineCount > FACEBOOK_PAYLOAD_LIMIT.MAX_STREAM_LINES) {
+            return false;
+        }
+        const newline = normalized.indexOf("\n", lineStart);
+        const lineEnd = newline === -1 ? normalized.length : newline;
+        const line = normalized.slice(
+            lineStart,
+            lineEnd > lineStart && normalized[lineEnd - 1] === "\r"
+                ? lineEnd - 1
+                : lineEnd,
+        );
+        const document = stripXssiPrefix(line);
+        if (document !== "") {
             try {
-                yield JSON.parse(document) as unknown;
+                if (!visit(JSON.parse(document) as unknown)) {
+                    return false;
+                }
             } catch {
                 /* malformed stream entries cannot establish a trusted timestamp */
             }
         }
+        if (newline === -1) {
+            return true;
+        }
+        lineStart = newline + 1;
     }
+    return true;
 }
 
 /**
@@ -141,25 +172,42 @@ function storyTimestampTokens(story: Record<string, unknown>): readonly string[]
  * @param conflicts - Tokens already invalidated by contradictory timestamps.
  * @param trackingToken - Proven Story timestamp token.
  * @param storyTime - Story-owned Unix-seconds value.
+ * @returns - Whether the complete update remains representable within the bound.
  */
 function retainRecord(
     records: Map<string, FacebookTimestampRecord>,
     conflicts: Set<string>,
     trackingToken: string,
     storyTime: string,
-): void {
+): boolean {
     if (conflicts.has(trackingToken)) {
-        return;
+        return true;
     }
     const existing = records.get(trackingToken);
     if (existing && existing.rawDatetime !== storyTime) {
         records.delete(trackingToken);
         conflicts.add(trackingToken);
-    } else if (
-        !existing
-        && records.size + conflicts.size < FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
-    ) {
-        records.set(trackingToken, { trackingToken, rawDatetime: storyTime });
+        return true;
+    }
+    if (existing) {
+        return true;
+    }
+    if (records.size + conflicts.size >= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE) {
+        return false;
+    }
+    records.set(trackingToken, { trackingToken, rawDatetime: storyTime });
+    return true;
+}
+
+/**
+ * Pushes children without a variadic call that could exceed the engine argument limit.
+ *
+ * @param stack - Traversal stack receiving children.
+ * @param children - Parsed child values in document order.
+ */
+function pushChildren(stack: unknown[], children: readonly unknown[]): void {
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+        stack.push(children[index]);
     }
 }
 
@@ -184,11 +232,11 @@ export function extractFacebookTimestampUpdate(
     const records = new Map<string, FacebookTimestampRecord>();
     const conflicts = new Set<string>();
     let visited = 0;
-    for (const root of parsePayloadRoots(payloadText)) {
+    const completed = visitPayloadRoots(payloadText, (root) => {
         const stack: unknown[] = [root];
         while (stack.length > 0) {
             if (visited >= FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES) {
-                return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
+                return false;
             }
             const value = stack.pop();
             visited += 1;
@@ -198,9 +246,9 @@ export function extractFacebookTimestampUpdate(
                     - visited
                     - stack.length;
                 if (children.length > remaining) {
-                    return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
+                    return false;
                 }
-                stack.push(...children);
+                pushChildren(stack, children);
                 continue;
             }
             if (!isRecord(value)) {
@@ -210,7 +258,9 @@ export function extractFacebookTimestampUpdate(
                 const storyTime = rawCreationTime(value.creation_time);
                 if (storyTime !== null) {
                     for (const trackingToken of storyTimestampTokens(value)) {
-                        retainRecord(records, conflicts, trackingToken, storyTime);
+                        if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -219,28 +269,18 @@ export function extractFacebookTimestampUpdate(
                 - visited
                 - stack.length;
             if (children.length > remaining) {
-                return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
+                return false;
             }
-            stack.push(...children);
+            pushChildren(stack, children);
         }
+        return true;
+    });
+    if (!completed) {
+        return INVALIDATE_ALL_FACEBOOK_TIMESTAMP_UPDATE;
     }
     return {
         records: [...records.values()],
         invalidatedTrackingTokens: [...conflicts],
+        invalidateAll: false,
     };
-}
-
-/**
- * Extracts bounded, conflict-free Story timestamps from a Facebook JSON payload.
- *
- * Records are keyed by the encrypted tracking token also carried by Facebook's
- * timestamp link. Conflicting timestamps for one token are discarded.
- *
- * @param payloadText - Serialized initial-page or GraphQL payload.
- * @returns - Minimal records suitable for cross-world transfer and DOM matching.
- */
-export function extractFacebookTimestampRecords(
-    payloadText: string,
-): readonly FacebookTimestampRecord[] {
-    return extractFacebookTimestampUpdate(payloadText).records;
 }

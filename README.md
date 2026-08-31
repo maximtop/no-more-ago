@@ -115,15 +115,17 @@ Story-bearing GraphQL operation families. Support is evidence-based rather than
 tied to an allowlist of feed surfaces: public and signed-in pages are supported
 best-effort whenever they expose the same proof. A Facebook-only main-world
 bridge transfers only the opaque tracking token and Unix-seconds timestamp to
-the isolated content runtime. Each transfer is authenticated with a short-lived
-per-frame lease delivered through extension runtime messaging and browser
-scripting. The token must exactly match the post timestamp link, and the link
-must use one of Facebook's current bounded text or SVG timestamp shapes.
+the isolated content runtime. The page world is not an authentication boundary,
+so the bridge holds no secrets or privileged capability. Messages are bounded
+and structurally validated as page-derived input. The token must exactly match
+the post timestamp link, and the link must use one of Facebook's current bounded
+text or SVG timestamp shapes.
 
 The bridge is inert until existing global and site policy enables the isolated
-runtime. Activation is browser-mediated; release or lease expiry stops payload
-inspection and restores only transport wrappers the bridge still owns.
-Disabling also clears temporary associations and restores page-owned content.
+runtime. Same-window lifecycle messages make its installed wrappers active or
+inert, while the isolated runtime independently follows extension policy.
+Disabling stops consumption, clears temporary associations, and restores
+page-owned content.
 Visible labels, ARIA labels, link destinations, and elapsed time are never
 timestamp fallbacks. Comments, Reels, and future Facebook shapes remain
 unchanged unless they independently satisfy the same Story proof, token
@@ -404,15 +406,15 @@ The Facebook source accepts only typed `Story` objects with a bounded
 `/api/graphql/` request, a synchronously inspectable bounded form body, and an
 anchored Story-bearing `fb_api_req_friendly_name`. Fetch response clones are
 read as capped streams; XHR requires POST plus an empty or `text` response type.
-At most two selected responses are inspected concurrently, and disable or lease
-renewal rejects work from an older activation generation.
+At most two selected responses are inspected concurrently, and lifecycle
+changes reject work from an older activation generation.
 
-Only HMAC-authenticated minimal token/timestamp records cross into the isolated
-runtime. The associations remain in document memory and are cleared on disable
-or teardown. Response content, post text, authors, comments, reactions, and
-account data are not persisted, retained in diagnostics, or sent as telemetry.
-Facebook support adds no permission beyond the manifest permissions listed
-above and has no visible-text or elapsed-time fallback.
+Only structurally validated minimal token/timestamp records cross into the
+isolated runtime. The associations remain in document memory and are cleared on
+disable or teardown. Response content, post text, authors, comments, reactions,
+and account data are not persisted, retained in diagnostics, or sent as
+telemetry. Facebook support adds no permission beyond the manifest permissions
+listed above and has no visible-text or elapsed-time fallback.
 
 The Telegram Web K source trusts only a matching message bubble's ten-digit
 Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It

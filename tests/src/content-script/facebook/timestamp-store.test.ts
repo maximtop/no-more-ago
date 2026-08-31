@@ -2,7 +2,7 @@
  * @file Verifies bounded Facebook timestamp associations and invalidation transitions.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FACEBOOK_PAYLOAD_LIMIT, type FacebookTimestampRecord } from
     "../../../../src/content-script/facebook/contracts";
@@ -13,8 +13,8 @@ import {
     clearFacebookTimestampRecords,
     getFacebookTimestampRecord,
     ingestFacebookPayloadScripts,
-    storeFacebookTimestampRecords,
     storeFacebookTimestampUpdate,
+    type FacebookTimestampRecordChange,
 } from "../../../../src/content-script/facebook/timestamp-store";
 
 /**
@@ -36,6 +36,24 @@ function token(index: number): string {
  */
 function record(index: number, rawDatetime = "1787933301"): FacebookTimestampRecord {
     return { trackingToken: token(index), rawDatetime };
+}
+
+/**
+ * Stores records through the complete payload-update boundary.
+ *
+ * @param targetDocument - Document receiving the records.
+ * @param records - Minimal Story timestamp records.
+ * @returns - Observable association changes.
+ */
+function storeFacebookTimestampRecords(
+    targetDocument: Document,
+    records: readonly FacebookTimestampRecord[],
+): readonly FacebookTimestampRecordChange[] {
+    return storeFacebookTimestampUpdate(targetDocument, {
+        records,
+        invalidatedTrackingTokens: [],
+        invalidateAll: false,
+    });
 }
 
 /**
@@ -160,6 +178,57 @@ describe("Facebook timestamp store", () => {
         expect(getFacebookTimestampRecord(element)).toBeNull();
     });
 
+    it("invalidates every retained association after a bounded parser failure", () => {
+        const first = source(token(1));
+        const second = source(token(2));
+        storeFacebookTimestampRecords(document, [record(1), record(2)]);
+
+        expect(storeFacebookTimestampUpdate(document, {
+            records: [],
+            invalidatedTrackingTokens: [],
+            invalidateAll: true,
+        })).toEqual([
+            {
+                trackingToken: token(1),
+                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+            },
+            {
+                trackingToken: token(2),
+                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+            },
+        ]);
+        expect(getFacebookTimestampRecord(first)).toBeNull();
+        expect(getFacebookTimestampRecord(second)).toBeNull();
+    });
+
+    it("invalidates an old value when its conflicting Story falls beyond the update cap", () => {
+        const retainedIndex = 9_999;
+        const retained = source(token(retainedIndex));
+        storeFacebookTimestampRecords(document, [record(retainedIndex)]);
+        const payload = JSON.stringify([
+            ...Array.from({
+                length: FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE,
+            }, (_, index) => ({
+                __typename: "Story",
+                creation_time: 1_787_933_301,
+                encrypted_click_tracking: token(index),
+            })),
+            {
+                __typename: "Story",
+                creation_time: 1_787_933_302,
+                encrypted_click_tracking: token(retainedIndex),
+            },
+        ]);
+
+        const update = extractFacebookTimestampUpdate(payload);
+        expect(update.invalidateAll).toBe(true);
+        expect(storeFacebookTimestampUpdate(document, update)).toEqual([{
+            trackingToken: token(retainedIndex),
+            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+        }]);
+        expect(getFacebookTimestampRecord(retained)).toBeNull();
+    });
+
     it("parses a payload script once after its text becomes available", () => {
         const script = document.createElement("script");
         script.type = "application/json";
@@ -177,5 +246,21 @@ describe("Facebook timestamp store", () => {
             state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
         }]);
         expect(ingestFacebookPayloadScripts(document)).toEqual([]);
+    });
+
+    it("ingests exact mutation candidates without rescanning the document", () => {
+        const script = document.createElement("script");
+        script.type = "application/json";
+        script.dataset.sjs = "1";
+        script.textContent = JSON.stringify({
+            __typename: "Story",
+            creation_time: 1_787_933_301,
+            encrypted_click_tracking: token(1),
+        });
+        document.body.append(script);
+        const query = vi.spyOn(document, "querySelectorAll");
+
+        expect(ingestFacebookPayloadScripts(document, [script])).toHaveLength(1);
+        expect(query).not.toHaveBeenCalled();
     });
 });
