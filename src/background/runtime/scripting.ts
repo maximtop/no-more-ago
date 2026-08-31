@@ -3,6 +3,24 @@
  *
  * @file Chrome Scripting API contracts for the universal document runtime.
  */
+
+/**
+ * JavaScript execution worlds supported by extension scripting operations.
+ */
+export const SCRIPT_EXECUTION_WORLD = {
+    ISOLATED: "ISOLATED",
+    MAIN: "MAIN",
+} as const;
+
+/**
+ * JavaScript execution world used by a registration or one-off injection.
+ */
+export type ScriptExecutionWorld =
+    (typeof SCRIPT_EXECUTION_WORLD)[keyof typeof SCRIPT_EXECUTION_WORLD];
+
+/**
+ * Complete dynamic content-script registration specification.
+ */
 export interface RegisteredContentScriptSpec {
     /**
      * Chrome registration ID, stable across updates and lookups.
@@ -33,6 +51,11 @@ export interface RegisteredContentScriptSpec {
      * Whether Chrome retains this dynamic registration across browser sessions.
      */
     readonly persistAcrossSessions: boolean;
+
+    /**
+     * JavaScript world where the registered files execute.
+     */
+    readonly world: ScriptExecutionWorld;
 }
 
 /**
@@ -68,6 +91,91 @@ export interface RegisteredContentScriptReference {
      * Returned persistence setting when Chrome includes it.
      */
     readonly persistAcrossSessions?: boolean | undefined;
+
+    /**
+     * Returned JavaScript execution world when Chrome includes it.
+     */
+    readonly world?: string | undefined;
+}
+
+/**
+ * One-off script target covering every reachable frame in a tab.
+ */
+interface AllFramesScriptTarget {
+    /**
+     * Tab receiving the script.
+     */
+    readonly tabId: number;
+
+    /**
+     * Selects every reachable frame.
+     */
+    readonly allFrames: true;
+}
+
+/**
+ * One-off script target covering explicit reachable frames in a tab.
+ */
+interface ExplicitFramesScriptTarget {
+    /**
+     * Tab receiving the script.
+     */
+    readonly tabId: number;
+
+    /**
+     * Exact frame identifiers receiving the script.
+     */
+    readonly frameIds: number[];
+}
+
+/**
+ * Supported all-frame or explicit-frame one-off script target.
+ */
+export type ScriptInjectionTarget = AllFramesScriptTarget | ExplicitFramesScriptTarget;
+
+/**
+ * One-off injection of extension bundle files.
+ */
+export interface FileScriptInjection {
+    /**
+     * Selected tab and frame scope.
+     */
+    readonly target: ScriptInjectionTarget;
+
+    /**
+     * Extension-relative files to execute.
+     */
+    readonly files: string[];
+
+    /**
+     * Optional JavaScript world override.
+     */
+    readonly world?: ScriptExecutionWorld;
+}
+
+/**
+ * One-off injection of a serializable function and its arguments.
+ */
+export interface FunctionScriptInjection {
+    /**
+     * Selected tab and frame scope.
+     */
+    readonly target: ScriptInjectionTarget;
+
+    /**
+     * Self-contained function serialized by the browser.
+     */
+    readonly func: (...args: never[]) => unknown;
+
+    /**
+     * Structured-cloneable arguments supplied to the function.
+     */
+    readonly args: readonly unknown[];
+
+    /**
+     * Optional JavaScript world override.
+     */
+    readonly world?: ScriptExecutionWorld;
 }
 
 /**
@@ -95,39 +203,11 @@ export interface ScriptingRuntime {
     updateContentScripts(scripts: RegisteredContentScriptSpec[]): Promise<void>;
 
     /**
-     * Executes a content file in every frame or an explicit set of frames in a tab.
+     * Executes a content file in every frame of a tab.
      */
-    executeScript(input: {
-        /**
-         * Frames in the tab selected for recovery injection.
-         */
-        readonly target: {
-            /**
-             * Tab identifier receiving the injection.
-             */
-            readonly tabId: number;
-
-            /**
-             * Requires execution in every reachable frame.
-             */
-            readonly allFrames: true;
-        } | {
-            /**
-             * Tab identifier receiving the injection.
-             */
-            readonly tabId: number;
-
-            /**
-             * Exact frames whose policy message was not acknowledged.
-             */
-            readonly frameIds: number[];
-        };
-
-        /**
-         * Extension-relative files to execute.
-         */
-        readonly files: string[];
-    }): Promise<readonly InjectionResult[]>;
+    executeScript(
+        input: FileScriptInjection | FunctionScriptInjection,
+    ): Promise<readonly InjectionResult[]>;
 
     /**
      * Removes dynamic registrations whose IDs are listed in the Chrome filter.

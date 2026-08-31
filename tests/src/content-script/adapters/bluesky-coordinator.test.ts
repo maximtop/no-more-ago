@@ -22,6 +22,10 @@ import {
     BLUESKY_TARGET_ROLE,
     discoverBlueskyRelativeTargets,
 } from "../../../../src/content-script/adapters/bluesky";
+import type {
+    TimestampCandidate,
+    TimestampExtractionContext,
+} from "../../../../src/content-script/adapters/types";
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
@@ -32,6 +36,10 @@ import type {
 
 const INDEXED_AT = "2026-08-31T10:15:00.000Z" as const;
 const QUOTE_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
+const EXTRACTION_CONTEXT: TimestampExtractionContext = {
+    url: new URL("https://bsky.app/"),
+    readPageText: (target) => target.data,
+};
 let feedFixture = "";
 let quoteFixture = "";
 
@@ -44,6 +52,16 @@ type ProfileResult = BlueskyLookupResult<BlueskyProfileRecord>;
  * Typed post lookup result used by fake handlers.
  */
 type PostResult = BlueskyLookupResult<BlueskyPostRecord>;
+
+/**
+ * Reads validated string evidence without assuming every adapter candidate carries it.
+ *
+ * @param candidate - Candidate returned by the coordinator-backed rule.
+ * @returns - Raw datetime evidence when the candidate is string-backed.
+ */
+function rawDatetime(candidate: TimestampCandidate | null): string | undefined {
+    return candidate && "rawDatetime" in candidate ? candidate.rawDatetime : undefined;
+}
 
 /**
  * Manually settled asynchronous work.
@@ -202,7 +220,10 @@ async function waitForResolvedSources(
 ): Promise<void> {
     await vi.waitFor(() => {
         const resolved = discoverBlueskyRelativeTargets(document)
-            .filter(({ source }) => coordinator.rule.extract(source) !== null);
+            .filter(({ source }) => coordinator.rule.extract(
+                source,
+                EXTRACTION_CONTEXT,
+            ) !== null);
         expect(resolved).toHaveLength(expected);
     });
 }
@@ -410,8 +431,14 @@ describe("Bluesky coordinator", () => {
         const targets = discoverBlueskyRelativeTargets(document);
         const outer = targets.find(({ role }) => role === BLUESKY_TARGET_ROLE.POST);
         const quote = targets.find(({ role }) => role === BLUESKY_TARGET_ROLE.QUOTE);
-        expect(outer && coordinator.rule.extract(outer.source)?.rawDatetime).toBe(INDEXED_AT);
-        expect(quote && coordinator.rule.extract(quote.source)?.rawDatetime)
+        expect(outer && rawDatetime(coordinator.rule.extract(
+            outer.source,
+            EXTRACTION_CONTEXT,
+        ))).toBe(INDEXED_AT);
+        expect(quote && rawDatetime(coordinator.rule.extract(
+            quote.source,
+            EXTRACTION_CONTEXT,
+        )))
             .toBe(QUOTE_INDEXED_AT);
         expect(appView.profileCalls).toHaveLength(1);
         expect(appView.postCalls).toHaveLength(1);
@@ -532,7 +559,7 @@ describe("Bluesky coordinator", () => {
         postResult.resolve(resolvePosts(appView.postCalls[0] ?? []));
 
         await waitForResolvedSources(coordinator, 1);
-        const candidate = coordinator.rule.extract(descriptor.source);
+        const candidate = coordinator.rule.extract(descriptor.source, EXTRACTION_CONTEXT);
         expect(candidate?.presentation).toMatchObject({ target: replacement });
         expect(oldTarget.isConnected).toBe(false);
         expect(new Set(changed.flat())).toEqual(new Set([descriptor.source]));
@@ -655,7 +682,7 @@ describe("Bluesky coordinator", () => {
             if (!descriptor) {
                 throw new Error("Expected partial descriptor");
             }
-            expect(coordinator.rule.extract(descriptor.source)).toBeNull();
+            expect(coordinator.rule.extract(descriptor.source, EXTRACTION_CONTEXT)).toBeNull();
             expect(descriptor.target.data).toBe("2h");
             expect(diagnostics).toEqual([{
                 category: DIAGNOSTIC_CATEGORY.SKIP,
@@ -746,6 +773,9 @@ describe("Bluesky coordinator", () => {
         await Promise.resolve();
         const descriptor = discoverBlueskyRelativeTargets(document)[0];
         expect(descriptor?.target.data).toBe("2h");
-        expect(descriptor && throwingSink.rule.extract(descriptor.source)).toBeNull();
+        expect(descriptor && throwingSink.rule.extract(
+            descriptor.source,
+            EXTRACTION_CONTEXT,
+        )).toBeNull();
     });
 });

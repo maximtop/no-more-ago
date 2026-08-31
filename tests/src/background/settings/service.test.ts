@@ -143,11 +143,11 @@ describe("SettingsService V5", () => {
         });
         await expect(service.resetAll()).resolves.toMatchObject({
             ok: true,
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
+            snapshot: v5(9),
         });
         expect(backend.pair()).toEqual({
-            current: DEFAULT_SETTINGS_SNAPSHOT,
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
+            current: v5(9),
+            previous: v5(9),
         });
     });
 
@@ -811,7 +811,22 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
 });
 
 describe("SettingsService reset", () => {
-    it("resets a valid custom/disabled/debug-on pair to exactly the system defaults", async () => {
+    it("rejects reset when the monotonic revision cannot advance safely", async () => {
+        const current = v5(Number.MAX_SAFE_INTEGER, false, { "github.com": false });
+        const previous = v5(Number.MAX_SAFE_INTEGER - 1);
+        const backend = storage(current, previous);
+        const service = new SettingsService(backend);
+
+        await expect(service.resetAll()).resolves.toEqual({
+            ok: false,
+            error: "persistence-failed",
+            snapshot: current,
+        });
+        expect(backend.set).not.toHaveBeenCalled();
+        expect(backend.pair()).toEqual({ current, previous });
+    });
+
+    it("resets custom values while preserving monotonic settings revisions", async () => {
         const custom: DisplaySettings = {
             formatMode: "custom",
             pattern: "yyyy-MM-dd",
@@ -824,11 +839,11 @@ describe("SettingsService reset", () => {
         await expect(service.resetAll()).resolves.toEqual({
             ok: true,
             changed: true,
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
+            snapshot: v5(10),
         });
         expect(backend.pair()).toEqual({
-            current: DEFAULT_SETTINGS_SNAPSHOT,
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
+            current: v5(10),
+            previous: v5(10),
         });
         expect(backend.remove).not.toHaveBeenCalled();
     });
@@ -859,16 +874,16 @@ describe("SettingsService reset", () => {
         await expect(service.resetAll()).resolves.toEqual({
             ok: true,
             changed: true,
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
+            snapshot: v5(18),
         });
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.set).toHaveBeenCalledWith({
-            [SETTINGS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
-            [SETTINGS_PREVIOUS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
+            [SETTINGS_STORAGE_KEY]: v5(18),
+            [SETTINGS_PREVIOUS_STORAGE_KEY]: v5(18),
         });
         expect(backend.pair()).toEqual({
-            current: DEFAULT_SETTINGS_SNAPSHOT,
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
+            current: v5(18),
+            previous: v5(18),
         });
         expect(backend.remove).not.toHaveBeenCalled();
     });
@@ -925,16 +940,16 @@ describe("SettingsService reset", () => {
         expect(resetResult).toEqual({
             ok: true,
             changed: true,
-            snapshot: DEFAULT_SETTINGS_SNAPSHOT,
+            snapshot: v5(4),
         });
         expect(editResult).toEqual({
             ok: true,
             changed: true,
-            snapshot: v5(1, true, { "github.com": false }),
+            snapshot: v5(5, true, { "github.com": false }),
         });
         expect(backend.pair()).toEqual({
-            current: v5(1, true, { "github.com": false }),
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
+            current: v5(5, true, { "github.com": false }),
+            previous: v5(4),
         });
         expect(backend.set).toHaveBeenCalledTimes(2);
     });
@@ -959,11 +974,11 @@ describe("SettingsService reset", () => {
             changed: true,
             snapshot: { revision: 5, debugEnabled: true },
         });
-        expect(reset).toEqual({ ok: true, changed: true, snapshot: DEFAULT_SETTINGS_SNAPSHOT });
+        expect(reset).toEqual({ ok: true, changed: true, snapshot: v5(6) });
         expect(backend.set).toHaveBeenCalledTimes(3);
         expect(backend.pair()).toEqual({
-            current: DEFAULT_SETTINGS_SNAPSHOT,
-            previous: DEFAULT_SETTINGS_SNAPSHOT,
+            current: v5(6),
+            previous: v5(6),
         });
     });
 });

@@ -36,7 +36,7 @@ function isGitHubTimestampElement(element: Element): boolean {
  * GitHub-specific adapter that accepts only explicit-zone datetime attributes on supported time
  * widgets.
  */
-export const githubAdapter: TimestampSourceRule = {
+export const githubAdapter = {
     id: GITHUB_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
@@ -74,4 +74,4 @@ export const githubAdapter: TimestampSourceRule = {
             }
             : null;
     },
-};
+} satisfies TimestampSourceRule;

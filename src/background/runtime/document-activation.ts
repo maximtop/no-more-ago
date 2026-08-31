@@ -3,27 +3,25 @@
  *
  * @file Chrome scripting and tab reconciliation for the document runtime.
  */
-import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
+import {
+    CONTENT_SCRIPT_FILE,
+    FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
+} from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
+import { isFacebookUrl } from "../../shared/url/facebook";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import {
-    REFRESH_DOCUMENT_POLICY_MESSAGE,
-    SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    TEARDOWN_DOCUMENT_MESSAGE,
-    isDocumentPolicyRefreshedResponse,
+    isDocumentPolicyReconciledMessage,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
+    type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
-import type { RuntimeTab, TabsRuntime } from "./tabs";
-import type {
-    RegisteredContentScriptReference,
-    ScriptingRuntime,
-} from "./scripting";
+import type { RuntimeFrame, RuntimeTab, TabsRuntime } from "./tabs";
+import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from "./scripting";
 import {
-    DOCUMENT_RUNTIME_REGISTRATION,
-    DOCUMENT_RUNTIME_REGISTRATION_ID,
+    DOCUMENT_RUNTIME_REGISTRATIONS,
     registrationMatches,
 } from "./register-documents";
-
-const TAB_OPERATION_TIMEOUT_MS = 1_000;
+import { settleBrowserOperation } from "./settle";
 
 /**
  * Global activation policy values.
@@ -84,6 +82,21 @@ export type RegistrationOutcome =
     (typeof REGISTRATION_OUTCOME)[keyof typeof REGISTRATION_OUTCOME];
 
 /**
+ * Outcome retained for one independently reconciled registration.
+ */
+export interface RegistrationResult {
+    /**
+     * Stable browser registration identifier.
+     */
+    readonly id: string;
+
+    /**
+     * Operation outcome for this registration only.
+     */
+    readonly outcome: RegistrationOutcome;
+}
+
+/**
  * Reconciliation failure retained with independent successes.
  */
 export type ReconcileFailure =
@@ -97,6 +110,11 @@ export type ReconcileFailure =
          * Failed registration operation.
          */
         readonly operation: (typeof REGISTRATION_OPERATION)[keyof typeof REGISTRATION_OPERATION];
+
+        /**
+         * Registration whose operation failed, when the failure was registration-specific.
+         */
+        readonly registrationId?: string;
     }
     | {
         /**
@@ -149,6 +167,11 @@ export interface ActivationReconcileResult {
      * Universal registration operation outcome.
      */
     readonly registration: RegistrationOutcome;
+
+    /**
+     * Independent outcomes for the universal runtime and optional site bridges.
+     */
+    readonly registrations: readonly RegistrationResult[];
 
     /**
      * Outcomes recorded for each selected tab.
@@ -235,110 +258,137 @@ interface DocumentActivationDependencies {
 }
 
 /**
- * Settles a browser operation without rejecting reconciliation.
- *
- * @param operation - Operation to invoke and settle.
- * @returns - A tagged success or failure result.
- */
-function settle<T>(operation: () => Promise<T>): Promise<
-    { readonly ok: true; readonly value: T } | { readonly ok: false }
-> {
-    try {
-        return Promise.resolve(operation()).then(
-            (value) => ({ ok: true, value } as const),
-            () => ({ ok: false } as const),
-        );
-    } catch {
-        return Promise.resolve({ ok: false } as const);
-    }
-}
-
-/**
- * Settles a browser operation within a bounded interval.
- *
- * @param operation - Browser operation to invoke.
- * @param timeoutMs - Maximum time to wait for settlement.
- * @returns - The operation result, or a tagged failure after the timeout.
- */
-async function settleWithin<T>(
-    operation: () => Promise<T>,
-    timeoutMs: number,
-): Promise<{ readonly ok: true; readonly value: T } | { readonly ok: false }> {
-    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
-    const timeout = new Promise<{ readonly ok: false }>((resolve) => {
-        timeoutId = globalThis.setTimeout(() => {
-            resolve({ ok: false });
-        }, timeoutMs);
-    });
-    try {
-        return await Promise.race([settle(operation), timeout]);
-    } finally {
-        if (timeoutId !== undefined) {
-            globalThis.clearTimeout(timeoutId);
-        }
-    }
-}
-
-/**
- * Reconciles the universal registration.
+ * Reconciles one registration without coupling its outcome to sibling registrations.
  *
  * @param scripting - Scripting API boundary.
+ * @param expected - Canonical registration to reconcile.
  * @param enabled - Whether global processing is enabled.
  * @param failures - Failure collection to append to.
+ * @param onLateWrite - Optional convergence request after a timed-out write succeeds.
  * @returns - Registration operation outcome.
  */
 async function registration(
     scripting: ScriptingRuntime,
+    expected: (typeof DOCUMENT_RUNTIME_REGISTRATIONS)[number],
     enabled: boolean,
     failures: ReconcileFailure[],
+    onLateWrite?: () => void,
 ): Promise<RegistrationOutcome> {
-    let found: readonly RegisteredContentScriptReference[];
-    let current: RegisteredContentScriptReference | undefined;
-    try {
-        found = await scripting.getRegisteredContentScripts({
-            ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
-        });
-        current = found.find((entry) => entry.id === DOCUMENT_RUNTIME_REGISTRATION_ID);
-    } catch {
+    const inspected = await settleBrowserOperation(
+        () => scripting.getRegisteredContentScripts({
+            ids: [expected.id],
+        }),
+    );
+    if (!inspected.ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
             operation: REGISTRATION_OPERATION.GET,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
+    const found = inspected.value.find((entry) => entry.id === expected.id);
     if (!enabled) {
-        const registeredIds = found.map((entry) => entry.id);
-        if (registeredIds.length === 0) {
+        if (!found) {
             return REGISTRATION_OUTCOME.UNCHANGED;
         }
-        try {
-            await scripting.unregisterContentScripts({ ids: registeredIds });
+        const removed = await settleRegistrationWrite(
+            () => scripting.unregisterContentScripts({ ids: [expected.id] }),
+            onLateWrite,
+        );
+        if (removed) {
             return REGISTRATION_OUTCOME.UNREGISTERED;
-        } catch {
-            failures.push({
-                scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-                operation: REGISTRATION_OPERATION.UNREGISTER,
-            });
-            return REGISTRATION_OUTCOME.FAILED;
         }
-    }
-    if (current && registrationMatches(current, DOCUMENT_RUNTIME_REGISTRATION)) {
-        return REGISTRATION_OUTCOME.UNCHANGED;
-    }
-    try {
-        if (current) {
-            await scripting.updateContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-            return REGISTRATION_OUTCOME.UPDATED;
-        }
-        await scripting.registerContentScripts([DOCUMENT_RUNTIME_REGISTRATION]);
-        return REGISTRATION_OUTCOME.REGISTERED;
-    } catch {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-            operation: current ? REGISTRATION_OPERATION.UPDATE : REGISTRATION_OPERATION.REGISTER,
+            operation: REGISTRATION_OPERATION.UNREGISTER,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
+    if (found && registrationMatches(found, expected)) {
+        return REGISTRATION_OUTCOME.UNCHANGED;
+    }
+    const operation = found
+        ? REGISTRATION_OPERATION.UPDATE
+        : REGISTRATION_OPERATION.REGISTER;
+    const written = await settleRegistrationWrite(
+        () => found
+            ? scripting.updateContentScripts([{ ...expected }])
+            : scripting.registerContentScripts([{ ...expected }]),
+        onLateWrite,
+    );
+    if (written) {
+        return found
+            ? REGISTRATION_OUTCOME.UPDATED
+            : REGISTRATION_OUTCOME.REGISTERED;
+    }
+    failures.push({
+        scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
+        operation,
+        registrationId: expected.id,
+    });
+    return REGISTRATION_OUTCOME.FAILED;
+}
+
+/**
+ * Derives the legacy aggregate registration outcome from independent results.
+ *
+ * @param results - Per-registration outcomes from the current pass.
+ * @param enabled - Whether registrations were being installed or removed.
+ * @returns - Aggregate outcome retained for existing projections.
+ */
+function aggregateRegistrationOutcome(
+    results: readonly RegistrationResult[],
+    enabled: boolean,
+): RegistrationOutcome {
+    if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.FAILED)) {
+        return REGISTRATION_OUTCOME.FAILED;
+    }
+    if (enabled) {
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UPDATED)) {
+            return REGISTRATION_OUTCOME.UPDATED;
+        }
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.REGISTERED)) {
+            return REGISTRATION_OUTCOME.REGISTERED;
+        }
+    } else if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UNREGISTERED)) {
+        return REGISTRATION_OUTCOME.UNREGISTERED;
+    }
+    return REGISTRATION_OUTCOME.UNCHANGED;
+}
+
+/**
+ * Bounds one idempotent registration write and observes a successful late completion.
+ *
+ * @param operation - Registration mutation to invoke once.
+ * @param onLateWrite - Callback requesting convergence after a timed-out write succeeds.
+ * @returns - Whether the write completed successfully before the deadline.
+ */
+async function settleRegistrationWrite(
+    operation: () => Promise<void>,
+    onLateWrite?: () => void,
+): Promise<boolean> {
+    let pending: Promise<void>;
+    try {
+        pending = Promise.resolve(operation());
+    } catch {
+        return false;
+    }
+    let deadlineElapsed = false;
+    void pending.then(
+        () => {
+            if (deadlineElapsed) {
+                onLateWrite?.();
+            }
+        },
+        () => undefined,
+    );
+    const result = await settleBrowserOperation(() => pending);
+    if (!result.ok) {
+        deadlineElapsed = true;
+    }
+    return result.ok;
 }
 
 /**
@@ -352,29 +402,141 @@ async function httpTabs(
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
 ): Promise<readonly RuntimeTab[]> {
-    try {
-        const found = await tabs.query({ url: [...HTTP_MATCH_PATTERNS] });
-        const seen = new Set<number>();
-        return found.filter((tab) => {
-            const url = parseHttpUrl(tab.url);
-            if (!url || seen.has(tab.id)) {
-                return false;
-            }
-            seen.add(tab.id);
-            return true;
-        });
-    } catch {
+    const queried = await settleBrowserOperation(
+        () => tabs.query({ url: [...HTTP_MATCH_PATTERNS] }),
+    );
+    if (!queried.ok) {
         failures.push({ scope: RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY });
         return [];
     }
+    const seen = new Set<number>();
+    return queried.value.filter((tab) => {
+        const url = parseHttpUrl(tab.url);
+        if (!url || seen.has(tab.id)) {
+            return false;
+        }
+        seen.add(tab.id);
+        return true;
+    });
 }
 
 /**
- * Refreshes each reachable frame and injects only where no runtime acknowledged the command.
+ * Delivers one idempotent policy command and verifies its retained revision.
+ *
+ * @param tabs - Tabs API boundary.
+ * @param tabId - Target top-level tab identifier.
+ * @param frameId - Exact reachable frame receiving the command.
+ * @param message - Effective policy and associated settings revision.
+ * @returns - Whether a document runtime acknowledged the exact revision.
+ */
+async function deliverPolicy(
+    tabs: TabsRuntime,
+    tabId: number,
+    frameId: number,
+    message: ReconcileDocumentPolicyMessage,
+): Promise<boolean> {
+    const result = await settleBrowserOperation(
+        () => tabs.sendMessage(tabId, message, { frameId }),
+    );
+    return result.ok
+        && isDocumentPolicyReconciledMessage(result.value, message.revision);
+}
+
+/**
+ * Enumerates reachable HTTP(S) frames within the shared browser-operation deadline.
+ *
+ * @param tabs - Tabs and frame browser boundary.
+ * @param tabId - Tab whose frames are requested.
+ * @returns - Distinct reachable frames, or null when enumeration fails.
+ */
+async function enumerateFrames(
+    tabs: TabsRuntime,
+    tabId: number,
+): Promise<readonly RuntimeFrame[] | null> {
+    const frames = await settleBrowserOperation(() => tabs.getAllFrames(tabId));
+    if (!frames.ok) {
+        return null;
+    }
+    const seen = new Set<number>();
+    return frames.value.filter((frame) => {
+        if (seen.has(frame.frameId)) {
+            return false;
+        }
+        seen.add(frame.frameId);
+        return true;
+    });
+}
+
+/**
+ * Ensures the inert Facebook main-world bridge in every reachable Facebook frame.
+ *
+ * @param scripting - Scripting API boundary.
+ * @param tabId - Tab whose Facebook frames receive the bridge.
+ * @param enabled - Whether the top-level site's effective policy is enabled.
+ * @param frames - Reachable frames, or null when enumeration failed.
+ * @returns - Whether every required bridge injection completed.
+ */
+async function ensureFacebookBridge(
+    scripting: ScriptingRuntime,
+    tabId: number,
+    enabled: boolean,
+    frames: readonly RuntimeFrame[] | null,
+): Promise<boolean> {
+    if (!enabled) {
+        return true;
+    }
+    if (frames === null) {
+        return false;
+    }
+    const facebookFrameIds = frames.flatMap((frame) => {
+        const url = parseHttpUrl(frame.url);
+        return url && isFacebookUrl(url) ? [frame.frameId] : [];
+    });
+    if (facebookFrameIds.length === 0) {
+        return true;
+    }
+    const injected = await settleBrowserOperation(() => scripting.executeScript({
+        target: { tabId, frameIds: facebookFrameIds },
+        files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
+        world: SCRIPT_EXECUTION_WORLD.MAIN,
+    }));
+    if (!injected.ok) {
+        return false;
+    }
+    const injectedFrameIds = new Set(injected.value.map((result) => result.frameId));
+    return injectedFrameIds.size === facebookFrameIds.length
+        && facebookFrameIds.every((frameId) => injectedFrameIds.has(frameId));
+}
+
+/**
+ * Delivers one policy to every supplied frame and requires every acknowledgement.
+ *
+ * @param tabs - Tabs browser boundary.
+ * @param tabId - Target tab identifier.
+ * @param frames - Exact frame identifiers receiving the command.
+ * @param message - Effective policy command.
+ * @returns - Acknowledgement state keyed by frame identifier.
+ */
+async function deliverPolicyToFrames(
+    tabs: TabsRuntime,
+    tabId: number,
+    frames: readonly number[],
+    message: ReconcileDocumentPolicyMessage,
+): Promise<ReadonlyMap<number, boolean>> {
+    const acknowledged = await Promise.all(frames.map(async (frameId) => [
+        frameId,
+        await deliverPolicy(tabs, tabId, frameId, message),
+    ] as const));
+    return new Map(acknowledged);
+}
+
+/**
+ * Ensures the content runtime in all frames and converges it on the requested policy.
  *
  * @param tab - Target tab.
  * @param hostname - Canonical top-level hostname for the target tab.
  * @param enabled - Whether the site's effective policy is enabled.
+ * @param revision - Settings revision associated with this operation.
  * @param scripting - Scripting API boundary.
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
@@ -385,48 +547,53 @@ async function refresh(
     tab: RuntimeTab,
     hostname: string,
     enabled: boolean,
+    revision: number | null,
     scripting: ScriptingRuntime,
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
     const message = {
-        type: enabled
-            ? REFRESH_DOCUMENT_POLICY_MESSAGE
-            : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
+        type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+        revision,
+        enabled,
     } as const;
-    const foundFrames = await settleWithin(
-        () => tabs.getAllFrames(tab.id),
-        TAB_OPERATION_TIMEOUT_MS,
+    const initialFrames = enumerateFrames(tabs, tab.id);
+    const [initialPolicy, ensured, bridgeReady] = await Promise.all([
+        initialFrames.then((frames) => deliverPolicyToFrames(
+            tabs,
+            tab.id,
+            frames?.map((frame) => frame.frameId) ?? [],
+            message,
+        )),
+        settleBrowserOperation(
+            () => scripting.executeScript({
+                target: { tabId: tab.id, allFrames: true },
+                files: [CONTENT_SCRIPT_FILE],
+            }),
+        ),
+        initialFrames.then((frames) => ensureFacebookBridge(
+            scripting,
+            tab.id,
+            enabled,
+            frames,
+        )),
+    ]);
+    const ensuredFrames = ensured.ok
+        ? [...new Set(ensured.value.map((result) => result.frameId))]
+        : [];
+    const runtimeEnsured = ensuredFrames.length > 0;
+    const retryFrames = ensuredFrames.filter((frameId) => initialPolicy.get(frameId) !== true);
+    const retriedPolicy = await deliverPolicyToFrames(
+        tabs,
+        tab.id,
+        retryFrames,
+        message,
     );
-    let target: Parameters<ScriptingRuntime["executeScript"]>[0]["target"] | undefined;
-    if (!foundFrames.ok || foundFrames.value.length === 0) {
-        target = { tabId: tab.id, allFrames: true };
-    } else {
-        const deliveries = await Promise.all(foundFrames.value.map(async ({ frameId }) => {
-            const delivered = await settleWithin(
-                () => tabs.sendMessage(tab.id, message, { frameId }),
-                TAB_OPERATION_TIMEOUT_MS,
-            );
-            return delivered.ok && isDocumentPolicyRefreshedResponse(delivered.value)
-                ? null
-                : frameId;
-        }));
-        const missingFrameIds = deliveries.filter((frameId): frameId is number => {
-            return frameId !== null;
-        });
-        if (missingFrameIds.length > 0) {
-            target = { tabId: tab.id, frameIds: missingFrameIds };
-        }
-    }
-    let ok = true;
-    if (target) {
-        const ensured = await settleWithin(() => scripting.executeScript({
-            target,
-            files: [CONTENT_SCRIPT_FILE],
-        }), TAB_OPERATION_TIMEOUT_MS);
-        ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
-    }
+    const policyOk = ensuredFrames.length > 0 && ensuredFrames.every(
+        (frameId) => initialPolicy.get(frameId) === true || retriedPolicy.get(frameId) === true,
+    );
+    const ok = runtimeEnsured && policyOk && bridgeReady;
     if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -439,10 +606,11 @@ async function refresh(
 }
 
 /**
- * Broadcasts synchronous teardown to every reachable frame.
+ * Reconciles every reachable frame to a disabled global policy.
  *
  * @param tab - Target tab.
  * @param hostname - Canonical top-level hostname for the target tab.
+ * @param revision - Settings revision associated with this operation.
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
  * @param records - Tab outcome collection to append to.
@@ -451,15 +619,22 @@ async function refresh(
 async function teardown(
     tab: RuntimeTab,
     hostname: string,
+    revision: number | null,
     tabs: TabsRuntime,
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const result = await settleWithin(
-        () => tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }),
-        TAB_OPERATION_TIMEOUT_MS,
+    const frames = await enumerateFrames(tabs, tab.id);
+    const frameIds = frames?.map((frame) => frame.frameId) ?? [];
+    const acknowledgements = await deliverPolicyToFrames(tabs, tab.id, frameIds, {
+        type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
+        revision,
+        enabled: false,
+    });
+    const ok = frames !== null && frameIds.length > 0 && frameIds.every(
+        (frameId) => acknowledgements.get(frameId) === true,
     );
-    if (!result.ok) {
+    if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: tab.id,
@@ -467,13 +642,33 @@ async function teardown(
             action: TAB_ACTION.TEARDOWN,
         });
     }
-    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok: result.ok });
+    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok });
 }
 
 /**
  * Coordinates universal registration and tab/frame lifecycle.
  */
 export class DocumentActivationCoordinator {
+    /**
+     * Monotonic intent token used to recognize registration writes that settle late.
+     */
+    private registrationGeneration = 0;
+
+    /**
+     * Latest desired universal registration state.
+     */
+    private registrationEnabled = false;
+
+    /**
+     * Whether another registration convergence pass is required.
+     */
+    private registrationRepairRequested = false;
+
+    /**
+     * Shared background repair flight for successful stale writes.
+     */
+    private registrationRepairFlight: Promise<void> | undefined;
+
     /**
      * Creates a coordinator over browser API boundaries.
      *
@@ -483,6 +678,54 @@ export class DocumentActivationCoordinator {
     public constructor(
         private readonly input: DocumentActivationDependencies,
     ) {}
+
+    /**
+     * Requests a convergence pass after an older timed-out registration write succeeds.
+     *
+     * @param completedGeneration - Intent generation owning the late browser write.
+     */
+    private requestRegistrationRepair(completedGeneration: number): void {
+        if (completedGeneration === this.registrationGeneration) {
+            return;
+        }
+        this.registrationRepairRequested = true;
+        this.startRegistrationRepair();
+    }
+
+    /**
+     * Starts one shared repair drain without delaying application responses.
+     */
+    private startRegistrationRepair(): void {
+        if (this.registrationRepairFlight) {
+            return;
+        }
+        this.registrationRepairFlight = this.drainRegistrationRepairs().finally(() => {
+            this.registrationRepairFlight = undefined;
+            if (this.registrationRepairRequested) {
+                this.startRegistrationRepair();
+            }
+        });
+    }
+
+    /**
+     * Reconciles the latest desired registration state after stale writes settle.
+     */
+    private async drainRegistrationRepairs(): Promise<void> {
+        while (this.registrationRepairRequested) {
+            this.registrationRepairRequested = false;
+            const generation = this.registrationGeneration;
+            await Promise.all(DOCUMENT_RUNTIME_REGISTRATIONS.map((expected) =>
+                registration(
+                    this.input.scripting,
+                    expected,
+                    this.registrationEnabled,
+                    [],
+                    () => {
+                        this.requestRegistrationRepair(generation);
+                    },
+                )));
+        }
+    }
 
     /**
      * Reconciles registration and selected top-level documents.
@@ -496,7 +739,23 @@ export class DocumentActivationCoordinator {
         const failures: ReconcileFailure[] = [];
         const records: TabOutcome[] = [];
         const enabled = input.policy === ACTIVATION_POLICY.ENABLED;
-        const registered = await registration(this.input.scripting, enabled, failures);
+        this.registrationEnabled = enabled;
+        const registrationGeneration = ++this.registrationGeneration;
+        const registrations = await Promise.all(
+            DOCUMENT_RUNTIME_REGISTRATIONS.map(async (expected) => ({
+                id: expected.id,
+                outcome: await registration(
+                    this.input.scripting,
+                    expected,
+                    enabled,
+                    failures,
+                    () => {
+                        this.requestRegistrationRepair(registrationGeneration);
+                    },
+                ),
+            })),
+        );
+        const registered = aggregateRegistrationOutcome(registrations, enabled);
         const tabs = await httpTabs(this.input.tabs, failures);
         const affected = input.affectedHostnames === undefined
             ? undefined
@@ -511,7 +770,14 @@ export class DocumentActivationCoordinator {
                 return;
             }
             if (!enabled) {
-                await teardown(tab, url.hostname, this.input.tabs, failures, records);
+                await teardown(
+                    tab,
+                    url.hostname,
+                    input.revision,
+                    this.input.tabs,
+                    failures,
+                    records,
+                );
                 return;
             }
             const siteEnabled = isSiteEnabled(input.sitePreferences ?? {}, url.hostname);
@@ -519,6 +785,7 @@ export class DocumentActivationCoordinator {
                 tab,
                 url.hostname,
                 siteEnabled,
+                input.revision,
                 this.input.scripting,
                 this.input.tabs,
                 failures,
@@ -530,6 +797,7 @@ export class DocumentActivationCoordinator {
             policy: input.policy,
             failures,
             registration: registered,
+            registrations,
             tabs: records,
         };
     }

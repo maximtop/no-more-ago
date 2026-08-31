@@ -50,6 +50,7 @@ function application(
         policy: ACTIVATION_POLICY.ENABLED,
         failures: [],
         registration: REGISTRATION_OUTCOME.UNCHANGED,
+        registrations: [],
         tabs: [],
     };
     const coordinator: BackgroundApplicationOptions["coordinator"] = {
@@ -139,6 +140,7 @@ describe("BackgroundApplication document state", () => {
             policy: input.policy,
             failures: [],
             registration: REGISTRATION_OUTCOME.UNCHANGED,
+            registrations: [],
             tabs: [],
         }));
         const app = new BackgroundApplication({
@@ -160,5 +162,62 @@ describe("BackgroundApplication document state", () => {
             sitePreferences: { "example.test": false },
             affectedHostnames: ["example.test"],
         });
+    });
+
+    it("reconciles reset defaults at a revision newer than the active documents", async () => {
+        let stored: Record<string, SettingsSnapshotV5 | undefined> = {
+            [SETTINGS_STORAGE_KEY]: createSettingsSnapshot(
+                7,
+                true,
+                { "example.test": false },
+                { formatMode: "system", timeZone: { mode: "utc" } },
+                true,
+            ),
+        };
+        const storage = {
+            get: vi.fn(() => Promise.resolve(stored)),
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV5>>) => {
+                stored = { ...stored, ...items };
+                return Promise.resolve();
+            }),
+        };
+        const tabs: TabsRuntime = {
+            query: vi.fn(() => Promise.resolve([])),
+            getAllFrames: vi.fn(() => Promise.resolve([])),
+            sendMessage: vi.fn(() => Promise.resolve(undefined)),
+        };
+        const reconcile = vi.fn((input: Parameters<
+            BackgroundApplicationOptions["coordinator"]["reconcile"]
+        >[0]) => Promise.resolve({
+            revision: input.revision,
+            policy: input.policy,
+            failures: [],
+            registration: REGISTRATION_OUTCOME.UNCHANGED,
+            registrations: [],
+            tabs: [],
+        }));
+        const app = new BackgroundApplication({
+            settings: new SettingsService(storage),
+            coordinator: { reconcile },
+            tabs,
+        });
+
+        const response = await app.resetAllSettings();
+
+        expect(response).toMatchObject({ ok: true, acceptedRevision: 8 });
+        expect(stored[SETTINGS_STORAGE_KEY]).toMatchObject({
+            revision: 8,
+            globalEnabled: true,
+            sitePreferences: {},
+            debugEnabled: false,
+        });
+        expect(reconcile.mock.calls.map(([input]) => ({
+            revision: input.revision,
+            policy: input.policy,
+        }))).toEqual([
+            { revision: 7, policy: ACTIVATION_POLICY.ENABLED },
+            { revision: 8, policy: ACTIVATION_POLICY.DISABLED },
+            { revision: 8, policy: ACTIVATION_POLICY.ENABLED },
+        ]);
     });
 });

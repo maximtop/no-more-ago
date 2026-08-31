@@ -1,0 +1,2 @@
+for (;;);{"data":{"node":{"__typename":"Story","creation_time":1787343300,"encrypted_click_tracking":"dynamic-story-token-000000000002"}}}
+{"data":{"duplicate":{"__typename":"Story","creation_time":"1787343300","encrypted_click_tracking":"dynamic-story-token-000000000002"}}}

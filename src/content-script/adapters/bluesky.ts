@@ -632,8 +632,17 @@ export function createBlueskyAdapter(
             TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL,
             TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP,
         ],
-        getMutationSources,
-        getChildListMutationSources,
+        getMutationSources: (element, attributeName, oldValue) => {
+            return attributeName
+                ? getMutationSources(
+                    element,
+                    attributeName,
+                    oldValue,
+                    readResolution(element) !== undefined,
+                )
+                : [];
+        },
+        getChildMutationSources: (element) => getChildListMutationSources(element),
         matches: matchesBlueskyUrl,
         matchesElement: (element) => describeBlueskySource(
             element,

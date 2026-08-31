@@ -13,6 +13,11 @@ export const BACKGROUND_SCRIPT_FILE = "background.js" as const;
 export const CONTENT_SCRIPT_FILE = "content.js" as const;
 
 /**
+ * Facebook main-world payload bridge bundle filename.
+ */
+export const FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE = "facebook-payload-bridge.js" as const;
+
+/**
  * Popup document filename.
  */
 export const POPUP_PAGE_FILE = "popup.html" as const;

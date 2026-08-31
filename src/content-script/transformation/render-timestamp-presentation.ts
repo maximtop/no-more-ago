@@ -9,6 +9,7 @@ import {
 import type { OwnedDomMutationSink } from "./owned-dom-mutations";
 import {
     getOwnedSourceEntries as getOwnedTimeSourceEntries,
+    renderAppendedTime,
     renderExactTime,
     restoreExactTime,
     restoreExactTimes,
@@ -22,6 +23,7 @@ import {
 
 export {
     capturePageOwnedTextChange,
+    readPageOwnedText,
 } from "./render-exact-text";
 export { getOwnedSourceForOutput } from "./render-exact-time";
 
@@ -31,9 +33,11 @@ export { getOwnedSourceForOutput } from "./render-exact-time";
 export type TimestampRenderResult =
     | {
         /**
-         * Adjacent-output strategy discriminant.
+         * Generated-output strategy discriminant.
          */
-        readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME;
+        readonly kind:
+            | typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME
+            | typeof TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME;
 
         /**
          * Generated extension-owned time element.
@@ -83,7 +87,7 @@ export function getOwnedTimestampSourceEntries(
  * Renders one validated timestamp using its adapter-selected strategy.
  *
  * @param source - Trusted timestamp source.
- * @param datetime - Original trusted datetime.
+ * @param datetime - Adapter-supplied validated datetime, or null for derived in-place output.
  * @param presentation - Validated presentation descriptor.
  * @param text - Formatted exact label.
  * @param mutations - Optional observer acknowledgement sink.
@@ -91,18 +95,30 @@ export function getOwnedTimestampSourceEntries(
  */
 export function renderTimestampPresentation(
     source: Element,
-    datetime: string,
+    datetime: string | null,
     presentation: TimestampPresentation,
     text: string,
     mutations?: OwnedDomMutationSink,
 ): TimestampRenderResult | null {
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
         restoreExactTime(source, mutations);
-        const output = renderExactText(source, presentation.target, text, mutations);
+        const renderedText = `${presentation.textPrefix ?? ""}${text}`
+            + (presentation.textSuffix ?? "");
+        const output = renderExactText(
+            source,
+            presentation.target,
+            renderedText,
+            mutations,
+        );
         return output ? { kind: presentation.kind, output } : null;
     }
+    if (datetime === null) {
+        return null;
+    }
     restoreExactText(source, mutations);
-    const output = renderExactTime(source, datetime, text, mutations);
+    const output = presentation.kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME
+        ? renderAppendedTime(source, datetime, text, mutations)
+        : renderExactTime(source, datetime, text, mutations);
     return output ? { kind: presentation.kind, output } : null;
 }
 

@@ -4,6 +4,7 @@
 
 import { findSimpleTextTarget } from "./simple-text-target";
 import { discoverElements } from "./discover-elements";
+import { isHtmlElement } from "./html-element";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -13,7 +14,6 @@ import {
     type TimestampSourceRule,
 } from "./types";
 
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const RELATIVE_TIME_SELECTOR = "span.relativetime[title]" as const;
 const CLEAN_RELATIVE_TIME_SELECTOR = "span.relativetime-clean[title]" as const;
 const USER_CARD_TIME_SELECTOR = "time.s-user-card--time[title]:not([datetime])" as const;
@@ -120,16 +120,6 @@ export function matchesStackExchangeUrl(url: URL): boolean {
 }
 
 /**
- * Checks whether an element is a standard HTML element in light DOM.
- *
- * @param element - Candidate Stack Exchange timestamp source.
- * @returns - Whether the element uses the HTML namespace.
- */
-function isHtmlElement(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE;
-}
-
-/**
  * Checks whether an element is a trusted Stack Exchange title-based timestamp source.
  *
  * @param element - Candidate Stack Exchange timestamp source.
@@ -159,7 +149,7 @@ function readStackExchangeDatetime(element: Element): string | null {
 /**
  * Specialized Stack Exchange source using only approved title-bearing widgets.
  */
-export const stackExchangeAdapter: TimestampSourceRule = {
+export const stackExchangeAdapter = {
     id: STACK_EXCHANGE_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
@@ -196,4 +186,4 @@ export const stackExchangeAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;

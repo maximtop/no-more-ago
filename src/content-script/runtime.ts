@@ -13,23 +13,22 @@ import {
     DocumentTransformationController,
     type DocumentTransformationControllerInput,
 } from "./transformation/document-transformation-controller";
+import type { DocumentDiagnosticSink } from "./diagnostics";
 import type {
     DocumentTransformationParticipantFactory,
 } from "./transformation/document-transformation-participant";
-import type { DocumentDiagnosticSink } from "./diagnostics";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
-    DOCUMENT_POLICY_REFRESHED_MESSAGE,
-    DOCUMENT_TORN_DOWN_MESSAGE,
+    DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
     isDebugPolicyUpdateMessage,
     isDocumentStatusMessage,
-    isRefreshDocumentPolicyMessage,
-    isSuspendAndRefreshDocumentPolicyMessage,
+    isReconcileDocumentPolicyMessage,
+    isReconcileDocumentRouteMessage,
     isPresentationUpdateMessage,
-    isTeardownDocumentMessage,
     PRESENTATION_UPDATED_MESSAGE,
+    type DocumentPolicyReconciledMessage,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
@@ -40,6 +39,7 @@ import {
     DEFAULT_DISPLAY_SETTINGS,
     type DisplaySettings,
 } from "../shared/settings/snapshot";
+import type { DocumentRouteHandoffClassifier } from "./transformation/route-handoff";
 
 /**
  * Global symbol used to retain the single content-runtime instance for a document.
@@ -75,6 +75,25 @@ export interface ContentRuntimeHandle {
      * Stops processing, cancels pending startup, and clears diagnostic forwarding.
      */
     teardown(): void;
+
+    /**
+     * Reconciles exact sources whose trusted out-of-band data changed.
+     *
+     * @param sources - Connected page-owned timestamp sources to re-evaluate.
+     */
+    reconcileSources(sources: readonly Element[]): void;
+}
+
+/**
+ * Same-document route event source such as the content window's popstate event.
+ */
+export interface ContentRouteEventSource {
+    /**
+     * Registers one route-change listener retained for the document lifetime.
+     *
+     * @param listener - Listener that samples the current route when invoked.
+     */
+    addListener(listener: () => void): void;
 }
 
 /**
@@ -137,6 +156,16 @@ interface RuntimeSlot {
     debugRevision: number | undefined;
 
     /**
+     * Effective activation policy applied by the latest revisioned command or hydration.
+     */
+    policyEnabled: boolean | undefined;
+
+    /**
+     * Latest persisted settings revision accepted for activation policy.
+     */
+    policyRevision: number | undefined;
+
+    /**
      * Background reporter used only while diagnostic forwarding is enabled.
      */
     reportDiagnostic: ((event: Record<string, unknown>) => Promise<unknown>) | undefined;
@@ -146,6 +175,52 @@ interface RuntimeSlot {
      */
     loadDocumentState: (() => Promise<unknown>) | undefined;
 
+    /**
+     * Lazily samples the content document's current URL.
+     */
+    urlProvider: () => URL;
+
+    /**
+     * Optional site-composition listener synchronized with controller activity.
+     */
+    onActivityChanged: ((active: boolean) => void) | undefined;
+
+    /**
+     * Last activity state delivered through onActivityChanged.
+     */
+    activityActive: boolean;
+}
+
+/**
+ * Delivers a changed controller activity state without allowing site integration failures to
+ * interfere with shared timestamp processing.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param active - Whether the controller generation may process the document.
+ */
+function notifyActivity(slot: RuntimeSlot, active: boolean): void {
+    if (slot.activityActive === active) {
+        return;
+    }
+    slot.activityActive = active;
+    try {
+        slot.onActivityChanged?.(active);
+    } catch {
+        /* optional site composition fails independently from shared processing */
+    }
+}
+
+/**
+ * Synchronizes a replacement listener to the current activity state.
+ *
+ * @param slot - Singleton runtime state with the replacement listener installed.
+ */
+function synchronizeActivity(slot: RuntimeSlot): void {
+    try {
+        slot.onActivityChanged?.(slot.activityActive);
+    } catch {
+        /* optional site composition fails independently from shared processing */
+    }
 }
 
 /**
@@ -158,7 +233,6 @@ interface RuntimeSlot {
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
     slot.presentation = display;
     slot.presentationRevision = revision;
-    slot.controller.setDisplay(display);
 }
 
 /**
@@ -203,6 +277,24 @@ function reformatOwned(slot: RuntimeSlot): void {
 }
 
 /**
+ * Samples and reconciles the current route without trusting message payload data.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @returns - Whether reconciliation succeeded and activation may proceed.
+ */
+function reconcileCurrentRoute(slot: RuntimeSlot): boolean {
+    try {
+        const currentUrl = slot.urlProvider();
+        slot.controller.reconcileRoute(new URL(currentUrl.href));
+        return true;
+    } catch {
+        teardown(slot);
+        slot.phase = DOCUMENT_PHASE.FAILED;
+        return false;
+    }
+}
+
+/**
  * Starts the controller once state hydration succeeds.
  *
  * @param slot - Singleton runtime state for the current document.
@@ -212,14 +304,17 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (
         slot.phase !== DOCUMENT_PHASE.WAITING ||
         slot.generation !== generation ||
-        slot.presentation === undefined
+        slot.presentation === undefined ||
+        slot.policyEnabled === false
     ) {
         return;
     }
+    notifyActivity(slot, true);
     try {
         slot.controller.start();
         slot.phase = DOCUMENT_PHASE.ACTIVE;
     } catch (error) {
+        notifyActivity(slot, false);
         try {
             slot.controller.teardown();
         } finally {
@@ -248,6 +343,8 @@ function beginHydration(
         = DOCUMENT_PHASE.FAILED,
 ): void {
     if (!loader) {
+        slot.policyEnabled = true;
+        slot.policyRevision ??= 0;
         applyPresentation(slot, DEFAULT_DISPLAY_SETTINGS, 0);
         applyDebugPolicy(slot, false, 0);
         maybeStart(slot, generation);
@@ -277,6 +374,15 @@ function beginHydration(
                     failHydration(slot, generation, failurePhase);
                     return;
                 }
+                if (
+                    slot.policyRevision !== undefined
+                    && response.revision < slot.policyRevision
+                ) {
+                    failHydration(slot, generation, failurePhase);
+                    return;
+                }
+                slot.policyRevision = response.revision;
+                slot.policyEnabled = response.enabled;
                 const previousRevision = Math.max(
                     slot.presentationRevision ?? -1,
                     slot.debugRevision ?? -1,
@@ -358,6 +464,9 @@ function activate(
     if (slot.phase === DOCUMENT_PHASE.WAITING || slot.phase === DOCUMENT_PHASE.ACTIVE) {
         return;
     }
+    if (!reconcileCurrentRoute(slot)) {
+        return;
+    }
     slot.generation += 1;
     const generation = slot.generation;
     slot.phase = DOCUMENT_PHASE.WAITING;
@@ -375,14 +484,21 @@ function activate(
  * Starts a policy hydration generation without disrupting an active controller.
  *
  * @param slot - Singleton runtime state for the current document.
+ * @param failurePhase - Phase used when the refreshed state cannot be loaded.
  */
-function refreshPolicy(slot: RuntimeSlot): void {
+function refreshPolicy(
+    slot: RuntimeSlot,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    > = DOCUMENT_PHASE.FAILED,
+): void {
     if (slot.phase !== DOCUMENT_PHASE.ACTIVE && slot.phase !== DOCUMENT_PHASE.WAITING) {
-        activate(slot, slot.loadDocumentState);
+        activate(slot, slot.loadDocumentState, failurePhase);
         return;
     }
     slot.generation += 1;
-    beginHydration(slot, slot.generation, slot.loadDocumentState);
+    beginHydration(slot, slot.generation, slot.loadDocumentState, failurePhase);
 }
 
 /**
@@ -392,6 +508,7 @@ function refreshPolicy(slot: RuntimeSlot): void {
  */
 function teardown(slot: RuntimeSlot): void {
     slot.generation += 1;
+    notifyActivity(slot, false);
     slot.controller.teardown();
     slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.presentation = undefined;
@@ -400,6 +517,77 @@ function teardown(slot: RuntimeSlot): void {
     slot.debugRevision = undefined;
     slot.controller.setDiagnosticSink(undefined);
     slot.hydration = undefined;
+}
+
+/**
+ * Creates an acknowledgement for the policy revision retained by the runtime.
+ *
+ * @param revision - Retained settings revision, or null for an unversioned fail-closed refresh.
+ * @returns - Policy reconciliation acknowledgement.
+ */
+function policyAcknowledgement(
+    revision: number | null,
+): DocumentPolicyReconciledMessage {
+    return { type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision };
+}
+
+/**
+ * Applies one revisioned effective policy without allowing older commands to win later.
+ *
+ * Unversioned fail-closed commands synchronously restore page ownership before they reload
+ * current background state. Authoritative hydration may replace a provisional same-revision
+ * command, allowing reinjection after a cross-document navigation to converge on the new host.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param revision - Persisted settings revision, or null while settings are unavailable.
+ * @param enabled - Effective top-level activation policy carried by the command.
+ * @returns - Revision retained for acknowledgement.
+ */
+function reconcilePolicy(
+    slot: RuntimeSlot,
+    revision: number | null,
+    enabled: boolean,
+): number | null {
+    if (revision === null) {
+        slot.policyEnabled = false;
+        if (slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        if (slot.loadDocumentState) {
+            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
+        }
+        return null;
+    }
+    if (slot.policyRevision !== undefined && revision < slot.policyRevision) {
+        return slot.policyRevision;
+    }
+    if (
+        slot.policyRevision === revision
+        && slot.policyEnabled !== undefined
+        && slot.policyEnabled !== enabled
+    ) {
+        slot.policyEnabled = enabled;
+        if (!enabled && slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        refreshPolicy(slot);
+        return revision;
+    }
+    const repeated = slot.policyRevision === revision && slot.policyEnabled === enabled;
+    slot.policyRevision = revision;
+    slot.policyEnabled = enabled;
+    if (!enabled) {
+        if (slot.phase !== DOCUMENT_PHASE.STOPPED) {
+            teardown(slot);
+        }
+        return revision;
+    }
+    if (slot.phase !== DOCUMENT_PHASE.ACTIVE && slot.phase !== DOCUMENT_PHASE.WAITING) {
+        activate(slot, slot.loadDocumentState);
+    } else if (!repeated) {
+        refreshPolicy(slot);
+    }
+    return revision;
 }
 
 /**
@@ -428,35 +616,45 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input - Document, presentation, and messaging dependencies.
  * @param input.document - Page document owned by this runtime.
  * @param input.url - Current page URL used for adapter selection.
+ * @param input.urlProvider - Lazy current page URL source used for route signals.
+ * @param input.routeEvents - Optional same-document route event source.
+ * @param input.routeHandoffClassifier - Optional total retained-policy classifier.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
  * @param input.blueskyAppView - Optional deterministic AppView replacement for tests.
  * @param input.loadDocumentState - Background document-state loader.
  * @param input.reportDiagnostic - Background diagnostic event reporter.
+ * @param input.onActivityChanged - Optional site lifecycle listener.
  * @param input.messages - Runtime message event source.
  * @returns - Installed singleton runtime handle.
  */
 export function installContentRuntime(input: {
     readonly document: Document;
     readonly url: URL;
+    readonly urlProvider?: () => URL;
+    readonly routeEvents?: ContentRouteEventSource;
+    readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
     readonly blueskyAppView?: BlueskyAppView;
     readonly loadDocumentState?: () => Promise<unknown>;
     readonly reportDiagnostic?: (event: Record<string, unknown>) => Promise<unknown>;
+    readonly onActivityChanged?: (active: boolean) => void;
     readonly messages: ContentMessageRuntime;
 }): ContentRuntimeHandle {
     const runtimeDocument = input.document as Document & Record<symbol, RuntimeSlot | undefined>;
     const existing = runtimeDocument[DOCUMENT_RUNTIME_SLOT];
     if (existing) {
+        existing.onActivityChanged = input.onActivityChanged;
+        synchronizeActivity(existing);
         if (input.reportDiagnostic) {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
+        existing.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
         existing.loadDocumentState = input.loadDocumentState;
-        teardown(existing);
-        activate(existing, input.loadDocumentState);
+        refreshPolicy(existing);
         return existing.handle;
     }
     const participantFactory: DocumentTransformationParticipantFactory | undefined =
@@ -469,17 +667,20 @@ export function installContentRuntime(input: {
                 onSourcesChanged: host.onSourcesChanged,
             })
             : undefined;
+    const slot = {} as RuntimeSlot;
     const processInput: DocumentTransformationControllerInput = {
         url: input.url,
         root: input.document,
         locales: input.locales,
+        displayProvider: () => slot.presentation ?? DEFAULT_DISPLAY_SETTINGS,
+        urlProvider: () => slot.urlProvider(),
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
-        ...(participantFactory === undefined
+        ...(participantFactory === undefined ? {} : { participantFactory }),
+        ...(input.routeHandoffClassifier === undefined
             ? {}
-            : { participantFactory }),
+            : { routeHandoffClassifier: input.routeHandoffClassifier }),
     };
-    const slot = {} as RuntimeSlot;
     slot.document = input.document;
     slot.messages = input.messages;
     slot.controller = new DocumentTransformationController(processInput);
@@ -490,32 +691,35 @@ export function installContentRuntime(input: {
     slot.presentationRevision = undefined;
     slot.debugEnabled = false;
     slot.debugRevision = undefined;
+    slot.policyEnabled = undefined;
+    slot.policyRevision = undefined;
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.loadDocumentState = input.loadDocumentState;
+    slot.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
+    slot.onActivityChanged = input.onActivityChanged;
+    slot.activityActive = false;
     slot.handle = {
         teardown: () => {
             teardown(slot);
         },
+        reconcileSources: (sources) => {
+            slot.controller.reconcileSources(sources);
+        },
     };
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
-        if (isTeardownDocumentMessage(message)) {
-            teardown(slot);
-            const response = { type: DOCUMENT_TORN_DOWN_MESSAGE };
+        if (isReconcileDocumentPolicyMessage(message)) {
+            const retainedRevision = reconcilePolicy(
+                slot,
+                message.revision,
+                message.enabled,
+            );
+            const response = policyAcknowledgement(retainedRevision);
             sendResponse?.(response);
             return response;
         }
-        if (isRefreshDocumentPolicyMessage(message)) {
-            refreshPolicy(slot);
-            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
-            sendResponse?.(response);
-            return response;
-        }
-        if (isSuspendAndRefreshDocumentPolicyMessage(message)) {
-            teardown(slot);
-            activate(slot, slot.loadDocumentState, DOCUMENT_PHASE.STOPPED);
-            const response = { type: DOCUMENT_POLICY_REFRESHED_MESSAGE };
-            sendResponse?.(response);
-            return response;
+        if (isReconcileDocumentRouteMessage(message)) {
+            reconcileCurrentRoute(slot);
+            return undefined;
         }
         if (isDocumentStatusMessage(message)) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
@@ -571,6 +775,13 @@ export function installContentRuntime(input: {
         }
         return undefined;
     });
+    try {
+        input.routeEvents?.addListener(() => {
+            reconcileCurrentRoute(slot);
+        });
+    } catch {
+        /* exact-frame route messages remain available when popstate setup is unavailable */
+    }
     runtimeDocument[DOCUMENT_RUNTIME_SLOT] = slot;
     activate(slot, input.loadDocumentState);
     return slot.handle;

@@ -3,17 +3,26 @@
  */
 
 import { genericTimeRule } from "./generic-time";
+import { facebookAdapter } from "./facebook";
 import { githubAdapter } from "./github";
 import { hackerNewsAdapter } from "./hacker-news";
 import { instagramAdapter } from "./instagram";
+import { linkedinAdapter } from "./linkedin";
 import { stackExchangeAdapter } from "./stack-exchange";
 import { telegramWebKAdapter } from "./telegram-web-k";
+import { tiktokAdapters } from "./tiktok";
 import type { TimestampSourceRule } from "./types";
+import { youtubeAdapter, youtubePlayerResponseRule } from "./youtube";
 
 /**
  * Provides deterministic source-rule selection with specialized rules before the generic fallback.
  */
 export class AdapterRegistry {
+    /**
+     * Stable ordered rule collection used for document-wide mutation observation.
+     */
+    private readonly ordered: readonly TimestampSourceRule[];
+
     /**
      * Retains the ordered specialized rules and the final generic fallback.
      *
@@ -23,7 +32,18 @@ export class AdapterRegistry {
     constructor(
         private readonly specialized: readonly TimestampSourceRule[],
         private readonly generic: TimestampSourceRule,
-    ) {}
+    ) {
+        this.ordered = [...specialized, generic];
+    }
+
+    /**
+     * Returns every registered rule in deterministic source-precedence order.
+     *
+     * @returns - Stable specialized rule collection followed by the generic fallback.
+     */
+    all(): readonly TimestampSourceRule[] {
+        return this.ordered;
+    }
 
     /**
      * Selects all rules whose URL matcher accepts the current page.
@@ -40,7 +60,7 @@ export class AdapterRegistry {
      * Returns a registry with one document-scoped specialized rule at highest priority.
      *
      * @param rule - Specialized rule to prepend or replace by identifier.
-     * @returns - New registry retaining all other production rules and the generic fallback.
+     * @returns - New registry retaining all other rules and the generic fallback.
      */
     withSpecialized(rule: TimestampSourceRule): AdapterRegistry {
         return new AdapterRegistry(
@@ -51,9 +71,20 @@ export class AdapterRegistry {
 }
 
 /**
- * Production registry with specialized-source precedence and generic fallback.
+ * Production registry with prioritized specialized rules before the generic fallback.
  */
 export const defaultRegistry = new AdapterRegistry(
-    [githubAdapter, hackerNewsAdapter, instagramAdapter, stackExchangeAdapter, telegramWebKAdapter],
+    [
+        facebookAdapter,
+        githubAdapter,
+        hackerNewsAdapter,
+        instagramAdapter,
+        linkedinAdapter,
+        stackExchangeAdapter,
+        ...tiktokAdapters,
+        telegramWebKAdapter,
+        youtubePlayerResponseRule,
+        youtubeAdapter,
+    ],
     genericTimeRule,
 );

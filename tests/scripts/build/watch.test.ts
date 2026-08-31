@@ -4,7 +4,7 @@
 
 import { appendFileSync, readFileSync } from "node:fs";
 import { strFromU8, unzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBuildWorkspace, startChromeWatch } from "./build-workspace";
 
 describe("development watch command", () => {
@@ -29,12 +29,14 @@ describe("development watch command", () => {
                     && event.status === "success"
                     && (event.sequence ?? 0) > sequence,
             );
-            expect(
-                readFileSync(`${workspace.root}/dist/dev/chrome/content.js`, "utf8"),
-            ).toContain(marker);
-            const zip = unzipSync(readFileSync(`${workspace.root}/dist/dev/chrome.zip`));
-            const content = zip["content.js"];
-            expect(content && strFromU8(content)).toContain(marker);
+            await vi.waitFor(() => {
+                expect(
+                    readFileSync(`${workspace.root}/dist/dev/chrome/content.js`, "utf8"),
+                ).toContain(marker);
+                const zip = unzipSync(readFileSync(`${workspace.root}/dist/dev/chrome.zip`));
+                const content = zip["content.js"];
+                expect(content && strFromU8(content)).toContain(marker);
+            }, { timeout: 30_000, interval: 25 });
         } finally {
             await running.stop(pid);
             workspace.cleanup();

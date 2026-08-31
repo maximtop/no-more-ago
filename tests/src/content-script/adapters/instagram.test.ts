@@ -18,6 +18,7 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
 } from "../../../../src/content-script/adapters/types";
+
 import { OWNED_OUTPUT_ATTRIBUTE } from
     "../../../../src/content-script/ownership-markers";
 
@@ -64,10 +65,10 @@ describe("instagramAdapter", () => {
                 ${OWNED_OUTPUT_ATTRIBUTE}="token">exact</time>`;
         const complex = document.getElementById("complex");
         const owned = document.getElementById("owned");
+
         if (!complex || !owned) {
             throw new Error("Expected complex and owned time sources");
         }
-
         expect(instagramAdapter.extract(complex)).toBeNull();
         expect(instagramAdapter.extract(owned)).toBeNull();
         expect(genericTimeRule.extract(complex)?.presentation.kind).toBe(

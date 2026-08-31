@@ -1,0 +1,19 @@
+{
+    "data": {
+        "node": {
+            "__typename": "Story",
+            "creation_time": 1787933301,
+            "encrypted_click_tracking": "initial-story-token-000000000001",
+            "equal_duplicate": {
+                "encrypted_click_tracking": "initial-story-token-000000000001"
+            },
+            "nested_without_time": {
+                "__typename": "Story",
+                "encrypted_click_tracking": "nested-story-token-000000000003",
+                "child": {
+                    "encrypted_click_tracking": "nested-story-token-000000000003"
+                }
+            }
+        }
+    }
+}

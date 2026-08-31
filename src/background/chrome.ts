@@ -43,6 +43,10 @@ import type {
     DisplaySettings,
     SettingsSnapshotV5,
 } from "../shared/settings/snapshot";
+import {
+    installDocumentRouteUpdates,
+    type HistoryStateUpdateSource,
+} from "./runtime/document-route-updates";
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -63,6 +67,7 @@ function installApplication(): BackgroundApplication | undefined {
         };
         readonly webNavigation?: {
             readonly getAllFrames?: typeof chrome.webNavigation.getAllFrames;
+            readonly onHistoryStateUpdated?: HistoryStateUpdateSource;
         };
         readonly scripting?: {
             readonly getRegisteredContentScripts?:
@@ -107,6 +112,7 @@ function installApplication(): BackgroundApplication | undefined {
                         runAt: script.runAt,
                         allFrames: script.allFrames,
                         persistAcrossSessions: script.persistAcrossSessions,
+                        world: script.world,
                     })),
                 ) ?? Promise.reject(new Error("Scripting is unavailable")),
         registerContentScripts: (scripts) =>
@@ -140,10 +146,16 @@ function installApplication(): BackgroundApplication | undefined {
         getAllFrames: async (tabId) => {
             const frames = await candidate.webNavigation?.getAllFrames?.({ tabId });
             return (frames ?? []).flatMap(({ frameId, url }) =>
-                parseHttpUrl(url) ? [{ frameId }] : []);
+                parseHttpUrl(url) ? [{ frameId, url }] : []);
         },
     };
     const coordinator = new DocumentActivationCoordinator({ scripting, tabs });
+    if (candidate.webNavigation.onHistoryStateUpdated) {
+        installDocumentRouteUpdates({
+            updates: candidate.webNavigation.onHistoryStateUpdated,
+            tabs,
+        });
+    }
     const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
     const browserFamily: DiagnosticBrowserFamily = /Firefox|FxiOS/iu.test(userAgent)
         ? DIAGNOSTIC_BROWSER_FAMILY.FIREFOX

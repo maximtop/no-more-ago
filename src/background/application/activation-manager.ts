@@ -95,6 +95,7 @@ export class ActivationManager {
                     operation: REGISTRATION_OPERATION.GET,
                 }],
                 registration: REGISTRATION_OUTCOME.FAILED,
+                registrations: [],
                 tabs: [],
             };
         }

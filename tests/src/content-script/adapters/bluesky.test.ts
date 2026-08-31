@@ -20,11 +20,18 @@ import { INSTAGRAM_ADAPTER_ID } from "../../../../src/content-script/adapters/in
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_MUTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
+    type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
+
+const EXTRACTION_CONTEXT: TimestampExtractionContext = {
+    url: new URL("https://bsky.app/"),
+    readPageText: (target) => target.data,
+};
 
 const FIXTURE_NAMES = [
     "feed.html",
@@ -181,16 +188,16 @@ describe("Bluesky source contract", () => {
         }
         const resolutions = new Map<Element, ResolvedBlueskyTarget>();
         const adapter = createBlueskyAdapter((source) => resolutions.get(source));
-        expect(adapter.discover(document)).toEqual([]);
-        expect(adapter.matchesElement(descriptor.source)).toBe(true);
+        expect(adapter.discover(document, EXTRACTION_CONTEXT)).toEqual([]);
+        expect(adapter.matchesElement(descriptor.source, EXTRACTION_CONTEXT)).toBe(true);
 
         resolutions.set(descriptor.source, {
             target: descriptor.target,
             fingerprint: descriptor.fingerprint,
             indexedAt: "2026-08-31T10:15:00.000Z",
         });
-        expect(adapter.discover(document)).toEqual([descriptor.source]);
-        expect(adapter.extract(descriptor.source)).toEqual({
+        expect(adapter.discover(document, EXTRACTION_CONTEXT)).toEqual([descriptor.source]);
+        expect(adapter.extract(descriptor.source, EXTRACTION_CONTEXT)).toEqual({
             ruleId: BLUESKY_ADAPTER_ID,
             source: descriptor.source,
             sourceKind: TIMESTAMP_SOURCE_KIND.BLUESKY_POST,
@@ -219,6 +226,8 @@ describe("Bluesky source contract", () => {
             outer,
             TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
             outer.getAttribute("href"),
+            EXTRACTION_CONTEXT,
+            TIMESTAMP_MUTATION_KIND.ATTRIBUTE,
         );
 
         expect(sources).toEqual([outer, quote]);
@@ -227,9 +236,20 @@ describe("Bluesky source contract", () => {
 
     it("restores a tracked source after both metadata attributes disappear", () => {
         document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
-        const adapter = createBlueskyAdapter(() => undefined);
         const outer = requireElement("quoted-outer-time");
         const quote = requireElement("quoted-inner-time");
+        const descriptor = discoverBlueskyRelativeTargets(document)
+            .find(({ source }) => source === outer);
+        if (!descriptor) {
+            throw new Error("Expected tracked outer descriptor");
+        }
+        const adapter = createBlueskyAdapter((source) => source === outer
+            ? {
+                target: descriptor.target,
+                fingerprint: descriptor.fingerprint,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            }
+            : undefined);
         outer.removeAttribute("aria-label");
         outer.removeAttribute("data-tooltip");
 
@@ -237,7 +257,8 @@ describe("Bluesky source contract", () => {
             outer,
             TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP,
             "August 31, 2026",
-            true,
+            EXTRACTION_CONTEXT,
+            TIMESTAMP_MUTATION_KIND.ATTRIBUTE,
         );
 
         expect(sources).toEqual([outer, quote]);
@@ -254,6 +275,8 @@ describe("Bluesky source contract", () => {
             navigation,
             TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
             "/profile/previous.example",
+            EXTRACTION_CONTEXT,
+            TIMESTAMP_MUTATION_KIND.ATTRIBUTE,
         )).toEqual([]);
     });
 

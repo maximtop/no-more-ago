@@ -23,6 +23,11 @@ export interface RuntimeFrame {
      * Numeric frame ID accepted by targeted sendMessage delivery.
      */
     readonly frameId: number;
+
+    /**
+     * HTTP(S) document URL when the browser exposes it.
+     */
+    readonly url?: string;
 }
 
 /**

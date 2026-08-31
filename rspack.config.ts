@@ -123,6 +123,7 @@ export function createRspackConfig({
         entry: {
             background: "./src/background/chrome.ts",
             content: "./src/content-script/main.ts",
+            "facebook-payload-bridge": "./src/content-script/facebook/main-world.ts",
             popup: "./src/popup/main.tsx",
             options: "./src/options/main.tsx",
         },

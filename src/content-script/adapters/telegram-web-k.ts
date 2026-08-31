@@ -4,6 +4,7 @@
 
 import { discoverElements } from "./discover-elements";
 import { findSimpleTextTarget } from "./simple-text-target";
+import { isHtmlElement } from "./html-element";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -11,10 +12,10 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceAttribute,
+    type TimestampMutationSourceResult,
     type TimestampSourceRule,
 } from "./types";
 
-const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const MESSAGE_SELECTOR = "div.bubble[data-timestamp]" as const;
 const MESSAGE_CLASS = "bubble" as const;
 const TIME_INNER_SELECTOR = ".time-inner" as const;
@@ -60,7 +61,7 @@ export function matchesTelegramWebKUrl(url: URL): boolean {
  * @returns - Whether the element can carry a Web K candidate.
  */
 function isTelegramWebKMessage(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === "div"
         && element.classList.contains(MESSAGE_CLASS)
         && element.hasAttribute("data-timestamp");
@@ -73,7 +74,7 @@ function isTelegramWebKMessage(element: Element): boolean {
  * @returns - Whether the element has the stable HTML and timestamp shape.
  */
 function isMessageContainer(element: Element): boolean {
-    return element.namespaceURI === HTML_NAMESPACE
+    return isHtmlElement(element)
         && element.localName === "div"
         && element.hasAttribute("data-timestamp");
 }
@@ -139,25 +140,29 @@ function findMutationSource(element: Element, oldValue: string | null): Element 
  */
 function getMutationSources(
     element: Element,
-    attributeName: TimestampSourceAttribute,
+    attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
-): readonly Element[] {
+): TimestampMutationSourceResult {
+    if (attributeName === undefined) {
+        const source = findMutationSource(element, oldValue);
+        return { handled: true, sources: source ? [source] : [] };
+    }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP) {
-        return element.namespaceURI === HTML_NAMESPACE
+        return { handled: true, sources: isHtmlElement(element)
             && element.localName === "div"
             && element.classList.contains(MESSAGE_CLASS)
             && (element.hasAttribute("data-timestamp") || oldValue !== null)
             ? [element]
-            : [];
+            : [] };
     }
     if (
         attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.CLASS
         || !changedRelevantClass(element, oldValue)
     ) {
-        return [];
+        return { handled: true, sources: [] };
     }
     const source = findMutationSource(element, oldValue);
-    return source ? [source] : [];
+    return { handled: true, sources: source ? [source] : [] };
 }
 
 /**
@@ -186,7 +191,7 @@ function findClockTarget(source: Element): Text | null {
         return null;
     }
     const clocks = Array.from(container.children).filter(
-        (child) => child.namespaceURI === HTML_NAMESPACE
+        (child) => isHtmlElement(child)
             && child.localName === "span"
             && child.classList.contains(CLOCK_CLASS),
     );
@@ -197,7 +202,7 @@ function findClockTarget(source: Element): Text | null {
 /**
  * Specialized Telegram Web K source using the bubble's message.date value.
  */
-export const telegramWebKAdapter: TimestampSourceRule = {
+export const telegramWebKAdapter = {
     id: TELEGRAM_WEB_K_ADAPTER_ID,
     mutationAttributes: [
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
@@ -229,4 +234,4 @@ export const telegramWebKAdapter: TimestampSourceRule = {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         };
     },
-};
+} satisfies TimestampSourceRule;
