@@ -2,7 +2,7 @@
  * @file Verifies universal popup status and site controls.
  */
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -67,6 +67,38 @@ async function renderPopup(
 }
 
 describe("PopupApp contract", () => {
+    it("stops loading when the background state request never settles", async () => {
+        vi.useFakeTimers();
+        const container = document.createElement("div");
+        document.body.append(container);
+        const root = createRoot(container);
+        const pendingTransport: PopupTransport = {
+            sendMessage: () => new Promise(() => undefined),
+        };
+
+        try {
+            await act(async () => {
+                root.render(<PopupApp client={new PopupClient(pendingTransport)} />);
+            });
+            expect(container.textContent).toContain("Loading…");
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(5_000);
+            });
+
+            expect(container.textContent).not.toContain("Loading…");
+            expect(container.textContent).toContain(
+                "Settings are unavailable. Processing is disabled.",
+            );
+        } finally {
+            await act(async () => {
+                root.unmount();
+            });
+            container.remove();
+            vi.useRealTimers();
+        }
+    });
+
     it("renders active status and a site switch for any HTTP(S) hostname", async () => {
         const rendered = await renderPopup(active);
         expect(rendered.container.textContent).toContain("Active on example.test");

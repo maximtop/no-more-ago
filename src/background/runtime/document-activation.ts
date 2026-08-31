@@ -22,6 +22,8 @@ import {
     registrationMatches,
 } from "./register-documents";
 
+const TAB_OPERATION_TIMEOUT_MS = 1_000;
+
 /**
  * Global activation policy values.
  */
@@ -251,6 +253,32 @@ function settle<T>(operation: () => Promise<T>): Promise<
 }
 
 /**
+ * Settles a browser operation within a bounded interval.
+ *
+ * @param operation - Browser operation to invoke.
+ * @param timeoutMs - Maximum time to wait for settlement.
+ * @returns - The operation result, or a tagged failure after the timeout.
+ */
+async function settleWithin<T>(
+    operation: () => Promise<T>,
+    timeoutMs: number,
+): Promise<{ readonly ok: true; readonly value: T } | { readonly ok: false }> {
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
+    const timeout = new Promise<{ readonly ok: false }>((resolve) => {
+        timeoutId = globalThis.setTimeout(() => {
+            resolve({ ok: false });
+        }, timeoutMs);
+    });
+    try {
+        return await Promise.race([settle(operation), timeout]);
+    } finally {
+        if (timeoutId !== undefined) {
+            globalThis.clearTimeout(timeoutId);
+        }
+    }
+}
+
+/**
  * Reconciles the universal registration.
  *
  * @param scripting - Scripting API boundary.
@@ -361,15 +389,15 @@ async function refresh(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    await settle(() => tabs.sendMessage(tab.id, {
+    await settleWithin(() => tabs.sendMessage(tab.id, {
         type: enabled
             ? REFRESH_DOCUMENT_POLICY_MESSAGE
             : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    }));
-    const ensured = await settle(() => scripting.executeScript({
+    }), TAB_OPERATION_TIMEOUT_MS);
+    const ensured = await settleWithin(() => scripting.executeScript({
         target: { tabId: tab.id, allFrames: true },
         files: [CONTENT_SCRIPT_FILE],
-    }));
+    }), TAB_OPERATION_TIMEOUT_MS);
     const ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
     if (!ok) {
         failures.push({
@@ -399,8 +427,10 @@ async function teardown(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const result = await settle(() =>
-        tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }));
+    const result = await settleWithin(
+        () => tabs.sendMessage(tab.id, { type: TEARDOWN_DOCUMENT_MESSAGE }),
+        TAB_OPERATION_TIMEOUT_MS,
+    );
     if (!result.ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,

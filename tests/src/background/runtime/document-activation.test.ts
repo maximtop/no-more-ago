@@ -216,6 +216,73 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
+    it("does not let an unresponsive policy broadcast block reconciliation", async () => {
+        vi.useFakeTimers();
+        const fake = fakes([
+            "https://first.test/page",
+            "https://second.test/page",
+        ]);
+        fake.tabs.sendMessage.mockImplementationOnce(
+            () => new Promise<{ type: string }>(() => undefined),
+        );
+        const coordinator = new DocumentActivationCoordinator(fake);
+        let result: Awaited<ReturnType<typeof coordinator.reconcile>> | undefined;
+
+        try {
+            void coordinator.reconcile({
+                revision: 5,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            }).then((next) => {
+                result = next;
+            });
+
+            await vi.advanceTimersByTimeAsync(5_000);
+
+            expect(result).toBeDefined();
+            expect(fake.scripting.executeScript).toHaveBeenCalledTimes(2);
+            expect(result?.tabs).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("does not let an unresponsive script injection block reconciliation", async () => {
+        vi.useFakeTimers();
+        const fake = fakes([
+            "https://first.test/page",
+            "https://second.test/page",
+        ]);
+        fake.scripting.executeScript.mockImplementationOnce(
+            () => new Promise<{ frameId: number }[]>(() => undefined),
+        );
+        const coordinator = new DocumentActivationCoordinator(fake);
+        let result: Awaited<ReturnType<typeof coordinator.reconcile>> | undefined;
+
+        try {
+            void coordinator.reconcile({
+                revision: 6,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            }).then((next) => {
+                result = next;
+            });
+
+            await vi.advanceTimersByTimeAsync(5_000);
+
+            expect(result).toBeDefined();
+            expect(result?.tabs).toHaveLength(2);
+            expect(result?.failures).toContainEqual({
+                scope: RECONCILE_FAILURE_SCOPE.TAB,
+                tabId: 1,
+                hostname: "first.test",
+                action: TAB_ACTION.INJECT,
+            });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("contains synchronous browser API failures and still reconciles siblings", async () => {
         const fake = fakes([
             "https://first.test/page",

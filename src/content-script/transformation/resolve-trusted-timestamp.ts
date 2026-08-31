@@ -108,6 +108,37 @@ function hasControlCharacter(value: string): boolean {
 }
 
 /**
+ * Parses only a complete ISO datetime carrying an explicit, valid UTC offset.
+ *
+ * @param value - Untrusted datetime value from a trusted source boundary.
+ * @returns - Parsed absolute instant, or null for malformed or ambiguous input.
+ */
+export function parseExplicitZoneDatetime(value: string): Date | null {
+    if (value.length === 0 || value !== value.trim() || hasControlCharacter(value)) {
+        return null;
+    }
+    const zoneMatch = value.match(ZONE);
+    if (!zoneMatch) {
+        return null;
+    }
+    const zone = zoneMatch[0];
+    if (!hasKnownNumericZone(zone)) {
+        return null;
+    }
+    const dateTime = value.slice(0, -zone.length);
+    if (!COMPLETE_DATE_TIME.test(dateTime)) {
+        return null;
+    }
+    const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
+    const time = dateTime.slice(separatorIndex + 1);
+    if (/[Z+-]/.test(time)) {
+        return null;
+    }
+    const parsed = parseISO(value);
+    return isValid(parsed) ? parsed : null;
+}
+
+/**
  * Adapter candidate after its explicit-zone datetime has been validated and parsed into an instant.
  */
 export interface ResolvedTimestamp {
@@ -171,32 +202,7 @@ export function resolveTrustedTimestamp(
     } else if (validationRule === TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL) {
         instant = parseHtmlGlobalDatetime(rawDatetime);
     } else if (validationRule === TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE) {
-        if (
-            rawDatetime.length === 0
-            || rawDatetime !== rawDatetime.trim()
-            || hasControlCharacter(rawDatetime)
-        ) {
-            return null;
-        }
-        const zoneMatch = rawDatetime.match(ZONE);
-        if (!zoneMatch) {
-            return null;
-        }
-        const zone = zoneMatch[0];
-        if (!hasKnownNumericZone(zone)) {
-            return null;
-        }
-        const dateTime = rawDatetime.slice(0, -zone.length);
-        if (!COMPLETE_DATE_TIME.test(dateTime)) {
-            return null;
-        }
-        const separatorIndex = Math.max(dateTime.indexOf("T"), dateTime.indexOf(" "));
-        const time = dateTime.slice(separatorIndex + 1);
-        if (/[Z+-]/.test(time)) {
-            return null;
-        }
-        const parsed = parseISO(rawDatetime);
-        instant = isValid(parsed) ? parsed : null;
+        instant = parseExplicitZoneDatetime(rawDatetime);
     } else {
         return null;
     }

@@ -4,6 +4,12 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
+import {
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+    type BlueskyLookupResult,
+    type BlueskyProfileRecord,
+} from "../../../src/content-script/adapters/bluesky-appview";
 import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../../src/content-script/runtime";
 import {
     DOCUMENT_POLICY_REFRESHED_MESSAGE,
@@ -15,6 +21,7 @@ import {
     REFRESH_DOCUMENT_POLICY_MESSAGE,
 } from "../../../src/shared/messaging/document-messages";
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
+import type { TimeZoneSelection } from "../../../src/shared/settings/snapshot";
 
 /**
  * Creates a controllable extension message source.
@@ -322,5 +329,156 @@ describe("installContentRuntime", () => {
         expect(source.dispatch({ type: TEARDOWN_DOCUMENT_MESSAGE }))
             .toEqual({ type: DOCUMENT_TORN_DOWN_MESSAGE });
         expect(clock.textContent).toBe("16:08");
+    });
+
+    it("reuses resolved Bluesky time across format and time-zone changes", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-runtime-source"
+            href="/profile/alice.example/post/3runtime"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = messages();
+        const label = document.getElementById("bluesky-runtime-source")?.lastChild;
+        if (!(label instanceof Text)) {
+            throw new Error("Expected Bluesky runtime label");
+        }
+        let revision = 1;
+        let pattern = "yyyy-MM-dd HH:mm";
+        let timeZone: TimeZoneSelection = { mode: "utc" };
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+        }));
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        const appView: BlueskyAppView = {
+            getProfiles,
+            getPosts,
+        };
+        installContentRuntime({
+            document,
+            url: new URL("https://bsky.app/"),
+            locales: ["en-US"],
+            loadDocumentState: async () => ({
+                ...state(true, revision),
+                display: {
+                    formatMode: "custom" as const,
+                    pattern,
+                    timeZone,
+                },
+            }),
+            messages: source,
+            blueskyAppView: appView,
+        });
+
+        await vi.waitFor(() => {
+            expect(label.data).toBe("2026-08-31 10:15");
+        });
+        pattern = "dd/MM/yyyy HH:mm";
+        revision = 2;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE })).toEqual({
+            type: DOCUMENT_POLICY_REFRESHED_MESSAGE,
+        });
+        await vi.waitFor(() => {
+            expect(label.data).toBe("31/08/2026 10:15");
+        });
+
+        timeZone = { mode: "iana", identifier: "America/New_York" };
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE })).toEqual({
+            type: DOCUMENT_POLICY_REFRESHED_MESSAGE,
+        });
+        await vi.waitFor(() => {
+            expect(label.data).toBe("31/08/2026 06:15");
+        });
+        expect(getProfiles).toHaveBeenCalledTimes(1);
+        expect(getPosts).toHaveBeenCalledTimes(1);
+    });
+
+    it("makes a disabled generation inert and resolves through a fresh reactivation", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-policy-source"
+            href="/profile/alice.example/post/3policy"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = messages();
+        const label = document.getElementById("bluesky-policy-source")?.lastChild;
+        if (!(label instanceof Text)) {
+            throw new Error("Expected Bluesky policy label");
+        }
+        let enabled = true;
+        let revision = 1;
+        let resolveFirst: ((value: BlueskyLookupResult<BlueskyProfileRecord>) => void)
+            | undefined;
+        const firstProfiles = new Promise<BlueskyLookupResult<BlueskyProfileRecord>>(
+            (resolve) => {
+                resolveFirst = resolve;
+            },
+        );
+        let profileInvocation = 0;
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => {
+            profileInvocation += 1;
+            if (profileInvocation === 1) {
+                return firstProfiles;
+            }
+            return {
+                status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+                records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+            };
+        });
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        const appView: BlueskyAppView = {
+            getProfiles,
+            getPosts,
+        };
+        installContentRuntime({
+            document,
+            url: new URL("https://bsky.app/"),
+            locales: ["en-US"],
+            loadDocumentState: async () => state(enabled, revision),
+            messages: source,
+            blueskyAppView: appView,
+        });
+        await vi.waitFor(() => {
+            expect(getProfiles).toHaveBeenCalledTimes(1);
+        });
+
+        enabled = false;
+        revision = 2;
+        expect(source.dispatch({ type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE }))
+            .toEqual({ type: DOCUMENT_POLICY_REFRESHED_MESSAGE });
+        expect(label.data).toBe("2h");
+        await Promise.resolve();
+        await Promise.resolve();
+        resolveFirst?.({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: [{ actor: "alice.example", did: "did:plc:alice" }],
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(label.data).toBe("2h");
+        expect(getPosts).not.toHaveBeenCalled();
+
+        enabled = true;
+        revision = 3;
+        expect(source.dispatch({ type: REFRESH_DOCUMENT_POLICY_MESSAGE })).toEqual({
+            type: DOCUMENT_POLICY_REFRESHED_MESSAGE,
+        });
+        await vi.waitFor(() => {
+            expect(label.data).not.toBe("2h");
+        });
+        expect(getProfiles).toHaveBeenCalledTimes(2);
+        expect(getPosts).toHaveBeenCalledTimes(1);
     });
 });

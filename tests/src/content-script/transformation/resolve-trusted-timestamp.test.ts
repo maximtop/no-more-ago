@@ -13,6 +13,7 @@ import {
     type TimestampCandidate,
 } from "../../../../src/content-script/adapters/types";
 import {
+    parseExplicitZoneDatetime,
     resolveTrustedTimestamp,
 } from "../../../../src/content-script/transformation/resolve-trusted-timestamp";
 import {
@@ -32,6 +33,12 @@ const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
 });
 
 describe("resolveTrustedTimestamp", () => {
+    it("exposes the same strict explicit-zone parser for external boundaries", () => {
+        expect(parseExplicitZoneDatetime("2026-08-23T10:15:30+03:00")?.toISOString())
+            .toBe("2026-08-23T07:15:30.000Z");
+        expect(parseExplicitZoneDatetime("2026-08-23T10:15:30")).toBeNull();
+    });
+
     it("resolves an exact ten-digit Unix-seconds source", () => {
         const result = resolveTrustedTimestamp(unixSecondsCandidate("1778774880"));
 

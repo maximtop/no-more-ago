@@ -24,9 +24,11 @@ No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized relative timestamps with exact, localized dates.
 It ships a generic `time[datetime]` source for HTTP(S) documents and
 site-specific specialized sources for GitHub, Hacker News, supported Stack
-Exchange Q&A sites, and Telegram Web K, while keeping extraction separate from
-shared timestamp validation and rendering. Public `https://t.me/s/*` pages use
-the generic source.
+Exchange Q&A sites, Telegram Web K, and Bluesky. Bluesky is remote-enriched
+through anonymous public AppView lookups. Instagram uses a site-specific
+presentation rule for standard timestamps, while extraction remains separate
+from shared timestamp validation and rendering. Public `https://t.me/s/*`
+pages use the generic source.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -54,8 +56,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, and Telegram Web K as
-  specialized sources.
+  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and Bluesky as
+  specialized sources plus an Instagram in-place presentation rule for
+  standard timestamps. Bluesky resolution is document-local, anonymous, and
+  limited to the fixed public AppView origin.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -155,6 +159,10 @@ unpacked or temporary extension when manual browser verification is needed.
   when the extension or domain is disabled.
 - Keep the content-side rule order explicit: specialized rules run before the
   generic `time[datetime]` fallback, and the generic rule is always last.
+- Keep Bluesky public enrichment in its document-local coordinator. Use only
+  credential-free bounded GET requests to `https://public.api.bsky.app`, keep
+  successful caches in the active document runtime, abort on teardown, and do
+  not add polling, durable state, or presentation-text fallback parsing.
 - Treat every extension context as independent. Coordinate popup, options,
   background, and content scripts through typed messages and durable state.
 - Assume the background service worker can stop between events. Do not rely on
@@ -296,6 +304,8 @@ Known architectural exclusions to improve when their area changes:
 - Use injected browser capabilities and focused doubles instead of reproducing
   browser internals.
 - Use JSDOM for DOM behavior and offline fixtures for site markup.
+- Inject a fake AppView capability for Bluesky tests; automated tests must not
+  call the live public service.
 - Keep fixture data deterministic and free of network dependencies.
 - Cover a regression when fixing a user-visible failure that can reasonably
   recur.
@@ -363,9 +373,11 @@ Known architectural exclusions to improve when their area changes:
 - Keep all user-facing extension copy in English.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
-- Keep GitHub-, Hacker News-, Stack Exchange-, and Telegram Web K-specific
-  selectors and timestamp sources inside their respective adapters so adding
-  another site changes minimal shared business logic. Public `t.me/s/*`
-  support remains on the generic standard timestamp source.
+- Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
+  Bluesky-specific selectors, timestamp sources, and presentation rules inside
+  their respective adapters so adding another site changes minimal shared
+  business logic. Keep Bluesky batching and stale-result state in its focused
+  coordinator. Public `t.me/s/*` support remains on the generic standard
+  timestamp source.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.

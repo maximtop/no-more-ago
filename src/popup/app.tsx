@@ -32,6 +32,8 @@ import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
 import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 
+const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
+
 /**
  * Optional dependencies and initial state for the popup UI.
  */
@@ -172,12 +174,28 @@ export function PopupApp({
             return;
         }
         let mounted = true;
+        const loadTimeout = globalThis.setTimeout(() => {
+            if (!mounted) {
+                return;
+            }
+            setState({
+                availability: STATE_AVAILABILITY.UNAVAILABLE,
+                revision: null,
+                globalEnabled: null,
+                hostname: null,
+                siteEnabled: null,
+                status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
+                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+            });
+            setLoading(false);
+        }, POPUP_STATE_LOAD_TIMEOUT_MS);
         void client
             .getState()
             .then((next) => {
                 if (!mounted) {
                     return;
                 }
+                globalThis.clearTimeout(loadTimeout);
                 setState(next);
                 setLoading(false);
             })
@@ -185,6 +203,7 @@ export function PopupApp({
                 if (!mounted) {
                     return;
                 }
+                globalThis.clearTimeout(loadTimeout);
                 setState({
                     availability: STATE_AVAILABILITY.UNAVAILABLE,
                     revision: null,
@@ -198,6 +217,7 @@ export function PopupApp({
             });
         return () => {
             mounted = false;
+            globalThis.clearTimeout(loadTimeout);
         };
     }, [client, initialState]);
 

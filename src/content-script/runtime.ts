@@ -3,10 +3,12 @@
  */
 
 import type { AdapterRegistry } from "./adapters/registry";
+import type { BlueskyAppView } from "./adapters/bluesky-appview";
 import {
     DocumentTransformationController,
+    type DocumentTransformationControllerInput,
 } from "./transformation/document-transformation-controller";
-import type { DocumentDiagnosticSink, ProcessInput } from "./transformation/process-document";
+import type { DocumentDiagnosticSink } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -139,7 +141,7 @@ interface RuntimeSlot {
     /**
      * Controller input whose display field is populated after state hydration.
      */
-    processInput: ProcessInput & Record<string, unknown>;
+    processInput: DocumentTransformationControllerInput & Record<string, unknown>;
 }
 
 /**
@@ -425,6 +427,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
+ * @param input.blueskyAppView - Optional deterministic AppView replacement for tests.
  * @param input.loadDocumentState - Background document-state loader.
  * @param input.reportDiagnostic - Background diagnostic event reporter.
  * @param input.messages - Runtime message event source.
@@ -436,6 +439,7 @@ export function installContentRuntime(input: {
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
+    readonly blueskyAppView?: BlueskyAppView;
     readonly loadDocumentState?: () => Promise<unknown>;
     readonly reportDiagnostic?: (event: Record<string, unknown>) => Promise<unknown>;
     readonly messages: ContentMessageRuntime;
@@ -455,7 +459,10 @@ export function installContentRuntime(input: {
         locales: input.locales,
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
-    } as ProcessInput & Record<string, unknown>;
+        ...(input.blueskyAppView === undefined
+            ? {}
+            : { blueskyAppView: input.blueskyAppView }),
+    } as DocumentTransformationControllerInput & Record<string, unknown>;
     const slot = {} as RuntimeSlot;
     slot.document = input.document;
     slot.messages = input.messages;

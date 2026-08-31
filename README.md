@@ -7,11 +7,13 @@ page state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
-GitHub, Hacker News, supported Stack Exchange Q&A sites, and Telegram Web K
-have specialized sources for trusted timestamp widgets. These integrations
-preserve page-owned elements and links while updating simple labels in place
-when needed. Site markup support is best-effort and may change independently
-of the extension.
+GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
+Bluesky have specialized sources for trusted timestamp widgets. These
+integrations preserve page-owned elements and links while updating simple
+labels in place when needed. Bluesky resolves public post times through the
+anonymous public AppView API. Instagram uses the standard timestamp source with
+a specialized in-place presentation rule that preserves styling hooks. Site
+markup support is best-effort and may change independently of the extension.
 
 ## Key Concepts
 
@@ -21,8 +23,8 @@ of the extension.
   and time with an explicit, known UTC offset.
 - **Specialized source:** a site-specific rule for richer markup, such as
   GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange and Telegram Web K timestamps. Specialized rules take precedence
-  over the generic rule when both accept the same source.
+  Exchange, Telegram Web K, and Bluesky timestamps. Specialized rules take
+  precedence over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -60,8 +62,9 @@ from source, follow the [development guide](DEVELOPMENT.md).
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-and Telegram Web K timestamps can also become exact dates. The result follows
-the selected format, browser locale, and time zone.
+Telegram Web K, and Bluesky timestamps can also become exact dates. Instagram's
+simple standard timestamp labels retain their page-owned elements and styles.
+The result follows the selected format, browser locale, and time zone.
 
 ## Features
 
@@ -90,6 +93,22 @@ shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,
 using the generic fallback. All sources share presentation, restoration, and
 dynamic-page lifecycle behavior. When a specialized and generic rule both
 accept the same source, the specialized rule wins.
+
+On the exact `www.instagram.com` hostname, simple standard `time[datetime]`
+labels are updated in place so their element identity, classes, inline styles,
+and surrounding layout hooks remain page-owned. Complex timestamp markup keeps
+using the generic adjacent-output fallback. This presentation integration is
+best-effort and does not infer dates from Instagram's visible text.
+
+On the exact `bsky.app` hostname, remote-enriched support covers feed posts,
+profile activity, replies on an individual-post page, thread replies, and one
+level of quoted posts. Other `bsky.app` sections are best-effort. Only labels
+currently presented as relative under a confirmed post structure are changed;
+the already exact timestamp on an expanded root post remains untouched. The
+extension trusts only `indexedAt` from the matching public AppView PostView or
+its supported quoted view. It never derives a date from visible text,
+localized tooltips, a record key, or `record.createdAt`. If public lookup or
+validation fails, the original relative label remains unchanged.
 
 Representative public X and Twitter feed, post, thread, quoted-post, and
 nested-card shapes are verified through the same standard `time[datetime]`
@@ -231,7 +250,9 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Eligible standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or Bluesky timestamp | The trusted instant is shown with the configured exact-date presentation. |
+| Confirmed relative Bluesky post or one-level quote label | Matching public AppView `indexedAt` is shown; an already exact expanded root remains unchanged. |
+| Bluesky identity, lookup, response, or timestamp cannot be validated | The original relative label remains unchanged. |
 | Invalid, incomplete, or ambiguous timestamp | Page content remains unchanged. |
 | New eligible timestamp added dynamically | It is processed using current settings. |
 | Global or top-level site switch is disabled | Original page content is restored across reachable frames. |
@@ -266,14 +287,23 @@ does not inspect message text, authors, identifiers, localized titles, or full
 Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
 processing.
 
+Bluesky support sends public actor identifiers found in confirmed post
+permalinks and the resulting public AT post URIs to
+`https://public.api.bsky.app` solely to retrieve the server-observed exact post
+time. These are anonymous GET requests with no cookies, authorization headers,
+account tokens, post content, display names, extension settings, or unrelated
+page content. Successful mappings are cached only in memory for the current
+document runtime and are discarded on teardown. A failure leaves the page
+label unchanged, shows no error UI, and does not start an automatic retry.
+
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, and Telegram Web K are best-effort
-  specialized integrations whose markup can change independently of the
-  extension.
+- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, and Bluesky
+  are best-effort integrations whose markup or public API can change
+  independently of the extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
   may still use the universal generic rule.

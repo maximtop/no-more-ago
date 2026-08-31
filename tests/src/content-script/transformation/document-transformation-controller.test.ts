@@ -3,7 +3,12 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+/* eslint-disable @typescript-eslint/require-await */
 
+import {
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+} from "../../../../src/content-script/adapters/bluesky-appview";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
@@ -73,6 +78,82 @@ describe("DocumentTransformationController", () => {
         await Promise.resolve();
         await Promise.resolve();
     };
+
+    it("resolves Bluesky in place after startup and restores exact page content", async () => {
+        document.head.innerHTML = '<base href="https://bsky.app/">';
+        document.body.innerHTML = `<article><a id="bluesky-controller-source"
+            href="/profile/alice.example/post/3controller"
+            aria-label="localized date" data-tooltip="localized date">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const source = document.getElementById("bluesky-controller-source");
+        const target = source?.lastChild;
+        if (!source || !(target instanceof Text)) {
+            throw new Error("Expected Bluesky controller source");
+        }
+        const attributes = [...source.attributes].map(({ name, value }) => [name, value]);
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+        }));
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+            status: BLUESKY_LOOKUP_STATUS.SUCCESS,
+            records: uris.map((uri) => ({
+                uri,
+                indexedAt: "2026-08-31T10:15:00.000Z",
+            })),
+        }));
+        const appView: BlueskyAppView = {
+            getProfiles,
+            getPosts,
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://bsky.app/"),
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "utc" },
+            },
+            blueskyAppView: appView,
+        });
+
+        expect(controller.start()).toEqual([]);
+        expect(target.data).toBe("2h");
+        expect(document.getElementById("bluesky-controller-source")).toBe(source);
+        await vi.waitFor(() => {
+            expect(target.data).toBe("2026-08-31 10:15");
+        });
+
+        expect([...source.attributes].map(({ name, value }) => [name, value]))
+            .toEqual(attributes);
+        expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+        controller.teardown();
+        expect(target.data).toBe("2h");
+        expect(document.getElementById("bluesky-controller-source")).toBe(source);
+    });
+
+    it("never creates or calls Bluesky enrichment on another host", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-31T10:15:00Z">relative</time>';
+        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>();
+        const getPosts = vi.fn<BlueskyAppView["getPosts"]>();
+        const appView: BlueskyAppView = {
+            getProfiles,
+            getPosts,
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            blueskyAppView: appView,
+        });
+
+        controller.start();
+        await flushMutations();
+        expect(getProfiles).not.toHaveBeenCalled();
+        expect(getPosts).not.toHaveBeenCalled();
+        controller.teardown();
+    });
 
     it("starts idempotently, tears down precisely, and can reactivate", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'

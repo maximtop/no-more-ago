@@ -5,6 +5,7 @@
 import { genericTimeRule } from "./generic-time";
 import { githubAdapter } from "./github";
 import { hackerNewsAdapter } from "./hacker-news";
+import { instagramAdapter } from "./instagram";
 import { stackExchangeAdapter } from "./stack-exchange";
 import { telegramWebKAdapter } from "./telegram-web-k";
 import type { TimestampSourceRule } from "./types";
@@ -34,12 +35,25 @@ export class AdapterRegistry {
         const specialized = this.specialized.filter((rule) => rule.matches(url));
         return this.generic.matches(url) ? [...specialized, this.generic] : specialized;
     }
+
+    /**
+     * Returns a registry with one document-scoped specialized rule at highest priority.
+     *
+     * @param rule - Specialized rule to prepend or replace by identifier.
+     * @returns - New registry retaining all other production rules and the generic fallback.
+     */
+    withSpecialized(rule: TimestampSourceRule): AdapterRegistry {
+        return new AdapterRegistry(
+            [rule, ...this.specialized.filter((candidate) => candidate.id !== rule.id)],
+            this.generic,
+        );
+    }
 }
 
 /**
  * Production registry with specialized-source precedence and generic fallback.
  */
 export const defaultRegistry = new AdapterRegistry(
-    [githubAdapter, hackerNewsAdapter, stackExchangeAdapter, telegramWebKAdapter],
+    [githubAdapter, hackerNewsAdapter, instagramAdapter, stackExchangeAdapter, telegramWebKAdapter],
     genericTimeRule,
 );

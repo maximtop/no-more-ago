@@ -168,15 +168,25 @@ own URL to select applicable content rules.
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
-including GitHub's relative-time widgets, Hacker News age widgets, and
-approved Stack Exchange title widgets and Telegram Web K message clocks,
-remain content-side rules and take precedence when they accept the same
-source. GitHub uses the adjacent generated-time presentation. Hacker News,
-Stack Exchange, and Telegram Web K use in-place presentation: they retain an
-existing simple timestamp label and own only that text until restoration.
-Public `https://t.me/s/*` pages stay on generic `time[datetime]` processing.
-Adding or changing a specialized source should not require background adapter
-registration or site-policy logic.
+including GitHub's relative-time widgets, Hacker News age widgets, approved
+Stack Exchange title widgets, Telegram Web K message clocks, and confirmed
+Bluesky relative labels, remain content-side rules and take precedence when
+they accept the same source. GitHub uses the adjacent generated-time
+presentation. Hacker News, Stack Exchange, Telegram Web K, and Bluesky use
+in-place presentation: they retain an existing simple timestamp label and own
+only that text until restoration. Instagram applies the same in-place strategy
+to simple standard timestamps. Public `https://t.me/s/*` pages stay on generic
+`time[datetime]` processing. Adding or changing a specialized source should not
+require background adapter registration or site-policy logic.
+
+Bluesky is the only remote-enriched source. Its DOM adapter extracts only a
+validated public post identity; a document-local coordinator batches and
+caches successful work for that runtime, rejects stale DOM results, and uses a
+narrow AppView capability. Production requests are credential-free GETs to the
+fixed `https://public.api.bsky.app` origin. They contain only public actor
+identifiers or public AT post URIs and never cookies, authorization, account
+tokens, post content, settings, or unrelated page data. Failures are silent
+and are not retried automatically.
 
 The Telegram Web K adapter applies only below
 `https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
@@ -237,6 +247,18 @@ pnpm test tests/src/content-script/transformation/process-document.test.ts
 Use focused tests while iterating, then run `pnpm check` before submitting the
 change.
 
+Bluesky's network-free contract suites can be run together with:
+
+~~~sh
+pnpm test tests/src/content-script/adapters/bluesky.test.ts \
+  tests/src/content-script/adapters/bluesky-appview.test.ts \
+  tests/src/content-script/adapters/bluesky-coordinator.test.ts \
+  tests/src/content-script/adapters/bluesky-fixtures.test.ts
+~~~
+
+Inject a fake `BlueskyAppView` for controller or runtime tests. Tests must not
+contact the live public service.
+
 ### Add or Update a Site Adapter
 
 To add or update a specialized source:
@@ -252,6 +274,11 @@ To add or update a specialized source:
 
 Do not add site-specific background activation or registration. The universal
 runtime already reaches every accessible HTTP(S) document and frame.
+
+If a specialized source needs public enrichment, keep the capability narrow,
+fixed-origin, credential-free, batch-bounded, and document-local. Use offline
+response doubles and fixtures, cancel work on teardown, and do not add polling,
+durable caches, or fallback parsing of presentation text.
 
 For in-place numeric sources such as Telegram Web K, keep lexical validation
 in shared timestamp resolution and keep site-specific source and target
@@ -293,14 +320,16 @@ source value. Successful events never retain raw source timestamps.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, Stack Exchange, or Telegram Web K
+- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or Bluesky
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard
   `time[datetime]` values. In-place adapters require one unambiguous simple
   label. For Web K, also verify an HTML `div.bubble[data-timestamp]`, one
   bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
-  ten-digit seconds value. Do not recover by parsing localized UI text.
+  ten-digit seconds value. For Bluesky, verify the relative label still has a
+  canonical public post permalink and that the anonymous public AppView API is
+  reachable. Do not recover by parsing localized UI text.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the
   source of truth. JSDOM may print unsupported navigation messages while the
   tests still pass.
