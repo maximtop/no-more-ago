@@ -107,20 +107,23 @@ accept the same source, the specialized rule wins.
 
 On Facebook domains, supported post timestamps are proven by structured
 `Story.creation_time` values from initial JSON payloads and selected
-feed/timeline GraphQL responses. Support is evidence-based rather than tied to
-an allowlist of feed surfaces: public and signed-in pages are supported
+Story-bearing GraphQL operation families. Support is evidence-based rather than
+tied to an allowlist of feed surfaces: public and signed-in pages are supported
 best-effort whenever they expose the same proof. A Facebook-only main-world
 bridge transfers only the opaque tracking token and Unix-seconds timestamp to
-the isolated content runtime. The token must exactly match the post timestamp
-link, and the link must use one of Facebook's current bounded text or SVG
-timestamp shapes.
+the isolated content runtime. Each transfer is authenticated with a short-lived
+per-frame lease delivered through extension runtime messaging and browser
+scripting. The token must exactly match the post timestamp link, and the link
+must use one of Facebook's current bounded text or SVG timestamp shapes.
 
 The bridge is inert until existing global and site policy enables the isolated
-runtime. Disabling processing stops payload inspection, clears temporary
-associations, and restores page-owned content. Visible labels, ARIA labels,
-link destinations, and elapsed time are never timestamp fallbacks. Comments,
-Reels, and future Facebook shapes remain unchanged unless they independently
-satisfy the same Story proof, token correlation, and source-shape contract.
+runtime. Activation is browser-mediated; release or lease expiry stops payload
+inspection and restores only transport wrappers the bridge still owns.
+Disabling also clears temporary associations and restores page-owned content.
+Visible labels, ARIA labels, link destinations, and elapsed time are never
+timestamp fallbacks. Comments, Reels, and future Facebook shapes remain
+unchanged unless they independently satisfy the same Story proof, token
+correlation, and source-shape contract.
 
 On the exact `www.instagram.com` hostname, simple standard `time[datetime]`
 labels are updated in place so their element identity, classes, inline styles,
@@ -392,14 +395,20 @@ and event listeners remain intact. Standard processing remains limited to
 ordinary light-DOM `time[datetime]` elements.
 
 The Facebook source accepts only typed `Story` objects with a bounded
-`creation_time` and encrypted tracking token. Selected feed/timeline GraphQL
-responses are cloned for bounded parsing only while processing is enabled;
-only minimal token/timestamp records cross into the isolated runtime. The
-associations remain in document memory and are cleared on disable or teardown.
-Response content, post text, authors, comments, reactions, and account data are
-not persisted, retained in diagnostics, or sent as telemetry. Facebook support
-adds no permission beyond the manifest permissions listed above and has no
-visible-text or elapsed-time fallback.
+`creation_time` and a direct Story token or canonical
+`comet_sections.timestamp.story` token. Dynamic selection requires a Facebook
+`/api/graphql/` request, a synchronously inspectable bounded form body, and an
+anchored Story-bearing `fb_api_req_friendly_name`. Fetch response clones are
+read as capped streams; XHR requires POST plus an empty or `text` response type.
+At most two selected responses are inspected concurrently, and disable or lease
+renewal rejects work from an older activation generation.
+
+Only HMAC-authenticated minimal token/timestamp records cross into the isolated
+runtime. The associations remain in document memory and are cleared on disable
+or teardown. Response content, post text, authors, comments, reactions, and
+account data are not persisted, retained in diagnostics, or sent as telemetry.
+Facebook support adds no permission beyond the manifest permissions listed
+above and has no visible-text or elapsed-time fallback.
 
 The Telegram Web K source trusts only a matching message bubble's ten-digit
 Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It

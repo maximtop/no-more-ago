@@ -25,32 +25,31 @@ function stripXssiPrefix(value: string): string {
 }
 
 /**
- * Parses either one JSON document or Facebook's newline-delimited response stream.
+ * Lazily parses either one JSON document or Facebook's newline-delimited response stream.
  *
  * @param payloadText - Page-provided response or script payload.
- * @returns - Successfully parsed JSON roots.
+ * @returns - Successfully parsed JSON roots in document order.
  */
-function parsePayloadRoots(payloadText: string): readonly unknown[] {
+function* parsePayloadRoots(payloadText: string) {
     const normalized = stripXssiPrefix(payloadText);
     if (normalized === "") {
-        return [];
+        return;
     }
     try {
-        return [JSON.parse(normalized) as unknown];
+        yield JSON.parse(normalized) as unknown;
+        return;
     } catch {
-        const roots: unknown[] = [];
         for (const line of normalized.split(/\r?\n/u)) {
             const document = stripXssiPrefix(line);
             if (document === "") {
                 continue;
             }
             try {
-                roots.push(JSON.parse(document) as unknown);
+                yield JSON.parse(document) as unknown;
             } catch {
                 /* malformed stream entries cannot establish a trusted timestamp */
             }
         }
-        return roots;
     }
 }
 
@@ -90,18 +89,69 @@ function isTrackingToken(value: unknown): value is string {
 }
 
 /**
- * One pending JSON value and the nearest structurally proven Story timestamp.
+ * Reads a nested object property without accepting arrays.
+ *
+ * @param value - Candidate parent record.
+ * @param property - Direct property to read.
+ * @returns - Nested record, or null when the path is not an object path.
  */
-interface TraversalEntry {
-    /**
-     * Parsed JSON value to inspect.
-     */
-    readonly value: unknown;
+function nestedRecord(
+    value: Record<string, unknown>,
+    property: string,
+): Record<string, unknown> | null {
+    const nested = value[property];
+    return isRecord(nested) ? nested : null;
+}
 
-    /**
-     * Timestamp inherited from the nearest Story ancestor.
-     */
-    readonly storyTime: string | null;
+/**
+ * Returns tokens proven to represent the Story or its post timestamp section.
+ *
+ * Arbitrary descendants are deliberately excluded: comment, media, Reel, actor,
+ * and accessibility objects can carry tracking tokens without representing the
+ * parent post timestamp.
+ *
+ * @param story - Typed Story with its own creation time.
+ * @returns - Direct Story and canonical timestamp-section tokens.
+ */
+function storyTimestampTokens(story: Record<string, unknown>): readonly string[] {
+    const tokens: string[] = [];
+    if (isTrackingToken(story.encrypted_click_tracking)) {
+        tokens.push(story.encrypted_click_tracking);
+    }
+    const cometSections = nestedRecord(story, "comet_sections");
+    const timestamp = cometSections && nestedRecord(cometSections, "timestamp");
+    const timestampStory = timestamp && nestedRecord(timestamp, "story");
+    const timestampToken = timestampStory?.encrypted_click_tracking;
+    if (isTrackingToken(timestampToken)) {
+        tokens.push(timestampToken);
+    }
+    return tokens;
+}
+
+/**
+ * Retains one conflict-free association within the record transfer bound.
+ *
+ * @param records - Available associations collected so far.
+ * @param conflicts - Tokens already invalidated by contradictory timestamps.
+ * @param trackingToken - Proven Story timestamp token.
+ * @param storyTime - Story-owned Unix-seconds value.
+ */
+function retainRecord(
+    records: Map<string, FacebookTimestampRecord>,
+    conflicts: Set<string>,
+    trackingToken: string,
+    storyTime: string,
+): void {
+    if (conflicts.has(trackingToken)) {
+        return;
+    }
+    const existing = records.get(trackingToken);
+    if (existing && existing.rawDatetime !== storyTime) {
+        records.delete(trackingToken);
+        conflicts.add(trackingToken);
+    } else if (!existing && records.size < FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE) {
+        records.set(trackingToken, { trackingToken, rawDatetime: storyTime });
+    }
 }
 
 /**
@@ -125,48 +175,47 @@ export function extractFacebookTimestampRecords(
     ) {
         return [];
     }
-    const stack: TraversalEntry[] = parsePayloadRoots(payloadText).map((value) => ({
-        value,
-        storyTime: null,
-    }));
     const records = new Map<string, FacebookTimestampRecord>();
     const conflicts = new Set<string>();
     let visited = 0;
-    while (stack.length > 0 && visited < FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES) {
-        const entry = stack.pop();
-        if (!entry) {
-            break;
-        }
-        const { value } = entry;
-        visited += 1;
-        if (Array.isArray(value)) {
-            for (const child of value) {
-                stack.push({ value: child, storyTime: entry.storyTime });
+    for (const root of parsePayloadRoots(payloadText)) {
+        const stack: unknown[] = [root];
+        while (stack.length > 0) {
+            if (visited >= FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES) {
+                return [];
             }
-            continue;
-        }
-        if (!isRecord(value)) {
-            continue;
-        }
-        const storyTime = value.__typename === FACEBOOK_STORY_TYPENAME
-            ? rawCreationTime(value.creation_time)
-            : entry.storyTime;
-        const trackingToken = value.encrypted_click_tracking;
-        if (storyTime !== null && isTrackingToken(trackingToken) && !conflicts.has(trackingToken)) {
-            const candidate = { trackingToken, rawDatetime: storyTime };
-            const existing = records.get(candidate.trackingToken);
-            if (existing && existing.rawDatetime !== candidate.rawDatetime) {
-                records.delete(candidate.trackingToken);
-                conflicts.add(candidate.trackingToken);
-            } else if (
-                !existing
-                && records.size < FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
-            ) {
-                records.set(candidate.trackingToken, candidate);
+            const value = stack.pop();
+            visited += 1;
+            if (Array.isArray(value)) {
+                const children = value as readonly unknown[];
+                const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
+                    - visited
+                    - stack.length;
+                if (children.length > remaining) {
+                    return [];
+                }
+                stack.push(...children);
+                continue;
             }
-        }
-        for (const child of Object.values(value)) {
-            stack.push({ value: child, storyTime });
+            if (!isRecord(value)) {
+                continue;
+            }
+            if (value.__typename === FACEBOOK_STORY_TYPENAME) {
+                const storyTime = rawCreationTime(value.creation_time);
+                if (storyTime !== null) {
+                    for (const trackingToken of storyTimestampTokens(value)) {
+                        retainRecord(records, conflicts, trackingToken, storyTime);
+                    }
+                }
+            }
+            const children = Object.values(value);
+            const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
+                - visited
+                - stack.length;
+            if (children.length > remaining) {
+                return [];
+            }
+            stack.push(...children);
         }
     }
     return [...records.values()];

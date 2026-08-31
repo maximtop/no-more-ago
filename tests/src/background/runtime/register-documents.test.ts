@@ -9,16 +9,18 @@ import {
     FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION,
     registrationMatches,
 } from "../../../../src/background/runtime/register-documents";
+import { SCRIPT_EXECUTION_WORLD } from
+    "../../../../src/background/runtime/scripting";
 
 describe("document runtime registrations", () => {
     it("registers the universal runtime isolated and the Facebook bridge main-world", () => {
         expect(DOCUMENT_RUNTIME_REGISTRATION).toMatchObject({
             allFrames: true,
-            world: "ISOLATED",
+            world: SCRIPT_EXECUTION_WORLD.ISOLATED,
         });
         expect(FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION).toMatchObject({
             allFrames: true,
-            world: "MAIN",
+            world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
 
@@ -39,7 +41,7 @@ describe("document runtime registrations", () => {
         { runAt: "document_idle" },
         { allFrames: false },
         { persistAcrossSessions: false },
-        { world: "ISOLATED" },
+        { world: SCRIPT_EXECUTION_WORLD.ISOLATED },
     ])("rejects an explicitly different Facebook field", (difference) => {
         expect(registrationMatches(
             { ...FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION, ...difference },

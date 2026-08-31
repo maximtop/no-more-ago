@@ -4,12 +4,12 @@
 
 import {
     FACEBOOK_PAYLOAD_LIMIT,
+    FACEBOOK_TRACKED_LINK_SELECTOR,
     FACEBOOK_TRACKING_QUERY_PARAMETER,
     type FacebookTimestampRecord,
 } from "./contracts";
 import { extractFacebookTimestampRecords } from "./payload-parser";
 
-const FACEBOOK_TIMESTAMP_SELECTOR = "a[href*='__cft__']" as const;
 const FACEBOOK_PAYLOAD_SCRIPT_SELECTOR = "script[type='application/json'][data-sjs]" as const;
 
 /**
@@ -245,7 +245,7 @@ export function findFacebookTimestampSources(
         return [];
     }
     const selected = new Set(tokens);
-    return [...document.querySelectorAll(FACEBOOK_TIMESTAMP_SELECTOR)].filter((element) => {
+    return [...document.querySelectorAll(FACEBOOK_TRACKED_LINK_SELECTOR)].filter((element) => {
         const token = getFacebookTrackingToken(element);
         return token !== null && selected.has(token);
     });

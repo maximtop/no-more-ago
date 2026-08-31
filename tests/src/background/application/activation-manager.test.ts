@@ -28,6 +28,7 @@ describe("ActivationManager", () => {
                     action: TAB_ACTION.INJECT,
                 }],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [{
                     tabId: 2,
                     hostname: "b.test",
@@ -40,6 +41,7 @@ describe("ActivationManager", () => {
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [{
                     tabId: 1,
                     hostname: "a.test",
@@ -52,6 +54,7 @@ describe("ActivationManager", () => {
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [{
                     tabId: 2,
                     hostname: "b.test",
@@ -114,6 +117,7 @@ describe("ActivationManager", () => {
                     action: TAB_ACTION.INJECT,
                 }],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [{
                     tabId: 2,
                     hostname: "b.test",
@@ -126,6 +130,7 @@ describe("ActivationManager", () => {
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [],
             },
         ];

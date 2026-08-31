@@ -41,6 +41,7 @@ describe("StateProjection", () => {
                 action: TAB_ACTION.INJECT,
             }],
             registration: REGISTRATION_OUTCOME.UNCHANGED,
+            registrations: [],
             tabs: [{
                 tabId: 1,
                 hostname: "a.test",
@@ -106,6 +107,7 @@ describe("StateProjection", () => {
                 policy: ACTIVATION_POLICY.ENABLED,
                 failures: [],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
                 tabs: [],
             };
             const activation = new ActivationManager({

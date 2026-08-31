@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { FACEBOOK_PAYLOAD_LIMIT } from
+    "../../../../src/content-script/facebook/contracts";
 import { extractFacebookTimestampRecords } from
     "../../../../src/content-script/facebook/payload-parser";
 
@@ -117,6 +119,23 @@ describe("Facebook payload parser", () => {
         }]);
     });
 
+    it("does not associate arbitrary Story descendants with the post timestamp", () => {
+        const payload = JSON.stringify({
+            __typename: "Story",
+            creation_time: 1_787_933_301,
+            encrypted_click_tracking: TRACKING_TOKEN,
+            comments: {
+                __typename: "CommentConnection",
+                encrypted_click_tracking: VISIBLE_TRACKING_TOKEN,
+            },
+        });
+
+        expect(extractFacebookTimestampRecords(payload)).toEqual([{
+            trackingToken: TRACKING_TOKEN,
+            rawDatetime: "1787933301",
+        }]);
+    });
+
     it.each([
         "",
         "not json",
@@ -142,10 +161,10 @@ describe("Facebook payload parser", () => {
         const base = JSON.stringify({ ...story(TRACKING_TOKEN), padding: "" });
         const closingLength = 2;
         const accepted = `${base.slice(0, -closingLength)}${"x".repeat(
-            8_000_000 - base.length,
+            FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS - base.length,
         )}${base.slice(-closingLength)}`;
 
-        expect(accepted).toHaveLength(8_000_000);
+        expect(accepted).toHaveLength(FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS);
         expect(extractFacebookTimestampRecords(accepted)).toEqual([{
             trackingToken: TRACKING_TOKEN,
             rawDatetime: "1787933301",
@@ -156,28 +175,51 @@ describe("Facebook payload parser", () => {
     it("stops before a Story positioned beyond the traversal bound", () => {
         const payload = JSON.stringify([
             story(TRACKING_TOKEN),
-            ...Array.from({ length: 250_000 }, () => null),
+            ...Array.from({
+                length: FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES,
+            }, () => null),
         ]);
 
         expect(extractFacebookTimestampRecords(payload)).toEqual([]);
     });
 
-    it("emits no more than one thousand records from one payload", () => {
-        const payload = JSON.stringify(Array.from({ length: 1_001 }, (_, index) =>
+    it("invalidates records when a conflicting stream root lies beyond the visit limit", () => {
+        const first = JSON.stringify(story(TRACKING_TOKEN));
+        const padding = Array.from({
+            length: FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES - 1,
+        }, () => "null").join("\n");
+        const conflict = JSON.stringify({
+            ...story(TRACKING_TOKEN),
+            creation_time: 1_787_933_302,
+        });
+
+        expect(extractFacebookTimestampRecords(`${first}\n${padding}\n${conflict}`))
+            .toEqual([]);
+    });
+
+    it("emits no more than the configured record limit from one payload", () => {
+        const payload = JSON.stringify(Array.from({
+            length: FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE + 1,
+        }, (_, index) =>
             story(`${TRACKING_TOKEN}-${String(index).padStart(4, "0")}`)));
 
-        expect(extractFacebookTimestampRecords(payload)).toHaveLength(1_000);
+        expect(extractFacebookTimestampRecords(payload)).toHaveLength(
+            FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE,
+        );
     });
 
     it("accepts only tracking tokens inside the inclusive character bounds", () => {
         const payload = JSON.stringify([
-            story("a".repeat(19)),
-            story("b".repeat(20)),
-            story("c".repeat(2_048)),
-            story("d".repeat(2_049)),
+            story("a".repeat(FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS - 1)),
+            story("b".repeat(FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS)),
+            story("c".repeat(FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS)),
+            story("d".repeat(FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS + 1)),
         ]);
 
         expect(extractFacebookTimestampRecords(payload).map(({ trackingToken }) =>
-            trackingToken.length).sort((left, right) => left - right)).toEqual([20, 2_048]);
+            trackingToken.length).sort((left, right) => left - right)).toEqual([
+            FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS,
+            FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS,
+        ]);
     });
 });

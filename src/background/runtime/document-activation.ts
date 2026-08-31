@@ -16,9 +16,8 @@ import {
     type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
 import type { RuntimeFrame, RuntimeTab, TabsRuntime } from "./tabs";
-import type { ScriptingRuntime } from "./scripting";
+import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from "./scripting";
 import {
-    DOCUMENT_RUNTIME_REGISTRATION_IDS,
     DOCUMENT_RUNTIME_REGISTRATIONS,
     registrationMatches,
 } from "./register-documents";
@@ -83,6 +82,21 @@ export type RegistrationOutcome =
     (typeof REGISTRATION_OUTCOME)[keyof typeof REGISTRATION_OUTCOME];
 
 /**
+ * Outcome retained for one independently reconciled registration.
+ */
+export interface RegistrationResult {
+    /**
+     * Stable browser registration identifier.
+     */
+    readonly id: string;
+
+    /**
+     * Operation outcome for this registration only.
+     */
+    readonly outcome: RegistrationOutcome;
+}
+
+/**
  * Reconciliation failure retained with independent successes.
  */
 export type ReconcileFailure =
@@ -96,6 +110,11 @@ export type ReconcileFailure =
          * Failed registration operation.
          */
         readonly operation: (typeof REGISTRATION_OPERATION)[keyof typeof REGISTRATION_OPERATION];
+
+        /**
+         * Registration whose operation failed, when the failure was registration-specific.
+         */
+        readonly registrationId?: string;
     }
     | {
         /**
@@ -148,6 +167,11 @@ export interface ActivationReconcileResult {
      * Universal registration operation outcome.
      */
     readonly registration: RegistrationOutcome;
+
+    /**
+     * Independent outcomes for the universal runtime and optional site bridges.
+     */
+    readonly registrations: readonly RegistrationResult[];
 
     /**
      * Outcomes recorded for each selected tab.
@@ -234,9 +258,10 @@ interface DocumentActivationDependencies {
 }
 
 /**
- * Reconciles the universal registration.
+ * Reconciles one registration without coupling its outcome to sibling registrations.
  *
  * @param scripting - Scripting API boundary.
+ * @param expected - Canonical registration to reconcile.
  * @param enabled - Whether global processing is enabled.
  * @param failures - Failure collection to append to.
  * @param onLateWrite - Optional convergence request after a timed-out write succeeds.
@@ -244,30 +269,31 @@ interface DocumentActivationDependencies {
  */
 async function registration(
     scripting: ScriptingRuntime,
+    expected: (typeof DOCUMENT_RUNTIME_REGISTRATIONS)[number],
     enabled: boolean,
     failures: ReconcileFailure[],
     onLateWrite?: () => void,
 ): Promise<RegistrationOutcome> {
     const inspected = await settleBrowserOperation(
         () => scripting.getRegisteredContentScripts({
-            ids: [...DOCUMENT_RUNTIME_REGISTRATION_IDS],
+            ids: [expected.id],
         }),
     );
     if (!inspected.ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
             operation: REGISTRATION_OPERATION.GET,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
-    const found = inspected.value;
+    const found = inspected.value.find((entry) => entry.id === expected.id);
     if (!enabled) {
-        const registeredIds = found.map((entry) => entry.id);
-        if (registeredIds.length === 0) {
+        if (!found) {
             return REGISTRATION_OUTCOME.UNCHANGED;
         }
         const removed = await settleRegistrationWrite(
-            () => scripting.unregisterContentScripts({ ids: registeredIds }),
+            () => scripting.unregisterContentScripts({ ids: [expected.id] }),
             onLateWrite,
         );
         if (removed) {
@@ -276,43 +302,60 @@ async function registration(
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
             operation: REGISTRATION_OPERATION.UNREGISTER,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
-    const foundById = new Map(found.map((entry) => [entry.id, entry]));
-    const toUpdate = DOCUMENT_RUNTIME_REGISTRATIONS.filter((expected) => {
-        const current = foundById.get(expected.id);
-        return current !== undefined && !registrationMatches(current, expected);
-    });
-    const toRegister = DOCUMENT_RUNTIME_REGISTRATIONS.filter(
-        (expected) => !foundById.has(expected.id),
-    );
-    if (toUpdate.length === 0 && toRegister.length === 0) {
+    if (found && registrationMatches(found, expected)) {
         return REGISTRATION_OUTCOME.UNCHANGED;
     }
+    const operation = found
+        ? REGISTRATION_OPERATION.UPDATE
+        : REGISTRATION_OPERATION.REGISTER;
     const written = await settleRegistrationWrite(
-        async () => {
-            if (toUpdate.length > 0) {
-                await scripting.updateContentScripts([...toUpdate]);
-            }
-            if (toRegister.length > 0) {
-                await scripting.registerContentScripts([...toRegister]);
-            }
-        },
+        () => found
+            ? scripting.updateContentScripts([{ ...expected }])
+            : scripting.registerContentScripts([{ ...expected }]),
         onLateWrite,
     );
     if (written) {
-        return toUpdate.length > 0
+        return found
             ? REGISTRATION_OUTCOME.UPDATED
             : REGISTRATION_OUTCOME.REGISTERED;
     }
     failures.push({
         scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-        operation: toUpdate.length > 0
-            ? REGISTRATION_OPERATION.UPDATE
-            : REGISTRATION_OPERATION.REGISTER,
+        operation,
+        registrationId: expected.id,
     });
     return REGISTRATION_OUTCOME.FAILED;
+}
+
+/**
+ * Derives the legacy aggregate registration outcome from independent results.
+ *
+ * @param results - Per-registration outcomes from the current pass.
+ * @param enabled - Whether registrations were being installed or removed.
+ * @returns - Aggregate outcome retained for existing projections.
+ */
+function aggregateRegistrationOutcome(
+    results: readonly RegistrationResult[],
+    enabled: boolean,
+): RegistrationOutcome {
+    if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.FAILED)) {
+        return REGISTRATION_OUTCOME.FAILED;
+    }
+    if (enabled) {
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UPDATED)) {
+            return REGISTRATION_OUTCOME.UPDATED;
+        }
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.REGISTERED)) {
+            return REGISTRATION_OUTCOME.REGISTERED;
+        }
+    } else if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UNREGISTERED)) {
+        return REGISTRATION_OUTCOME.UNREGISTERED;
+    }
+    return REGISTRATION_OUTCOME.UNCHANGED;
 }
 
 /**
@@ -455,7 +498,7 @@ async function ensureFacebookBridge(
     const injected = await settleBrowserOperation(() => scripting.executeScript({
         target: { tabId, frameIds: facebookFrameIds },
         files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
-        world: "MAIN",
+        world: SCRIPT_EXECUTION_WORLD.MAIN,
     }));
     if (!injected.ok) {
         return false;
@@ -671,14 +714,16 @@ export class DocumentActivationCoordinator {
         while (this.registrationRepairRequested) {
             this.registrationRepairRequested = false;
             const generation = this.registrationGeneration;
-            await registration(
-                this.input.scripting,
-                this.registrationEnabled,
-                [],
-                () => {
-                    this.requestRegistrationRepair(generation);
-                },
-            );
+            await Promise.all(DOCUMENT_RUNTIME_REGISTRATIONS.map((expected) =>
+                registration(
+                    this.input.scripting,
+                    expected,
+                    this.registrationEnabled,
+                    [],
+                    () => {
+                        this.requestRegistrationRepair(generation);
+                    },
+                )));
         }
     }
 
@@ -696,14 +741,21 @@ export class DocumentActivationCoordinator {
         const enabled = input.policy === ACTIVATION_POLICY.ENABLED;
         this.registrationEnabled = enabled;
         const registrationGeneration = ++this.registrationGeneration;
-        const registered = await registration(
-            this.input.scripting,
-            enabled,
-            failures,
-            () => {
-                this.requestRegistrationRepair(registrationGeneration);
-            },
+        const registrations = await Promise.all(
+            DOCUMENT_RUNTIME_REGISTRATIONS.map(async (expected) => ({
+                id: expected.id,
+                outcome: await registration(
+                    this.input.scripting,
+                    expected,
+                    enabled,
+                    failures,
+                    () => {
+                        this.requestRegistrationRepair(registrationGeneration);
+                    },
+                ),
+            })),
         );
+        const registered = aggregateRegistrationOutcome(registrations, enabled);
         const tabs = await httpTabs(this.input.tabs, failures);
         const affected = input.affectedHostnames === undefined
             ? undefined
@@ -745,6 +797,7 @@ export class DocumentActivationCoordinator {
             policy: input.policy,
             failures,
             registration: registered,
+            registrations,
             tabs: records,
         };
     }

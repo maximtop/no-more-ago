@@ -4,6 +4,7 @@
 
 import { isFacebookUrl } from "../../shared/url/facebook";
 import { discoverElements } from "./discover-elements";
+import { FACEBOOK_TRACKED_LINK_SELECTOR } from "../facebook/contracts";
 import {
     getFacebookTimestampRecord,
     getFacebookTrackingToken,
@@ -22,7 +23,6 @@ import {
  */
 export const FACEBOOK_ADAPTER_ID = "facebook" as const;
 
-const FACEBOOK_TRACKED_LINK_SELECTOR = "a[href*='__cft__']" as const;
 const FACEBOOK_OBFUSCATION_MARK = "\u034f" as const;
 
 /**
@@ -64,6 +64,7 @@ export function isFacebookTimestampElement(element: Element): boolean {
 export const facebookAdapter: TimestampSourceRule = {
     id: FACEBOOK_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.HREF],
+    observesCharacterData: true,
     matches: isFacebookUrl,
     matchesElement: isFacebookTimestampElement,
     discover: (root) => discoverElements(

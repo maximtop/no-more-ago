@@ -7,6 +7,7 @@ import type {
     RegisteredContentScriptReference,
     RegisteredContentScriptSpec,
 } from "./scripting";
+import { SCRIPT_EXECUTION_WORLD } from "./scripting";
 import {
     CONTENT_SCRIPT_FILE,
     FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
@@ -35,7 +36,7 @@ export const DOCUMENT_RUNTIME_REGISTRATION: RegisteredContentScriptSpec = {
     runAt: "document_start",
     allFrames: true,
     persistAcrossSessions: true,
-    world: "ISOLATED",
+    world: SCRIPT_EXECUTION_WORLD.ISOLATED,
 };
 
 /**
@@ -48,7 +49,7 @@ export const FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION: RegisteredContentScriptSpec =
     runAt: "document_start",
     allFrames: true,
     persistAcrossSessions: true,
-    world: "MAIN",
+    world: SCRIPT_EXECUTION_WORLD.MAIN,
 };
 
 /**
@@ -58,13 +59,6 @@ export const DOCUMENT_RUNTIME_REGISTRATIONS = [
     DOCUMENT_RUNTIME_REGISTRATION,
     FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION,
 ] as const;
-
-/**
- * Stable IDs used to query or unregister the complete runtime set.
- */
-export const DOCUMENT_RUNTIME_REGISTRATION_IDS = DOCUMENT_RUNTIME_REGISTRATIONS.map(
-    ({ id }) => id,
-);
 
 /**
  * Compares a browser registration with the canonical universal specification.

@@ -3,6 +3,24 @@
  *
  * @file Chrome Scripting API contracts for the universal document runtime.
  */
+
+/**
+ * JavaScript execution worlds supported by extension scripting operations.
+ */
+export const SCRIPT_EXECUTION_WORLD = {
+    ISOLATED: "ISOLATED",
+    MAIN: "MAIN",
+} as const;
+
+/**
+ * JavaScript execution world used by a registration or one-off injection.
+ */
+export type ScriptExecutionWorld =
+    (typeof SCRIPT_EXECUTION_WORLD)[keyof typeof SCRIPT_EXECUTION_WORLD];
+
+/**
+ * Complete dynamic content-script registration specification.
+ */
 export interface RegisteredContentScriptSpec {
     /**
      * Chrome registration ID, stable across updates and lookups.
@@ -37,7 +55,7 @@ export interface RegisteredContentScriptSpec {
     /**
      * JavaScript world where the registered files execute.
      */
-    readonly world: "ISOLATED" | "MAIN";
+    readonly world: ScriptExecutionWorld;
 }
 
 /**
@@ -116,6 +134,51 @@ interface ExplicitFramesScriptTarget {
 export type ScriptInjectionTarget = AllFramesScriptTarget | ExplicitFramesScriptTarget;
 
 /**
+ * One-off injection of extension bundle files.
+ */
+export interface FileScriptInjection {
+    /**
+     * Selected tab and frame scope.
+     */
+    readonly target: ScriptInjectionTarget;
+
+    /**
+     * Extension-relative files to execute.
+     */
+    readonly files: string[];
+
+    /**
+     * Optional JavaScript world override.
+     */
+    readonly world?: ScriptExecutionWorld;
+}
+
+/**
+ * One-off injection of a serializable function and its arguments.
+ */
+export interface FunctionScriptInjection {
+    /**
+     * Selected tab and frame scope.
+     */
+    readonly target: ScriptInjectionTarget;
+
+    /**
+     * Self-contained function serialized by the browser.
+     */
+    readonly func: (...args: never[]) => unknown;
+
+    /**
+     * Structured-cloneable arguments supplied to the function.
+     */
+    readonly args: readonly unknown[];
+
+    /**
+     * Optional JavaScript world override.
+     */
+    readonly world?: ScriptExecutionWorld;
+}
+
+/**
  * Chrome Scripting API methods used to manage document registration and inject files.
  */
 export interface ScriptingRuntime {
@@ -142,22 +205,9 @@ export interface ScriptingRuntime {
     /**
      * Executes a content file in every frame of a tab.
      */
-    executeScript(input: {
-        /**
-         * Selected tab and frame scope.
-         */
-        readonly target: ScriptInjectionTarget;
-
-        /**
-         * Extension-relative files to execute.
-         */
-        readonly files: string[];
-
-        /**
-         * Optional JavaScript world override for a one-off injection.
-         */
-        readonly world?: "ISOLATED" | "MAIN";
-    }): Promise<readonly InjectionResult[]>;
+    executeScript(
+        input: FileScriptInjection | FunctionScriptInjection,
+    ): Promise<readonly InjectionResult[]>;
 
     /**
      * Removes dynamic registrations whose IDs are listed in the Chrome filter.

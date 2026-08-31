@@ -2,6 +2,11 @@
  * @file Minimal cross-world contract for trusted Facebook story timestamps.
  */
 
+import {
+    FACEBOOK_BRIDGE_LEASE_ID,
+    FACEBOOK_BRIDGE_SECRET,
+} from "../../shared/messaging/facebook-bridge";
+
 /**
  * Source marker retained on Facebook bridge messages.
  */
@@ -13,19 +18,14 @@ export const FACEBOOK_PAYLOAD_MESSAGE_SOURCE = "no-more-ago:facebook-payload" as
 export const FACEBOOK_PAYLOAD_RECORDS_MESSAGE = "story-timestamp-records" as const;
 
 /**
- * Message type emitted when the main-world bridge is ready for lifecycle control.
- */
-export const FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE = "payload-bridge-ready" as const;
-
-/**
- * Message type used by the isolated runtime to enable or disable bridge inspection.
- */
-export const FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE = "payload-bridge-control" as const;
-
-/**
  * Facebook query parameter carrying an encrypted story tracking token.
  */
 export const FACEBOOK_TRACKING_QUERY_PARAMETER = "__cft__[0]" as const;
+
+/**
+ * Facebook anchors that can carry the opaque Story timestamp association.
+ */
+export const FACEBOOK_TRACKED_LINK_SELECTOR = "a[href*='__cft__']" as const;
 
 /**
  * Bounded processing contract shared by Facebook payload boundaries.
@@ -43,6 +43,11 @@ export const FACEBOOK_PAYLOAD_LIMIT = {
  * Lexical Unix-seconds form admitted at the Facebook page boundary.
  */
 export const FACEBOOK_UNIX_SECONDS = /^\d{1,12}$/u;
+
+/**
+ * Hexadecimal SHA-256 HMAC attached to one authenticated record message.
+ */
+const FACEBOOK_PAYLOAD_SIGNATURE = /^[\da-f]{64}$/u;
 
 /**
  * Small trusted record extracted from one structured Facebook Story object.
@@ -74,44 +79,24 @@ export interface FacebookPayloadMessage {
     readonly type: typeof FACEBOOK_PAYLOAD_RECORDS_MESSAGE;
 
     /**
+     * Browser-mediated lease that authenticated this message.
+     */
+    readonly leaseId: string;
+
+    /**
+     * Monotonic message identity within the lease, used to reject replay.
+     */
+    readonly sequence: number;
+
+    /**
      * Bounded story timestamp records extracted in the main world.
      */
     readonly records: readonly FacebookTimestampRecord[];
-}
-
-/**
- * Main-world readiness notification used to converge either script installation order.
- */
-export interface FacebookPayloadBridgeReadyMessage {
-    /**
-     * Stable source marker used to reject unrelated page messages.
-     */
-    readonly source: typeof FACEBOOK_PAYLOAD_MESSAGE_SOURCE;
 
     /**
-     * Stable bridge-ready discriminant.
+     * HMAC over the complete canonical envelope and minimal records.
      */
-    readonly type: typeof FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE;
-}
-
-/**
- * Isolated-world lifecycle command accepted by the main-world bridge.
- */
-export interface FacebookPayloadBridgeControlMessage {
-    /**
-     * Stable source marker used to reject unrelated page messages.
-     */
-    readonly source: typeof FACEBOOK_PAYLOAD_MESSAGE_SOURCE;
-
-    /**
-     * Stable bridge-control discriminant.
-     */
-    readonly type: typeof FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE;
-
-    /**
-     * Whether selected response inspection may run.
-     */
-    readonly enabled: boolean;
+    readonly signature: string;
 }
 
 /**
@@ -163,76 +148,146 @@ export function isFacebookPayloadMessage(value: unknown): value is FacebookPaylo
     if (!isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_RECORDS_MESSAGE)) {
         return false;
     }
-    return Array.isArray(value.records)
+    return typeof value.leaseId === "string"
+        && FACEBOOK_BRIDGE_LEASE_ID.test(value.leaseId)
+        && typeof value.sequence === "number"
+        && Number.isSafeInteger(value.sequence)
+        && value.sequence >= 0
+        && Array.isArray(value.records)
         && value.records.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE
-        && value.records.every(isFacebookTimestampRecord);
+        && value.records.every(isFacebookTimestampRecord)
+        && typeof value.signature === "string"
+        && FACEBOOK_PAYLOAD_SIGNATURE.test(value.signature);
 }
 
 /**
- * Validates an untrusted main-world bridge readiness message.
+ * Serializes the authenticated portion of one record message deterministically.
  *
- * @param value - Candidate message supplied by the page.
- * @returns - Whether the message announces the Facebook bridge.
+ * @param leaseId - Browser-mediated lease identity.
+ * @param sequence - Per-lease message identity.
+ * @param records - Minimal Story timestamp records.
+ * @returns - Canonical UTF-8 input for HMAC signing and verification.
  */
-export function isFacebookPayloadBridgeReadyMessage(
-    value: unknown,
-): value is FacebookPayloadBridgeReadyMessage {
-    return isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE);
+function facebookPayloadSignatureInput(
+    leaseId: string,
+    sequence: number,
+    records: readonly FacebookTimestampRecord[],
+): string {
+    return JSON.stringify({
+        source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
+        type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
+        leaseId,
+        sequence,
+        records,
+    });
 }
 
 /**
- * Validates an untrusted isolated-world lifecycle command.
+ * Decodes a validated hexadecimal secret or signature.
  *
- * @param value - Candidate message supplied by the page.
- * @returns - Whether the message carries a boolean bridge state.
+ * @param value - Even-length hexadecimal input.
+ * @returns - Binary bytes represented by the input.
  */
-export function isFacebookPayloadBridgeControlMessage(
-    value: unknown,
-): value is FacebookPayloadBridgeControlMessage {
-    return isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE)
-        && typeof value.enabled === "boolean";
+function hexadecimalBytes(value: string): ArrayBuffer {
+    const buffer = new ArrayBuffer(value.length / 2);
+    const bytes = new Uint8Array(buffer);
+    for (let index = 0; index < value.length; index += 2) {
+        bytes[index / 2] = Number.parseInt(value.slice(index, index + 2), 16);
+    }
+    return buffer;
 }
 
 /**
- * Creates a bounded cross-world message from extracted story records.
+ * Encodes binary HMAC bytes as lowercase hexadecimal.
+ *
+ * @param value - Binary signature bytes.
+ * @returns - Two-character hexadecimal encoding for every byte.
+ */
+function hexadecimal(value: ArrayBuffer): string {
+    return [...new Uint8Array(value)]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+/**
+ * Imports one internal per-lease secret as a Web Crypto HMAC key.
+ *
+ * @param secret - Background-generated 256-bit hexadecimal secret.
+ * @param usage - Whether the key signs in MAIN or verifies in ISOLATED.
+ * @returns - Imported non-extractable SHA-256 HMAC key.
+ */
+async function importFacebookPayloadKey(
+    secret: string,
+    usage: "sign" | "verify",
+): Promise<CryptoKey> {
+    if (!FACEBOOK_BRIDGE_SECRET.test(secret)) {
+        throw new Error("Invalid Facebook bridge secret");
+    }
+    return crypto.subtle.importKey(
+        "raw",
+        hexadecimalBytes(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        [usage],
+    );
+}
+
+/**
+ * Creates one authenticated cross-world message from extracted Story records.
  *
  * @param records - Valid records to transfer into the isolated world.
- * @returns - Canonical Facebook payload message.
+ * @param leaseId - Browser-mediated lease identity.
+ * @param sequence - Unique per-lease message identity.
+ * @param secret - Per-lease HMAC secret unavailable to page scripts.
+ * @returns - Canonical signed Facebook payload message.
  */
-export function createFacebookPayloadMessage(
+export async function createFacebookPayloadMessage(
     records: readonly FacebookTimestampRecord[],
-): FacebookPayloadMessage {
+    leaseId: string,
+    sequence: number,
+    secret: string,
+): Promise<FacebookPayloadMessage> {
+    const input = facebookPayloadSignatureInput(leaseId, sequence, records);
+    const key = await importFacebookPayloadKey(secret, "sign");
+    const signature = hexadecimal(await crypto.subtle.sign(
+        "HMAC",
+        key,
+        new TextEncoder().encode(input),
+    ));
     return {
         source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
         type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
+        leaseId,
+        sequence,
         records,
+        signature,
     };
 }
 
 /**
- * Creates the canonical main-world readiness notification.
+ * Verifies that a structurally valid record message belongs to the active lease.
  *
- * @returns - Facebook bridge readiness message.
+ * @param message - Untrusted same-window record envelope.
+ * @param secret - Isolated-world copy of the active per-lease HMAC secret.
+ * @returns - Whether the complete canonical envelope has a valid signature.
  */
-export function createFacebookPayloadBridgeReadyMessage(): FacebookPayloadBridgeReadyMessage {
-    return {
-        source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
-        type: FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE,
-    };
-}
-
-/**
- * Creates one canonical isolated-world bridge lifecycle command.
- *
- * @param enabled - Whether selected response inspection may run.
- * @returns - Facebook bridge control message.
- */
-export function createFacebookPayloadBridgeControlMessage(
-    enabled: boolean,
-): FacebookPayloadBridgeControlMessage {
-    return {
-        source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
-        type: FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE,
-        enabled,
-    };
+export async function verifyFacebookPayloadMessage(
+    message: FacebookPayloadMessage,
+    secret: string,
+): Promise<boolean> {
+    try {
+        const key = await importFacebookPayloadKey(secret, "verify");
+        return await crypto.subtle.verify(
+            "HMAC",
+            key,
+            hexadecimalBytes(message.signature),
+            new TextEncoder().encode(facebookPayloadSignatureInput(
+                message.leaseId,
+                message.sequence,
+                message.records,
+            )),
+        );
+    } catch {
+        return false;
+    }
 }

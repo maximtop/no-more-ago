@@ -21,6 +21,11 @@ const facebookRuntime = isFacebookUrl(documentUrl)
         onSourcesChanged: (sources) => {
             runtimeComposition.content?.reconcileSources(sources);
         },
+        ...(typeof chrome.runtime.sendMessage === "function"
+            ? {
+                requestBridgeLease: (request) => chrome.runtime.sendMessage(request),
+            }
+            : {}),
     })
     : undefined;
 

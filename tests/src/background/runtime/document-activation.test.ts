@@ -12,9 +12,10 @@ import {
     REGISTRATION_OUTCOME,
     TAB_ACTION,
 } from "../../../../src/background/runtime/document-activation";
-import type {
-    RegisteredContentScriptSpec,
-    ScriptingRuntime,
+import {
+    SCRIPT_EXECUTION_WORLD,
+    type RegisteredContentScriptSpec,
+    type ScriptingRuntime,
 } from "../../../../src/background/runtime/scripting";
 import type { RuntimeFrame } from "../../../../src/background/runtime/tabs";
 import {
@@ -184,10 +185,24 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.registration).toBe(REGISTRATION_OUTCOME.REGISTERED);
-        expect(fake.scripting.registerContentScripts).toHaveBeenCalledWith([
-            DOCUMENT_RUNTIME_REGISTRATION,
-            FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION,
+        expect(result.registrations).toEqual([
+            {
+                id: DOCUMENT_RUNTIME_REGISTRATION_ID,
+                outcome: REGISTRATION_OUTCOME.REGISTERED,
+            },
+            {
+                id: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
+                outcome: REGISTRATION_OUTCOME.REGISTERED,
+            },
         ]);
+        expect(fake.scripting.registerContentScripts).toHaveBeenNthCalledWith(
+            1,
+            [DOCUMENT_RUNTIME_REGISTRATION],
+        );
+        expect(fake.scripting.registerContentScripts).toHaveBeenNthCalledWith(
+            2,
+            [FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION],
+        );
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             1,
             {
@@ -212,6 +227,49 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
+    it(
+        "keeps the core runtime registered when the Facebook bridge registration fails",
+        async () => {
+            const fake = fakes([]);
+            fake.registered.clear();
+            fake.scripting.registerContentScripts.mockImplementation(async (scripts) => {
+                const registration = scripts[0];
+                if (!registration) {
+                    throw new Error("Expected one registration");
+                }
+                if (registration.id === FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID) {
+                    throw new Error("MAIN-world registration is unavailable");
+                }
+                fake.registered.set(registration.id, registration);
+            });
+            const coordinator = new DocumentActivationCoordinator(fake);
+
+            const result = await coordinator.reconcile({
+                revision: 1,
+                policy: ACTIVATION_POLICY.ENABLED,
+                sitePreferences: {},
+            });
+
+            expect(result.registration).toBe(REGISTRATION_OUTCOME.FAILED);
+            expect(result.registrations).toEqual([
+                {
+                    id: DOCUMENT_RUNTIME_REGISTRATION_ID,
+                    outcome: REGISTRATION_OUTCOME.REGISTERED,
+                },
+                {
+                    id: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
+                    outcome: REGISTRATION_OUTCOME.FAILED,
+                },
+            ]);
+            expect(fake.registered.has(DOCUMENT_RUNTIME_REGISTRATION_ID)).toBe(true);
+            expect(result.failures).toContainEqual({
+                scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
+                operation: REGISTRATION_OPERATION.REGISTER,
+                registrationId: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
+            });
+        },
+    );
+
     it("ensures the Facebook main-world bridge only for an enabled Facebook site", async () => {
         const fake = fakes(["https://www.facebook.com/Meta"]);
         const coordinator = new DocumentActivationCoordinator(fake);
@@ -235,7 +293,7 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [0] },
             files: ["facebook-payload-bridge.js"],
-            world: "MAIN",
+            world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
 
@@ -264,7 +322,7 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [2] },
             files: ["facebook-payload-bridge.js"],
-            world: "MAIN",
+            world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
 
@@ -287,7 +345,7 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [0, 2] },
             files: ["facebook-payload-bridge.js"],
-            world: "MAIN",
+            world: SCRIPT_EXECUTION_WORLD.MAIN,
         });
     });
 
@@ -536,15 +594,15 @@ describe("DocumentActivationCoordinator", () => {
         try {
             const fake = fakes([]);
             fake.registered.clear();
-            let completeRegister: (() => void) | undefined;
+            const completeRegisters: (() => void)[] = [];
             fake.scripting.registerContentScripts.mockImplementation((scripts) =>
                 new Promise<void>((resolve) => {
-                    completeRegister = () => {
+                    completeRegisters.push(() => {
                         for (const script of scripts) {
                             fake.registered.set(script.id, script);
                         }
                         resolve();
-                    };
+                    });
                 }));
             const coordinator = new DocumentActivationCoordinator(fake);
             const enabling = coordinator.reconcile({
@@ -561,16 +619,18 @@ describe("DocumentActivationCoordinator", () => {
             });
             expect(fake.registered.size).toBe(0);
 
-            completeRegister?.();
+            for (const completeRegister of completeRegisters) {
+                completeRegister();
+            }
             for (let index = 0; index < 10; index += 1) {
                 await Promise.resolve();
             }
 
             expect(fake.scripting.unregisterContentScripts).toHaveBeenCalledWith({
-                ids: [
-                    DOCUMENT_RUNTIME_REGISTRATION_ID,
-                    FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
-                ],
+                ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
+            });
+            expect(fake.scripting.unregisterContentScripts).toHaveBeenCalledWith({
+                ids: [FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID],
             });
             expect(fake.registered.size).toBe(0);
         } finally {
@@ -672,6 +732,12 @@ describe("DocumentActivationCoordinator", () => {
             expect(result.failures).toContainEqual({
                 scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
                 operation: REGISTRATION_OPERATION.GET,
+                registrationId: DOCUMENT_RUNTIME_REGISTRATION_ID,
+            });
+            expect(result.failures).toContainEqual({
+                scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
+                operation: REGISTRATION_OPERATION.GET,
+                registrationId: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
             });
         } finally {
             vi.useRealTimers();

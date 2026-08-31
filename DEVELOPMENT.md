@@ -173,18 +173,28 @@ refresh of already-open tabs, the universal `content.js` bundle is injected in
 all reachable HTTP(S) frames while the bridge is injected only into enumerated
 frames whose own URL is a Facebook URL. Registration comparison tolerates
 browser APIs omitting optional returned fields but corrects every explicit
-mismatch. This path is required for Chrome, Firefox, and Edge builds.
+mismatch. The universal runtime and Facebook bridge registrations reconcile
+independently, so a bridge-specific browser rejection does not prevent the core
+runtime from registering. Firefox builds require version 128 or later for
+registered `MAIN`-world content scripts.
 
-The Facebook bridge starts inert and posts only a readiness message. The
-isolated runtime uses the shared controller's activity lifecycle to enable or
-disable selected response inspection. On enable it parses initial payload
-scripts before the controller's first discovery pass, then reconciles only
-sources affected by dynamic token records. On disable it detaches temporary
-listeners and observers, clears bounded document associations, and lets the
-shared controller restore every owned source. Only bounded tracking-token and
-Unix-seconds pairs cross worlds; payloads and page content are not persisted or
-diagnosed. The adapter itself remains a pure source rule backed by that
-temporary store.
+The Facebook bridge starts inert without wrapping page transports. The isolated
+runtime uses the shared controller's activity lifecycle to request a short-lived
+per-frame lease through extension runtime messaging. The background ensures the
+bridge and injects the lease command in `MAIN`; the bridge signs every minimal
+record message, and the isolated runtime accepts only the active lease and HMAC.
+Lease renewal advances the activation generation. Release, expiry, or renewal
+makes older request completions inert, and disposal restores only wrappers the
+bridge still owns.
+
+On enable the isolated runtime parses initial payload scripts before the
+controller's first discovery pass, then reconciles only sources affected by
+dynamic token records. On disable it detaches temporary listeners and observers,
+clears bounded document associations, and lets the shared controller restore
+every owned source. Only bounded tracking-token and Unix-seconds pairs plus
+authentication metadata cross worlds; payloads and page content are not
+persisted or diagnosed. The adapter itself remains a pure source rule backed by
+that temporary store.
 
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
@@ -282,9 +292,11 @@ fields and their owned literals, removes time fields and orphaned separators,
 and uses the localized medium date when no usable date projection remains.
 The controller receives one stable lazy display provider backed by the
 runtime's latest hydrated or message-updated snapshot, so reformatting observes
-current settings without controller reconstruction. All specialized rules
-remain content-side and take precedence over the final generic fallback; no
-site-specific background registration or policy logic is needed.
+current settings without controller reconstruction. Ordinary specialized rules
+remain content-side and take precedence over the final generic fallback, so
+they need no site-specific background registration or policy logic. Facebook is
+the explicit exception described above because its dynamic absolute evidence
+exists in page-main-world response bodies.
 
 Keep these boundaries best-effort: browser-restricted documents, non-HTTP(S)
 frames, Shadow DOM, unapproved page labels, generic date-only values, and
@@ -566,10 +578,15 @@ source value. Successful events never retain raw source timestamps.
   bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
   ten-digit seconds value. For Facebook, verify typed Story evidence, exact
   tracking-token correlation, a recognized post timestamp link, and active
-  global/site policy. For best-effort LinkedIn support, verify the accepted
-  local ID evidence and timestamp-label relationship before changing
-  selectors. Do not recover from markup drift by parsing localized or relative
-  UI text or adding a network fallback.
+  global/site policy. For dynamic Facebook evidence, also verify the exact
+  `/api/graphql/` URL, a synchronously inspectable bounded request body, an
+  anchored Story-bearing `fb_api_req_friendly_name`, and—for XHR—a POST request
+  with an empty or `text` response type. A lease or signature rejection points
+  to background/main/isolated lifecycle coordination rather than selector
+  drift. For best-effort LinkedIn support, verify the accepted local ID evidence
+  and timestamp-label relationship before changing selectors. Do not recover
+  from markup drift by parsing localized or relative UI text or adding a
+  network fallback.
 - **A supported TikTok publication is unchanged:** confirm the page uses HTTPS
   `www.tiktok.com`, an exact profile/video/photo path, an unambiguous tested
   card or direct label shape, and a plausible 19-digit post ID. A universal

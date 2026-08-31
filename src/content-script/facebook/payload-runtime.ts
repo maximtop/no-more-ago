@@ -4,15 +4,23 @@
 
 import {
     FACEBOOK_PAYLOAD_LIMIT,
-    createFacebookPayloadBridgeControlMessage,
-    isFacebookPayloadBridgeReadyMessage,
+    FACEBOOK_TRACKED_LINK_SELECTOR,
     isFacebookPayloadMessage,
+    verifyFacebookPayloadMessage,
 } from "./contracts";
+import {
+    FACEBOOK_BRIDGE_LEASE_RENEWAL_MS,
+    FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+    isFacebookBridgeLease,
+    type FacebookBridgeLease,
+    type FacebookBridgeLeaseRequest,
+} from "../../shared/messaging/facebook-bridge";
 import { isFacebookTimestampElement } from "../adapters/facebook";
 import {
     FACEBOOK_TIMESTAMP_RECORD_CHANGE,
     clearFacebookTimestampRecords,
     findFacebookTimestampSources,
+    getFacebookTrackingToken,
     ingestFacebookPayloadScripts,
     storeFacebookTimestampRecords,
     type FacebookTimestampRecordChange,
@@ -20,7 +28,6 @@ import {
 
 const FACEBOOK_PAYLOAD_RUNTIME_SLOT = Symbol.for("no-more-ago.facebook-payload-runtime");
 const FACEBOOK_PAYLOAD_SCRIPT_SELECTOR = "script[type='application/json'][data-sjs]" as const;
-const FACEBOOK_TRACKED_LINK_SELECTOR = "a[href*='__cft__']" as const;
 
 /**
  * Lifecycle handle for the isolated Facebook payload consumer.
@@ -49,6 +56,11 @@ interface FacebookPayloadRuntimeSlot {
     onSourcesChanged: (sources: readonly Element[]) => void;
 
     /**
+     * Current browser-mediated bridge lease requester.
+     */
+    requestBridgeLease: ((request: FacebookBridgeLeaseRequest) => Promise<unknown>) | undefined;
+
+    /**
      * Stable public lifecycle handle returned by duplicate installations.
      */
     handle: FacebookPayloadRuntimeHandle;
@@ -71,10 +83,10 @@ interface FacebookPayloadRuntimeSlot {
  * @returns - Whether newly available script text should be parsed.
  */
 function hasPayloadScript(record: MutationRecord): boolean {
-    if (
-        record.target instanceof HTMLScriptElement
-        && record.target.matches(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR)
-    ) {
+    const target = record.target instanceof HTMLScriptElement
+        ? record.target
+        : record.target.parentElement;
+    if (target?.matches(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR) === true) {
         return true;
     }
     return [...record.addedNodes].some((node) =>
@@ -112,12 +124,14 @@ function affectsTrackedLink(record: MutationRecord): boolean {
  * @param input.window - Window receiving main-world bridge messages.
  * @param input.document - Facebook document whose records and scripts are consumed.
  * @param input.onSourcesChanged - Reconciles only sources affected by record changes.
+ * @param input.requestBridgeLease - Optional authenticated background lease boundary.
  * @returns - Idempotent lifecycle handle for the document.
  */
 export function installFacebookPayloadRuntime(input: {
     readonly window: Window;
     readonly document: Document;
     readonly onSourcesChanged: (sources: readonly Element[]) => void;
+    readonly requestBridgeLease?: (request: FacebookBridgeLeaseRequest) => Promise<unknown>;
 }): FacebookPayloadRuntimeHandle {
     const runtimeDocument = input.document as Document & Record<
         symbol,
@@ -126,36 +140,61 @@ export function installFacebookPayloadRuntime(input: {
     const existing = runtimeDocument[FACEBOOK_PAYLOAD_RUNTIME_SLOT];
     if (existing) {
         existing.onSourcesChanged = input.onSourcesChanged;
+        existing.requestBridgeLease = input.requestBridgeLease;
         return existing.handle;
     }
     const pendingChanges = new Map<string, FacebookTimestampRecordChange>();
     const slot = {} as FacebookPayloadRuntimeSlot;
     slot.onSourcesChanged = input.onSourcesChanged;
+    slot.requestBridgeLease = input.requestBridgeLease;
     slot.enabled = false;
     slot.disposed = false;
+    let lifecycleGeneration = 0;
+    let lease: FacebookBridgeLease | null = null;
+    let renewalTimer: number | undefined;
+    const acceptedSequences = new Set<number>();
+    const pendingSequences = new Set<number>();
 
     const retryPending = (): void => {
         if (!slot.enabled) {
             return;
         }
-        for (const change of [...pendingChanges.values()]) {
-            const sources = findFacebookTimestampSources(
-                input.document,
-                [change.trackingToken],
-            );
-            const affected = change.state === FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED
-                ? sources
-                : sources.filter(isFacebookTimestampElement);
-            if (affected.length > 0) {
-                try {
-                    slot.onSourcesChanged(affected);
-                } catch {
-                    continue;
-                }
+        const changes = [...pendingChanges.values()];
+        const changeByToken = new Map(changes.map((change) => [change.trackingToken, change]));
+        const sources = findFacebookTimestampSources(
+            input.document,
+            [...changeByToken.keys()],
+        );
+        const matchedTokens = new Set<string>();
+        const affected = sources.filter((source) => {
+            const trackingToken = getFacebookTrackingToken(source);
+            if (trackingToken === null) {
+                return false;
+            }
+            const change = changeByToken.get(trackingToken);
+            if (!change) {
+                return false;
             }
             if (
                 change.state === FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED
-                || affected.length > 0
+                || isFacebookTimestampElement(source)
+            ) {
+                matchedTokens.add(trackingToken);
+                return true;
+            }
+            return false;
+        });
+        if (affected.length > 0) {
+            try {
+                slot.onSourcesChanged(affected);
+            } catch {
+                return;
+            }
+        }
+        for (const change of changes) {
+            if (
+                change.state === FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED
+                || matchedTokens.has(change.trackingToken)
             ) {
                 pendingChanges.delete(change.trackingToken);
             }
@@ -183,11 +222,69 @@ export function installFacebookPayloadRuntime(input: {
         retryPending();
     };
 
-    const postControl = (enabled: boolean): void => {
-        input.window.postMessage(
-            createFacebookPayloadBridgeControlMessage(enabled),
-            input.window.location.origin,
-        );
+    const clearRenewal = (): void => {
+        if (renewalTimer !== undefined) {
+            input.window.clearTimeout(renewalTimer);
+            renewalTimer = undefined;
+        }
+    };
+
+    const releaseLease = (released: FacebookBridgeLease): void => {
+        try {
+            void slot.requestBridgeLease?.({
+                type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+                active: false,
+                leaseId: released.leaseId,
+            }).catch(() => undefined);
+        } catch {
+            /* release is best-effort because the main-world lease expires independently */
+        }
+    };
+
+    const requestLease = (generation: number): void => {
+        const requester = slot.requestBridgeLease;
+        if (!slot.enabled || slot.disposed || !requester) {
+            return;
+        }
+        let pending: Promise<unknown>;
+        try {
+            pending = Promise.resolve(requester({
+                type: FACEBOOK_BRIDGE_LEASE_REQUEST_MESSAGE,
+                active: true,
+            }));
+        } catch {
+            pending = Promise.reject(new Error("Facebook bridge lease unavailable"));
+        }
+        void pending.then((response) => {
+            if (
+                !slot.enabled
+                || slot.disposed
+                || lifecycleGeneration !== generation
+            ) {
+                if (isFacebookBridgeLease(response)) {
+                    releaseLease(response);
+                }
+                return;
+            }
+            clearRenewal();
+            if (isFacebookBridgeLease(response) && response.expiresAt > Date.now()) {
+                lease = response;
+                acceptedSequences.clear();
+                pendingSequences.clear();
+            }
+            renewalTimer = input.window.setTimeout(() => {
+                renewalTimer = undefined;
+                requestLease(generation);
+            }, FACEBOOK_BRIDGE_LEASE_RENEWAL_MS);
+        }, () => {
+            if (slot.enabled && !slot.disposed && lifecycleGeneration === generation) {
+                clearRenewal();
+                renewalTimer = input.window.setTimeout(() => {
+                    renewalTimer = undefined;
+                    requestLease(generation);
+                }, FACEBOOK_BRIDGE_LEASE_RENEWAL_MS);
+            }
+        });
     };
 
     const messageListener = (event: MessageEvent): void => {
@@ -197,16 +294,39 @@ export function installFacebookPayloadRuntime(input: {
         ) {
             return;
         }
-        if (isFacebookPayloadBridgeReadyMessage(event.data)) {
-            postControl(true);
+        if (!isFacebookPayloadMessage(event.data)) {
             return;
         }
-        if (isFacebookPayloadMessage(event.data)) {
+        const currentLease = lease;
+        const message = event.data;
+        if (
+            !currentLease
+            || message.leaseId !== currentLease.leaseId
+            || acceptedSequences.has(message.sequence)
+            || pendingSequences.has(message.sequence)
+            || pendingSequences.size >= 4
+        ) {
+            return;
+        }
+        pendingSequences.add(message.sequence);
+        void verifyFacebookPayloadMessage(message, currentLease.secret).then((verified) => {
+            pendingSequences.delete(message.sequence);
+            if (
+                !verified
+                || !slot.enabled
+                || lease !== currentLease
+                || acceptedSequences.has(message.sequence)
+            ) {
+                return;
+            }
+            acceptedSequences.add(message.sequence);
             acceptChanges(storeFacebookTimestampRecords(
                 input.document,
-                event.data.records,
+                message.records,
             ));
-        }
+        }, () => {
+            pendingSequences.delete(message.sequence);
+        });
     };
 
     const observer = new MutationObserver((records) => {
@@ -226,19 +346,28 @@ export function installFacebookPayloadRuntime(input: {
             return;
         }
         slot.enabled = enabled;
+        lifecycleGeneration += 1;
+        const generation = lifecycleGeneration;
         if (enabled) {
             input.window.addEventListener("message", messageListener);
             observer.observe(input.document, {
                 attributes: true,
                 attributeFilter: ["href"],
+                characterData: true,
                 childList: true,
                 subtree: true,
             });
-            postControl(true);
             acceptChanges(ingestFacebookPayloadScripts(input.document));
+            requestLease(generation);
             return;
         }
-        postControl(false);
+        clearRenewal();
+        if (lease) {
+            releaseLease(lease);
+        }
+        lease = null;
+        acceptedSequences.clear();
+        pendingSequences.clear();
         input.window.removeEventListener("message", messageListener);
         observer.disconnect();
         pendingChanges.clear();

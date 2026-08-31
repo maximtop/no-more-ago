@@ -61,6 +61,11 @@ describe("build commands", () => {
                 expect(manifest.version).toBe("0.1.0");
                 expect(background[browser === "firefox" ? "scripts" : "service_worker"])
                     .toBeDefined();
+                if (browser === "firefox") {
+                    expect(manifest.browser_specific_settings).toEqual({
+                        gecko: { strict_min_version: "128.0" },
+                    });
+                }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
                 expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))
                     .toBe(true);
