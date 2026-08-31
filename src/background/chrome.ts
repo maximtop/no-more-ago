@@ -112,6 +112,7 @@ function installApplication(): BackgroundApplication | undefined {
                         runAt: script.runAt,
                         allFrames: script.allFrames,
                         persistAcrossSessions: script.persistAcrossSessions,
+                        world: script.world,
                     })),
                 ) ?? Promise.reject(new Error("Scripting is unavailable")),
         registerContentScripts: (scripts) =>
@@ -145,7 +146,7 @@ function installApplication(): BackgroundApplication | undefined {
         getAllFrames: async (tabId) => {
             const frames = await candidate.webNavigation?.getAllFrames?.({ tabId });
             return (frames ?? []).flatMap(({ frameId, url }) =>
-                parseHttpUrl(url) ? [{ frameId }] : []);
+                parseHttpUrl(url) ? [{ frameId, url }] : []);
         },
     };
     const coordinator = new DocumentActivationCoordinator({ scripting, tabs });

@@ -61,7 +61,13 @@ function normalizeMutationSources(selection: TimestampMutationSourceSelection): 
 /**
  * Controller construction dependencies beyond one document processing pass.
  */
-export interface DocumentTransformationControllerInput extends ProcessInput {
+export interface DocumentTransformationControllerInput
+    extends Omit<ProcessInput, "root"> {
+    /**
+     * Document whose timestamps and route lifecycle are owned by the controller.
+     */
+    readonly root: Document;
+
     /**
      * Total classifier applied to every non-duplicate changed route.
      */
@@ -122,7 +128,7 @@ export class DocumentTransformationController {
     /**
      * Stable processing dependencies excluding controller-owned route classification.
      */
-    private readonly input: ProcessInput;
+    private readonly input: ProcessInput & { readonly root: Document };
 
     /**
      * Total route transition classifier used after exact duplicate filtering.
@@ -395,6 +401,24 @@ export class DocumentTransformationController {
             sources,
         });
         return this.outputs;
+    }
+
+    /**
+     * Reconciles exact connected sources after an out-of-band adapter record arrives.
+     *
+     * @param sources - Page-owned sources whose trusted payload data changed.
+     * @returns - Adjacent timestamp outputs rendered by the targeted pass.
+     */
+    reconcileSources(sources: readonly Element[]): readonly HTMLTimeElement[] {
+        const scheduler = this.scheduler;
+        if (this.phase !== "active" || !scheduler) {
+            return [];
+        }
+        return reconcileDocumentSources({
+            ...this.regionProcessInput(this.input.root, scheduler),
+            root: this.input.root,
+            sources,
+        });
     }
 
     /**

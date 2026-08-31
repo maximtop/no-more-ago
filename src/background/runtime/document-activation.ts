@@ -3,19 +3,22 @@
  *
  * @file Chrome scripting and tab reconciliation for the document runtime.
  */
-import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
+import {
+    CONTENT_SCRIPT_FILE,
+    FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
+} from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
+import { isFacebookUrl } from "../../shared/url/facebook";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import {
     isDocumentPolicyReconciledMessage,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
-import type { RuntimeTab, TabsRuntime } from "./tabs";
-import type { ScriptingRuntime } from "./scripting";
+import type { RuntimeFrame, RuntimeTab, TabsRuntime } from "./tabs";
+import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from "./scripting";
 import {
-    DOCUMENT_RUNTIME_REGISTRATION,
-    DOCUMENT_RUNTIME_REGISTRATION_ID,
+    DOCUMENT_RUNTIME_REGISTRATIONS,
     registrationMatches,
 } from "./register-documents";
 import { settleBrowserOperation } from "./settle";
@@ -79,6 +82,21 @@ export type RegistrationOutcome =
     (typeof REGISTRATION_OUTCOME)[keyof typeof REGISTRATION_OUTCOME];
 
 /**
+ * Outcome retained for one independently reconciled registration.
+ */
+export interface RegistrationResult {
+    /**
+     * Stable browser registration identifier.
+     */
+    readonly id: string;
+
+    /**
+     * Operation outcome for this registration only.
+     */
+    readonly outcome: RegistrationOutcome;
+}
+
+/**
  * Reconciliation failure retained with independent successes.
  */
 export type ReconcileFailure =
@@ -92,6 +110,11 @@ export type ReconcileFailure =
          * Failed registration operation.
          */
         readonly operation: (typeof REGISTRATION_OPERATION)[keyof typeof REGISTRATION_OPERATION];
+
+        /**
+         * Registration whose operation failed, when the failure was registration-specific.
+         */
+        readonly registrationId?: string;
     }
     | {
         /**
@@ -144,6 +167,11 @@ export interface ActivationReconcileResult {
      * Universal registration operation outcome.
      */
     readonly registration: RegistrationOutcome;
+
+    /**
+     * Independent outcomes for the universal runtime and optional site bridges.
+     */
+    readonly registrations: readonly RegistrationResult[];
 
     /**
      * Outcomes recorded for each selected tab.
@@ -230,9 +258,10 @@ interface DocumentActivationDependencies {
 }
 
 /**
- * Reconciles the universal registration.
+ * Reconciles one registration without coupling its outcome to sibling registrations.
  *
  * @param scripting - Scripting API boundary.
+ * @param expected - Canonical registration to reconcile.
  * @param enabled - Whether global processing is enabled.
  * @param failures - Failure collection to append to.
  * @param onLateWrite - Optional convergence request after a timed-out write succeeds.
@@ -240,31 +269,31 @@ interface DocumentActivationDependencies {
  */
 async function registration(
     scripting: ScriptingRuntime,
+    expected: (typeof DOCUMENT_RUNTIME_REGISTRATIONS)[number],
     enabled: boolean,
     failures: ReconcileFailure[],
     onLateWrite?: () => void,
 ): Promise<RegistrationOutcome> {
     const inspected = await settleBrowserOperation(
         () => scripting.getRegisteredContentScripts({
-            ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
+            ids: [expected.id],
         }),
     );
     if (!inspected.ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
             operation: REGISTRATION_OPERATION.GET,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
-    const found = inspected.value;
-    const current = found.find((entry) => entry.id === DOCUMENT_RUNTIME_REGISTRATION_ID);
+    const found = inspected.value.find((entry) => entry.id === expected.id);
     if (!enabled) {
-        const registeredIds = found.map((entry) => entry.id);
-        if (registeredIds.length === 0) {
+        if (!found) {
             return REGISTRATION_OUTCOME.UNCHANGED;
         }
         const removed = await settleRegistrationWrite(
-            () => scripting.unregisterContentScripts({ ids: registeredIds }),
+            () => scripting.unregisterContentScripts({ ids: [expected.id] }),
             onLateWrite,
         );
         if (removed) {
@@ -273,26 +302,60 @@ async function registration(
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
             operation: REGISTRATION_OPERATION.UNREGISTER,
+            registrationId: expected.id,
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
-    if (current && registrationMatches(current, DOCUMENT_RUNTIME_REGISTRATION)) {
+    if (found && registrationMatches(found, expected)) {
         return REGISTRATION_OUTCOME.UNCHANGED;
     }
+    const operation = found
+        ? REGISTRATION_OPERATION.UPDATE
+        : REGISTRATION_OPERATION.REGISTER;
     const written = await settleRegistrationWrite(
-        () => current
-            ? scripting.updateContentScripts([DOCUMENT_RUNTIME_REGISTRATION])
-            : scripting.registerContentScripts([DOCUMENT_RUNTIME_REGISTRATION]),
+        () => found
+            ? scripting.updateContentScripts([{ ...expected }])
+            : scripting.registerContentScripts([{ ...expected }]),
         onLateWrite,
     );
     if (written) {
-        return current ? REGISTRATION_OUTCOME.UPDATED : REGISTRATION_OUTCOME.REGISTERED;
+        return found
+            ? REGISTRATION_OUTCOME.UPDATED
+            : REGISTRATION_OUTCOME.REGISTERED;
     }
     failures.push({
         scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-        operation: current ? REGISTRATION_OPERATION.UPDATE : REGISTRATION_OPERATION.REGISTER,
+        operation,
+        registrationId: expected.id,
     });
     return REGISTRATION_OUTCOME.FAILED;
+}
+
+/**
+ * Derives the legacy aggregate registration outcome from independent results.
+ *
+ * @param results - Per-registration outcomes from the current pass.
+ * @param enabled - Whether registrations were being installed or removed.
+ * @returns - Aggregate outcome retained for existing projections.
+ */
+function aggregateRegistrationOutcome(
+    results: readonly RegistrationResult[],
+    enabled: boolean,
+): RegistrationOutcome {
+    if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.FAILED)) {
+        return REGISTRATION_OUTCOME.FAILED;
+    }
+    if (enabled) {
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UPDATED)) {
+            return REGISTRATION_OUTCOME.UPDATED;
+        }
+        if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.REGISTERED)) {
+            return REGISTRATION_OUTCOME.REGISTERED;
+        }
+    } else if (results.some(({ outcome }) => outcome === REGISTRATION_OUTCOME.UNREGISTERED)) {
+        return REGISTRATION_OUTCOME.UNREGISTERED;
+    }
+    return REGISTRATION_OUTCOME.UNCHANGED;
 }
 
 /**
@@ -384,14 +447,65 @@ async function deliverPolicy(
  *
  * @param tabs - Tabs and frame browser boundary.
  * @param tabId - Tab whose frames are requested.
- * @returns - Distinct reachable frame IDs, or an empty list on failure.
+ * @returns - Distinct reachable frames, or null when enumeration fails.
  */
-async function frameIds(tabs: TabsRuntime, tabId: number): Promise<readonly number[]> {
+async function enumerateFrames(
+    tabs: TabsRuntime,
+    tabId: number,
+): Promise<readonly RuntimeFrame[] | null> {
     const frames = await settleBrowserOperation(() => tabs.getAllFrames(tabId));
     if (!frames.ok) {
-        return [];
+        return null;
     }
-    return [...new Set(frames.value.map((frame) => frame.frameId))];
+    const seen = new Set<number>();
+    return frames.value.filter((frame) => {
+        if (seen.has(frame.frameId)) {
+            return false;
+        }
+        seen.add(frame.frameId);
+        return true;
+    });
+}
+
+/**
+ * Ensures the inert Facebook main-world bridge in every reachable Facebook frame.
+ *
+ * @param scripting - Scripting API boundary.
+ * @param tabId - Tab whose Facebook frames receive the bridge.
+ * @param enabled - Whether the top-level site's effective policy is enabled.
+ * @param frames - Reachable frames, or null when enumeration failed.
+ * @returns - Whether every required bridge injection completed.
+ */
+async function ensureFacebookBridge(
+    scripting: ScriptingRuntime,
+    tabId: number,
+    enabled: boolean,
+    frames: readonly RuntimeFrame[] | null,
+): Promise<boolean> {
+    if (!enabled) {
+        return true;
+    }
+    if (frames === null) {
+        return false;
+    }
+    const facebookFrameIds = frames.flatMap((frame) => {
+        const url = parseHttpUrl(frame.url);
+        return url && isFacebookUrl(url) ? [frame.frameId] : [];
+    });
+    if (facebookFrameIds.length === 0) {
+        return true;
+    }
+    const injected = await settleBrowserOperation(() => scripting.executeScript({
+        target: { tabId, frameIds: facebookFrameIds },
+        files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
+        world: SCRIPT_EXECUTION_WORLD.MAIN,
+    }));
+    if (!injected.ok) {
+        return false;
+    }
+    const injectedFrameIds = new Set(injected.value.map((result) => result.frameId));
+    return injectedFrameIds.size === facebookFrameIds.length
+        && facebookFrameIds.every((frameId) => injectedFrameIds.has(frameId));
 }
 
 /**
@@ -444,15 +558,26 @@ async function refresh(
         revision,
         enabled,
     } as const;
-    const initialFrames = frameIds(tabs, tab.id);
-    const [initialPolicy, ensured] = await Promise.all([
-        initialFrames.then((frames) => deliverPolicyToFrames(tabs, tab.id, frames, message)),
+    const initialFrames = enumerateFrames(tabs, tab.id);
+    const [initialPolicy, ensured, bridgeReady] = await Promise.all([
+        initialFrames.then((frames) => deliverPolicyToFrames(
+            tabs,
+            tab.id,
+            frames?.map((frame) => frame.frameId) ?? [],
+            message,
+        )),
         settleBrowserOperation(
             () => scripting.executeScript({
                 target: { tabId: tab.id, allFrames: true },
                 files: [CONTENT_SCRIPT_FILE],
             }),
         ),
+        initialFrames.then((frames) => ensureFacebookBridge(
+            scripting,
+            tab.id,
+            enabled,
+            frames,
+        )),
     ]);
     const ensuredFrames = ensured.ok
         ? [...new Set(ensured.value.map((result) => result.frameId))]
@@ -468,7 +593,7 @@ async function refresh(
     const policyOk = ensuredFrames.length > 0 && ensuredFrames.every(
         (frameId) => initialPolicy.get(frameId) === true || retriedPolicy.get(frameId) === true,
     );
-    const ok = runtimeEnsured && policyOk;
+    const ok = runtimeEnsured && policyOk && bridgeReady;
     if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -499,13 +624,14 @@ async function teardown(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const frames = await frameIds(tabs, tab.id);
-    const acknowledgements = await deliverPolicyToFrames(tabs, tab.id, frames, {
+    const frames = await enumerateFrames(tabs, tab.id);
+    const frameIds = frames?.map((frame) => frame.frameId) ?? [];
+    const acknowledgements = await deliverPolicyToFrames(tabs, tab.id, frameIds, {
         type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
         revision,
         enabled: false,
     });
-    const ok = frames.length > 0 && frames.every(
+    const ok = frames !== null && frameIds.length > 0 && frameIds.every(
         (frameId) => acknowledgements.get(frameId) === true,
     );
     if (!ok) {
@@ -588,14 +714,16 @@ export class DocumentActivationCoordinator {
         while (this.registrationRepairRequested) {
             this.registrationRepairRequested = false;
             const generation = this.registrationGeneration;
-            await registration(
-                this.input.scripting,
-                this.registrationEnabled,
-                [],
-                () => {
-                    this.requestRegistrationRepair(generation);
-                },
-            );
+            await Promise.all(DOCUMENT_RUNTIME_REGISTRATIONS.map((expected) =>
+                registration(
+                    this.input.scripting,
+                    expected,
+                    this.registrationEnabled,
+                    [],
+                    () => {
+                        this.requestRegistrationRepair(generation);
+                    },
+                )));
         }
     }
 
@@ -613,14 +741,21 @@ export class DocumentActivationCoordinator {
         const enabled = input.policy === ACTIVATION_POLICY.ENABLED;
         this.registrationEnabled = enabled;
         const registrationGeneration = ++this.registrationGeneration;
-        const registered = await registration(
-            this.input.scripting,
-            enabled,
-            failures,
-            () => {
-                this.requestRegistrationRepair(registrationGeneration);
-            },
+        const registrations = await Promise.all(
+            DOCUMENT_RUNTIME_REGISTRATIONS.map(async (expected) => ({
+                id: expected.id,
+                outcome: await registration(
+                    this.input.scripting,
+                    expected,
+                    enabled,
+                    failures,
+                    () => {
+                        this.requestRegistrationRepair(registrationGeneration);
+                    },
+                ),
+            })),
         );
+        const registered = aggregateRegistrationOutcome(registrations, enabled);
         const tabs = await httpTabs(this.input.tabs, failures);
         const affected = input.affectedHostnames === undefined
             ? undefined
@@ -662,6 +797,7 @@ export class DocumentActivationCoordinator {
             policy: input.policy,
             failures,
             registration: registered,
+            registrations,
             tabs: records,
         };
     }

@@ -50,6 +50,7 @@ function application(
         policy: ACTIVATION_POLICY.ENABLED,
         failures: [],
         registration: REGISTRATION_OUTCOME.UNCHANGED,
+        registrations: [],
         tabs: [],
     };
     const coordinator: BackgroundApplicationOptions["coordinator"] = {
@@ -139,6 +140,7 @@ describe("BackgroundApplication document state", () => {
             policy: input.policy,
             failures: [],
             registration: REGISTRATION_OUTCOME.UNCHANGED,
+            registrations: [],
             tabs: [],
         }));
         const app = new BackgroundApplication({
@@ -191,6 +193,7 @@ describe("BackgroundApplication document state", () => {
             policy: input.policy,
             failures: [],
             registration: REGISTRATION_OUTCOME.UNCHANGED,
+            registrations: [],
             tabs: [],
         }));
         const app = new BackgroundApplication({

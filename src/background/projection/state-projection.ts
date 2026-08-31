@@ -19,6 +19,7 @@ import type {
     SitesState,
 } from "../../shared/messaging/view-state-schemas";
 import { parseHttpUrl } from "../../shared/url/http";
+import { isFacebookHostname } from "../../shared/url/facebook";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import type { ReconcileFailure } from "../runtime/document-activation";
@@ -30,6 +31,8 @@ import type { ActivationManager } from "../application/activation-manager";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
 import { settleBrowserOperation } from "../runtime/settle";
+import { FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID } from
+    "../runtime/register-documents";
 
 /**
  * Maps a reconciliation failure to the popup failure vocabulary.
@@ -46,6 +49,12 @@ function failureFor(
 ): PopupRuntimeFailure | undefined {
     for (const failure of failures) {
         if (failure.scope === RECONCILE_FAILURE_SCOPE.REGISTRATION) {
+            if (
+                failure.registrationId === FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID
+                && !isFacebookHostname(hostname)
+            ) {
+                continue;
+            }
             return POPUP_RUNTIME_FAILURE.REGISTRATION;
         }
         if (failure.scope === RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY) {

@@ -213,4 +213,34 @@ describe("DocumentRefresh", () => {
             reason: REFRESH_FAILURE_REASON.TAB_UPDATE,
         }]);
     });
+
+    it("reports a tab failure when a frame update never settles", async () => {
+        vi.useFakeTimers();
+        try {
+            const tabs = {
+                query: vi.fn(() => Promise.resolve([{
+                    id: 13,
+                    url: "https://example.test/page",
+                }])),
+                getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
+                sendMessage: vi.fn(() => new Promise<never>(() => undefined)),
+            };
+            const snapshot = createSettingsSnapshot(6, true);
+
+            const refresh = new DocumentRefresh(tabs).refreshDisplay(
+                snapshot,
+                snapshot.display,
+                snapshot.revision,
+            );
+            await vi.runAllTimersAsync();
+
+            await expect(refresh).resolves.toEqual([{
+                hostname: "example.test",
+                tabId: 13,
+                reason: REFRESH_FAILURE_REASON.TAB_UPDATE,
+            }]);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 });

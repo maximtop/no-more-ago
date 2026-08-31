@@ -109,6 +109,7 @@ function state(enabled = true, revision = 2) {
 describe("content entrypoint", () => {
     beforeEach(() => {
         vi.resetModules();
+        vi.doUnmock("../../../src/content-script/facebook/payload-runtime");
         vi.unstubAllGlobals();
         const current = (document as unknown as Record<symbol, {
             handle?: { teardown(): void };
@@ -269,6 +270,37 @@ describe("content entrypoint", () => {
             expect(forbiddenFetch).not.toHaveBeenCalled();
             expect(sendMessage).toHaveBeenCalledTimes(2);
             expect(chrome.onMessage.addListener).toHaveBeenCalledOnce();
+        },
+    );
+
+    it.each([
+        { enabled: true, expectedActivity: [true] },
+        { enabled: false, expectedActivity: [] },
+    ])(
+        "coordinates Facebook payload activity for enabled=$enabled",
+        async ({ enabled, expectedActivity }) => {
+            const setEnabled = vi.fn<(active: boolean) => void>();
+            const installFacebookPayloadRuntime = vi.fn(() => ({
+                setEnabled,
+                teardown: vi.fn(),
+            }));
+            vi.doMock(
+                "../../../src/content-script/facebook/payload-runtime",
+                () => ({ installFacebookPayloadRuntime }),
+            );
+            const sendMessage = vi.fn(async () => state(enabled));
+            installChromeMock(sendMessage);
+            vi.stubGlobal("window", {
+                location: { href: "https://www.facebook.com/home" },
+            });
+
+            await import("../../../src/content-script/main");
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(installFacebookPayloadRuntime).toHaveBeenCalledOnce();
+            expect(setEnabled.mock.calls.map(([active]) => active))
+                .toEqual(expectedActivity);
         },
     );
 });

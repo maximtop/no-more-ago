@@ -28,6 +28,7 @@ export const TIMESTAMP_SOURCE_KIND = {
     TIKTOK_PUBLICATION: "tiktok-publication",
     LINKEDIN_TIMESTAMP: "linkedin-timestamp",
     YT_FORMATTED_STRING: "yt-formatted-string",
+    FACEBOOK_STORY_TIMESTAMP: "facebook-story-timestamp",
 } as const;
 
 /**
