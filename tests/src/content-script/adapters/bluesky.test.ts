@@ -142,7 +142,7 @@ describe("Bluesky source contract", () => {
             .some(({ source }) => source.id === "expanded-root-exact")).toBe(false);
     });
 
-    it("associates one quote with its outer identity without reading presentation text", () => {
+    it("associates one relative quote without depending on localized tooltip text", () => {
         document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
         const before = discoverBlueskyRelativeTargets(document);
         const quote = before.find(({ role }) => role === BLUESKY_TARGET_ROLE.QUOTE);
@@ -154,14 +154,23 @@ describe("Bluesky source contract", () => {
         quoteSource.setAttribute("aria-label", "完全に異なる表示");
         quoteSource.setAttribute("data-tooltip", "autre présentation");
         if (quote?.target) {
-            quote.target.data = " другой текст";
+            quote.target.data = " 7m";
         }
         const after = discoverBlueskyRelativeTargets(document)
             .find(({ role }) => role === BLUESKY_TARGET_ROLE.QUOTE);
         expect(after?.outerIdentity).toEqual(quote?.outerIdentity);
         expect(after?.fingerprint).toBe(quote?.fingerprint);
         expect(after?.fingerprint).not.toContain("présentation");
-        expect(after?.fingerprint).not.toContain("текст");
+        expect(after?.fingerprint).not.toContain("7m");
+    });
+
+    it("leaves an already exact Bluesky label unchanged", () => {
+        document.body.innerHTML = `<article><a
+            href="/profile/alice.example/post/3oldpost"
+            aria-label="August 31, 2025" data-tooltip="August 31, 2025">
+            <span aria-hidden="true">· </span>Aug 31, 2025</a></article>`;
+
+        expect(discoverBlueskyRelativeTargets(document)).toEqual([]);
     });
 
     it("emits a candidate only for a matching injected resolution", () => {
@@ -200,6 +209,12 @@ describe("Bluesky source contract", () => {
         const adapter = createBlueskyAdapter(() => undefined);
         const outer = requireElement("quoted-outer-time");
         const quote = requireElement("quoted-inner-time");
+        const navigation = document.createElement("a");
+        navigation.href = "/profile/unrelated.example";
+        navigation.setAttribute("aria-label", "localized");
+        navigation.setAttribute("data-tooltip", "localized");
+        navigation.textContent = "5m";
+        outer.closest("article")?.append(navigation);
         const sources = adapter.getMutationSources?.(
             outer,
             TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
@@ -208,6 +223,38 @@ describe("Bluesky source contract", () => {
 
         expect(sources).toEqual([outer, quote]);
         expect(adapter.mutationAttributes).not.toContain(TIMESTAMP_SOURCE_ATTRIBUTE.CLASS);
+    });
+
+    it("restores a tracked source after both metadata attributes disappear", () => {
+        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+        const adapter = createBlueskyAdapter(() => undefined);
+        const outer = requireElement("quoted-outer-time");
+        const quote = requireElement("quoted-inner-time");
+        outer.removeAttribute("aria-label");
+        outer.removeAttribute("data-tooltip");
+
+        const sources = adapter.getMutationSources?.(
+            outer,
+            TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP,
+            "August 31, 2026",
+            true,
+        );
+
+        expect(sources).toEqual([outer, quote]);
+    });
+
+    it("ignores href mutations on non-post navigation links", () => {
+        document.body.innerHTML = fixtures.get("feed.html") ?? "";
+        const navigation = document.createElement("a");
+        navigation.href = "/profile/alice.example";
+        document.getElementById("feed")?.prepend(navigation);
+        const adapter = createBlueskyAdapter(() => undefined);
+
+        expect(adapter.getMutationSources?.(
+            navigation,
+            TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
+            "/profile/previous.example",
+        )).toEqual([]);
     });
 
     it("composes a document-scoped rule first without losing production rules", () => {

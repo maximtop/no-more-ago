@@ -13,6 +13,9 @@ import {
     BLUESKY_PUBLIC_APPVIEW_ORIGIN,
     createBlueskyAppView,
 } from "../../../../src/content-script/adapters/bluesky-appview";
+import {
+    createBlueskyPostUri,
+} from "../../../../src/content-script/adapters/bluesky-identity";
 
 const VALID_INDEXED_AT = "2026-08-31T10:15:00.000Z" as const;
 const SECOND_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
@@ -92,7 +95,7 @@ function createFetchDouble(responses: readonly (Response | Error)[]): {
  * @returns - Canonical AT post URI.
  */
 function postUri(suffix: string): string {
-    return `at://did:plc:${suffix}/app.bsky.feed.post/3${suffix}`;
+    return createBlueskyPostUri(`did:plc:${suffix}`, `3${suffix}`);
 }
 
 describe("Bluesky AppView request contract", () => {
@@ -334,16 +337,15 @@ describe("Bluesky AppView response contract", () => {
     });
 
     it.each([
-        [fakeResponse({}), "missing envelope field"],
-        [fakeResponse({ posts: "wrong" }), "malformed envelope field"],
-        [fakeResponse({ posts: [] }, { ok: false, status: 429 }), "429 status"],
-        [fakeResponse({ posts: [] }, { ok: false, status: 500 }), "500 status"],
-        [fakeResponse({ posts: [] }, { redirected: true }), "redirect"],
-        [fakeResponse(null, { jsonFailure: true }), "non-JSON body"],
-        [new TypeError("offline"), "transport failure"],
-        [new DOMException("aborted", "AbortError"), "abort"],
-    ])("returns failure for %s", async (response, _description) => {
-        void _description;
+        ["missing envelope field", fakeResponse({})],
+        ["malformed envelope field", fakeResponse({ posts: "wrong" })],
+        ["429 status", fakeResponse({ posts: [] }, { ok: false, status: 429 })],
+        ["500 status", fakeResponse({ posts: [] }, { ok: false, status: 500 })],
+        ["redirect", fakeResponse({ posts: [] }, { redirected: true })],
+        ["non-JSON body", fakeResponse(null, { jsonFailure: true })],
+        ["transport failure", new TypeError("offline")],
+        ["abort", new DOMException("aborted", "AbortError")],
+    ])("returns failure for %s", async (_description, response) => {
         const fake = createFetchDouble([response]);
         const result = await createBlueskyAppView(fake.fetch).getPosts(
             [postUri("one")],

@@ -3,7 +3,7 @@
  */
 
 import type { TimestampSourceRule } from "../adapters/types";
-import type { DocumentDiagnosticSink } from "./process-document";
+import type { DocumentDiagnosticSink } from "../diagnostics";
 
 /**
  * Host capabilities available to one document-scoped participant.

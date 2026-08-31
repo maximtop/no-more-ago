@@ -17,6 +17,7 @@ import {
     DOCUMENT_RUNTIME_REGISTRATION_ID,
 } from "../../../../src/background/runtime/register-documents";
 import {
+    DOCUMENT_POLICY_REFRESHED_MESSAGE,
     REFRESH_DOCUMENT_POLICY_MESSAGE,
     SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
@@ -136,7 +137,7 @@ function fakes(urls: readonly string[]) {
 }
 
 describe("DocumentActivationCoordinator", () => {
-    it("registers universally and broadcasts before all-frame ensure", async () => {
+    it("registers universally and recovers frames without a policy acknowledgement", async () => {
         const fake = fakes(["https://example.test/page"]);
         fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
         const coordinator = new DocumentActivationCoordinator(fake);
@@ -147,14 +148,39 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.registration).toBe(REGISTRATION_OUTCOME.REGISTERED);
-        expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
+        expect(fake.tabs.sendMessage).toHaveBeenNthCalledWith(
+            1,
             1,
             { type: REFRESH_DOCUMENT_POLICY_MESSAGE },
+            { frameId: 0 },
+        );
+        expect(fake.tabs.sendMessage).toHaveBeenNthCalledWith(
+            2,
+            1,
+            { type: REFRESH_DOCUMENT_POLICY_MESSAGE },
+            { frameId: 1 },
         );
         expect(fake.scripting.executeScript).toHaveBeenCalledWith({
-            target: { tabId: 1, allFrames: true },
+            target: { tabId: 1, frameIds: [0, 1] },
             files: ["content.js"],
         });
+    });
+
+    it("does not reinject frames that acknowledged the policy refresh", async () => {
+        const fake = fakes(["https://example.test/page"]);
+        fake.tabs.sendMessage.mockResolvedValue({
+            type: DOCUMENT_POLICY_REFRESHED_MESSAGE,
+        });
+        const coordinator = new DocumentActivationCoordinator(fake);
+
+        await coordinator.reconcile({
+            revision: 2,
+            policy: ACTIVATION_POLICY.ENABLED,
+            sitePreferences: { "example.test": true },
+        });
+
+        expect(fake.tabs.sendMessage).toHaveBeenCalledTimes(2);
+        expect(fake.scripting.executeScript).not.toHaveBeenCalled();
     });
 
     it("suspends a disabled site and still ensures every reachable frame", async () => {
@@ -169,6 +195,7 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
             1,
             { type: SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE },
+            { frameId: 0 },
         );
         expect(fake.scripting.executeScript).toHaveBeenCalledTimes(1);
     });
@@ -321,10 +348,12 @@ describe("DocumentActivationCoordinator", () => {
             const frames = [first, second];
             const fake = fakes(["https://example.test/page"]);
             let rejectBroadcastResponse = true;
-            fake.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
-                frames.forEach((frame) => {
-                    frame.messages.dispatch(message);
-                });
+            fake.tabs.sendMessage.mockImplementation(async (_tabId, message, options) => {
+                if (options) {
+                    frames[options.frameId]?.messages.dispatch(message);
+                } else {
+                    frames.forEach((frame) => frame.messages.dispatch(message));
+                }
                 if (rejectBroadcastResponse) {
                     throw new Error("nondeterministic broadcast response");
                 }

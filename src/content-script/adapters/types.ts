@@ -172,13 +172,23 @@ export interface TimestampSourceRule {
      * @param element - Element whose attribute changed.
      * @param attributeName - Adapter-declared attribute that changed.
      * @param oldValue - Attribute value before the mutation.
+     * @param wasTracked - Whether the element was an active rendered source before the batch.
      * @returns - Exact source elements that require re-evaluation.
      */
     readonly getMutationSources?: (
         element: Element,
         attributeName: TimestampSourceAttribute,
         oldValue: string | null,
+        wasTracked?: boolean,
     ) => readonly Element[];
+
+    /**
+     * Maps a child-list container to exact sources whose structural association changed.
+     *
+     * @param element - Connected element whose children changed.
+     * @returns - Exact source elements that require re-evaluation.
+     */
+    readonly getChildListMutationSources?: (element: Element) => readonly Element[];
 
     /**
      * Determines whether the source rule applies to the page URL.

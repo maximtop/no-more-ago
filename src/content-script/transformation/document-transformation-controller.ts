@@ -10,9 +10,9 @@ import {
     reconcileDocumentRegion,
     reconcileDocumentSources,
     processDocument,
-    type DocumentDiagnosticSink,
     type ProcessInput,
 } from "./process-document";
+import type { DocumentDiagnosticSink } from "../diagnostics";
 import {
     capturePageOwnedTextChange,
     getOwnedSourceForOutput,
@@ -182,6 +182,7 @@ export class DocumentTransformationController {
                             element,
                             attributeName as TimestampSourceAttribute,
                             oldValue ?? null,
+                            wasTracked,
                         ) ?? (rule.matchesElement(element) || wasTracked ? [element] : []);
                         for (const source of mutationSources) {
                             if (!seen.has(source)) {
@@ -193,10 +194,23 @@ export class DocumentTransformationController {
                     return sources;
                 }
                 const roots: Element[] = [];
+                const seen = new Set<Element>();
+                for (const rule of applicableRules) {
+                    for (const source of rule.getChildListMutationSources?.(element) ?? []) {
+                        if (!seen.has(source)) {
+                            seen.add(source);
+                            roots.push(source);
+                        }
+                    }
+                }
                 let current: Element | null = element;
                 while (current && current.ownerDocument === this.input.root) {
                     const candidate = current;
-                    if (applicableRules.some((rule) => rule.matchesElement(candidate))) {
+                    if (
+                        !seen.has(candidate)
+                        && applicableRules.some((rule) => rule.matchesElement(candidate))
+                    ) {
+                        seen.add(candidate);
                         roots.push(candidate);
                     }
                     current = current.parentElement;

@@ -144,6 +144,27 @@ describe("installContentRuntime", () => {
         expect(source.onMessage.addListener).toHaveBeenCalledTimes(1);
     });
 
+    it("restores synchronously when fallback reinjection cannot hydrate", async () => {
+        const source = messages();
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 1))
+            .mockImplementationOnce(() => new Promise<unknown>(() => undefined));
+        const first = install(source, load);
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+
+        const second = install(source, load);
+
+        expect(second).toBe(first);
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
+            type: DOCUMENT_STATUS_MESSAGE,
+            phase: DOCUMENT_PHASE.WAITING,
+        });
+    });
+
     it("suspends synchronously and remains stopped after rejected hydration", async () => {
         let reject: ((error: Error) => void) | undefined;
         const source = messages();

@@ -16,7 +16,7 @@ import {
 import type {
     DocumentTransformationParticipantFactory,
 } from "./transformation/document-transformation-participant";
-import type { DocumentDiagnosticSink } from "./transformation/process-document";
+import type { DocumentDiagnosticSink } from "./diagnostics";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -455,7 +455,8 @@ export function installContentRuntime(input: {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
         existing.loadDocumentState = input.loadDocumentState;
-        refreshPolicy(existing);
+        teardown(existing);
+        activate(existing, input.loadDocumentState);
         return existing.handle;
     }
     const participantFactory: DocumentTransformationParticipantFactory | undefined =

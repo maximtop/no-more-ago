@@ -110,6 +110,13 @@ const suspendAndRefreshDocumentPolicyMessageSchema = v.strictObject({
 });
 
 /**
+ * Schema for a document policy-refresh acknowledgement.
+ */
+const documentPolicyRefreshedResponseSchema = v.strictObject({
+    type: v.literal(DOCUMENT_POLICY_REFRESHED_MESSAGE),
+});
+
+/**
  * Schema for a command requesting document runtime status.
  */
 const documentStatusMessageSchema = v.strictObject({
@@ -264,6 +271,16 @@ export function isSuspendAndRefreshDocumentPolicyMessage(
     value: unknown,
 ): value is SuspendAndRefreshDocumentPolicyMessage {
     return v.safeParse(suspendAndRefreshDocumentPolicyMessageSchema, value).success;
+}
+
+/**
+ * Recognizes an exact document policy-refresh acknowledgement.
+ *
+ * @param value - Runtime response.
+ * @returns - Whether the value confirms a delivered policy refresh.
+ */
+export function isDocumentPolicyRefreshedResponse(value: unknown): boolean {
+    return v.safeParse(documentPolicyRefreshedResponseSchema, value).success;
 }
 
 /**

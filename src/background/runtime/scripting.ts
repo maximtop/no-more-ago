@@ -95,11 +95,11 @@ export interface ScriptingRuntime {
     updateContentScripts(scripts: RegisteredContentScriptSpec[]): Promise<void>;
 
     /**
-     * Executes a content file in every frame of a tab.
+     * Executes a content file in every frame or an explicit set of frames in a tab.
      */
     executeScript(input: {
         /**
-         * All frames in the tab are selected.
+         * Frames in the tab selected for recovery injection.
          */
         readonly target: {
             /**
@@ -111,6 +111,16 @@ export interface ScriptingRuntime {
              * Requires execution in every reachable frame.
              */
             readonly allFrames: true;
+        } | {
+            /**
+             * Tab identifier receiving the injection.
+             */
+            readonly tabId: number;
+
+            /**
+             * Exact frames whose policy message was not acknowledged.
+             */
+            readonly frameIds: number[];
         };
 
         /**

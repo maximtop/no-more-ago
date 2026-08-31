@@ -22,7 +22,10 @@ import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
-import type { PopupState } from "../shared/messaging/view-state-schemas";
+import {
+    createUnavailablePopupState,
+    type PopupState,
+} from "../shared/messaging/view-state-schemas";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,
@@ -178,15 +181,7 @@ export function PopupApp({
             if (!mounted) {
                 return;
             }
-            setState({
-                availability: STATE_AVAILABILITY.UNAVAILABLE,
-                revision: null,
-                globalEnabled: null,
-                hostname: null,
-                siteEnabled: null,
-                status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-            });
+            setState(createUnavailablePopupState());
             setLoading(false);
         }, POPUP_STATE_LOAD_TIMEOUT_MS);
         void client
@@ -204,15 +199,7 @@ export function PopupApp({
                     return;
                 }
                 globalThis.clearTimeout(loadTimeout);
-                setState({
-                    availability: STATE_AVAILABILITY.UNAVAILABLE,
-                    revision: null,
-                    globalEnabled: null,
-                    hostname: null,
-                    siteEnabled: null,
-                    status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                });
+                setState(createUnavailablePopupState());
                 setLoading(false);
             });
         return () => {

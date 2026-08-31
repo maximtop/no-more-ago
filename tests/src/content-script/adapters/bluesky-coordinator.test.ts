@@ -453,6 +453,53 @@ describe("Bluesky coordinator", () => {
         expect(appView.profileCalls).toHaveLength(2);
     });
 
+    it("skips a detached later batch before requesting a newly connected identity", async () => {
+        installTargets(BLUESKY_BATCH_LIMIT + 1);
+        const firstProfiles = createDeferred<ProfileResult>();
+        let profileInvocation = 0;
+        const appView = new FakeAppView(async (actors) => {
+            profileInvocation += 1;
+            return profileInvocation === 1
+                ? firstProfiles.promise
+                : resolveProfiles(actors);
+        });
+        const coordinator = createBlueskyCoordinator({
+            document,
+            url: new URL("https://bsky.app/"),
+            appView,
+            getDiagnosticSink: () => undefined,
+            onSourcesChanged: () => undefined,
+        });
+        coordinator.start();
+        coordinator.inspect(document);
+        await vi.waitFor(() => {
+            expect(appView.profileCalls).toHaveLength(1);
+        });
+
+        const staleId = `source-${String(BLUESKY_BATCH_LIMIT).padStart(2, "0")}`;
+        const stale = document.getElementById(staleId)?.closest("article");
+        if (!stale) {
+            throw new Error("Expected later-batch source");
+        }
+        stale.remove();
+        coordinator.release(stale);
+        const fresh = document.createElement("article");
+        fresh.innerHTML = `<a href="/profile/fresh.example/post/3fresh"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>4h</a>`;
+        document.body.append(fresh);
+        coordinator.inspect(fresh);
+        firstProfiles.resolve(resolveProfiles(appView.profileCalls[0] ?? []));
+
+        await vi.waitFor(() => {
+            expect(appView.profileCalls.flat()).toContain("fresh.example");
+        });
+        expect(appView.profileCalls.flat()).not.toContain(
+            `actor-${String(BLUESKY_BATCH_LIMIT).padStart(2, "0")}.example`,
+        );
+        expect(appView.profileCalls).toHaveLength(2);
+    });
+
     it("revalidates identity and target before publishing an in-flight result", async () => {
         installTargets(1);
         const postResult = createDeferred<PostResult>();
@@ -479,7 +526,7 @@ describe("Bluesky coordinator", () => {
             throw new Error("Expected pending descriptor");
         }
         const oldTarget = descriptor.target;
-        const replacement = document.createTextNode("new relative value");
+        const replacement = document.createTextNode("4h");
         oldTarget.replaceWith(replacement);
         coordinator.inspectSources([descriptor.source]);
         postResult.resolve(resolvePosts(appView.postCalls[0] ?? []));

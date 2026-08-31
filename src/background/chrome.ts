@@ -23,8 +23,8 @@ import {
     backgroundMessageSchema,
 } from "../shared/messaging/contracts";
 import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
+import { createUnavailablePopupState } from "../shared/messaging/view-state-schemas";
 import {
-    POPUP_STATUS,
     SETTINGS_STATE_FAILURE,
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
@@ -231,17 +231,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         if (request.type === GET_POPUP_STATE_MESSAGE) {
             void application
                 .getPopupState()
-                .then(sendOnce, () =>
-                    sendOnce({
-                        availability: STATE_AVAILABILITY.UNAVAILABLE,
-                        revision: null,
-                        globalEnabled: null,
-                        hostname: null,
-                        siteEnabled: null,
-                        status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                    }),
-                );
+                .then(sendOnce, () => sendOnce(createUnavailablePopupState()));
             return true;
         }
         if (request.type === GET_DOCUMENT_STATE_MESSAGE) {
@@ -324,15 +314,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                     sendOnce({
                         ok: false,
                         error: "settings-unavailable",
-                        state: {
-                            availability: STATE_AVAILABILITY.UNAVAILABLE,
-                            revision: null,
-                            globalEnabled: null,
-                            hostname: null,
-                            siteEnabled: null,
-                            status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                        },
+                        state: createUnavailablePopupState(),
                     }),
                 );
             return true;
@@ -379,15 +361,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         surface: request.surface,
                         state:
                             request.surface === SITE_SETTINGS_SURFACE.POPUP
-                                ? {
-                                    availability: STATE_AVAILABILITY.UNAVAILABLE,
-                                    revision: null,
-                                    globalEnabled: null,
-                                    hostname: null,
-                                    siteEnabled: null,
-                                    status: POPUP_STATUS.SETTINGS_UNAVAILABLE,
-                                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                                }
+                                ? createUnavailablePopupState()
                                 : {
                                     availability: STATE_AVAILABILITY.UNAVAILABLE,
                                     revision: null,

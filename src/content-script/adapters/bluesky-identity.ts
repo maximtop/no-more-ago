@@ -9,7 +9,17 @@ const RECORD_KEY_MAX_LENGTH = 512;
 const HANDLE_LABEL_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/u;
 const DID_PATTERN = /^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/u;
 const RECORD_KEY_PATTERN = /^[A-Za-z0-9._~:-]+$/u;
-const POST_URI_PATTERN = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/u;
+
+/**
+ * AT Protocol collection containing Bluesky post records.
+ */
+export const BLUESKY_POST_COLLECTION = "app.bsky.feed.post" as const;
+
+const ESCAPED_POST_COLLECTION = BLUESKY_POST_COLLECTION.replaceAll(".", "\\.");
+const POST_URI_PATTERN = new RegExp(
+    `^at://([^/]+)/${ESCAPED_POST_COLLECTION}/([^/]+)$`,
+    "u",
+);
 
 /**
  * Normalizes a valid DNS-style Bluesky handle.
@@ -62,6 +72,17 @@ export function normalizeBlueskyActor(value: string): string | null {
  */
 export function isValidBlueskyRecordKey(value: string): boolean {
     return value.length <= RECORD_KEY_MAX_LENGTH && RECORD_KEY_PATTERN.test(value);
+}
+
+/**
+ * Builds one canonical AT URI from a validated DID and post record key.
+ *
+ * @param did - Valid Bluesky DID.
+ * @param recordKey - Valid post record key.
+ * @returns - Canonical public Bluesky post URI.
+ */
+export function createBlueskyPostUri(did: string, recordKey: string): string {
+    return `at://${did}/${BLUESKY_POST_COLLECTION}/${recordKey}`;
 }
 
 /**

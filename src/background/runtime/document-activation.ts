@@ -10,6 +10,7 @@ import {
     REFRESH_DOCUMENT_POLICY_MESSAGE,
     SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
     TEARDOWN_DOCUMENT_MESSAGE,
+    isDocumentPolicyRefreshedResponse,
 } from "../../shared/messaging/document-messages";
 import type { RuntimeTab, TabsRuntime } from "./tabs";
 import type {
@@ -369,7 +370,7 @@ async function httpTabs(
 }
 
 /**
- * Broadcasts policy, then ensures the content runtime in all frames.
+ * Refreshes each reachable frame and injects only where no runtime acknowledged the command.
  *
  * @param tab - Target tab.
  * @param hostname - Canonical top-level hostname for the target tab.
@@ -389,17 +390,43 @@ async function refresh(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    await settleWithin(() => tabs.sendMessage(tab.id, {
+    const message = {
         type: enabled
             ? REFRESH_DOCUMENT_POLICY_MESSAGE
             : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
-    }), TAB_OPERATION_TIMEOUT_MS);
-    // Re-execution refreshes an existing singleton when the broadcast misses or times out.
-    const ensured = await settleWithin(() => scripting.executeScript({
-        target: { tabId: tab.id, allFrames: true },
-        files: [CONTENT_SCRIPT_FILE],
-    }), TAB_OPERATION_TIMEOUT_MS);
-    const ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
+    } as const;
+    const foundFrames = await settleWithin(
+        () => tabs.getAllFrames(tab.id),
+        TAB_OPERATION_TIMEOUT_MS,
+    );
+    let target: Parameters<ScriptingRuntime["executeScript"]>[0]["target"] | undefined;
+    if (!foundFrames.ok || foundFrames.value.length === 0) {
+        target = { tabId: tab.id, allFrames: true };
+    } else {
+        const deliveries = await Promise.all(foundFrames.value.map(async ({ frameId }) => {
+            const delivered = await settleWithin(
+                () => tabs.sendMessage(tab.id, message, { frameId }),
+                TAB_OPERATION_TIMEOUT_MS,
+            );
+            return delivered.ok && isDocumentPolicyRefreshedResponse(delivered.value)
+                ? null
+                : frameId;
+        }));
+        const missingFrameIds = deliveries.filter((frameId): frameId is number => {
+            return frameId !== null;
+        });
+        if (missingFrameIds.length > 0) {
+            target = { tabId: tab.id, frameIds: missingFrameIds };
+        }
+    }
+    let ok = true;
+    if (target) {
+        const ensured = await settleWithin(() => scripting.executeScript({
+            target,
+            files: [CONTENT_SCRIPT_FILE],
+        }), TAB_OPERATION_TIMEOUT_MS);
+        ok = ensured.ok && Array.isArray(ensured.value) && ensured.value.length > 0;
+    }
     if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,

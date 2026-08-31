@@ -7,6 +7,7 @@ import {
     isValidBlueskyRecordKey,
     normalizeBlueskyActor,
 } from "./bluesky-identity";
+import { discoverElements } from "./discover-elements";
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -22,6 +23,7 @@ const POST_METADATA_SELECTOR = "a[href][aria-label][data-tooltip]" as const;
 const QUOTE_METADATA_SELECTOR =
     "[aria-label][data-tooltip]:not(a):not(button):not(input)" as const;
 const FINGERPRINT_SEPARATOR = "\u0000" as const;
+const COMPACT_RELATIVE_LABEL_PATTERN = /^(?:now|\d+\s*(?:s|m|h|d|w|mo|y))$/iu;
 
 /**
  * Stable identifier for the Bluesky source rule.
@@ -153,25 +155,25 @@ function hasControlOrSlash(value: string): boolean {
 }
 
 /**
- * Parses an exact public Bluesky post permalink without inspecting visible text.
+ * Parses one supplied href as an exact public Bluesky post permalink.
  *
- * @param element - Potential permalink element.
+ * @param element - Anchor that owns the href and supplies its base URL.
+ * @param href - Current or mutation-record href value.
  * @returns - Validated public post identity, or null for every unsupported shape.
  */
-export function parseBlueskyPostPermalink(element: Element): BlueskyPostIdentity | null {
+function parseBlueskyPostHref(
+    element: Element,
+    href: string | null,
+): BlueskyPostIdentity | null {
     if (
         element.namespaceURI !== HTML_NAMESPACE
         || element.localName !== "a"
-        || !element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF)
+        || href === null
     ) {
         return null;
     }
     let url: URL;
     try {
-        const href = element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF);
-        if (href === null) {
-            return null;
-        }
         url = new URL(href, element.ownerDocument.baseURI);
     } catch {
         return null;
@@ -214,47 +216,16 @@ export function parseBlueskyPostPermalink(element: Element): BlueskyPostIdentity
 }
 
 /**
- * Finds quote labels whose association depends on one outer post permalink.
+ * Parses an exact public Bluesky post permalink without inspecting visible text.
  *
- * @param source - Current or formerly eligible outer permalink.
- * @returns - Quote sources from the smallest unambiguous enclosing card.
+ * @param element - Potential permalink element.
+ * @returns - Validated public post identity, or null for every unsupported shape.
  */
-function findDependentQuoteSources(source: Element): readonly Element[] {
-    let current = source.parentElement;
-    while (current && current.localName !== "body" && current.localName !== "html") {
-        const postSources = new Set(discoverMatchingElements(current, POST_METADATA_SELECTOR));
-        postSources.add(source);
-        if (postSources.size > 1) {
-            return [];
-        }
-        const quotes = discoverMatchingElements(current, QUOTE_METADATA_SELECTOR)
-            .filter((candidate) => findPresentationTarget(candidate) !== null);
-        if (quotes.length > 0) {
-            return quotes;
-        }
-        current = current.parentElement;
-    }
-    return [];
-}
-
-/**
- * Returns all matching HTML elements in a bounded root, including that root.
- *
- * @param root - Bounded document region to inspect.
- * @param selector - Selector representing one confirmed Bluesky shape.
- * @returns - Matching HTML elements in document order.
- */
-function discoverMatchingElements(root: ParentNode, selector: string): readonly Element[] {
-    const matches: Element[] = [];
-    if (root instanceof Element && root.matches(selector)) {
-        matches.push(root);
-    }
-    for (const element of root.querySelectorAll(selector)) {
-        if (element.namespaceURI === HTML_NAMESPACE) {
-            matches.push(element);
-        }
-    }
-    return matches;
+export function parseBlueskyPostPermalink(element: Element): BlueskyPostIdentity | null {
+    return parseBlueskyPostHref(
+        element,
+        element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF),
+    );
 }
 
 /**
@@ -279,6 +250,31 @@ function findPresentationTarget(source: Element): Text | null {
 }
 
 /**
+ * Confirms that a page-owned label is still one of Bluesky's compact relative forms.
+ *
+ * The label is used only for eligibility; AppView remains the sole timestamp source.
+ *
+ * @param target - Unambiguous direct text node selected for presentation.
+ * @returns - Whether the label is relative rather than an already exact calendar date.
+ */
+function isCompactRelativePresentation(target: Text): boolean {
+    return COMPACT_RELATIVE_LABEL_PATTERN.test(target.data.trim());
+}
+
+/**
+ * Discovers HTML elements matching one Bluesky metadata selector at and below a root.
+ *
+ * @param root - Bounded region to inspect.
+ * @param selector - Confirmed Bluesky metadata selector.
+ * @returns - Matching HTML elements in root-first document order.
+ */
+function discoverMetadataElements(root: ParentNode, selector: string): readonly Element[] {
+    return discoverElements(root, selector, (element) => {
+        return element.namespaceURI === HTML_NAMESPACE && element.matches(selector);
+    });
+}
+
+/**
  * Creates a structural fingerprint that excludes localized presentation values.
  *
  * @param role - Outer-post or quote role.
@@ -293,22 +289,68 @@ function createFingerprint(
 }
 
 /**
+ * Options used only while reconciling an already tracked source or mutation record.
+ */
+interface PostDescriptionOptions {
+    /**
+     * Accepts the extension-rendered exact label retained by a tracked source.
+     */
+    readonly allowExactLabel?: boolean;
+
+    /**
+     * Accepts a formerly tracked source after Bluesky removed metadata attributes.
+     */
+    readonly allowMissingMetadata?: boolean;
+
+    /**
+     * Uses a mutation record's previous href instead of the current attribute.
+     */
+    readonly href?: string | null;
+}
+
+/**
+ * One unambiguous outer-post and quote association inside the smallest enclosing card.
+ */
+interface BlueskyCardAssociation {
+    /**
+     * Outer post descriptor supplying the AppView identity.
+     */
+    readonly outer: BlueskyRelativeTarget;
+
+    /**
+     * Single supported one-level quote label.
+     */
+    readonly quote: Element;
+}
+
+/**
  * Describes a confirmed ordinary relative metadata permalink.
  *
  * @param source - Potential Bluesky timestamp source.
+ * @param options - Reconciliation-only allowances for retained or previous source state.
  * @returns - Current descriptor, or null when its structure is not eligible.
  */
-function describePostTarget(source: Element): BlueskyRelativeTarget | null {
-    if (
-        !source.matches(POST_METADATA_SELECTOR)
-        || !source.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL)
-        || !source.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP)
-    ) {
+function describePostTarget(
+    source: Element,
+    options: PostDescriptionOptions = {},
+): BlueskyRelativeTarget | null {
+    const hasMetadata = source.namespaceURI === HTML_NAMESPACE
+        && source.localName === "a"
+        && source.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL)
+        && source.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP);
+    if (!hasMetadata && !options.allowMissingMetadata) {
         return null;
     }
-    const outerIdentity = parseBlueskyPostPermalink(source);
+    const href = options.href === undefined
+        ? source.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF)
+        : options.href;
+    const outerIdentity = parseBlueskyPostHref(source, href);
     const target = findPresentationTarget(source);
-    if (!outerIdentity || !target) {
+    if (
+        !outerIdentity
+        || !target
+        || (!options.allowExactLabel && !isCompactRelativePresentation(target))
+    ) {
         return null;
     }
     return {
@@ -321,21 +363,62 @@ function describePostTarget(source: Element): BlueskyRelativeTarget | null {
 }
 
 /**
- * Finds an unambiguous outer post descriptor for one plain quote label.
+ * Selects one eligible quote presentation target.
  *
- * @param source - Potential quote timestamp label.
- * @returns - Associated outer post descriptor, or null when ambiguous.
+ * @param source - Potential non-anchor quote label.
+ * @param allowExactLabel - Whether an already tracked rendered label remains eligible.
+ * @returns - Existing page-owned label target, or null.
  */
-function findQuoteOuterTarget(source: Element): BlueskyRelativeTarget | null {
+function describeQuotePresentation(source: Element, allowExactLabel: boolean): Text | null {
+    if (!source.matches(QUOTE_METADATA_SELECTOR)) {
+        return null;
+    }
+    const target = findPresentationTarget(source);
+    return target && (allowExactLabel || isCompactRelativePresentation(target))
+        ? target
+        : null;
+}
+
+/**
+ * Finds the smallest unambiguous card shared by one outer post and one quote.
+ *
+ * @param source - Outer or quote source whose association is required.
+ * @param allowExactLabels - Whether tracked rendered labels remain structurally eligible.
+ * @param outerOverride - Previous or formerly tracked outer descriptor for mutation recovery.
+ * @returns - Shared card association, or null when the card is absent or ambiguous.
+ */
+function findCardAssociation(
+    source: Element,
+    allowExactLabels: boolean,
+    outerOverride?: BlueskyRelativeTarget,
+): BlueskyCardAssociation | null {
     let card = source.parentElement;
     while (card && card.localName !== "body" && card.localName !== "html") {
-        const quoteSources = discoverMatchingElements(card, QUOTE_METADATA_SELECTOR)
-            .filter((candidate) => findPresentationTarget(candidate) !== null);
-        const postTargets = discoverMatchingElements(card, POST_METADATA_SELECTOR)
-            .map(describePostTarget)
+        const quoteSources = discoverMetadataElements(card, QUOTE_METADATA_SELECTOR)
+            .filter((candidate) => describeQuotePresentation(candidate, allowExactLabels));
+        const postTargets = discoverMetadataElements(card, POST_METADATA_SELECTOR)
+            .map((candidate) => describePostTarget(candidate, {
+                allowExactLabel: allowExactLabels,
+            }))
             .filter((target): target is BlueskyRelativeTarget => target !== null);
-        if (quoteSources.length === 1 && quoteSources[0] === source && postTargets.length === 1) {
-            return postTargets[0] ?? null;
+        if (outerOverride && card.contains(outerOverride.source)) {
+            const currentIndex = postTargets.findIndex(
+                ({ source: candidate }) => candidate === outerOverride.source,
+            );
+            if (currentIndex >= 0) {
+                postTargets[currentIndex] = outerOverride;
+            } else {
+                postTargets.push(outerOverride);
+            }
+        }
+        const outer = postTargets.length === 1 ? postTargets[0] : undefined;
+        const quote = quoteSources.length === 1 ? quoteSources[0] : undefined;
+        if (
+            outer
+            && quote
+            && (source === outer.source || source === quote)
+        ) {
+            return { outer, quote };
         }
         card = card.parentElement;
     }
@@ -346,42 +429,50 @@ function findQuoteOuterTarget(source: Element): BlueskyRelativeTarget | null {
  * Describes one current Bluesky relative timestamp source without using the network.
  *
  * @param source - Potential outer-post or quote metadata source.
+ * @param allowExactLabel - Whether an already tracked rendered label remains eligible.
  * @returns - Current structural descriptor, or null when unsupported or ambiguous.
  */
-export function describeBlueskySource(source: Element): BlueskyRelativeTarget | null {
-    const post = describePostTarget(source);
+export function describeBlueskySource(
+    source: Element,
+    allowExactLabel = false,
+): BlueskyRelativeTarget | null {
+    const post = describePostTarget(source, { allowExactLabel });
     if (post) {
         return post;
     }
-    if (!source.matches(QUOTE_METADATA_SELECTOR)) {
-        return null;
-    }
-    const target = findPresentationTarget(source);
-    const outer = target ? findQuoteOuterTarget(source) : null;
-    if (!target || !outer) {
+    const target = describeQuotePresentation(source, allowExactLabel);
+    const association = target
+        ? findCardAssociation(source, allowExactLabel)
+        : null;
+    if (!target || !association) {
         return null;
     }
     return {
         source,
         target,
         role: BLUESKY_TARGET_ROLE.QUOTE,
-        outerIdentity: outer.outerIdentity,
-        fingerprint: createFingerprint(BLUESKY_TARGET_ROLE.QUOTE, outer.outerIdentity),
+        outerIdentity: association.outer.outerIdentity,
+        fingerprint: createFingerprint(
+            BLUESKY_TARGET_ROLE.QUOTE,
+            association.outer.outerIdentity,
+        ),
     };
 }
 
 /**
- * Discovers currently supported outer-post and one-level quote targets.
+ * Discovers supported targets while optionally retaining exact labels already owned by a rule.
  *
  * @param root - Bounded document region to inspect.
- * @returns - Unambiguous Bluesky relative timestamp descriptors in document order.
+ * @param allowsExactLabel - Predicate for known tracked sources.
+ * @returns - Unambiguous Bluesky target descriptors in document order.
  */
-export function discoverBlueskyRelativeTargets(
+function discoverTargets(
     root: ParentNode,
+    allowsExactLabel: (source: Element) => boolean,
 ): readonly BlueskyRelativeTarget[] {
     const sources = [
-        ...discoverMatchingElements(root, POST_METADATA_SELECTOR),
-        ...discoverMatchingElements(root, QUOTE_METADATA_SELECTOR),
+        ...discoverMetadataElements(root, POST_METADATA_SELECTOR),
+        ...discoverMetadataElements(root, QUOTE_METADATA_SELECTOR),
     ];
     const seen = new Set<Element>();
     const targets: BlueskyRelativeTarget[] = [];
@@ -390,7 +481,7 @@ export function discoverBlueskyRelativeTargets(
             continue;
         }
         seen.add(source);
-        const target = describeBlueskySource(source);
+        const target = describeBlueskySource(source, allowsExactLabel(source));
         if (target) {
             targets.push(target);
         }
@@ -402,66 +493,107 @@ export function discoverBlueskyRelativeTargets(
 }
 
 /**
+ * Discovers currently supported outer-post and one-level quote targets.
+ *
+ * @param root - Bounded document region to inspect.
+ * @returns - Unambiguous Bluesky relative timestamp descriptors in document order.
+ */
+export function discoverBlueskyRelativeTargets(
+    root: ParentNode,
+): readonly BlueskyRelativeTarget[] {
+    return discoverTargets(root, () => false);
+}
+
+/**
  * Maps one declared mutation to currently affected Bluesky source elements.
  *
  * @param element - Element whose attribute changed.
  * @param attributeName - Declared adapter attribute that changed.
  * @param oldValue - Previous attribute value retained for the source-rule contract.
+ * @param wasTracked - Whether the element was rendered before this observer batch.
  * @returns - Exact current sources that require reconciliation.
  */
 function getMutationSources(
     element: Element,
     attributeName: TimestampSourceAttribute,
     oldValue: string | null,
+    wasTracked = false,
 ): readonly Element[] {
     const sources = new Set<Element>();
-    if (describeBlueskySource(element)) {
+    const current = describeBlueskySource(element, wasTracked);
+    if (current) {
         sources.add(element);
     }
-    const wasDirectSource = oldValue !== null
-        && element.namespaceURI === HTML_NAMESPACE
-        && (
-            (
-                attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
-                && element.localName === "a"
-            )
-            || (
-                (
-                    attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL
-                    || attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP
-                )
-                && (
-                    element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF)
-                    || element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL)
-                    || element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP)
-                )
-            )
-        );
-    if (wasDirectSource) {
+    if (wasTracked) {
         sources.add(element);
     }
-    if (
-        element.localName === "a"
-        && (
-            element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF)
-            || (
-                attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
-                && oldValue !== null
-            )
-        )
+    if (element.namespaceURI !== HTML_NAMESPACE || element.localName !== "a") {
+        return [...sources];
+    }
+    const hasMetadata = element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL)
+        && element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP);
+    const currentOuter = current?.role === BLUESKY_TARGET_ROLE.POST
+        ? current
+        : describePostTarget(element, {
+            allowExactLabel: wasTracked,
+            allowMissingMetadata: wasTracked,
+        });
+    const previousOuter = attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
+        && oldValue !== null
+        && (wasTracked || hasMetadata)
+        ? describePostTarget(element, {
+            allowExactLabel: true,
+            allowMissingMetadata: wasTracked,
+            href: oldValue,
+        })
+        : null;
+    const outer = currentOuter ?? previousOuter;
+    if (!outer) {
+        return [...sources];
+    }
+    sources.add(element);
+    const association = findCardAssociation(element, true, outer);
+    if (association) {
+        sources.add(association.quote);
+    }
+    return [...sources];
+}
+
+/**
+ * Maps one changed child list to exact Bluesky sources in its smallest enclosing card.
+ *
+ * @param element - Connected container whose children changed.
+ * @returns - Current or formerly associated sources that require re-evaluation.
+ */
+function getChildListMutationSources(element: Element): readonly Element[] {
+    const sources = new Set<Element>();
+    let current: Element | null = element;
+    while (
+        current
+        && current.localName !== "main"
+        && current.localName !== "body"
+        && current.localName !== "html"
     ) {
-        for (const quote of findDependentQuoteSources(element)) {
-            sources.add(quote);
-        }
-    }
-    const anchor = element.closest(POST_METADATA_SELECTOR);
-    if (anchor && describeBlueskySource(anchor)) {
-        sources.add(anchor);
-    }
-    let current = element.parentElement;
-    while (current && current.localName !== "body" && current.localName !== "html") {
-        for (const target of discoverBlueskyRelativeTargets(current)) {
-            sources.add(target.source);
+        const candidates = [
+            ...discoverMetadataElements(current, POST_METADATA_SELECTOR),
+            ...discoverMetadataElements(current, QUOTE_METADATA_SELECTOR),
+        ];
+        for (const source of new Set(candidates)) {
+            const descriptor = describeBlueskySource(source, true);
+            if (descriptor) {
+                sources.add(source);
+                const association = findCardAssociation(
+                    source,
+                    true,
+                    descriptor.role === BLUESKY_TARGET_ROLE.POST ? descriptor : undefined,
+                );
+                if (association) {
+                    sources.add(association.outer.source);
+                    sources.add(association.quote);
+                }
+            } else if (findPresentationTarget(source)) {
+                sources.add(source);
+            }
         }
         if (sources.size > 0) {
             break;
@@ -484,8 +616,8 @@ export function createBlueskyAdapter(
         source: Element,
     ): { readonly descriptor: BlueskyRelativeTarget; readonly resolution: ResolvedBlueskyTarget }
         | null => {
-        const descriptor = describeBlueskySource(source);
         const resolution = readResolution(source);
+        const descriptor = describeBlueskySource(source, resolution !== undefined);
         return descriptor
             && resolution
             && descriptor.target === resolution.target
@@ -501,9 +633,15 @@ export function createBlueskyAdapter(
             TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP,
         ],
         getMutationSources,
+        getChildListMutationSources,
         matches: matchesBlueskyUrl,
-        matchesElement: (element) => describeBlueskySource(element) !== null,
-        discover: (root) => discoverBlueskyRelativeTargets(root)
+        matchesElement: (element) => describeBlueskySource(
+            element,
+            readResolution(element) !== undefined,
+        ) !== null,
+        discover: (root) => discoverTargets(root, (source) => {
+            return readResolution(source) !== undefined;
+        })
             .filter(({ source }) => readCurrentResolution(source) !== null)
             .map(({ source }) => source),
         extract: (element) => {

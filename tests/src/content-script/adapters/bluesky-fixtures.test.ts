@@ -409,7 +409,63 @@ describe("Bluesky fixture surfaces", () => {
         controller.teardown();
     });
 
-    it.each(["blocked", "missing", "malformed", "ambiguous"])(
+    it("reassociates a quote when Bluesky replaces the outer permalink element", async () => {
+        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+        const outer = document.getElementById("quoted-outer-time");
+        const oldOuterTarget = outer?.lastChild;
+        const quoteTarget = document.getElementById("quoted-inner-time")?.lastChild;
+        if (!outer || !(oldOuterTarget instanceof Text) || !(quoteTarget instanceof Text)) {
+            throw new Error("Expected quoted-post labels");
+        }
+        const appView = new FixtureAppView();
+        const controller = createController(appView);
+        controller.start();
+        await vi.waitFor(() => {
+            expect(oldOuterTarget.data).toBe("2026-08-31 10:09");
+            expect(quoteTarget.data).toBe("2026-08-30 09:00");
+        });
+
+        const replacement = outer.cloneNode(true) as Element;
+        replacement.setAttribute("href", "/profile/alice.example/post/3quotedreplacement");
+        const replacementTarget = replacement.lastChild;
+        if (!(replacementTarget instanceof Text)) {
+            throw new Error("Expected replacement outer label");
+        }
+        replacementTarget.data = "3h";
+        outer.replaceWith(replacement);
+
+        await vi.waitFor(() => {
+            expect(replacementTarget.data).toBe("2026-08-31 12:30");
+            expect(quoteTarget.data).toBe("2026-08-29 08:00");
+        });
+        expect(oldOuterTarget.data).toBe("3h");
+        expect(appView.postCalls).toHaveLength(2);
+        controller.teardown();
+    });
+
+    it("restores a label when Bluesky removes both metadata attributes in one batch", async () => {
+        document.body.innerHTML = fixtures.get("profile.html") ?? "";
+        const source = document.getElementById("profile-time");
+        const target = source?.lastChild;
+        if (!source || !(target instanceof Text)) {
+            throw new Error("Expected profile fixture label");
+        }
+        const controller = createController(new FixtureAppView());
+        controller.start();
+        await vi.waitFor(() => {
+            expect(target.data).toBe("2026-08-31 10:03");
+        });
+
+        source.removeAttribute("aria-label");
+        source.removeAttribute("data-tooltip");
+
+        await vi.waitFor(() => {
+            expect(target.data).toBe("1d");
+        });
+        controller.teardown();
+    });
+
+    it.each(["unavailable", "ambiguous"])(
         "changes only the outer label for an unavailable %s quote",
         async (variant) => {
             document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
@@ -477,7 +533,7 @@ describe("Bluesky fixture surfaces", () => {
                 throw new Error("Expected pending source");
             }
             source.setAttribute("href", "/profile/second.example/post/3second");
-            const replacementTarget = document.createTextNode("page replacement");
+            const replacementTarget = document.createTextNode("4h");
             oldTarget.replaceWith(replacementTarget);
             document.getElementById("second")?.append(article);
             profileWork[0]?.resolve({
@@ -535,7 +591,7 @@ describe("Bluesky fixture surfaces", () => {
 
             expect(article.isConnected).toBe(false);
             expect(source.isConnected).toBe(false);
-            expect(replacementTarget.data).toBe("page replacement");
+            expect(replacementTarget.data).toBe("4h");
             expect(oldTarget.data).toBe("2h");
             expect(document.getElementById("pending-source")).toBeNull();
             controller.teardown();
@@ -613,13 +669,13 @@ describe("Bluesky fixture surfaces", () => {
                 expect(target.data).toBe("2026-08-31 10:03");
             });
 
-            target.data = "page refreshed relative";
+            target.data = "4h";
             await vi.waitFor(() => {
                 expect(target.data).toBe("2026-08-31 10:03");
             });
             source.removeAttribute("aria-label");
             await vi.waitFor(() => {
-                expect(target.data).toBe("page refreshed relative");
+                expect(target.data).toBe("4h");
             });
             source.setAttribute("aria-label", "new localized presentation");
             await vi.waitFor(() => {
@@ -628,7 +684,7 @@ describe("Bluesky fixture surfaces", () => {
             expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(0);
 
             controller.teardown();
-            expect(target.data).toBe("page refreshed relative");
+            expect(target.data).toBe("4h");
             controller.start();
             await vi.waitFor(() => {
                 expect(target.data).toBe("2026-08-31 10:03");
@@ -636,7 +692,7 @@ describe("Bluesky fixture surfaces", () => {
             expect(appView.profileCalls).toHaveLength(3);
             expect(appView.postCalls).toHaveLength(3);
             controller.teardown();
-            expect(target.data).toBe("page refreshed relative");
+            expect(target.data).toBe("4h");
         },
     );
 
