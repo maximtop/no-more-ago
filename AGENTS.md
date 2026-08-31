@@ -23,14 +23,17 @@
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
 HTML and trusted specialized timestamps with exact, localized values. It ships
 a generic instant-only `time[datetime]` source for HTTP(S) documents,
-specialized sources for GitHub, Hacker News, supported Stack Exchange Q&A
-sites, Telegram Web K, TikTok, and best-effort LinkedIn timestamps, plus a
+specialized sources for Facebook, GitHub, Hacker News, supported Stack Exchange
+Q&A sites, Telegram Web K, TikTok, and best-effort LinkedIn timestamps, plus a
 best-effort canonical YouTube watch publication source for calendar dates or
-explicitly zoned instants. Instagram uses a site-specific presentation rule for
-its standard timestamps. TikTok direct pages use in-place presentation and
-profile grids use appended generated-time presentation. Public
-`https://t.me/s/*` pages use the generic source. Extraction remains separate
-from shared semantic validation, presentation, and rendering.
+explicitly zoned instants. Facebook uses a narrowly scoped main-world payload
+bridge for selected Story-bearing GraphQL responses. The bridge is inert by
+default, follows the shared content-runtime activity lifecycle, and transfers
+only bounded tracking-token and Unix-seconds records. Instagram uses a
+site-specific presentation rule for its standard timestamps. TikTok direct
+pages use in-place presentation and profile grids use appended generated-time
+presentation. Public `https://t.me/s/*` pages use the generic source. Extraction
+remains separate from shared semantic validation, presentation, and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -58,10 +61,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, TikTok, and
-  best-effort LinkedIn and canonical desktop YouTube watch-page publication
-  sources, plus an Instagram in-place presentation rule for standard
-  timestamps.
+  contains Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K,
+  TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
+  publication sources, plus an Instagram in-place presentation rule for
+  standard timestamps.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -83,6 +86,7 @@ has an obvious, simpler standard-library replacement.
 │   │   └── settings/           # Settings persistence
 │   ├── content-script/         # Page-side timestamp processing
 │   │   ├── adapters/           # Generic and specialized site sources
+│   │   ├── facebook/           # Story payload parser, bridge, and record store
 │   │   └── transformation/     # Resolve, format, render, and restore
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
@@ -154,6 +158,10 @@ unpacked or temporary extension when manual browser verification is needed.
   `allFrames` enabled. Global policy controls registration; the top-level
   hostname controls processing for every reachable frame in its tab. Hydrate
   reachable frames on startup and policy refresh without duplicating runtimes.
+- Register the Facebook `MAIN`-world bridge at `document_start` in every
+  matching Facebook frame, but keep it inert until the isolated runtime signals
+  activity. For already-open tabs, inject it only into enumerated Facebook
+  frame IDs. Disable must stop inspection and clear temporary associations.
 - Keep site knowledge in adapters. Shared timestamp validation, formatting,
   restoration, settings, and diagnostics must remain site-agnostic.
 - Keep the content script lightweight. Process matching mutations
@@ -212,6 +220,9 @@ unpacked or temporary extension when manual browser verification is needed.
   or page mutation.
 - Keep async browser operations explicit and handle unavailable tabs, pages,
   storage, and workers without leaving partially applied UI state.
+- Bound browser operations that gate background initialization or UI queries.
+  A pending operation for one stale or discarded tab must become a contained
+  runtime failure and must not block popup or settings availability.
 - Restore original page text immediately when global or per-domain processing
   is disabled, and reprocess the current document when it is enabled.
 - Keep settings schema versions and forward migrations explicit. Before store
@@ -417,6 +428,8 @@ Known architectural exclusions to improve when their area changes:
   logic. Keep TikTok URL, selector, hydration, and ID-decoding knowledge in
   `src/content-script/adapters/tiktok*.ts`. Public `t.me/s/*` support remains on
   the generic standard timestamp source.
+- Keep Facebook DOM recognition in its adapter and its main/isolated payload
+  lifecycle under `src/content-script/facebook`.
 - Keep YouTube route matching, selectors, loaded publication properties, and
   metadata provenance inside the YouTube contract and adapter. Treat its
   current watch markup as a best-effort source, not a compatibility promise.

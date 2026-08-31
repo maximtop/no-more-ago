@@ -11,6 +11,8 @@ import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
 } from "../../../src/content-script/ownership-markers";
+import { DocumentTransformationController } from
+    "../../../src/content-script/transformation/document-transformation-controller";
 import {
     DOCUMENT_PHASE,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
@@ -198,17 +200,20 @@ async function settleRuntime(): Promise<void> {
  *
  * @param source - Controllable message source.
  * @param load - Document-state loader.
+ * @param onActivityChanged - Optional controller activity observer.
  * @returns - Runtime handle.
  */
 function install(
     source: ReturnType<typeof messages>,
     load: () => Promise<unknown> = async () => state(),
+    onActivityChanged?: (active: boolean) => void,
 ) {
     return installContentRuntime({
         document,
         url: new URL("https://example.test/page"),
         locales: ["en-US"],
         loadDocumentState: load,
+        ...(onActivityChanged === undefined ? {} : { onActivityChanged }),
         messages: source,
     });
 }
@@ -333,6 +338,124 @@ describe("installContentRuntime", () => {
         expect(second).toBe(first);
         expect(load).toHaveBeenCalledTimes(2);
         expect(source.onMessage.addListener).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports active and inactive transitions around policy disable", async () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        install(source, async () => state(), activity);
+        await settleRuntime();
+
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([true]);
+        expect(source.dispatch(policy(2, false))).toEqual(policyAcknowledgement(2));
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
+    });
+
+    it("never activates the hook for a ready disabled state", async () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        install(source, async () => state(false), activity);
+        await settleRuntime();
+
+        expect(activity).not.toHaveBeenCalled();
+    });
+
+    it("reports disable and re-enable without duplicate active transitions", async () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 1))
+            .mockResolvedValueOnce(state(true, 3));
+        install(source, load, activity);
+        await settleRuntime();
+
+        expect(source.dispatch(policy(2, false))).toEqual(policyAcknowledgement(2));
+        expect(source.dispatch(policy(3, true))).toEqual(policyAcknowledgement(3));
+        await settleRuntime();
+
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([
+            true,
+            false,
+            true,
+        ]);
+    });
+
+    it("reports inactive when an enabled refresh fails closed", async () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 1))
+            .mockRejectedValueOnce(new Error("unavailable"));
+        install(source, load, activity);
+        await settleRuntime();
+
+        expect(source.dispatch(policy(2, true))).toEqual(policyAcknowledgement(2));
+        await settleRuntime();
+
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
+    });
+
+    it("synchronizes a replacement hook when an active singleton is reinjected", async () => {
+        const source = messages();
+        const firstActivity = vi.fn<(active: boolean) => void>();
+        const secondActivity = vi.fn<(active: boolean) => void>();
+        const load = vi.fn(async () => state());
+        install(source, load, firstActivity);
+        await settleRuntime();
+
+        install(source, load, secondActivity);
+
+        expect(firstActivity.mock.calls.map(([active]) => active)).toEqual([true]);
+        expect(secondActivity.mock.calls.map(([active]) => active)).toEqual([true]);
+    });
+
+    it("reports inactive after a synchronous controller startup failure", () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        vi.spyOn(DocumentTransformationController.prototype, "start")
+            .mockImplementationOnce(() => {
+                throw new Error("controller failed");
+            });
+
+        expect(() => installContentRuntime({
+            document,
+            url: new URL("https://example.test/page"),
+            locales: ["en-US"],
+            onActivityChanged: activity,
+            messages: source,
+        })).toThrow("controller failed");
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
+    });
+
+    it("contains an activity-listener failure without blocking document processing", async () => {
+        const source = messages();
+        const activity = vi.fn(() => {
+            throw new Error("site integration failed");
+        });
+        install(source, async () => state(), activity);
+        await settleRuntime();
+
+        expect(activity).toHaveBeenCalledWith(true);
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
+            type: DOCUMENT_STATUS_MESSAGE,
+            phase: DOCUMENT_PHASE.ACTIVE,
+        });
+    });
+
+    it("keeps activity stable across an enabled policy refresh", async () => {
+        const source = messages();
+        const activity = vi.fn<(active: boolean) => void>();
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 1))
+            .mockResolvedValueOnce(state(true, 2));
+        install(source, load, activity);
+        await settleRuntime();
+
+        expect(source.dispatch(policy(2, true))).toEqual(policyAcknowledgement(2));
+        await settleRuntime();
+
+        expect(activity.mock.calls.map(([active]) => active)).toEqual([true]);
     });
 
     it("disables synchronously and ignores the prior hydration", async () => {

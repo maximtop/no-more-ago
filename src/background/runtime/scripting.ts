@@ -33,6 +33,11 @@ export interface RegisteredContentScriptSpec {
      * Whether Chrome retains this dynamic registration across browser sessions.
      */
     readonly persistAcrossSessions: boolean;
+
+    /**
+     * JavaScript world where the registered files execute.
+     */
+    readonly world: "ISOLATED" | "MAIN";
 }
 
 /**
@@ -68,7 +73,47 @@ export interface RegisteredContentScriptReference {
      * Returned persistence setting when Chrome includes it.
      */
     readonly persistAcrossSessions?: boolean | undefined;
+
+    /**
+     * Returned JavaScript execution world when Chrome includes it.
+     */
+    readonly world?: string | undefined;
 }
+
+/**
+ * One-off script target covering every reachable frame in a tab.
+ */
+interface AllFramesScriptTarget {
+    /**
+     * Tab receiving the script.
+     */
+    readonly tabId: number;
+
+    /**
+     * Selects every reachable frame.
+     */
+    readonly allFrames: true;
+}
+
+/**
+ * One-off script target covering explicit reachable frames in a tab.
+ */
+interface ExplicitFramesScriptTarget {
+    /**
+     * Tab receiving the script.
+     */
+    readonly tabId: number;
+
+    /**
+     * Exact frame identifiers receiving the script.
+     */
+    readonly frameIds: number[];
+}
+
+/**
+ * Supported all-frame or explicit-frame one-off script target.
+ */
+export type ScriptInjectionTarget = AllFramesScriptTarget | ExplicitFramesScriptTarget;
 
 /**
  * Chrome Scripting API methods used to manage document registration and inject files.
@@ -99,24 +144,19 @@ export interface ScriptingRuntime {
      */
     executeScript(input: {
         /**
-         * All frames in the tab are selected.
+         * Selected tab and frame scope.
          */
-        readonly target: {
-            /**
-             * Tab identifier receiving the injection.
-             */
-            readonly tabId: number;
-
-            /**
-             * Requires execution in every reachable frame.
-             */
-            readonly allFrames: true;
-        };
+        readonly target: ScriptInjectionTarget;
 
         /**
          * Extension-relative files to execute.
          */
         readonly files: string[];
+
+        /**
+         * Optional JavaScript world override for a one-off injection.
+         */
+        readonly world?: "ISOLATED" | "MAIN";
     }): Promise<readonly InjectionResult[]>;
 
     /**

@@ -23,6 +23,7 @@ import {
     type SettingsSnapshotV5,
 } from "../../shared/settings/snapshot";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
+import { settleBrowserOperation } from "../runtime/settle";
 
 /**
  * Revisioned settings message sent to a document runtime.
@@ -111,15 +112,15 @@ export class DocumentRefresh {
         if (!snapshot.globalEnabled) {
             return [];
         }
-        let tabs: readonly RuntimeTab[];
-        try {
-            tabs = await this.tabs.query({ url: [...HTTP_MATCH_PATTERNS] });
-        } catch {
+        const matchingTabs = await settleBrowserOperation(() =>
+            this.tabs.query({ url: [...HTTP_MATCH_PATTERNS] }));
+        if (!matchingTabs.ok) {
             return [{
                 hostname: "*",
                 reason: REFRESH_FAILURE_REASON.MATCHING_TABS_QUERY,
             }];
         }
+        const tabs: readonly RuntimeTab[] = matchingTabs.value;
         const failures: DisplayRefreshFailure[] = [];
         const seen = new Set<number>();
         await Promise.all(tabs.map(async (tab) => {
@@ -132,13 +133,15 @@ export class DocumentRefresh {
                 return;
             }
             try {
-                const frames = await this.tabs.getAllFrames(tab.id);
-                if (frames.length === 0) {
+                const frames = await settleBrowserOperation(() =>
+                    this.tabs.getAllFrames(tab.id));
+                if (!frames.ok || frames.value.length === 0) {
                     throw new Error("No reachable document frames");
                 }
-                await Promise.all(frames.map(async ({ frameId }) => {
-                    const response = await this.tabs.sendMessage(tab.id, message, { frameId });
-                    if (!isRefreshAcknowledgement(response, message)) {
+                await Promise.all(frames.value.map(async ({ frameId }) => {
+                    const response = await settleBrowserOperation(() =>
+                        this.tabs.sendMessage(tab.id, message, { frameId }));
+                    if (!response.ok || !isRefreshAcknowledgement(response.value, message)) {
                         throw new Error("Invalid document refresh acknowledgement");
                     }
                 }));

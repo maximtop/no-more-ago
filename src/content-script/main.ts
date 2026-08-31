@@ -3,14 +3,30 @@
  */
 
 import { installContentRuntime } from "./runtime";
+import { installFacebookPayloadRuntime } from "./facebook/payload-runtime";
+import { isFacebookUrl } from "../shared/url/facebook";
 import { GET_DOCUMENT_STATE_MESSAGE } from "../shared/messaging/contracts";
 import { DIAGNOSTIC_EVENT_MESSAGE } from "../shared/messaging/document-messages";
 import { classifyYouTubeWatchRouteHandoff } from
     "./adapters/youtube-watch-route-handoff";
 
-installContentRuntime({
+const documentUrl = new URL(window.location.href);
+const runtimeComposition: {
+    content?: ReturnType<typeof installContentRuntime>;
+} = {};
+const facebookRuntime = isFacebookUrl(documentUrl)
+    ? installFacebookPayloadRuntime({
+        window,
+        document,
+        onSourcesChanged: (sources) => {
+            runtimeComposition.content?.reconcileSources(sources);
+        },
+    })
+    : undefined;
+
+runtimeComposition.content = installContentRuntime({
     document,
-    url: new URL(window.location.href),
+    url: documentUrl,
     urlProvider: () => new URL(window.location.href),
     routeEvents: {
         addListener: (listener) => {
@@ -28,5 +44,12 @@ installContentRuntime({
                 chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
         }
         : {}),
+    ...(facebookRuntime === undefined
+        ? {}
+        : {
+            onActivityChanged: (active: boolean) => {
+                facebookRuntime.setEnabled(active);
+            },
+        }),
     messages: chrome.runtime,
 });

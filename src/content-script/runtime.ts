@@ -66,6 +66,13 @@ export interface ContentRuntimeHandle {
      * Stops processing, cancels pending startup, and clears diagnostic forwarding.
      */
     teardown(): void;
+
+    /**
+     * Reconciles exact sources whose trusted out-of-band data changed.
+     *
+     * @param sources - Connected page-owned timestamp sources to re-evaluate.
+     */
+    reconcileSources(sources: readonly Element[]): void;
 }
 
 /**
@@ -163,6 +170,48 @@ interface RuntimeSlot {
      * Lazily samples the content document's current URL.
      */
     urlProvider: () => URL;
+
+    /**
+     * Optional site-composition listener synchronized with controller activity.
+     */
+    onActivityChanged: ((active: boolean) => void) | undefined;
+
+    /**
+     * Last activity state delivered through onActivityChanged.
+     */
+    activityActive: boolean;
+}
+
+/**
+ * Delivers a changed controller activity state without allowing site integration failures to
+ * interfere with shared timestamp processing.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param active - Whether the controller generation may process the document.
+ */
+function notifyActivity(slot: RuntimeSlot, active: boolean): void {
+    if (slot.activityActive === active) {
+        return;
+    }
+    slot.activityActive = active;
+    try {
+        slot.onActivityChanged?.(active);
+    } catch {
+        /* optional site composition fails independently from shared processing */
+    }
+}
+
+/**
+ * Synchronizes a replacement listener to the current activity state.
+ *
+ * @param slot - Singleton runtime state with the replacement listener installed.
+ */
+function synchronizeActivity(slot: RuntimeSlot): void {
+    try {
+        slot.onActivityChanged?.(slot.activityActive);
+    } catch {
+        /* optional site composition fails independently from shared processing */
+    }
 }
 
 /**
@@ -251,10 +300,12 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
     ) {
         return;
     }
+    notifyActivity(slot, true);
     try {
         slot.controller.start();
         slot.phase = DOCUMENT_PHASE.ACTIVE;
     } catch (error) {
+        notifyActivity(slot, false);
         try {
             slot.controller.teardown();
         } finally {
@@ -448,6 +499,7 @@ function refreshPolicy(
  */
 function teardown(slot: RuntimeSlot): void {
     slot.generation += 1;
+    notifyActivity(slot, false);
     slot.controller.teardown();
     slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.presentation = undefined;
@@ -563,6 +615,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input.registry - Trusted adapter registry override.
  * @param input.loadDocumentState - Background document-state loader.
  * @param input.reportDiagnostic - Background diagnostic event reporter.
+ * @param input.onActivityChanged - Optional site lifecycle listener.
  * @param input.messages - Runtime message event source.
  * @returns - Installed singleton runtime handle.
  */
@@ -577,11 +630,14 @@ export function installContentRuntime(input: {
     readonly registry?: AdapterRegistry;
     readonly loadDocumentState?: () => Promise<unknown>;
     readonly reportDiagnostic?: (event: Record<string, unknown>) => Promise<unknown>;
+    readonly onActivityChanged?: (active: boolean) => void;
     readonly messages: ContentMessageRuntime;
 }): ContentRuntimeHandle {
     const runtimeDocument = input.document as Document & Record<symbol, RuntimeSlot | undefined>;
     const existing = runtimeDocument[DOCUMENT_RUNTIME_SLOT];
     if (existing) {
+        existing.onActivityChanged = input.onActivityChanged;
+        synchronizeActivity(existing);
         if (input.reportDiagnostic) {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
@@ -618,9 +674,14 @@ export function installContentRuntime(input: {
     slot.reportDiagnostic = input.reportDiagnostic;
     slot.loadDocumentState = input.loadDocumentState;
     slot.urlProvider = input.urlProvider ?? (() => new URL(input.url.href));
+    slot.onActivityChanged = input.onActivityChanged;
+    slot.activityActive = false;
     slot.handle = {
         teardown: () => {
             teardown(slot);
+        },
+        reconcileSources: (sources) => {
+            slot.controller.reconcileSources(sources);
         },
     };
     slot.messages.onMessage.addListener((message, _sender, sendResponse) => {

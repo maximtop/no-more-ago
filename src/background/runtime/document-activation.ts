@@ -3,19 +3,23 @@
  *
  * @file Chrome scripting and tab reconciliation for the document runtime.
  */
-import { CONTENT_SCRIPT_FILE } from "../../shared/extension-files";
+import {
+    CONTENT_SCRIPT_FILE,
+    FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
+} from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
+import { isFacebookUrl } from "../../shared/url/facebook";
 import { isSiteEnabled } from "../../shared/settings/snapshot";
 import {
     isDocumentPolicyReconciledMessage,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
-import type { RuntimeTab, TabsRuntime } from "./tabs";
+import type { RuntimeFrame, RuntimeTab, TabsRuntime } from "./tabs";
 import type { ScriptingRuntime } from "./scripting";
 import {
-    DOCUMENT_RUNTIME_REGISTRATION,
-    DOCUMENT_RUNTIME_REGISTRATION_ID,
+    DOCUMENT_RUNTIME_REGISTRATION_IDS,
+    DOCUMENT_RUNTIME_REGISTRATIONS,
     registrationMatches,
 } from "./register-documents";
 import { settleBrowserOperation } from "./settle";
@@ -246,7 +250,7 @@ async function registration(
 ): Promise<RegistrationOutcome> {
     const inspected = await settleBrowserOperation(
         () => scripting.getRegisteredContentScripts({
-            ids: [DOCUMENT_RUNTIME_REGISTRATION_ID],
+            ids: [...DOCUMENT_RUNTIME_REGISTRATION_IDS],
         }),
     );
     if (!inspected.ok) {
@@ -257,7 +261,6 @@ async function registration(
         return REGISTRATION_OUTCOME.FAILED;
     }
     const found = inspected.value;
-    const current = found.find((entry) => entry.id === DOCUMENT_RUNTIME_REGISTRATION_ID);
     if (!enabled) {
         const registeredIds = found.map((entry) => entry.id);
         if (registeredIds.length === 0) {
@@ -276,21 +279,38 @@ async function registration(
         });
         return REGISTRATION_OUTCOME.FAILED;
     }
-    if (current && registrationMatches(current, DOCUMENT_RUNTIME_REGISTRATION)) {
+    const foundById = new Map(found.map((entry) => [entry.id, entry]));
+    const toUpdate = DOCUMENT_RUNTIME_REGISTRATIONS.filter((expected) => {
+        const current = foundById.get(expected.id);
+        return current !== undefined && !registrationMatches(current, expected);
+    });
+    const toRegister = DOCUMENT_RUNTIME_REGISTRATIONS.filter(
+        (expected) => !foundById.has(expected.id),
+    );
+    if (toUpdate.length === 0 && toRegister.length === 0) {
         return REGISTRATION_OUTCOME.UNCHANGED;
     }
     const written = await settleRegistrationWrite(
-        () => current
-            ? scripting.updateContentScripts([DOCUMENT_RUNTIME_REGISTRATION])
-            : scripting.registerContentScripts([DOCUMENT_RUNTIME_REGISTRATION]),
+        async () => {
+            if (toUpdate.length > 0) {
+                await scripting.updateContentScripts([...toUpdate]);
+            }
+            if (toRegister.length > 0) {
+                await scripting.registerContentScripts([...toRegister]);
+            }
+        },
         onLateWrite,
     );
     if (written) {
-        return current ? REGISTRATION_OUTCOME.UPDATED : REGISTRATION_OUTCOME.REGISTERED;
+        return toUpdate.length > 0
+            ? REGISTRATION_OUTCOME.UPDATED
+            : REGISTRATION_OUTCOME.REGISTERED;
     }
     failures.push({
         scope: RECONCILE_FAILURE_SCOPE.REGISTRATION,
-        operation: current ? REGISTRATION_OPERATION.UPDATE : REGISTRATION_OPERATION.REGISTER,
+        operation: toUpdate.length > 0
+            ? REGISTRATION_OPERATION.UPDATE
+            : REGISTRATION_OPERATION.REGISTER,
     });
     return REGISTRATION_OUTCOME.FAILED;
 }
@@ -384,14 +404,65 @@ async function deliverPolicy(
  *
  * @param tabs - Tabs and frame browser boundary.
  * @param tabId - Tab whose frames are requested.
- * @returns - Distinct reachable frame IDs, or an empty list on failure.
+ * @returns - Distinct reachable frames, or null when enumeration fails.
  */
-async function frameIds(tabs: TabsRuntime, tabId: number): Promise<readonly number[]> {
+async function enumerateFrames(
+    tabs: TabsRuntime,
+    tabId: number,
+): Promise<readonly RuntimeFrame[] | null> {
     const frames = await settleBrowserOperation(() => tabs.getAllFrames(tabId));
     if (!frames.ok) {
-        return [];
+        return null;
     }
-    return [...new Set(frames.value.map((frame) => frame.frameId))];
+    const seen = new Set<number>();
+    return frames.value.filter((frame) => {
+        if (seen.has(frame.frameId)) {
+            return false;
+        }
+        seen.add(frame.frameId);
+        return true;
+    });
+}
+
+/**
+ * Ensures the inert Facebook main-world bridge in every reachable Facebook frame.
+ *
+ * @param scripting - Scripting API boundary.
+ * @param tabId - Tab whose Facebook frames receive the bridge.
+ * @param enabled - Whether the top-level site's effective policy is enabled.
+ * @param frames - Reachable frames, or null when enumeration failed.
+ * @returns - Whether every required bridge injection completed.
+ */
+async function ensureFacebookBridge(
+    scripting: ScriptingRuntime,
+    tabId: number,
+    enabled: boolean,
+    frames: readonly RuntimeFrame[] | null,
+): Promise<boolean> {
+    if (!enabled) {
+        return true;
+    }
+    if (frames === null) {
+        return false;
+    }
+    const facebookFrameIds = frames.flatMap((frame) => {
+        const url = parseHttpUrl(frame.url);
+        return url && isFacebookUrl(url) ? [frame.frameId] : [];
+    });
+    if (facebookFrameIds.length === 0) {
+        return true;
+    }
+    const injected = await settleBrowserOperation(() => scripting.executeScript({
+        target: { tabId, frameIds: facebookFrameIds },
+        files: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
+        world: "MAIN",
+    }));
+    if (!injected.ok) {
+        return false;
+    }
+    const injectedFrameIds = new Set(injected.value.map((result) => result.frameId));
+    return injectedFrameIds.size === facebookFrameIds.length
+        && facebookFrameIds.every((frameId) => injectedFrameIds.has(frameId));
 }
 
 /**
@@ -444,15 +515,26 @@ async function refresh(
         revision,
         enabled,
     } as const;
-    const initialFrames = frameIds(tabs, tab.id);
-    const [initialPolicy, ensured] = await Promise.all([
-        initialFrames.then((frames) => deliverPolicyToFrames(tabs, tab.id, frames, message)),
+    const initialFrames = enumerateFrames(tabs, tab.id);
+    const [initialPolicy, ensured, bridgeReady] = await Promise.all([
+        initialFrames.then((frames) => deliverPolicyToFrames(
+            tabs,
+            tab.id,
+            frames?.map((frame) => frame.frameId) ?? [],
+            message,
+        )),
         settleBrowserOperation(
             () => scripting.executeScript({
                 target: { tabId: tab.id, allFrames: true },
                 files: [CONTENT_SCRIPT_FILE],
             }),
         ),
+        initialFrames.then((frames) => ensureFacebookBridge(
+            scripting,
+            tab.id,
+            enabled,
+            frames,
+        )),
     ]);
     const ensuredFrames = ensured.ok
         ? [...new Set(ensured.value.map((result) => result.frameId))]
@@ -468,7 +550,7 @@ async function refresh(
     const policyOk = ensuredFrames.length > 0 && ensuredFrames.every(
         (frameId) => initialPolicy.get(frameId) === true || retriedPolicy.get(frameId) === true,
     );
-    const ok = runtimeEnsured && policyOk;
+    const ok = runtimeEnsured && policyOk && bridgeReady;
     if (!ok) {
         failures.push({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
@@ -499,13 +581,14 @@ async function teardown(
     failures: ReconcileFailure[],
     records: TabOutcomeSink,
 ): Promise<void> {
-    const frames = await frameIds(tabs, tab.id);
-    const acknowledgements = await deliverPolicyToFrames(tabs, tab.id, frames, {
+    const frames = await enumerateFrames(tabs, tab.id);
+    const frameIds = frames?.map((frame) => frame.frameId) ?? [];
+    const acknowledgements = await deliverPolicyToFrames(tabs, tab.id, frameIds, {
         type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
         revision,
         enabled: false,
     });
-    const ok = frames.length > 0 && frames.every(
+    const ok = frames !== null && frameIds.length > 0 && frameIds.every(
         (frameId) => acknowledgements.get(frameId) === true,
     );
     if (!ok) {

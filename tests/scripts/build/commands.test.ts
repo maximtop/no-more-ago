@@ -8,6 +8,8 @@ import { promisify } from "node:util";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { BROWSERS } from "../../../scripts/build/contracts";
+import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
+    "../../../src/shared/extension-files";
 import { createBuildWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
@@ -60,9 +62,16 @@ describe("build commands", () => {
                 expect(background[browser === "firefox" ? "scripts" : "service_worker"])
                     .toBeDefined();
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
+                expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))
+                    .toBe(true);
+                expect(existsSync(
+                    `${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`,
+                )).toBe(true);
                 const zip = unzipSync(readFileSync(`${workspace.root}/dist/dev/${browser}.zip`));
                 const zippedManifest = zip["manifest.json"];
                 expect(zippedManifest && strFromU8(zippedManifest)).toBe(manifestText);
+                expect(zip[FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE]).toBeDefined();
+                expect(zip[`${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`]).toBeDefined();
             }
 
             await execFileAsync(PNPM_COMMAND, ["release", "chrome"], {
@@ -75,6 +84,18 @@ describe("build commands", () => {
             ]);
             expect(existsSync(`${workspace.root}/dist/release/chrome/background.js.map`))
                 .toBe(false);
+            expect(existsSync(
+                `${workspace.root}/dist/release/chrome/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`,
+            )).toBe(true);
+            expect(existsSync(
+                `${workspace.root}/dist/release/chrome/`
+                + `${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`,
+            )).toBe(false);
+            const releaseZip = unzipSync(readFileSync(
+                `${workspace.root}/dist/release/chrome.zip`,
+            ));
+            expect(releaseZip[FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE]).toBeDefined();
+            expect(releaseZip[`${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`]).toBeUndefined();
         } finally {
             workspace.cleanup();
         }

@@ -3,6 +3,7 @@
  */
 
 import { genericTimeRule } from "./generic-time";
+import { facebookAdapter } from "./facebook";
 import { githubAdapter } from "./github";
 import { hackerNewsAdapter } from "./hacker-news";
 import { instagramAdapter } from "./instagram";
@@ -61,6 +62,7 @@ export class AdapterRegistry {
  */
 export const defaultRegistry = new AdapterRegistry(
     [
+        facebookAdapter,
         githubAdapter,
         hackerNewsAdapter,
         instagramAdapter,

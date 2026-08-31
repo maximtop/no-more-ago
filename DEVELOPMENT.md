@@ -19,6 +19,7 @@
   - [Common Tasks](#common-tasks)
     - [Run a Focused Test](#run-a-focused-test)
     - [Add or Update a Site Adapter](#add-or-update-a-site-adapter)
+    - [Verify Facebook Support](#verify-facebook-support)
     - [Debug the Extension](#debug-the-extension)
   - [Troubleshooting](#troubleshooting)
   - [Additional Resources](#additional-resources)
@@ -165,6 +166,26 @@ global processing policy; a per-site preference affects the current
 top-level hostname and all reachable frames in that tab. Each frame uses its
 own URL to select applicable content rules.
 
+Facebook is the one current integration that also needs page-main-world data.
+The background registers `facebook-payload-bridge.js` at `document_start` in
+`MAIN`, with all frames enabled but Facebook match patterns only. During
+refresh of already-open tabs, the universal `content.js` bundle is injected in
+all reachable HTTP(S) frames while the bridge is injected only into enumerated
+frames whose own URL is a Facebook URL. Registration comparison tolerates
+browser APIs omitting optional returned fields but corrects every explicit
+mismatch. This path is required for Chrome, Firefox, and Edge builds.
+
+The Facebook bridge starts inert and posts only a readiness message. The
+isolated runtime uses the shared controller's activity lifecycle to enable or
+disable selected response inspection. On enable it parses initial payload
+scripts before the controller's first discovery pass, then reconciles only
+sources affected by dynamic token records. On disable it detaches temporary
+listeners and observers, clears bounded document associations, and lets the
+shared controller restore every owned source. Only bounded tracking-token and
+Unix-seconds pairs cross worlds; payloads and page content are not persisted or
+diagnosed. The adapter itself remains a pure source rule backed by that
+temporary store.
+
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
 complete global date-times with explicit known offsets. Specialized sources,
@@ -172,14 +193,17 @@ including GitHub's relative-time widgets, Hacker News age widgets, approved
 Stack Exchange title widgets, Telegram Web K message clocks, and TikTok
 publications, remain content-side rules and take precedence when they accept
 source. Rules extract and resolve values strictly in registry order; after one
-source resolves, lower extractors are not called for that element. GitHub uses
-the adjacent generated-time presentation. Hacker News, Stack Exchange,
-Telegram Web K, and direct TikTok pages use in-place presentation: they retain
-an existing simple timestamp label and own only that text until restoration.
-TikTok profile grids use appended generated-time presentation, which keeps
-each card link visible. Public `https://t.me/s/*` pages stay on generic
-`time[datetime]` processing. Adding or changing a specialized source should not
-require background adapter registration or site-policy logic.
+source resolves, lower extractors are not called for that element. GitHub and
+Facebook use the adjacent generated-time presentation. Hacker News, Stack
+Exchange, Telegram Web K, and direct TikTok pages use in-place presentation:
+they retain an existing simple timestamp label and own only that text until
+restoration. TikTok profile grids use appended generated-time presentation,
+which keeps each card link visible. Public `https://t.me/s/*` pages stay on
+generic `time[datetime]` processing.
+Ordinary specialized sources should not require background registration or
+site-policy branches. A page-main-world transport is an exceptional boundary
+and must reuse the shared activity policy rather than create an independent
+enablement model.
 
 The Telegram Web K adapter applies only below
 `https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
@@ -331,8 +355,12 @@ To add or update a specialized source:
    authentication state, and real user or content IDs.
 7. Run `pnpm check` and a development build for the affected browser.
 
-Do not add site-specific background activation or registration. The universal
-runtime already reaches every accessible HTTP(S) document and frame.
+Do not add site-specific background activation or registration when the
+universal isolated runtime can obtain the trusted source. Facebook is the only
+current exception because selected response bodies exist in the page main
+world. Any similar exception must be narrowly matched, inert by default,
+controlled by the shared lifecycle, and covered at emitted-artifact and frame
+injection boundaries.
 
 For in-place numeric sources such as Telegram Web K, keep lexical validation
 in shared timestamp resolution and keep site-specific source and target
@@ -473,6 +501,29 @@ explicit value. Keep fixture derivatives minimal, sanitized, and offline.
 
 Follow the adapter and shared-contract rules in [AGENTS.md](AGENTS.md).
 
+### Verify Facebook Support
+
+Run the deterministic fixture and bridge suites before live verification:
+
+~~~sh
+pnpm test tests/src/content-script/facebook \
+    tests/src/content-script/adapters/facebook.test.ts \
+    tests/src/content-script/adapters/facebook-fixtures.test.ts
+~~~
+
+The fixtures cover initial and dynamic Story evidence, both evidence/source
+arrival orders, conflicts, rejected actor/media/comment/Reel shapes, disable,
+teardown, DOM repair, and repeated mutations without network access.
+
+For a live compatibility pass, build and load the same revision in Chrome,
+Firefox, and Edge. Use a UTC custom format with seconds, and record browser
+version, public or signed-in session, tested surface, and observed result.
+Verify an initially rendered post, a dynamically loaded older post, a normal
+navigation, disable/restore, and re-enable. Confirm that actor/media links,
+comments already exposing exact accessible labels, and Reels without proven
+post timestamps remain unchanged. Do not save response payloads, account data,
+or personal page content as test evidence.
+
 ### Debug the Extension
 
 - Inspect popup and options errors in their page developer tools.
@@ -505,16 +556,18 @@ source value. Successful events never retain raw source timestamps.
 - **The extension cannot run on a browser-internal page:** open an HTTP or
   HTTPS page. Browser-internal and otherwise restricted pages cannot accept the
   content script.
-- **A standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, TikTok,
-  LinkedIn, or supported YouTube watch
+- **A standard, Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K,
+  TikTok, LinkedIn, or supported YouTube watch
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard
   `time[datetime]` values. In-place adapters require one unambiguous simple
   label. For Web K, also verify an HTML `div.bubble[data-timestamp]`, one
   bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
-  ten-digit seconds value. For best-effort LinkedIn support, verify the
-  accepted local ID evidence and timestamp-label relationship before changing
+  ten-digit seconds value. For Facebook, verify typed Story evidence, exact
+  tracking-token correlation, a recognized post timestamp link, and active
+  global/site policy. For best-effort LinkedIn support, verify the accepted
+  local ID evidence and timestamp-label relationship before changing
   selectors. Do not recover from markup drift by parsing localized or relative
   UI text or adding a network fallback.
 - **A supported TikTok publication is unchanged:** confirm the page uses HTTPS

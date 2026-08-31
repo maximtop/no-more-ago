@@ -7,8 +7,8 @@ state for restoration.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
-GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web K, and
-TikTok and LinkedIn have specialized sources for trusted or best-effort
+Facebook, GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web
+K, TikTok, and LinkedIn have specialized sources for trusted or best-effort
 timestamp inputs. These integrations preserve page-owned elements and links
 while updating simple labels in place when needed. Instagram uses the standard
 timestamp source with a specialized in-place presentation rule that preserves
@@ -26,11 +26,11 @@ extension.
 - **Calendar date:** a strict explicit `YYYY-MM-DD` value that retains its
   calendar day without becoming an instant or receiving a time-zone shift.
 - **Specialized source:** a site-specific rule for richer markup, such as
-  GitHub's relative-time widgets, Hacker News age widgets, or approved Stack
-  Exchange, Telegram Web K, and TikTok timestamps; the approved YouTube watch
-  label and identity-matched loaded data or initial-document metadata; or
-  best-effort LinkedIn ID timestamps. Specialized rules take precedence over
-  the generic rule when both accept the same source.
+  Facebook Story payloads, GitHub's relative-time widgets, Hacker News age
+  widgets, approved Stack Exchange, Telegram Web K, and TikTok timestamps; the
+  approved YouTube watch label and identity-matched loaded data or
+  initial-document metadata; or best-effort LinkedIn ID timestamps. Specialized
+  rules take precedence over the generic rule when both accept the same source.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -67,12 +67,13 @@ from source, follow the [development guide](DEVELOPMENT.md).
 5. Eligible timestamps are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
-become “Aug 27, 2026, 9:32 PM.” Trusted GitHub, Hacker News, Stack Exchange,
-Telegram Web K, supported TikTok timestamps, and best-effort LinkedIn ID
-timestamps can also become exact dates. Instagram's simple standard timestamp
-labels retain their page-owned elements and styles. A supported YouTube watch
-calendar date becomes a localized date without a time, while a supported zoned
-publication instant becomes a localized date and time. Instant output follows
+become “Aug 27, 2026, 9:32 PM.” Trusted Facebook, GitHub, Hacker News, Stack
+Exchange, Telegram Web K, and supported TikTok timestamps plus best-effort
+LinkedIn ID timestamps can also become exact dates. Instagram's simple standard
+timestamp labels retain their page-owned elements and styles. A supported
+YouTube watch calendar date becomes a localized date without a time, while a
+supported zoned publication instant becomes a localized date and time. Instant
+output follows
 the selected format, browser locale, and time zone; calendar-date output
 preserves the same day in every configured time zone.
 
@@ -103,6 +104,23 @@ shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,
 using the generic fallback. All sources share presentation, restoration, and
 dynamic-page lifecycle behavior. When a specialized and generic rule both
 accept the same source, the specialized rule wins.
+
+On Facebook domains, supported post timestamps are proven by structured
+`Story.creation_time` values from initial JSON payloads and selected
+feed/timeline GraphQL responses. Support is evidence-based rather than tied to
+an allowlist of feed surfaces: public and signed-in pages are supported
+best-effort whenever they expose the same proof. A Facebook-only main-world
+bridge transfers only the opaque tracking token and Unix-seconds timestamp to
+the isolated content runtime. The token must exactly match the post timestamp
+link, and the link must use one of Facebook's current bounded text or SVG
+timestamp shapes.
+
+The bridge is inert until existing global and site policy enables the isolated
+runtime. Disabling processing stops payload inspection, clears temporary
+associations, and restores page-owned content. Visible labels, ARIA labels,
+link destinations, and elapsed time are never timestamp fallbacks. Comments,
+Reels, and future Facebook shapes remain unchanged unless they independently
+satisfy the same Story proof, token correlation, and source-shape contract.
 
 On the exact `www.instagram.com` hostname, simple standard `time[datetime]`
 labels are updated in place so their element identity, classes, inline styles,
@@ -329,7 +347,7 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible zoned standard, GitHub, Hacker News, Stack Exchange, Telegram Web K, or LinkedIn timestamp | The trusted or best-effort ID instant is shown with the configured exact-date presentation. |
+| Eligible zoned standard, Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K, or LinkedIn timestamp | The trusted or best-effort ID instant is shown with the configured exact-date presentation. |
 | Supported TikTok profile card or direct video/photo publication | A matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is appended to the card or rendered in place. |
 | Eligible canonical YouTube watch calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
 | Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
@@ -352,8 +370,8 @@ The extension requests:
 - **Access to all HTTP and HTTPS sites:** allows standard timestamps on
   accessible pages, keeps per-host preferences available, and supports future
   specialized sources.
-- **Scripting:** registers, updates, and removes one universal content runtime
-  at document start for all frames.
+- **Scripting:** registers, updates, and removes the universal isolated content
+  runtime plus the Facebook-only main-world payload bridge.
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
   can verify each frame's revision acknowledgement, and coalesces YouTube
   history-state updates into payload-free route signals for the exact frame.
@@ -372,6 +390,16 @@ supported current URL or profile-card link. In-place sources change only their
 selected label text; titles, link destinations, element identity, attributes,
 and event listeners remain intact. Standard processing remains limited to
 ordinary light-DOM `time[datetime]` elements.
+
+The Facebook source accepts only typed `Story` objects with a bounded
+`creation_time` and encrypted tracking token. Selected feed/timeline GraphQL
+responses are cloned for bounded parsing only while processing is enabled;
+only minimal token/timestamp records cross into the isolated runtime. The
+associations remain in document memory and are cleared on disable or teardown.
+Response content, post text, authors, comments, reactions, and account data are
+not persisted, retained in diagnostics, or sent as telemetry. Facebook support
+adds no permission beyond the manifest permissions listed above and has no
+visible-text or elapsed-time fallback.
 
 The Telegram Web K source trusts only a matching message bubble's ten-digit
 Unix-seconds `data-timestamp` and one structurally proven ordinary clock. It
@@ -397,9 +425,9 @@ source types are deferred.
 - Generic support applies to eligible standard timestamps on accessible
   HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
   registered specialized source accepts them.
-- GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K, TikTok,
-  LinkedIn, and YouTube
-  are best-effort integrations whose markup can change independently of the
+- Facebook, GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K,
+  TikTok, LinkedIn, and YouTube are best-effort integrations whose markup and,
+  where applicable, payload contracts can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
