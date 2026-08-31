@@ -4,6 +4,10 @@
 
 import { isHttpUrl } from "../../shared/url/http";
 import {
+    isValidBlueskyRecordKey,
+    normalizeBlueskyActor,
+} from "./bluesky-identity";
+import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
@@ -17,13 +21,6 @@ const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const POST_METADATA_SELECTOR = "a[href][aria-label][data-tooltip]" as const;
 const QUOTE_METADATA_SELECTOR =
     "[aria-label][data-tooltip]:not(a):not(button):not(input)" as const;
-const HANDLE_MAX_LENGTH = 253;
-const HANDLE_LABEL_MAX_LENGTH = 63;
-const DID_MAX_LENGTH = 2_048;
-const RECORD_KEY_MAX_LENGTH = 512;
-const HANDLE_LABEL_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/u;
-const DID_PATTERN = /^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/u;
-const RECORD_KEY_PATTERN = /^[A-Za-z0-9._~:-]+$/u;
 const FINGERPRINT_SEPARATOR = "\u0000" as const;
 
 /**
@@ -156,30 +153,6 @@ function hasControlOrSlash(value: string): boolean {
 }
 
 /**
- * Normalizes an accepted public handle or preserves an accepted DID.
- *
- * @param value - Decoded actor segment.
- * @returns - Canonical actor lookup value, or null when unsupported.
- */
-function normalizeActor(value: string): string | null {
-    if (value.startsWith("did:")) {
-        return value.length <= DID_MAX_LENGTH && DID_PATTERN.test(value) ? value : null;
-    }
-    if (value.length > HANDLE_MAX_LENGTH || !value.includes(".")) {
-        return null;
-    }
-    const labels = value.split(".");
-    if (labels.some(
-        (label) => label.length === 0
-            || label.length > HANDLE_LABEL_MAX_LENGTH
-            || !HANDLE_LABEL_PATTERN.test(label),
-    )) {
-        return null;
-    }
-    return value.toLowerCase();
-}
-
-/**
  * Parses an exact public Bluesky post permalink without inspecting visible text.
  *
  * @param element - Potential permalink element.
@@ -224,13 +197,12 @@ export function parseBlueskyPostPermalink(element: Element): BlueskyPostIdentity
     if (encodedActor === undefined || encodedRecordKey === undefined) {
         return null;
     }
-    const actor = normalizeActor(decodeIdentitySegment(encodedActor) ?? "");
+    const actor = normalizeBlueskyActor(decodeIdentitySegment(encodedActor) ?? "");
     const recordKey = decodeIdentitySegment(encodedRecordKey);
     if (
         !actor
         || !recordKey
-        || recordKey.length > RECORD_KEY_MAX_LENGTH
-        || !RECORD_KEY_PATTERN.test(recordKey)
+        || !isValidBlueskyRecordKey(recordKey)
     ) {
         return null;
     }
@@ -239,6 +211,30 @@ export function parseBlueskyPostPermalink(element: Element): BlueskyPostIdentity
         recordKey,
         key: `${actor}${FINGERPRINT_SEPARATOR}${recordKey}`,
     };
+}
+
+/**
+ * Finds quote labels whose association depends on one outer post permalink.
+ *
+ * @param source - Current or formerly eligible outer permalink.
+ * @returns - Quote sources from the smallest unambiguous enclosing card.
+ */
+function findDependentQuoteSources(source: Element): readonly Element[] {
+    let current = source.parentElement;
+    while (current && current.localName !== "body" && current.localName !== "html") {
+        const postSources = new Set(discoverMatchingElements(current, POST_METADATA_SELECTOR));
+        postSources.add(source);
+        if (postSources.size > 1) {
+            return [];
+        }
+        const quotes = discoverMatchingElements(current, QUOTE_METADATA_SELECTOR)
+            .filter((candidate) => findPresentationTarget(candidate) !== null);
+        if (quotes.length > 0) {
+            return quotes;
+        }
+        current = current.parentElement;
+    }
+    return [];
 }
 
 /**
@@ -444,6 +440,20 @@ function getMutationSources(
     if (wasDirectSource) {
         sources.add(element);
     }
+    if (
+        element.localName === "a"
+        && (
+            element.hasAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF)
+            || (
+                attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
+                && oldValue !== null
+            )
+        )
+    ) {
+        for (const quote of findDependentQuoteSources(element)) {
+            sources.add(quote);
+        }
+    }
     const anchor = element.closest(POST_METADATA_SELECTOR);
     if (anchor && describeBlueskySource(anchor)) {
         sources.add(anchor);
@@ -487,7 +497,6 @@ export function createBlueskyAdapter(
         id: BLUESKY_ADAPTER_ID,
         mutationAttributes: [
             TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
-            TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
             TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_LABEL,
             TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TOOLTIP,
         ],

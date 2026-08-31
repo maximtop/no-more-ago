@@ -55,11 +55,11 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   runtime can process standard timestamps and future specialized sources;
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
-  available, including public `https://t.me/s/*` pages. The production registry
-  contains GitHub, Hacker News, Stack Exchange, Telegram Web K, and Bluesky as
-  specialized sources plus an Instagram in-place presentation rule for
-  standard timestamps. Bluesky resolution is document-local, anonymous, and
-  limited to the fixed public AppView origin.
+  available, including public `https://t.me/s/*` pages. The effective
+  per-document registry contains the static GitHub, Hacker News, Stack Exchange,
+  Telegram Web K, and Instagram rules; exact `bsky.app` documents prepend a
+  document-scoped Bluesky rule. Bluesky resolution is anonymous and limited to
+  the fixed public AppView origin.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -160,9 +160,10 @@ unpacked or temporary extension when manual browser verification is needed.
 - Keep the content-side rule order explicit: specialized rules run before the
   generic `time[datetime]` fallback, and the generic rule is always last.
 - Keep Bluesky public enrichment in its document-local coordinator. Use only
-  credential-free bounded GET requests to `https://public.api.bsky.app`, keep
-  successful caches in the active document runtime, abort on teardown, and do
-  not add polling, durable state, or presentation-text fallback parsing.
+  credential-free bounded GET requests to `https://public.api.bsky.app`, retain
+  successful caches only while connected sources reference them, abort on a
+  finite request deadline or teardown, and do not add polling, durable state,
+  or presentation-text fallback parsing.
 - Treat every extension context as independent. Coordinate popup, options,
   background, and content scripts through typed messages and durable state.
 - Assume the background service worker can stop between events. Do not rely on

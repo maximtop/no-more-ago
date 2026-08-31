@@ -9,6 +9,9 @@ import {
     BLUESKY_LOOKUP_STATUS,
     type BlueskyAppView,
 } from "../../../../src/content-script/adapters/bluesky-appview";
+import {
+    createBlueskyCoordinator,
+} from "../../../../src/content-script/adapters/bluesky-coordinator";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { hackerNewsAdapter } from "../../../../src/content-script/adapters/hacker-news";
 import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
@@ -22,6 +25,9 @@ import {
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
+import type {
+    DocumentTransformationParticipantFactory,
+} from "../../../../src/content-script/transformation/document-transformation-participant";
 import { formatDefaultDate } from "../../../../src/shared/date/format-default-date";
 import type { DisplaySettings } from "../../../../src/shared/settings/snapshot";
 
@@ -33,6 +39,26 @@ const noMatchRule: TimestampSourceRule = {
     discover: () => [],
     extract: () => null,
 };
+
+/**
+ * Composes one Bluesky participant for a controller test URL.
+ *
+ * @param appView - Deterministic AppView capability.
+ * @param url - Document URL owned by the participant.
+ * @returns - Generic document-participant factory.
+ */
+function blueskyParticipantFactory(
+    appView: BlueskyAppView,
+    url: URL,
+): DocumentTransformationParticipantFactory {
+    return (host) => createBlueskyCoordinator({
+        document,
+        url,
+        appView,
+        getDiagnosticSink: host.getDiagnosticSink,
+        onSourcesChanged: host.onSourcesChanged,
+    });
+}
 
 /**
  * Generic timestamp fixture shared by visibility lifecycle tests.
@@ -106,8 +132,9 @@ describe("DocumentTransformationController", () => {
             getProfiles,
             getPosts,
         };
+        const url = new URL("https://bsky.app/");
         const controller = new DocumentTransformationController({
-            url: new URL("https://bsky.app/"),
+            url,
             root: document,
             locales: ["en-US"],
             display: {
@@ -115,7 +142,7 @@ describe("DocumentTransformationController", () => {
                 pattern: "yyyy-MM-dd HH:mm",
                 timeZone: { mode: "utc" },
             },
-            blueskyAppView: appView,
+            participantFactory: blueskyParticipantFactory(appView, url),
         });
 
         expect(controller.start()).toEqual([]);
@@ -141,11 +168,12 @@ describe("DocumentTransformationController", () => {
             getProfiles,
             getPosts,
         };
+        const url = new URL("https://example.test/");
         const controller = new DocumentTransformationController({
-            url: new URL("https://example.test/"),
+            url,
             root: document,
             locales: ["en-US"],
-            blueskyAppView: appView,
+            participantFactory: blueskyParticipantFactory(appView, url),
         });
 
         controller.start();
@@ -153,6 +181,31 @@ describe("DocumentTransformationController", () => {
         expect(getProfiles).not.toHaveBeenCalled();
         expect(getPosts).not.toHaveBeenCalled();
         controller.teardown();
+    });
+
+    it("keeps a frozen participant input reusable", () => {
+        const participant = {
+            rule: noMatchRule,
+            start: vi.fn(),
+            inspect: vi.fn(),
+            inspectSources: vi.fn(),
+            release: vi.fn(),
+            stop: vi.fn(),
+        };
+        const participantFactory = vi.fn(() => participant);
+        const input = Object.freeze({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            participantFactory,
+        });
+
+        expect(() => {
+            new DocumentTransformationController(input);
+            new DocumentTransformationController(input);
+        }).not.toThrow();
+        expect(participantFactory).toHaveBeenCalledTimes(2);
+        expect(Object.keys(input)).not.toContain("registry");
     });
 
     it("starts idempotently, tears down precisely, and can reactivate", () => {

@@ -8,6 +8,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 
 import {
+    BLUESKY_BATCH_LIMIT,
     BLUESKY_LOOKUP_STATUS,
     type BlueskyAppView,
     type BlueskyLookupResult,
@@ -223,29 +224,100 @@ describe("Bluesky coordinator", () => {
         document.body.innerHTML = "";
     });
 
-    it.each([1, 25, 26])("batches and resolves %i unique identities", async (count) => {
-        installTargets(count);
-        const appView = new FakeAppView();
-        const changed: Element[][] = [];
+    it.each([1, BLUESKY_BATCH_LIMIT, BLUESKY_BATCH_LIMIT + 1])(
+        "batches and resolves %i unique identities",
+        async (count) => {
+            installTargets(count);
+            const appView = new FakeAppView();
+            const changed: Element[][] = [];
+            const coordinator = createBlueskyCoordinator({
+                document,
+                url: new URL("https://bsky.app/"),
+                appView,
+                getDiagnosticSink: () => undefined,
+                onSourcesChanged: (sources) => changed.push([...sources]),
+            });
+
+            coordinator.start();
+            coordinator.inspect(document);
+            await waitForResolvedSources(coordinator, count);
+
+            expect(appView.profileCalls.flat()).toHaveLength(count);
+            expect(appView.postCalls.flat()).toHaveLength(count);
+            expect(appView.profileCalls.every((batch) => {
+                return batch.length <= BLUESKY_BATCH_LIMIT;
+            })).toBe(true);
+            expect(appView.postCalls.every((batch) => {
+                return batch.length <= BLUESKY_BATCH_LIMIT;
+            })).toBe(true);
+            expect(appView.profileCalls)
+                .toHaveLength(Math.ceil(count / BLUESKY_BATCH_LIMIT));
+            expect(appView.postCalls)
+                .toHaveLength(Math.ceil(count / BLUESKY_BATCH_LIMIT));
+            expect(new Set(changed.flat())).toHaveLength(count);
+        },
+    );
+
+    it("runs at most one public batch at a time", async () => {
+        installTargets(BLUESKY_BATCH_LIMIT + 1);
+        let activeProfiles = 0;
+        let activePosts = 0;
+        let maximumProfiles = 0;
+        let maximumPosts = 0;
+        const appView = new FakeAppView(
+            async (actors) => {
+                activeProfiles += 1;
+                maximumProfiles = Math.max(maximumProfiles, activeProfiles);
+                await Promise.resolve();
+                activeProfiles -= 1;
+                return resolveProfiles(actors);
+            },
+            async (uris) => {
+                activePosts += 1;
+                maximumPosts = Math.max(maximumPosts, activePosts);
+                await Promise.resolve();
+                activePosts -= 1;
+                return resolvePosts(uris);
+            },
+        );
         const coordinator = createBlueskyCoordinator({
             document,
             url: new URL("https://bsky.app/"),
             appView,
             getDiagnosticSink: () => undefined,
-            onSourcesChanged: (sources) => changed.push([...sources]),
+            onSourcesChanged: () => undefined,
         });
 
         coordinator.start();
         coordinator.inspect(document);
-        await waitForResolvedSources(coordinator, count);
+        await waitForResolvedSources(coordinator, BLUESKY_BATCH_LIMIT + 1);
 
-        expect(appView.profileCalls.flat()).toHaveLength(count);
-        expect(appView.postCalls.flat()).toHaveLength(count);
-        expect(appView.profileCalls.every((batch) => batch.length <= 25)).toBe(true);
-        expect(appView.postCalls.every((batch) => batch.length <= 25)).toBe(true);
-        expect(appView.profileCalls).toHaveLength(Math.ceil(count / 25));
-        expect(appView.postCalls).toHaveLength(Math.ceil(count / 25));
-        expect(new Set(changed.flat())).toHaveLength(count);
+        expect(maximumProfiles).toBe(1);
+        expect(maximumPosts).toBe(1);
+    });
+
+    it("uses a permalink DID without a profile lookup", async () => {
+        document.body.innerHTML = `<article><a
+            href="/profile/did:plc:directactor/post/3direct"
+            aria-label="localized" data-tooltip="localized">
+            <span aria-hidden="true">· </span>2h</a></article>`;
+        const appView = new FakeAppView();
+        const coordinator = createBlueskyCoordinator({
+            document,
+            url: new URL("https://bsky.app/"),
+            appView,
+            getDiagnosticSink: () => undefined,
+            onSourcesChanged: () => undefined,
+        });
+
+        coordinator.start();
+        coordinator.inspect(document);
+        await waitForResolvedSources(coordinator, 1);
+
+        expect(appView.profileCalls).toEqual([]);
+        expect(appView.postCalls).toEqual([
+            ["at://did:plc:directactor/app.bsky.feed.post/3direct"],
+        ]);
     });
 
     it("deduplicates fixture identities and reuses successful document caches", async () => {
@@ -263,7 +335,7 @@ describe("Bluesky coordinator", () => {
         await waitForResolvedSources(coordinator, 3);
 
         expect(appView.profileCalls).toHaveLength(1);
-        expect(appView.profileCalls[0]).toHaveLength(2);
+        expect(appView.profileCalls[0]).toHaveLength(1);
         expect(appView.postCalls).toHaveLength(1);
         expect(appView.postCalls[0]).toHaveLength(2);
 
@@ -279,6 +351,35 @@ describe("Bluesky coordinator", () => {
 
         expect(appView.profileCalls).toHaveLength(1);
         expect(appView.postCalls).toHaveLength(1);
+    });
+
+    it("evicts lookup state after the final source for an identity detaches", async () => {
+        installTargets(1);
+        const appView = new FakeAppView();
+        const coordinator = createBlueskyCoordinator({
+            document,
+            url: new URL("https://bsky.app/"),
+            appView,
+            getDiagnosticSink: () => undefined,
+            onSourcesChanged: () => undefined,
+        });
+        coordinator.start();
+        coordinator.inspect(document);
+        await waitForResolvedSources(coordinator, 1);
+
+        const article = document.querySelector("article");
+        if (!article) {
+            throw new Error("Expected resolved article");
+        }
+        const replacement = article.cloneNode(true) as Element;
+        article.remove();
+        coordinator.release(article);
+        document.body.append(replacement);
+        coordinator.inspect(replacement);
+        await waitForResolvedSources(coordinator, 1);
+
+        expect(appView.profileCalls).toHaveLength(2);
+        expect(appView.postCalls).toHaveLength(2);
     });
 
     it("hydrates an outer and quote target from one outer PostView", async () => {

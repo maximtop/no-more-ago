@@ -271,9 +271,10 @@ The extension requests:
   can verify each frame's revision acknowledgement.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
-No More Ago does not derive dates from visible relative or absolute labels,
-link destinations, ARIA labels, nearby text, or elapsed time. The Hacker News
-specialized source trusts only the explicit zoned timestamp in its approved
+No More Ago does not parse dates from visible relative or absolute labels, ARIA
+labels, nearby text, or elapsed time. Except for the Bluesky lookup described
+below, link destinations are not timestamp inputs. The Hacker News specialized
+source trusts only the explicit zoned timestamp in its approved
 `span.age[title]` shape. The Stack Exchange source reads `title` only from its
 listed timestamp widgets and accepts only strict explicit-zone values plus the
 known comment-license suffix. In-place sources change only their simple label
@@ -292,9 +293,10 @@ permalinks and the resulting public AT post URIs to
 `https://public.api.bsky.app` solely to retrieve the server-observed exact post
 time. These are anonymous GET requests with no cookies, authorization headers,
 account tokens, post content, display names, extension settings, or unrelated
-page content. Successful mappings are cached only in memory for the current
-document runtime and are discarded on teardown. A failure leaves the page
-label unchanged, shows no error UI, and does not start an automatic retry.
+page content. Requests bypass the HTTP cache and have a finite deadline.
+Successful mappings remain only in memory while connected sources reference
+them and are discarded on teardown. A failure leaves the page label unchanged,
+shows no error UI, and does not start an automatic retry.
 
 ## Limitations
 

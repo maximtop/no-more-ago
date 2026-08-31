@@ -394,6 +394,7 @@ async function refresh(
             ? REFRESH_DOCUMENT_POLICY_MESSAGE
             : SUSPEND_AND_REFRESH_DOCUMENT_POLICY_MESSAGE,
     }), TAB_OPERATION_TIMEOUT_MS);
+    // Re-execution refreshes an existing singleton when the broadcast misses or times out.
     const ensured = await settleWithin(() => scripting.executeScript({
         target: { tabId: tab.id, allFrames: true },
         files: [CONTENT_SCRIPT_FILE],

@@ -20,27 +20,30 @@ import {
     restoreTimestampPresentations,
 } from "./render-timestamp-presentation";
 import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
+import type { DisplaySettings } from "../../shared/settings/snapshot";
 import { defaultRegistry } from "../adapters/registry";
 import type { TimestampSourceAttribute } from "../adapters/types";
 import {
-    createBlueskyCoordinator,
-    type BlueskyCoordinator,
-} from "../adapters/bluesky-coordinator";
-import {
-    createBlueskyAppView,
-    type BlueskyAppView,
-} from "../adapters/bluesky-appview";
-import { matchesBlueskyUrl } from "../adapters/bluesky";
+    type DocumentTransformationParticipant,
+    type DocumentTransformationParticipantFactory,
+} from "./document-transformation-participant";
 
 /**
- * Document-processing dependencies plus an optional offline-test AppView capability.
+ * Document-processing dependencies plus an optional site-owned participant factory.
  */
 export interface DocumentTransformationControllerInput extends ProcessInput {
     /**
-     * Optional AppView replacement used by deterministic controller and runtime tests.
+     * Optional factory for a document-scoped asynchronous source lifecycle.
      */
-    readonly blueskyAppView?: BlueskyAppView;
+    readonly participantFactory?: DocumentTransformationParticipantFactory;
 }
+
+/**
+ * Controller-owned copy whose refreshed presentation fields may change between passes.
+ */
+type MutableProcessInput = {
+    -readonly [Key in keyof ProcessInput]: ProcessInput[Key];
+};
 
 /**
  * Confirms that an element still belongs to the controller's document before it is reformatted.
@@ -72,7 +75,7 @@ export class DocumentTransformationController {
     /**
      * Plain synchronous processing input carrying the effective document registry.
      */
-    private readonly input: ProcessInput;
+    private readonly input: MutableProcessInput;
 
     /**
      * Distinguishes an inactive controller from one that currently owns document transformations.
@@ -96,9 +99,9 @@ export class DocumentTransformationController {
     private diagnosticSink: DocumentDiagnosticSink | undefined;
 
     /**
-     * Optional document-local remote enrichment coordinator for exact bsky.app pages.
+     * Optional site-owned document participant composed by the runtime.
      */
-    private readonly blueskyCoordinator: BlueskyCoordinator | undefined;
+    private readonly participant: DocumentTransformationParticipant | undefined;
 
     /**
      * Captures document-processing dependencies and seeds the current diagnostic sink before
@@ -107,29 +110,28 @@ export class DocumentTransformationController {
      * @param input - Document, adapter, presentation, and observer dependencies.
      */
     constructor(input: DocumentTransformationControllerInput) {
-        this.diagnosticSink = input.diagnosticSink;
-        const blueskyAppView = input.blueskyAppView;
-        const mutableInput = input as DocumentTransformationControllerInput & {
-            registry?: typeof input.registry;
-        };
-        Reflect.deleteProperty(mutableInput, "blueskyAppView");
-        this.input = mutableInput;
-        if (!matchesBlueskyUrl(input.url)) {
-            this.blueskyCoordinator = undefined;
-            return;
-        }
-        const coordinator = createBlueskyCoordinator({
-            document: input.root,
-            url: input.url,
-            appView: blueskyAppView ?? createBlueskyAppView(),
+        const { participantFactory, ...processInput } = input;
+        this.input = { ...processInput };
+        this.diagnosticSink = processInput.diagnosticSink;
+        this.participant = participantFactory?.({
             getDiagnosticSink: () => this.diagnosticSink,
             onSourcesChanged: (sources) => {
-                this.reconcileBlueskySources(sources);
+                this.reconcileParticipantSources(sources);
             },
         });
-        this.blueskyCoordinator = coordinator;
-        mutableInput.registry = (input.registry ?? defaultRegistry)
-            .withSpecialized(coordinator.rule);
+        if (this.participant) {
+            this.input.registry = (processInput.registry ?? defaultRegistry)
+                .withSpecialized(this.participant.rule);
+        }
+    }
+
+    /**
+     * Replaces the display settings used by later processing and reconciliation passes.
+     *
+     * @param display - Current persisted presentation settings.
+     */
+    setDisplay(display: DisplaySettings): void {
+        this.input.display = display;
     }
 
     /**
@@ -139,11 +141,10 @@ export class DocumentTransformationController {
      */
     setDiagnosticSink(sink: DocumentDiagnosticSink | undefined): void {
         this.diagnosticSink = sink;
-        const mutableInput = this.input as { diagnosticSink?: DocumentDiagnosticSink };
         if (sink) {
-            mutableInput.diagnosticSink = sink;
+            this.input.diagnosticSink = sink;
         } else {
-            Reflect.deleteProperty(mutableInput, "diagnosticSink");
+            Reflect.deleteProperty(this.input, "diagnosticSink");
         }
     }
 
@@ -225,13 +226,13 @@ export class DocumentTransformationController {
         this.scheduler = scheduler;
         try {
             scheduler.start();
-            this.blueskyCoordinator?.start();
-            this.blueskyCoordinator?.inspect(this.input.root);
+            this.participant?.start();
+            this.participant?.inspect(this.input.root);
             this.outputs = processDocument({ ...this.input, ownedDomMutations: scheduler });
             this.phase = "active";
             return this.outputs;
         } catch (error) {
-            this.blueskyCoordinator?.stop();
+            this.participant?.stop();
             scheduler.stop();
             restoreTimestampPresentations(this.input.root);
             this.outputs = [];
@@ -245,7 +246,7 @@ export class DocumentTransformationController {
      * Stops observation and restores the document to its pre-rendered state.
      */
     teardown(): void {
-        this.blueskyCoordinator?.stop();
+        this.participant?.stop();
         this.scheduler?.stop();
         this.scheduler = undefined;
         restoreTimestampPresentations(this.input.root);
@@ -288,7 +289,7 @@ export class DocumentTransformationController {
             (root) => !isConnectedToDocument(root, this.input.root),
         );
         for (const root of removedRoots) {
-            this.blueskyCoordinator?.release(root);
+            this.participant?.release(root);
         }
         if (removedRoots.length > 0) {
             restoreTimestampPresentations(removedRoots, scheduler);
@@ -296,12 +297,12 @@ export class DocumentTransformationController {
 
         for (const root of batch.addedRoots) {
             if (isConnectedToDocument(root, this.input.root)) {
-                this.blueskyCoordinator?.inspect(root);
+                this.participant?.inspect(root);
                 reconcileDocumentRegion({ ...this.input, root, ownedDomMutations: scheduler });
             }
         }
 
-        this.blueskyCoordinator?.inspectSources([
+        this.participant?.inspectSources([
             ...batch.sourceTargets,
             ...batch.displacedOutputSources,
         ].filter((source) => isConnectedToDocument(source, this.input.root)));
@@ -350,11 +351,11 @@ export class DocumentTransformationController {
     }
 
     /**
-     * Reconciles exact Bluesky sources after their document-local resolutions change.
+     * Reconciles exact participant sources after their document-local resolutions change.
      *
      * @param sources - Sources whose synchronous rule extraction result changed.
      */
-    private reconcileBlueskySources(sources: readonly Element[]): void {
+    private reconcileParticipantSources(sources: readonly Element[]): void {
         const scheduler = this.scheduler;
         if (this.phase !== "active" || !scheduler) {
             return;

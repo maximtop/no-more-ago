@@ -3,11 +3,19 @@
  */
 
 import type { AdapterRegistry } from "./adapters/registry";
-import type { BlueskyAppView } from "./adapters/bluesky-appview";
+import {
+    createBlueskyAppView,
+    type BlueskyAppView,
+} from "./adapters/bluesky-appview";
+import { createBlueskyCoordinator } from "./adapters/bluesky-coordinator";
+import { matchesBlueskyUrl } from "./adapters/bluesky";
 import {
     DocumentTransformationController,
     type DocumentTransformationControllerInput,
 } from "./transformation/document-transformation-controller";
+import type {
+    DocumentTransformationParticipantFactory,
+} from "./transformation/document-transformation-participant";
 import type { DocumentDiagnosticSink } from "./transformation/process-document";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
@@ -138,10 +146,6 @@ interface RuntimeSlot {
      */
     loadDocumentState: (() => Promise<unknown>) | undefined;
 
-    /**
-     * Controller input whose display field is populated after state hydration.
-     */
-    processInput: DocumentTransformationControllerInput & Record<string, unknown>;
 }
 
 /**
@@ -154,7 +158,7 @@ interface RuntimeSlot {
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
     slot.presentation = display;
     slot.presentationRevision = revision;
-    (slot.processInput as unknown as Record<string, unknown>).display = display;
+    slot.controller.setDisplay(display);
 }
 
 /**
@@ -450,23 +454,33 @@ export function installContentRuntime(input: {
         if (input.reportDiagnostic) {
             existing.reportDiagnostic = input.reportDiagnostic;
         }
-        activate(existing, input.loadDocumentState);
+        existing.loadDocumentState = input.loadDocumentState;
+        refreshPolicy(existing);
         return existing.handle;
     }
-    const processInput = {
+    const participantFactory: DocumentTransformationParticipantFactory | undefined =
+        matchesBlueskyUrl(input.url)
+            ? (host) => createBlueskyCoordinator({
+                document: input.document,
+                url: input.url,
+                appView: input.blueskyAppView ?? createBlueskyAppView(),
+                getDiagnosticSink: host.getDiagnosticSink,
+                onSourcesChanged: host.onSourcesChanged,
+            })
+            : undefined;
+    const processInput: DocumentTransformationControllerInput = {
         url: input.url,
         root: input.document,
         locales: input.locales,
         ...(input.localesProvider === undefined ? {} : { localesProvider: input.localesProvider }),
         ...(input.registry === undefined ? {} : { registry: input.registry }),
-        ...(input.blueskyAppView === undefined
+        ...(participantFactory === undefined
             ? {}
-            : { blueskyAppView: input.blueskyAppView }),
-    } as DocumentTransformationControllerInput & Record<string, unknown>;
+            : { participantFactory }),
+    };
     const slot = {} as RuntimeSlot;
     slot.document = input.document;
     slot.messages = input.messages;
-    slot.processInput = processInput;
     slot.controller = new DocumentTransformationController(processInput);
     slot.phase = DOCUMENT_PHASE.STOPPED;
     slot.generation = 0;

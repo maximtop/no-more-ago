@@ -5,13 +5,13 @@
 import * as v from "valibot";
 
 import {
-    parseExplicitZoneDatetime,
-} from "../transformation/resolve-trusted-timestamp";
+    isValidBlueskyDid,
+    isValidBlueskyPostUri,
+    normalizeBlueskyHandle,
+} from "./bluesky-identity";
+import { parseExplicitZoneDatetime } from "../../shared/date/parse-explicit-zone-datetime";
 
-const DID_PATTERN = /^did:[a-z0-9]+:[A-Za-z0-9._:%-]+$/u;
-const HANDLE_LABEL_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/u;
-const AT_POST_URI_PATTERN =
-    /^at:\/\/did:[a-z0-9]+:[A-Za-z0-9._:%-]+\/app\.bsky\.feed\.post\/[A-Za-z0-9._~:-]+$/u;
+const BLUESKY_REQUEST_TIMEOUT_MS = 10_000;
 const requiredStringSchema = v.pipe(v.string(), v.nonEmpty());
 const profileEnvelopeSchema = v.object({ profiles: v.array(v.unknown()) });
 const profileSchema = v.object({
@@ -201,42 +201,46 @@ async function requestJson(
     for (const value of values) {
         url.searchParams.append(queryName, value);
     }
-    try {
-        const response = await fetchImplementation(url, {
-            method: "GET",
-            credentials: "omit",
-            redirect: "error",
-            referrerPolicy: "no-referrer",
-            signal,
-        });
-        if (!response.ok || response.redirected) {
+    const requestController = new AbortController();
+    let resolveCancellation: (() => void) | undefined;
+    const cancellation = new Promise<null>((resolve) => {
+        resolveCancellation = () => {
+            resolve(null);
+        };
+    });
+    const cancel = (): void => {
+        requestController.abort();
+        resolveCancellation?.();
+    };
+    signal.addEventListener("abort", cancel, { once: true });
+    const timeoutId = globalThis.setTimeout(cancel, BLUESKY_REQUEST_TIMEOUT_MS);
+    if (signal.aborted) {
+        cancel();
+    }
+    const request = (async (): Promise<unknown> => {
+        try {
+            const response = await fetchImplementation(url, {
+                method: "GET",
+                cache: "no-store",
+                credentials: "omit",
+                redirect: "error",
+                referrerPolicy: "no-referrer",
+                signal: requestController.signal,
+            });
+            if (!response.ok || response.redirected) {
+                return null;
+            }
+            return await response.json() as unknown;
+        } catch {
             return null;
         }
-        return await response.json() as unknown;
-    } catch {
-        return null;
+    })();
+    try {
+        return await Promise.race([request, cancellation]);
+    } finally {
+        globalThis.clearTimeout(timeoutId);
+        signal.removeEventListener("abort", cancel);
     }
-}
-
-/**
- * Normalizes a valid DNS-style handle returned by AppView.
- *
- * @param value - Untrusted handle value.
- * @returns - Lowercase handle, or null when invalid.
- */
-function normalizeHandle(value: string): string | null {
-    if (value.length > 253 || !value.includes(".")) {
-        return null;
-    }
-    const labels = value.split(".");
-    if (labels.some(
-        (label) => label.length === 0
-            || label.length > 63
-            || !HANDLE_LABEL_PATTERN.test(label),
-    )) {
-        return null;
-    }
-    return value.toLowerCase();
 }
 
 /**
@@ -257,19 +261,21 @@ function parseProfiles(
     const profiles = envelope.output.profiles.flatMap((value) => {
         const parsed = v.safeParse(profileSchema, value);
         return parsed.success
-            && DID_PATTERN.test(parsed.output.did)
-            && normalizeHandle(parsed.output.handle) !== null
+            && isValidBlueskyDid(parsed.output.did)
+            && normalizeBlueskyHandle(parsed.output.handle) !== null
             ? [parsed.output]
             : [];
     });
     const records: BlueskyProfileRecord[] = [];
     for (const actor of actors) {
-        const normalizedActor = actor.startsWith("did:") ? null : normalizeHandle(actor);
+        const normalizedActor = actor.startsWith("did:")
+            ? null
+            : normalizeBlueskyHandle(actor);
         const matches = profiles.filter((profile) => {
             return profile.did === actor
                 || (
                     normalizedActor !== null
-                    && normalizeHandle(profile.handle) === normalizedActor
+                    && normalizeBlueskyHandle(profile.handle) === normalizedActor
                 );
         });
         if (matches.length === 1) {
@@ -298,7 +304,7 @@ function parseQuote(value: unknown): BlueskyQuoteRecord | undefined {
             : null;
     if (
         !record
-        || !AT_POST_URI_PATTERN.test(record.uri)
+        || !isValidBlueskyPostUri(record.uri)
         || !parseExplicitZoneDatetime(record.indexedAt)
     ) {
         return undefined;

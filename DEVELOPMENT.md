@@ -181,12 +181,13 @@ require background adapter registration or site-policy logic.
 
 Bluesky is the only remote-enriched source. Its DOM adapter extracts only a
 validated public post identity; a document-local coordinator batches and
-caches successful work for that runtime, rejects stale DOM results, and uses a
-narrow AppView capability. Production requests are credential-free GETs to the
-fixed `https://public.api.bsky.app` origin. They contain only public actor
-identifiers or public AT post URIs and never cookies, authorization, account
-tokens, post content, settings, or unrelated page data. Failures are silent
-and are not retried automatically.
+caches successful work while a connected source references it, rejects stale
+DOM results, and uses a narrow AppView capability. Production requests are
+credential-free, no-store GETs with a finite deadline to the fixed
+`https://public.api.bsky.app` origin. They contain only public actor identifiers
+or public AT post URIs and never cookies, authorization, account tokens, post
+content, settings, or unrelated page data. Failures are silent and are not
+retried automatically.
 
 The Telegram Web K adapter applies only below
 `https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
@@ -256,8 +257,8 @@ pnpm test tests/src/content-script/adapters/bluesky.test.ts \
   tests/src/content-script/adapters/bluesky-fixtures.test.ts
 ~~~
 
-Inject a fake `BlueskyAppView` for controller or runtime tests. Tests must not
-contact the live public service.
+Inject a fake `BlueskyAppView` through the runtime or a generic participant
+factory for controller tests. Tests must not contact the live public service.
 
 ### Add or Update a Site Adapter
 

@@ -124,16 +124,23 @@ describe("installContentRuntime", () => {
         });
     });
 
-    it("does not hydrate again when an active singleton is reinjected", async () => {
+    it("refreshes an active singleton when the runtime is reinjected", async () => {
         const source = messages();
-        const load = vi.fn(async () => state());
+        const load = vi.fn()
+            .mockResolvedValueOnce(state(true, 1))
+            .mockResolvedValueOnce(state(false, 2));
         const first = install(source, load);
         await Promise.resolve();
         await Promise.resolve();
+        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+
         const second = install(source, load);
+        await Promise.resolve();
+        await Promise.resolve();
 
         expect(second).toBe(first);
-        expect(load).toHaveBeenCalledTimes(1);
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         expect(source.onMessage.addListener).toHaveBeenCalledTimes(1);
     });
 

@@ -20,6 +20,7 @@ import { INSTAGRAM_ADAPTER_ID } from "../../../../src/content-script/adapters/in
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import {
     TIMESTAMP_PRESENTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -108,6 +109,17 @@ describe("Bluesky source contract", () => {
         expect(parseBlueskyPostPermalink(anchor)).toBeNull();
     });
 
+    it("rejects a permalink DID beyond the shared identity bound", () => {
+        const anchor = document.createElement("a");
+        anchor.setAttribute(
+            "href",
+            `/profile/did:plc:${"a".repeat(2_048)}/post/3alpha`,
+        );
+        document.body.append(anchor);
+
+        expect(parseBlueskyPostPermalink(anchor)).toBeNull();
+    });
+
     it("discovers relative targets on all required fixture shapes", () => {
         const expected = new Map([
             ["feed.html", 3],
@@ -181,6 +193,21 @@ describe("Bluesky source contract", () => {
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         });
+    });
+
+    it("reconciles a quote when its outer permalink changes", () => {
+        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+        const adapter = createBlueskyAdapter(() => undefined);
+        const outer = requireElement("quoted-outer-time");
+        const quote = requireElement("quoted-inner-time");
+        const sources = adapter.getMutationSources?.(
+            outer,
+            TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
+            outer.getAttribute("href"),
+        );
+
+        expect(sources).toEqual([outer, quote]);
+        expect(adapter.mutationAttributes).not.toContain(TIMESTAMP_SOURCE_ATTRIBUTE.CLASS);
     });
 
     it("composes a document-scoped rule first without losing production rules", () => {

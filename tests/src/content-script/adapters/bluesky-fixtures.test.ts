@@ -15,6 +15,9 @@ import {
     type BlueskyProfileRecord,
 } from "../../../../src/content-script/adapters/bluesky-appview";
 import {
+    createBlueskyCoordinator,
+} from "../../../../src/content-script/adapters/bluesky-coordinator";
+import {
     BLUESKY_TARGET_ROLE,
     discoverBlueskyRelativeTargets,
     type BlueskyRelativeTarget,
@@ -22,6 +25,9 @@ import {
 import {
     DocumentTransformationController,
 } from "../../../../src/content-script/transformation/document-transformation-controller";
+import type {
+    DocumentTransformationParticipantFactory,
+} from "../../../../src/content-script/transformation/document-transformation-participant";
 
 const FIXTURE_NAMES = [
     "feed.html",
@@ -33,6 +39,7 @@ const FIXTURE_NAMES = [
 const fixtures = new Map<string, string>();
 const QUOTE_URI = "at://did:plc:quoted/app.bsky.feed.post/3quoted" as const;
 const QUOTE_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
+const REPLACEMENT_QUOTE_INDEXED_AT = "2026-08-29T08:00:00.000Z" as const;
 const timestamps: ReadonlyMap<string, string> = new Map([
     ["3feedalpha", "2026-08-31T10:01:00.000Z"],
     ["3feedbravo", "2026-08-31T10:02:00.000Z"],
@@ -43,6 +50,7 @@ const timestamps: ReadonlyMap<string, string> = new Map([
     ["3threadreplyone", "2026-08-31T10:07:00.000Z"],
     ["3threadreplytwo", "2026-08-31T10:08:00.000Z"],
     ["3quotedouter", "2026-08-31T10:09:00.000Z"],
+    ["3quotedreplacement", "2026-08-31T12:30:00.000Z"],
 ] as const);
 
 /**
@@ -153,11 +161,16 @@ class FixtureAppView implements BlueskyAppView {
             if (!indexedAt) {
                 continue;
             }
+            const quoteIndexedAt = recordKey === "3quotedouter"
+                ? QUOTE_INDEXED_AT
+                : recordKey === "3quotedreplacement"
+                    ? REPLACEMENT_QUOTE_INDEXED_AT
+                    : undefined;
             records.push({
                 uri,
                 indexedAt,
-                ...(recordKey === "3quotedouter" && this.includeQuote
-                    ? { quote: { uri: QUOTE_URI, indexedAt: QUOTE_INDEXED_AT } }
+                ...(quoteIndexedAt && this.includeQuote
+                    ? { quote: { uri: QUOTE_URI, indexedAt: quoteIndexedAt } }
                     : {}),
             });
         }
@@ -237,6 +250,24 @@ function expectedText(descriptor: BlueskyRelativeTarget): string {
 }
 
 /**
+ * Composes the Bluesky participant used by a deterministic controller fixture.
+ *
+ * @param appView - Fake public dataset.
+ * @returns - Generic document-participant factory.
+ */
+function participantFactoryFor(
+    appView: BlueskyAppView,
+): DocumentTransformationParticipantFactory {
+    return (host) => createBlueskyCoordinator({
+        document,
+        url: new URL("https://bsky.app/"),
+        appView,
+        getDiagnosticSink: host.getDiagnosticSink,
+        onSourcesChanged: host.onSourcesChanged,
+    });
+}
+
+/**
  * Creates a fixture controller with deterministic custom UTC presentation.
  *
  * @param appView - Fake public dataset.
@@ -252,7 +283,7 @@ function createController(appView: BlueskyAppView): DocumentTransformationContro
             pattern: "yyyy-MM-dd HH:mm",
             timeZone: { mode: "utc" },
         },
-        blueskyAppView: appView,
+        participantFactory: participantFactoryFor(appView),
     });
 }
 
@@ -345,6 +376,36 @@ describe("Bluesky fixture surfaces", () => {
         expect(appView.profileCalls).toHaveLength(1);
         expect(appView.postCalls).toHaveLength(1);
         expect(appView.postCalls.flat()).not.toContain(QUOTE_URI);
+        controller.teardown();
+    });
+
+    it("re-resolves an outer post and its quote after the permalink changes", async () => {
+        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+        const outer = document.getElementById("quoted-outer-time");
+        const outerTarget = outer?.lastChild;
+        const quoteTarget = document.getElementById("quoted-inner-time")?.lastChild;
+        if (!outer || !(outerTarget instanceof Text) || !(quoteTarget instanceof Text)) {
+            throw new Error("Expected quoted-post labels");
+        }
+        const appView = new FixtureAppView();
+        const controller = createController(appView);
+        controller.start();
+        await vi.waitFor(() => {
+            expect(outerTarget.data).toBe("2026-08-31 10:09");
+            expect(quoteTarget.data).toBe("2026-08-30 09:00");
+        });
+
+        outer.setAttribute(
+            "href",
+            "/profile/alice.example/post/3quotedreplacement",
+        );
+
+        await vi.waitFor(() => {
+            expect(outerTarget.data).toBe("2026-08-31 12:30");
+            expect(quoteTarget.data).toBe("2026-08-29 08:00");
+        });
+        expect(appView.profileCalls).toHaveLength(1);
+        expect(appView.postCalls).toHaveLength(2);
         controller.teardown();
     });
 
@@ -572,8 +633,8 @@ describe("Bluesky fixture surfaces", () => {
             await vi.waitFor(() => {
                 expect(target.data).toBe("2026-08-31 10:03");
             });
-            expect(appView.profileCalls).toHaveLength(2);
-            expect(appView.postCalls).toHaveLength(2);
+            expect(appView.profileCalls).toHaveLength(3);
+            expect(appView.postCalls).toHaveLength(3);
             controller.teardown();
             expect(target.data).toBe("page refreshed relative");
         },
@@ -596,7 +657,7 @@ describe("Bluesky fixture surfaces", () => {
                 pattern: "yyyy ff",
                 timeZone: { mode: "utc" },
             },
-            blueskyAppView: appView,
+            participantFactory: participantFactoryFor(appView),
         });
         controller.start();
         await vi.waitFor(() => {

@@ -17,6 +17,7 @@ import {
     type BlueskyRelativeTarget,
     type ResolvedBlueskyTarget,
 } from "./bluesky";
+import { isValidBlueskyDid } from "./bluesky-identity";
 import type { TimestampSourceRule } from "./types";
 import type {
     DocumentDiagnosticSink,
@@ -187,6 +188,11 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
     private readonly pending = new Map<Element, BlueskyRelativeTarget>();
 
     /**
+     * Latest descriptor for every connected source, including resolved and failed sources.
+     */
+    private readonly tracked = new Map<Element, BlueskyRelativeTarget>();
+
+    /**
      * Successful actor-to-DID results scoped to the current document generation.
      */
     private readonly actorCache = new Map<string, string>();
@@ -205,16 +211,6 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Post URIs settled once, including missing and failed results, to prevent retries.
      */
     private readonly attemptedPosts = new Set<string>();
-
-    /**
-     * Actor values currently owned by an active public request.
-     */
-    private readonly inFlightActors = new Set<string>();
-
-    /**
-     * Post URIs currently owned by an active public request.
-     */
-    private readonly inFlightPosts = new Set<string>();
 
     /**
      * Current trusted timestamp resolution keyed weakly by page-owned source.
@@ -294,12 +290,14 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             if (descriptor) {
                 this.track(descriptor);
             } else {
+                this.tracked.delete(source);
                 this.pending.delete(source);
                 this.clearResolution(source);
             }
             changed = true;
         }
         if (changed) {
+            this.pruneLookupState();
             this.scheduleDrain();
         }
     }
@@ -310,8 +308,9 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * @param root - Detached document region.
      */
     release(root: ParentNode): void {
-        for (const source of this.pending.keys()) {
+        for (const source of this.tracked.keys()) {
             if (root === source || (root as Node).contains(source)) {
+                this.tracked.delete(source);
                 this.pending.delete(source);
             }
         }
@@ -324,6 +323,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             this.resolutions.delete(element);
             this.changedSources.delete(element);
         }
+        this.pruneLookupState();
     }
 
     /**
@@ -345,12 +345,11 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      */
     private clearState(): void {
         this.pending.clear();
+        this.tracked.clear();
         this.actorCache.clear();
         this.postCache.clear();
         this.attemptedActors.clear();
         this.attemptedPosts.clear();
-        this.inFlightActors.clear();
-        this.inFlightPosts.clear();
         this.changedSources.clear();
         this.resolutions = new WeakMap<Element, ResolvedBlueskyTarget>();
         this.running = false;
@@ -390,7 +389,43 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         ) {
             this.clearResolution(descriptor.source);
         }
+        this.tracked.set(descriptor.source, descriptor);
         this.pending.set(descriptor.source, descriptor);
+    }
+
+    /**
+     * Evicts lookup state that is no longer referenced by a connected tracked source.
+     */
+    private pruneLookupState(): void {
+        const descriptors = [...this.tracked.values()].filter((descriptor) => {
+            return descriptor.source.ownerDocument === this.input.document
+                && descriptor.source.isConnected;
+        });
+        const actors = new Set(descriptors.map(({ outerIdentity }) => outerIdentity.actor));
+        for (const actor of this.actorCache.keys()) {
+            if (!actors.has(actor)) {
+                this.actorCache.delete(actor);
+            }
+        }
+        for (const actor of this.attemptedActors) {
+            if (!actors.has(actor)) {
+                this.attemptedActors.delete(actor);
+            }
+        }
+        const postUris = new Set(descriptors.flatMap((descriptor) => {
+            const uri = this.getPostUri(descriptor);
+            return uri ? [uri] : [];
+        }));
+        for (const uri of this.postCache.keys()) {
+            if (!postUris.has(uri)) {
+                this.postCache.delete(uri);
+            }
+        }
+        for (const uri of this.attemptedPosts) {
+            if (!postUris.has(uri)) {
+                this.attemptedPosts.delete(uri);
+            }
+        }
     }
 
     /**
@@ -452,11 +487,13 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
+            this.pruneLookupState();
             await this.resolvePosts(generation, signal, diagnostics);
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
             this.publishPending();
+            this.pruneLookupState();
             this.emitDiagnostics(diagnostics);
         } finally {
             if (this.isCurrentGeneration(generation)) {
@@ -481,18 +518,19 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         signal: AbortSignal,
         diagnostics: DiagnosticCounts,
     ): Promise<void> {
-        const actors = [...new Set(
+        const actors = new Set(
             [...this.pending.values()].map(({ outerIdentity }) => outerIdentity.actor),
-        )].filter((actor) => {
-            return !this.actorCache.has(actor)
-                && !this.attemptedActors.has(actor)
-                && !this.inFlightActors.has(actor);
-        });
-        const batches = chunk(actors, BLUESKY_BATCH_LIMIT);
+        );
         for (const actor of actors) {
-            this.inFlightActors.add(actor);
+            if (isValidBlueskyDid(actor)) {
+                this.actorCache.set(actor, actor);
+            }
         }
-        await Promise.all(batches.map(async (batch) => {
+        const handles = [...actors].filter((actor) => {
+            return !this.actorCache.has(actor)
+                && !this.attemptedActors.has(actor);
+        });
+        for (const batch of chunk(handles, BLUESKY_BATCH_LIMIT)) {
             let result: Awaited<ReturnType<BlueskyAppView["getProfiles"]>>;
             try {
                 result = await this.input.appView.getProfiles(batch, signal);
@@ -503,7 +541,6 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 return;
             }
             for (const actor of batch) {
-                this.inFlightActors.delete(actor);
                 this.attemptedActors.add(actor);
             }
             if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
@@ -519,7 +556,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     diagnostics.partial += 1;
                 }
             }
-        }));
+        }
     }
 
     /**
@@ -554,14 +591,9 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             }),
         )].filter((uri) => {
             return !this.postCache.has(uri)
-                && !this.attemptedPosts.has(uri)
-                && !this.inFlightPosts.has(uri);
+                && !this.attemptedPosts.has(uri);
         });
-        const batches = chunk(uris, BLUESKY_BATCH_LIMIT);
-        for (const uri of uris) {
-            this.inFlightPosts.add(uri);
-        }
-        await Promise.all(batches.map(async (batch) => {
+        for (const batch of chunk(uris, BLUESKY_BATCH_LIMIT)) {
             let result: Awaited<ReturnType<BlueskyAppView["getPosts"]>>;
             try {
                 result = await this.input.appView.getPosts(batch, signal);
@@ -572,7 +604,6 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 return;
             }
             for (const uri of batch) {
-                this.inFlightPosts.delete(uri);
                 this.attemptedPosts.add(uri);
             }
             if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
@@ -588,7 +619,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     diagnostics.partial += 1;
                 }
             }
-        }));
+        }
     }
 
     /**
@@ -619,6 +650,9 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             if (!current) {
                 if (this.pending.get(source) === descriptor) {
                     this.pending.delete(source);
+                }
+                if (this.tracked.get(source) === descriptor) {
+                    this.tracked.delete(source);
                 }
                 this.clearResolution(source);
                 continue;

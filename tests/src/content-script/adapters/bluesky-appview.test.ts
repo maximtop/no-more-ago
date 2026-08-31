@@ -2,7 +2,7 @@
  * @file Verifies the anonymous, bounded, fail-closed Bluesky AppView boundary.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 /* eslint-disable @typescript-eslint/require-await */
 
 import {
@@ -137,13 +137,14 @@ describe("Bluesky AppView request contract", () => {
             expect(url.pathname).toBe(`/xrpc/${method}`);
             expect([...url.searchParams.keys()]).toEqual(values.map(() => queryName));
             expect(url.searchParams.getAll(queryName)).toEqual(values);
-            expect(call[1]).toEqual({
+            expect(call[1]).toMatchObject({
                 method: "GET",
+                cache: "no-store",
                 credentials: "omit",
                 redirect: "error",
                 referrerPolicy: "no-referrer",
-                signal,
             });
+            expect(call[1]?.signal).toBeInstanceOf(AbortSignal);
         }
     });
 
@@ -169,10 +170,48 @@ describe("Bluesky AppView request contract", () => {
         });
         expect(fake.calls).toEqual([]);
     });
+
+    it.each(["transport", "body"])(
+        "fails a request whose %s never settles",
+        async (mode) => {
+            vi.useFakeTimers();
+            let observedSignal: AbortSignal | null | undefined;
+            const fetchImplementation = (async (
+                _input: URL | RequestInfo,
+                init?: RequestInit,
+            ): Promise<Response> => {
+                observedSignal = init?.signal;
+                if (mode === "transport") {
+                    return new Promise<Response>(() => undefined);
+                }
+                return {
+                    ok: true,
+                    redirected: false,
+                    json: () => new Promise<unknown>(() => undefined),
+                } as Response;
+            }) as typeof fetch;
+            try {
+                const result = createBlueskyAppView(fetchImplementation).getPosts(
+                    [postUri("stalled")],
+                    new AbortController().signal,
+                );
+
+                await vi.runAllTimersAsync();
+
+                await expect(result).resolves.toEqual({
+                    status: BLUESKY_LOOKUP_STATUS.FAILURE,
+                });
+                expect(observedSignal?.aborted).toBe(true);
+            } finally {
+                vi.useRealTimers();
+            }
+        },
+    );
 });
 
 describe("Bluesky AppView response contract", () => {
     it("matches reordered partial profiles and omits foreign or ambiguous records", async () => {
+        const oversizedDid = `did:plc:${"a".repeat(2_048)}`;
         const fake = createFetchDouble([fakeResponse({
             profiles: [
                 { did: "did:plc:bob", handle: "bob.example", displayName: "ignored" },
@@ -180,6 +219,7 @@ describe("Bluesky AppView response contract", () => {
                 { did: "did:plc:alice", handle: "ALICE.EXAMPLE" },
                 { did: "did:plc:duplicate-one", handle: "duplicate.example" },
                 { did: "did:plc:duplicate-two", handle: "duplicate.example" },
+                { did: oversizedDid, handle: "oversized.example" },
                 { did: 42, handle: "invalid.example" },
             ],
         })]);
@@ -188,6 +228,7 @@ describe("Bluesky AppView response contract", () => {
             "did:plc:bob",
             "missing.example",
             "duplicate.example",
+            "oversized.example",
             "invalid.example",
         ], new AbortController().signal);
 
