@@ -57,14 +57,17 @@ extension.
 ## Installation
 
 No More Ago is not published in browser stores yet. Installation currently
-requires a browser-specific release artifact. If you need to create an artifact
-from source, follow the [development guide](DEVELOPMENT.md).
+requires a browser-specific archive: download
+`no-more-ago-<version>-<browser>.zip` from the repository's GitHub Releases
+page and verify it against the attached `SHA256SUMS.txt`, or build
+`dist/release/<browser>.zip` from source by following the
+[development guide](DEVELOPMENT.md).
 
 ### Chrome and Edge
 
 Requires Chrome or Edge 102 or later.
 
-1. Obtain and extract the `chrome.zip` or `edge.zip` release artifact.
+1. Extract the Chrome or Edge archive.
 2. Open the browser's extension management page.
 3. Enable Developer mode.
 4. Choose **Load unpacked**.
@@ -74,7 +77,7 @@ Requires Chrome or Edge 102 or later.
 
 Requires Firefox 128 or later.
 
-1. Obtain and extract the `firefox.zip` release artifact.
+1. Extract the Firefox archive.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Choose **Load Temporary Add-on**.
 4. Select `manifest.json` from the extracted artifact.

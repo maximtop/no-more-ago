@@ -86,8 +86,8 @@ has an obvious, simpler standard-library replacement.
 
 ~~~text
 .
-├── .env.example                # Chrome Web Store credential names for a local .env
 ├── .github/
+│   ├── actions/                # Composite pnpm setup shared by the workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── src/
 │   ├── assets/                 # Extension icons
@@ -107,11 +107,11 @@ has an obvious, simpler standard-library replacement.
 │   └── shared/                 # Cross-context schemas and contracts
 ├── scripts/
 │   ├── build.ts                # Build command entry point
-│   ├── build/                  # Build pipeline and artifacts
-│   └── release/                # Release validation for store deployment
+│   └── build/                  # Build pipeline and artifacts
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
+├── .env.example                # Chrome Web Store credential names for a local .env
 ├── eslint.config.ts            # Lint, style, and JSDoc rules
 ├── rspack.config.ts            # Browser bundle entry points
 ├── tsconfig.json               # Strict TypeScript configuration
@@ -144,7 +144,7 @@ Run commands from the repository root.
 The Makefile provides optional compatibility wrappers for non-watch development
 and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
 fallbacks that drive the Chrome Web Store with `go-webext` and the gitignored
-`.env`. Prefer the direct pnpm commands above, and the tag-driven release and
+`.env`. Prefer the direct pnpm commands above, and the tagged release and
 deployment workflows described in `DEVELOPMENT.md` for real releases. There is
 no separate formatter or development server. Load the relevant artifact from
 `dist/` as an unpacked or temporary extension when manual browser verification
@@ -419,6 +419,11 @@ Known architectural exclusions to improve when their area changes:
   contracts.
 - Assemble manifests from `src/manifest/common.json` and one browser-specific
   variant. Keep browser differences declarative where possible.
+- Treat the GitHub Release asset names (`no-more-ago-<version>-<browser>.zip`,
+  `no-more-ago-<version>-source.zip`, and `SHA256SUMS.txt`) as one contract
+  shared by `release.yml`, `deploy-chrome-store.yml` (which selects the Chrome
+  archive by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the README
+  installation steps. Change them together.
 - Keep settings in one typed, schema-versioned document and persist the current
   and previous snapshots together.
 - Route settings writes through the background settings service so concurrent

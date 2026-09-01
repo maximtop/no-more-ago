@@ -368,7 +368,8 @@ The Makefile also provides the [local store commands](#local-store-commands).
 Releases are produced by GitHub Actions from a version tag. `version` in
 `package.json` is the single source of truth: the build writes it into every
 generated manifest, and the release workflow refuses a tag that does not match
-it.
+it. GitHub Releases are created only by that workflow; do not create one by
+hand in the GitHub UI.
 
 ### Cut a Release
 
@@ -380,25 +381,43 @@ it.
    git tag vX.Y.Z && git push origin vX.Y.Z
    ~~~
 
-3. `.github/workflows/release.yml` checks that the tag matches `package.json`
-   and is reachable from `master`, runs `pnpm check`, builds every browser
-   target with `pnpm release`, verifies the manifest versions, and publishes a
-   GitHub Release with:
+3. `.github/workflows/release.yml` checks that the tag matches `package.json`,
+   is reachable from `master`, and has no release yet, then runs `pnpm check`,
+   builds every browser target with `pnpm release`, verifies the manifest
+   versions, and publishes a GitHub Release with:
    - `no-more-ago-<version>-chrome.zip`, `no-more-ago-<version>-edge.zip`,
      and `no-more-ago-<version>-firefox.zip`
    - `no-more-ago-<version>-source.zip`, the tagged repository state
    - `SHA256SUMS.txt`
 
-Run the workflow manually (**Actions → Release → Run workflow**, or
-`gh workflow run release.yml`) for a dry run: it executes the same checks and
-build and uploads the archives as a workflow artifact, but publishes nothing.
+Release notes are a fixed sentence followed by the notes GitHub generates from
+the pull requests merged since the previous tag; there is no changelog file.
+Edit them afterwards with `gh release edit vX.Y.Z --notes` when needed.
+
+The release is created as a draft and published once every asset is uploaded.
+If the run fails after the draft exists, delete the release (the tag stays)
+and re-run the workflow:
+
+~~~sh
+gh release delete vX.Y.Z --yes
+~~~
+
+A manual run (**Actions → Release → Run workflow**, or the command below)
+is a dry run: it executes the same checks and build and uploads the archives
+as a workflow artifact, but publishes nothing. `gh workflow run` needs the
+workflow file on `master`; pass `--ref` to dry-run the copy on a branch.
+
+~~~sh
+gh workflow run release.yml --ref <branch>
+~~~
 
 ### Chrome Web Store Deployment
 
 `.github/workflows/deploy-chrome-store.yml` submits the Chrome archive of an
-already published GitHub Release to the Chrome Web Store. It runs automatically
-after a tag release when the `CHROME_AUTO_DEPLOY_ENABLED` repository variable
-is `true`, and manually with a published release tag as the retry path:
+already published GitHub Release to the Chrome Web Store. It runs
+automatically after a tagged release when the `CHROME_AUTO_DEPLOY_ENABLED`
+repository variable is `true`, and manually with a published release tag as
+the retry path:
 
 ~~~sh
 gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
@@ -406,36 +425,73 @@ gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
 
 The workflow:
 
-1. Rejects tags that do not match `vX.Y.Z` and releases that are drafts or
-   pre-releases.
-2. Downloads the archive already attached to the release, never a fresh
-   rebuild, and verifies its SHA-256 checksum and the manifest version inside.
-3. Uploads it with the pinned `go-webext` v0.4.2 through Chrome Web Store API
-   v2 and refuses to continue unless the store reports
-   `Upload State: SUCCEEDED` for that exact version.
+1. Rejects tags that do not match `vX.Y.Z`, releases that are drafts or
+   pre-releases, and release commits that are not reachable from `master`.
+2. Selects the release asset ending in `-chrome.zip`, downloads it together
+   with `SHA256SUMS.txt` (never a fresh rebuild), and verifies its SHA-256
+   checksum and the manifest version inside.
+3. Uploads it with the `go-webext` version pinned by `GO_WEBEXT_VERSION` in
+   the workflow, through Chrome Web Store API v2, and refuses to continue
+   unless the store reports `Upload State: SUCCEEDED` for that exact version.
 4. Submits the draft for review with deferred (staged) publishing and writes
-   the store status to the job summary.
+   the store status to the job summary. The status shows the published and
+   submitted revisions only; draft processing is visible in the Developer
+   Dashboard.
 
 Nothing goes live automatically. When the review verdict arrives, publish the
 approved version by hand in the Chrome Web Store Developer Dashboard. A staged
 submission left unpublished expires back to a draft after about 30 days;
 re-run the workflow with the same tag to submit it again. A green run proves a
-successful submission, not approval. Uploading a version that is already
-published or already under review fails; ship a new version instead.
+successful submission, not approval.
+
+Failure recovery:
+
+- **`invalid_grant`, `deleted_client`, or another authentication error:**
+  the OAuth client or refresh token is dead and nothing was uploaded. Mint a
+  new refresh token (OAuth Playground with the
+  `https://www.googleapis.com/auth/chromewebstore` scope) or reuse the values
+  the other extension repositories already use, update
+  `CHROME_REFRESH_TOKEN`, and re-run.
+- **Upload did not reach `SUCCEEDED`:** the store is still processing the
+  draft. Wait, then re-run with the same tag; re-uploading the same version
+  replaces the draft.
+- **Submission failed after a successful upload:** the draft is still in
+  place. Re-run with the same tag; the re-upload replaces it and the
+  submission is repeated.
+- **Upload rejected because the version is already published:** ship a new
+  version.
+- **Upload rejected because a submission is pending review or staged:** the
+  store refuses every package upload in that state regardless of version.
+  Wait for the verdict or cancel the review in the Developer Dashboard, then
+  re-run with the same tag.
+- **Review rejected:** no workflow signal exists; the verdict arrives by
+  e-mail. Address the feedback and ship a new version.
 
 Edge Add-ons and Firefox Add-ons submissions remain manual uploads of the
 release archives.
 
 ### Store Configuration
 
+The store item must exist before any deployment: the API cannot create the
+listing. One-time setup:
+
+1. Create the item in the Chrome Web Store Developer Dashboard by uploading
+   any release archive by hand, and complete the listing, privacy, and
+   distribution tabs there.
+2. Copy the item ID from the dashboard URL into the `CHROME_APP_ID` repository
+   variable and into the local `.env`.
+3. Add the four secrets below and run the deploy workflow manually once.
+4. Set `CHROME_AUTO_DEPLOY_ENABLED` to `true` so later tagged releases deploy
+   on their own.
+
 Configure these in the GitHub repository under **Settings → Secrets and
 variables → Actions**. Workflows reference them by name only; no value is ever
 committed.
 
-| Kind | Name | Value |
+| Kind | Name | Description |
 | --- | --- | --- |
 | Variable | `CHROME_APP_ID` | Extension ID from the Developer Dashboard item URL. |
-| Variable | `CHROME_AUTO_DEPLOY_ENABLED` | `true` to deploy after every tag release; unset keeps manual runs only. |
+| Variable | `CHROME_AUTO_DEPLOY_ENABLED` | `true` to deploy after every tagged release; unset keeps manual runs only. |
 | Secret | `CHROME_CLIENT_ID` | OAuth 2.0 client ID from a Google Cloud project with the Chrome Web Store API enabled. |
 | Secret | `CHROME_CLIENT_SECRET` | Secret of that OAuth client. |
 | Secret | `CHROME_REFRESH_TOKEN` | Refresh token granted for the `https://www.googleapis.com/auth/chromewebstore` scope. |
@@ -459,20 +515,23 @@ gitignored; never commit it or print its values.
 ### Local Store Commands
 
 The Makefile offers a local fallback for the same store operations. It needs
-`go-webext`, which loads the credentials from `.env` by itself:
+`go-webext`, which loads the credentials from `.env` by itself; the Makefile
+reads only `CHROME_APP_ID` from that file and pins Chrome Web Store API v2 like
+the workflow. Install the version the workflow pins:
 
 ~~~sh
 go install github.com/adguardteam/go-webext@v0.4.2
 ~~~
 
-| Command | What it does |
+| Command | Purpose |
 | --- | --- |
-| `make chrome_status` | Print the store item status, including draft and review state. |
-| `make chrome_update` | Upload `dist/release/chrome.zip` as the new draft. Build it first with `pnpm release chrome`. |
+| `make chrome_status` | Print the published and submitted (review) state of the store item. |
+| `make chrome_update` | Upload `dist/release/chrome.zip` as the new draft after checking that its manifest version matches `package.json`. Build it first with `pnpm release chrome`. |
 | `make chrome_publish` | Submit the uploaded draft for review with deferred publishing. |
 
-Prefer the workflow for real releases: it deploys the exact archive attached
-to the GitHub Release, while the local upload ships whatever was built last.
+When calling `go-webext` directly instead, set `CHROME_API_VERSION=v2`. Prefer
+the workflow for real releases: it deploys the exact archive attached to the
+GitHub Release, while the local upload ships whatever was built last.
 
 ## Common Tasks
 
