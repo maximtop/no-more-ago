@@ -17,7 +17,7 @@ import {
 } from "./types";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 const MESSAGE_SELECTOR = "div.bubble[data-timestamp]" as const;
@@ -217,10 +217,9 @@ export const telegramWebKAdapter = {
     matches: matchesTelegramWebKUrl,
     matchesElement: isTelegramWebKMessage,
     discover: (root) => discoverElements(root, MESSAGE_SELECTOR, isTelegramWebKMessage),
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element) => {
         if (!isTelegramWebKMessage(element)) {
             return null;

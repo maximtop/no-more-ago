@@ -203,7 +203,6 @@ export class DocumentTransformationController {
         this.synchronizeCurrentRoute();
         const registry = this.input.registry ?? defaultRegistry;
         const observableRules = registry.all();
-        const currentRules = registry.matching(this.currentUrl);
         const sourceAttributes = [
             ...new Set([
                 ...observableRules.flatMap((rule) => rule.mutationAttributes),
@@ -227,9 +226,6 @@ export class DocumentTransformationController {
                     return false;
                 }
             },
-            observeCharacterData: currentRules.some(
-                (rule) => rule.observesCharacterData === true,
-            ),
             getSourceMutationRoots: (
                 element,
                 attributeName,
@@ -247,14 +243,12 @@ export class DocumentTransformationController {
                 const currentRules = registry.matching(this.currentUrl);
                 const applicableRules = attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG
                     ? currentRules
-                    : mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
-                        ? currentRules.filter((rule) => rule.observesCharacterData === true)
-                        : attributeName
-                            ? currentRules.filter((rule) =>
-                                rule.mutationAttributes.includes(
-                                    attributeName as TimestampSourceAttribute,
-                                ))
-                            : currentRules;
+                    : attributeName
+                        ? currentRules.filter((rule) =>
+                            rule.mutationAttributes.includes(
+                                attributeName as TimestampSourceAttribute,
+                            ))
+                        : currentRules;
                 const sources: Element[] = [];
                 const seen = new Set<Element>();
                 const addSource = (source: Element): void => {
@@ -264,10 +258,8 @@ export class DocumentTransformationController {
                     }
                 };
 
-                if (mutationKind !== TIMESTAMP_MUTATION_KIND.CHARACTER_DATA) {
-                    for (const trackedSource of trackedSources) {
-                        addSource(trackedSource);
-                    }
+                for (const trackedSource of trackedSources) {
+                    addSource(trackedSource);
                 }
                 for (const rule of applicableRules) {
                     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
@@ -508,7 +500,6 @@ export class DocumentTransformationController {
         this.currentUrl = nextUrl;
         this.applyRouteTransition(transition);
         try {
-            scheduler.setObserveCharacterData(this.observesCharacterData(nextUrl));
             this.activateHandoffSession(generation);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
             return true;
@@ -544,18 +535,6 @@ export class DocumentTransformationController {
         const currentRules = registry.matching(currentUrl);
         return previousRules.length === currentRules.length
             && previousRules.every((rule, index) => rule.id === currentRules[index]?.id);
-    }
-
-    /**
-     * Checks whether current route rules require document-wide text observation.
-     *
-     * @param url - Route whose matching rules are inspected.
-     * @returns - Whether at least one current rule discovers text-only sources.
-     */
-    private observesCharacterData(url: URL): boolean {
-        return (this.input.registry ?? defaultRegistry).matching(url).some(
-            (rule) => rule.observesCharacterData === true,
-        );
     }
 
     /**

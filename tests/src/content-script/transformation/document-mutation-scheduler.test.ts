@@ -157,7 +157,6 @@ describe("DocumentMutationScheduler", () => {
                 TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
                 TIMESTAMP_SOURCE_ATTRIBUTE.LANG,
             ],
-            observeCharacterData: true,
         });
         scheduler.start();
         scheduler.start();
@@ -176,8 +175,6 @@ describe("DocumentMutationScheduler", () => {
                 "class",
             ],
             attributeOldValue: true,
-            characterData: true,
-            characterDataOldValue: true,
         });
         scheduler.stop();
         document.body.append(document.createElement("section"));
@@ -268,6 +265,42 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
         restoreExactText(source);
         expect(target.data).toBe("page refreshed");
+    });
+
+    it("observes page text only beneath a discovered candidate source", async () => {
+        document.body.innerHTML = `<time id="candidate">Aug 23, 2026</time>
+            <p id="unrelated">unrelated</p>`;
+        const source = document.getElementById("candidate");
+        const target = source?.firstChild;
+        const unrelated = document.getElementById("unrelated")?.firstChild;
+        if (!source || !(target instanceof Text) || !(unrelated instanceof Text)) {
+            throw new Error("Expected candidate and unrelated text");
+        }
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        scheduler.trackSource(source, false);
+        scheduler.trackPageTextSource(source);
+
+        unrelated.data = "unrelated changed";
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        target.data = "2 hours ago";
+        await flushMutations();
+        expect(batches).toHaveLength(1);
+        expect(batches[0]?.sourceTargets).toEqual([source]);
+
+        batches.length = 0;
+        scheduler.untrackSource(source);
+        target.data = "released";
+        await flushMutations();
+        expect(batches).toEqual([]);
+        scheduler.stop();
     });
 
     it("stops character-data observation after an in-place source is released", async () => {

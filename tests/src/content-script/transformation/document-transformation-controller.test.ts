@@ -306,7 +306,7 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
-    it("keeps document-wide character observation for current label rules", () => {
+    it("keeps character-data observation off the document-wide observer", () => {
         document.body.innerHTML = "<main></main>";
         const observe = vi.spyOn(MutationObserver.prototype, "observe");
         const controller = new DocumentTransformationController({
@@ -319,16 +319,16 @@ describe("DocumentTransformationController", () => {
             controller.start();
             const documentOptions = (): MutationObserverInit | undefined =>
                 observe.mock.calls.filter(([target]) => target === document).at(-1)?.[1];
-            expect(documentOptions()?.characterData).toBe(true);
-            expect(documentOptions()?.characterDataOldValue).toBe(true);
+            expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 
             controller.reconcileRoute(new URL("https://www.linkedin.com/feed/"));
-            expect(documentOptions()?.characterData).toBe(true);
-            expect(documentOptions()?.characterDataOldValue).toBe(true);
+            expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 
             controller.reconcileRoute(new URL("https://example.test/next"));
-            expect(documentOptions()?.characterData).toBe(true);
-            expect(documentOptions()?.characterDataOldValue).toBe(true);
+            expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
         } finally {
             controller.teardown();
             observe.mockRestore();

@@ -15,7 +15,7 @@ import {
 } from "./types";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 const RELATIVE_TIME_SELECTOR = "span.relativetime[title]" as const;
@@ -169,10 +169,9 @@ export const stackExchangeAdapter = {
         STACK_EXCHANGE_TIMESTAMP_SELECTOR,
         isStackExchangeTimestampElement,
     ),
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-        ], ["Over a year ago"]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ], ["Over a year ago"]),
     extract: (element) => {
         if (!isStackExchangeTimestampElement(element)) {
             return null;

@@ -32,9 +32,9 @@ bridge for selected Story-bearing GraphQL responses. The bridge is inert by
 default, follows the shared content-runtime activity lifecycle, and transfers
 only bounded tracking-token and Unix-seconds records. Instagram uses a
 site-specific presentation rule for its standard timestamps. TikTok direct
-pages use in-place presentation; profile-grid sources carry an appended
-presentation but remain ineligible by default because cards have no existing
-timestamp label. Public `https://t.me/s/*` pages use the generic source.
+pages use in-place presentation; profile grids have no specialized rule because
+cards expose no existing timestamp label. Public `https://t.me/s/*` pages use
+the generic source.
 Timestamp extraction remains separate from current-label classification,
 semantic validation, presentation, and rendering.
 
@@ -68,7 +68,7 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
   contains Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K,
-  TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
+  direct TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
   publication sources, plus an Instagram in-place presentation rule for
   standard timestamps. Every rule requires an existing recognized relative
   label before its trusted value can render.

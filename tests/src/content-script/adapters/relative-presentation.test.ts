@@ -54,16 +54,21 @@ describe("relative presentation classification", () => {
         ])).toBe(false);
     });
 
-    it.each(CANONICAL)("accepts a compact localized age for %s", (locale) => {
-        const label = new Intl.NumberFormat(locale, {
-            style: "unit",
-            unit: "week",
-            unitDisplay: "narrow",
-        }).format(2);
-        expect(isRelativeLabelText(label, source(locale), [], [
+    it.each(CANONICAL)("accepts an unambiguous compact localized age for %s", (locale) => {
+        const element = source(locale);
+        const units = [
+            "second", "minute", "hour", "day", "week", "month", "year",
+        ] as const;
+        const labels = units.flatMap((unit) => ["short", "narrow"].map((unitDisplay) =>
+            new Intl.NumberFormat(locale, {
+                style: "unit",
+                unit,
+                unitDisplay: unitDisplay as "short" | "narrow",
+            }).format(2)));
+        expect(labels.some((label) => isRelativeLabelText(label, element, [], [
             RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
             RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-        ])).toBe(true);
+        ]))).toBe(true);
     });
 
     it.each(CANONICAL)("rejects unknown wording for %s", (locale) => {
@@ -85,6 +90,30 @@ describe("relative presentation classification", () => {
             ...options,
             timeZone: "UTC",
         }).format(new Date("2026-08-22T12:00:00Z"));
+        expect(isRelativeLabelText(label, source(locale), [], [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ])).toBe(false);
+    });
+
+    it.each([
+        ["ro", "long"],
+        ["sv", "short"],
+    ] as const)("rejects a compact age that is also a calendar fragment for %s", (
+        locale,
+        weekday,
+    ) => {
+        const date = new Date("2026-02-02T12:00:00Z");
+        const label = new Intl.DateTimeFormat(locale, {
+            month: "numeric",
+            weekday,
+            timeZone: "UTC",
+        }).format(date);
+        expect(label).toBe(new Intl.NumberFormat(locale, {
+            style: "unit",
+            unit: "month",
+            unitDisplay: "short",
+        }).format(2));
         expect(isRelativeLabelText(label, source(locale), [], [
             RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
             RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,

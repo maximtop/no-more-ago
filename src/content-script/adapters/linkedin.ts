@@ -13,26 +13,25 @@ import {
 import { findSimpleTextTarget } from "./simple-text-target";
 import {
     TIMESTAMP_PRESENTATION_KIND,
-    TIMESTAMP_MUTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
-    type TimestampMutationKind,
     type TimestampMutationSourceResult,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
 const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
 const MAX_ASSOCIATION_DEPTH = 8;
 const MAX_MUTATION_SCAN_ELEMENTS = 128;
+const MAX_PRESENTATION_TEXT_LENGTH = 512;
 const LABEL_SELECTOR = [
     "p[componentkey] > span",
     ".update-components-actor__sub-description span[aria-hidden='true']",
@@ -49,8 +48,6 @@ const LINKEDIN_PERMALINK_PATTERN = new RegExp(
     "^/feed/update/([^/]+)/?$",
     "u",
 );
-const PRESENTATION_SEGMENT_PATTERN =
-    /^(?<prefix>\s*)(?<timestamp>.*?\S)(?<suffix>\s*(?:•[\s\S]*)?)$/u;
 const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY,
     TIMESTAMP_SOURCE_ATTRIBUTE.SDUI_ANCHOR_ID,
@@ -205,18 +202,30 @@ function resolvePresentation(
     if (!target) {
         return null;
     }
-    const match = context.readPageText(target).match(PRESENTATION_SEGMENT_PATTERN);
-    const prefix = match?.groups?.prefix;
-    const timestamp = match?.groups?.timestamp;
-    const suffix = match?.groups?.suffix;
-    return prefix === undefined || timestamp === undefined || suffix === undefined
-        ? null
-        : {
-            label,
-            target,
-            textPrefix: prefix,
-            textSuffix: suffix,
-        };
+    const text = context.readPageText(target);
+    if (text.length > MAX_PRESENTATION_TEXT_LENGTH) {
+        return null;
+    }
+    const withoutPrefix = text.trimStart();
+    if (withoutPrefix.length === 0) {
+        return null;
+    }
+    const prefixLength = text.length - withoutPrefix.length;
+    const bulletIndex = withoutPrefix.indexOf("•");
+    const timestampRegion = bulletIndex === -1
+        ? withoutPrefix
+        : withoutPrefix.slice(0, bulletIndex);
+    const timestamp = timestampRegion.trimEnd();
+    if (timestamp.length === 0) {
+        return null;
+    }
+    const suffixStart = prefixLength + timestamp.length;
+    return {
+        label,
+        target,
+        textPrefix: text.slice(0, prefixLength),
+        textSuffix: text.slice(suffixStart),
+    };
 }
 
 /**
@@ -796,7 +805,6 @@ function isRelevantAttributeMutation(
  * @param attributeName - Changed adapter attribute, when applicable.
  * @param oldValue - Attribute value before the mutation.
  * @param context - Processing context.
- * @param mutationKind - Kind of DOM mutation being mapped.
  * @returns - Exact candidate source requiring reconciliation.
  */
 function getMutationSources(
@@ -804,17 +812,7 @@ function getMutationSources(
     attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
     context: TimestampExtractionContext,
-    mutationKind: TimestampMutationKind,
 ): TimestampMutationSourceResult {
-    if (
-        mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
-        && (
-            !element.matches(LABEL_SELECTOR)
-            || !resolvePresentation(element, context)
-        )
-    ) {
-        return { handled: true, sources: [] };
-    }
     if (
         attributeName
         && !isRelevantAttributeMutation(element, attributeName, oldValue)
@@ -838,11 +836,10 @@ export const linkedinAdapter = {
         resolveAssociation(element, context) !== null,
     discover: (root: ParentNode, context: TimestampExtractionContext) =>
         cacheAssociations(resolveAssociations(root, context), context),
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-        ], ["just now"]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ], ["just now"]),
     extract: (element: Element, context: TimestampExtractionContext) => {
         const association = takeAssociation(element, context);
         if (!association) {

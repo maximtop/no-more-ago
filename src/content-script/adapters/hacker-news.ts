@@ -15,7 +15,7 @@ import { discoverElements } from "./discover-elements";
 import { isHtmlElement } from "./html-element";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 const AGE_SELECTOR = "span.age[title]" as const;
@@ -97,10 +97,9 @@ export const hackerNewsAdapter = {
     matches: matchesHackerNewsUrl,
     matchesElement: isHackerNewsAgeElement,
     discover: (root) => discoverElements(root, AGE_SELECTOR, isHackerNewsAgeElement),
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element) => {
         if (!isHackerNewsAgeElement(element)) {
             return null;

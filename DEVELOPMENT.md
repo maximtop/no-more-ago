@@ -209,9 +209,8 @@ source resolves, lower extractors are not called for that element. GitHub and
 Facebook use the adjacent generated-time presentation. Hacker News, Stack
 Exchange, Telegram Web K, and direct TikTok pages use in-place presentation:
 they retain an existing simple timestamp label and own only that text until
-restoration. TikTok profile rules retain an appended presentation descriptor,
-but their cards have no page-owned timestamp label, so the shared eligibility
-gate leaves them unowned by default. Public `https://t.me/s/*` pages stay on
+restoration. TikTok profile grids have no specialized rule because their cards
+have no page-owned timestamp label. Public `https://t.me/s/*` pages stay on
 generic `time[datetime]` processing.
 Ordinary specialized sources should not require background registration or
 site-policy branches. A page-main-world transport is an exceptional boundary
@@ -228,9 +227,9 @@ Telegram text as the timestamp. Primary edit-time and ambiguous forwarded or
 saved-message shapes fail closed. Web A remains outside the supported source
 contract.
 
-The TikTok adapter applies only to HTTPS `www.tiktok.com/@...` profile grids
-and exact direct `video` or `photo` paths. It obtains the publication ID from
-the current URL or an unambiguous profile-card link. It prefers a valid
+The TikTok adapter applies only to exact HTTPS `www.tiktok.com/@...` direct
+`video` or `photo` paths. It obtains the publication ID from the current URL
+and prefers a valid
 same-record `createTime` from
 `#__UNIVERSAL_DATA_FOR_REHYDRATION__[type="application/json"]`; otherwise it
 decodes strict decimal IDs with `BigInt(id) >> 32n`. Both results are bounded
@@ -240,9 +239,7 @@ fallbacks without new evidence and a revised specification.
 
 Direct TikTok sources use the shared in-place text presentation and transform
 only a recognized relative label. A retained leading ` · ` separator remains
-page-owned. Profile cards retain their trusted-source infrastructure and the
-appended presentation descriptor, but the classifier rejects that no-label
-shape, so no block `<time>` sibling is created by default. Keep TikTok URL
+page-owned. Profile grids remain on the universal generic rule. Keep TikTok URL
 rules, selectors, embedded state traversal, and post-ID semantics inside
 `adapters/tiktok*.ts`; shared formatting, ownership, restoration, and mutation
 code must remain site-agnostic.
@@ -390,13 +387,14 @@ injection boundaries.
 For in-place numeric sources such as Telegram Web K, keep lexical validation
 in shared timestamp resolution and keep site-specific source and target
 knowledge in the adapter. Observe only attributes that can change extraction
-or eligibility; reuse the existing mutation scheduler rather than adding a
-site loop or polling path.
+or eligibility. Register discovered labels with the scheduler's targeted text
+observer; never enable document-wide character-data observation. Reuse the
+existing mutation scheduler rather than adding a site loop or polling path.
 
 For TikTok fixture changes, keep handles, post IDs, labels, routes, and
 hydration records synthetic. Cover matching and stale `createTime`, BigInt ID
 fallback, URL exclusions, direct target simplicity, ambiguous cards, SPA
-reconciliation, card reuse, and restoration through public adapter and
+reconciliation, profile no-op behavior, and restoration through public adapter and
 controller boundaries.
 
 For canonical YouTube watch pages, keep URL matching and DOM provenance in the
@@ -604,11 +602,10 @@ source value. Successful events never retain raw source timestamps.
   from markup drift by parsing localized or relative UI text or adding a network
   fallback.
 - **A supported TikTok publication is unchanged:** confirm the page uses HTTPS
-  `www.tiktok.com`, an exact profile/video/photo path, an unambiguous tested
+  `www.tiktok.com`, an exact direct video/photo path, an unambiguous tested
   direct label shape, a recognized relative label, and a plausible 19-digit
-  post ID. Profile cards have no timestamp label and intentionally receive no
-  output by default. A universal
-  hydration record is optional, but it is used only when its string-valued
+  post ID. A universal hydration record is optional, but it is used only when
+  its string-valued
   `id` matches the current post. Do not diagnose the issue by parsing visible
   text or adding a request; capture a privacy-safe minimized fixture instead.
 - **Vitest reports JSDOM navigation warnings:** use the test result as the

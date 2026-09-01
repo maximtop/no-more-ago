@@ -110,6 +110,22 @@ describe("linkedinAdapter", () => {
         });
     });
 
+    it("rejects an oversized page-owned presentation label", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp"><span id="label"></span></p>
+                <a href="/feed/update/urn:li:activity:${ACTIVITY_ID}/">Post</a>
+            </article>
+        `;
+        const label = document.getElementById("label");
+        if (!label) {
+            throw new Error("Expected oversized LinkedIn label");
+        }
+        label.textContent = "x".repeat(513);
+
+        expect(linkedinAdapter.discover(document, context())).toEqual([]);
+    });
+
     it("processes the English just-now literal", () => {
         document.body.innerHTML = `
             <article>

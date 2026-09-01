@@ -19,7 +19,7 @@ import {
 import { readYouTubePlayerResponsePublication } from "./youtube-player-response";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 const WATCH_PUBLICATION_SELECTOR =
@@ -85,10 +85,9 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element, context) => {
         if (!isYouTubeWatchPublicationSource(element)) {
             return null;
@@ -121,10 +120,9 @@ export const youtubeAdapter: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element, context) => {
         if (
             !isYouTubeWatchPublicationSource(element)

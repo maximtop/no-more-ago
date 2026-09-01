@@ -66,6 +66,20 @@ export interface OwnedDomMutationSink {
     untrackOwnedTextSources?(sources: readonly Element[]): void;
 
     /**
+     * Registers bounded character-data observation for a discovered page label.
+     *
+     * @param source - Candidate source whose current label controls eligibility.
+     */
+    trackPageTextSource?(source: Element): void;
+
+    /**
+     * Releases candidate-label observation for one discovered source.
+     *
+     * @param source - Source that no longer has an observable presentation candidate.
+     */
+    untrackPageTextSource?(source: Element): void;
+
+    /**
      * Registers a discovered source for ancestor visibility tracking.
      *
      * @param source - Source discovered by an adapter.

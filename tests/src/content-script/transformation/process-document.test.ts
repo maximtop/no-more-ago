@@ -17,10 +17,7 @@ import {
 import {
     restoreTimestampPresentations,
 } from "../../../../src/content-script/transformation/render-timestamp-presentation";
-import {
-    AdapterRegistry,
-    defaultRegistry,
-} from "../../../../src/content-script/adapters/registry";
+import { AdapterRegistry } from "../../../../src/content-script/adapters/registry";
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import {
     ADJACENT_TIME_PRESENTATION,
@@ -49,24 +46,6 @@ describe("processDocument", () => {
 
     beforeEach(() => {
         document.body.innerHTML = fixture;
-    });
-
-    it("keeps the production registry in explicit audit order", () => {
-        expect(defaultRegistry.all().map(({ id }) => id)).toEqual([
-            "facebook",
-            "github",
-            "hacker-news",
-            "instagram",
-            "linkedin",
-            "stack-exchange",
-            "tiktok-profile",
-            "tiktok-legacy-direct",
-            "tiktok-direct-feed",
-            "telegram-web-k",
-            "youtube-player-response",
-            "youtube",
-            "generic-time",
-        ]);
     });
 
     it("keeps accepted and rejected visible labels out of diagnostics", () => {

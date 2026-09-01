@@ -16,7 +16,7 @@ import { discoverElements } from "./discover-elements";
 import { isHtmlElement } from "./html-element";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 /**
@@ -92,10 +92,9 @@ export const genericTimeRule = {
     matches: isHttpUrl,
     matchesElement: isGenericTimeSource,
     discover: discoverStandardTimes,
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: extractStandardTime,
 } satisfies TimestampSourceRule;

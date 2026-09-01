@@ -6,6 +6,7 @@ import {
     TIMESTAMP_PRESENTATION_KIND,
     type TimestampCandidate,
     type TimestampExtractionContext,
+    type TimestampSourceRule,
 } from "./types";
 
 /**
@@ -71,9 +72,45 @@ const ABSOLUTE_FORMAT_OPTIONS = [
     { hour: "numeric", minute: "2-digit" },
     { timeStyle: "short" },
 ] satisfies readonly Intl.DateTimeFormatOptions[];
+const CALENDAR_COLLISION_FORMAT_OPTIONS = [
+    { month: "numeric", weekday: "long" },
+    { month: "numeric", weekday: "short" },
+    { month: "numeric", weekday: "narrow" },
+    { day: "numeric", month: "long" },
+    { day: "numeric", month: "short" },
+    { day: "numeric", month: "narrow" },
+    { day: "numeric", weekday: "long" },
+    { day: "numeric", weekday: "short" },
+    { day: "numeric", weekday: "narrow" },
+    { year: "numeric", month: "long" },
+    { year: "numeric", month: "short" },
+    { year: "numeric", month: "narrow" },
+] satisfies readonly Intl.DateTimeFormatOptions[];
 const directionalCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 const compactCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 const absoluteCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
+
+/**
+ * Selects one UTC date for every month-and-weekday combination in a leap year.
+ *
+ * Number normalization makes additional dates with the same month and weekday
+ * redundant while retaining every localized month and weekday label.
+ *
+ * @returns - Minimal representative calendar dates used for collision checks.
+ */
+function calendarCollisionInstants(): readonly Date[] {
+    const instants = new Map<string, Date>();
+    for (let day = 1; day <= 366; day += 1) {
+        const instant = new Date(Date.UTC(2024, 0, day, 12));
+        const key = `${String(instant.getUTCMonth())}:${String(instant.getUTCDay())}`;
+        if (!instants.has(key)) {
+            instants.set(key, instant);
+        }
+    }
+    return [...instants.values()];
+}
+
+const CALENDAR_COLLISION_INSTANTS = calendarCollisionInstants();
 
 /**
  * Normalizes one page label without interpreting its timestamp.
@@ -184,6 +221,15 @@ function absolutePatterns(
         });
         return partsSignature(formatter.formatToParts(ABSOLUTE_REFERENCE_INSTANT));
     }));
+    for (const options of CALENDAR_COLLISION_FORMAT_OPTIONS) {
+        const formatter = new Intl.DateTimeFormat(locale, {
+            ...options,
+            timeZone: "UTC",
+        });
+        for (const instant of CALENDAR_COLLISION_INSTANTS) {
+            patterns.add(partsSignature(formatter.formatToParts(instant)));
+        }
+    }
     absoluteCache.set(locale, patterns);
     return patterns;
 }
@@ -338,9 +384,6 @@ function readPresentationText(
     context: TimestampExtractionContext,
 ): { readonly source: Element; readonly text: string } | null {
     const presentation = candidate.presentation;
-    if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME) {
-        return null;
-    }
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
         const text = candidate.source.textContent;
         return text.trim() === ""
@@ -379,6 +422,25 @@ export function isRelativeTimestampPresentation(
         presentation.text,
         presentation.source,
         context.locales,
+        profiles,
+        additionalLiterals,
+    );
+}
+
+/**
+ * Creates one adapter classifier while keeping its allowed profiles local.
+ *
+ * @param profiles - Adapter-approved relative pattern families.
+ * @param additionalLiterals - Exact extra relative phrases owned by the adapter.
+ * @returns - Rule callback that classifies the candidate's page-owned label.
+ */
+export function createRelativePresentationClassifier(
+    profiles: readonly RelativePresentationProfile[],
+    additionalLiterals: readonly string[] = [],
+): TimestampSourceRule["isRelativePresentation"] {
+    return (candidate, context) => isRelativeTimestampPresentation(
+        candidate,
+        context,
         profiles,
         additionalLiterals,
     );

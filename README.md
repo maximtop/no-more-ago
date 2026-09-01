@@ -13,7 +13,7 @@ sources with no existing timestamp label remain unchanged.
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
 Facebook, GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web
-K, TikTok, and LinkedIn have specialized sources for trusted or best-effort
+K, direct TikTok publications, and LinkedIn have specialized sources for trusted or best-effort
 timestamp inputs. These integrations preserve page-owned elements and links
 while updating simple labels in place when needed. Instagram uses the standard
 timestamp source with a specialized in-place presentation rule that preserves
@@ -207,13 +207,13 @@ unsupported because it does not expose the same safe machine-readable instant.
 The extension never parses Telegram's visible or localized label as timestamp
 evidence.
 
-TikTok support applies only to HTTPS `www.tiktok.com` user profiles and direct
+TikTok specialized support applies only to direct HTTPS `www.tiktok.com`
 `/@handle/video/<post-id>` or `/@handle/photo/<post-id>` pages whose markup
 matches the tested guest or authenticated shapes. Direct video and photo pages
 replace one simple label in place only when it is currently relative, such as
 `3d`; absolute labels such as `5-14` remain unchanged. Profile cards have no
-existing timestamp label, so the extension does not append a date to them by
-default.
+existing timestamp label, so profile grids use only the universal generic rule
+and receive no appended date.
 
 For a current publication, the extension first uses a string-valued
 `createTime` from the page's universal hydration JSON when the same record's
@@ -431,8 +431,8 @@ widgets and accepts only strict explicit-zone values plus the known
 comment-license suffix. LinkedIn is the best-effort derived-ID exception: it
 accepts only explicit supported IDs in approved local URL, URN, component-key,
 or data-anchor evidence and makes no network request. TikTok is the documented
-exception for link destinations: it accepts only a strict post ID from an exact
-supported current URL or profile-card link. In-place sources change only their
+exception for URL identity: it accepts only a strict post ID from the exact
+supported current publication URL. In-place sources change only their
 selected label text; titles, link destinations, element identity, attributes,
 and event listeners remain intact. Standard processing remains limited to
 ordinary light-DOM `time[datetime]` elements.
@@ -484,11 +484,12 @@ source types are deferred.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`
   pages and Web K are unsupported. Independently eligible standard timestamps
   may still use the universal generic rule.
-- TikTok support is limited to tested `www.tiktok.com/@...` profile, direct
-  video, and direct photo shapes. For You, Following, search, embeds, LIVE,
+- TikTok specialized support is limited to tested direct
+  `www.tiktok.com/@.../video/...` and `/photo/...` shapes. Profiles, For You,
+  Following, search, embeds, LIVE,
   TikTok Studio, short/mobile links, other subdomains, and non-HTTPS pages do
-  not receive TikTok-specialized processing. Profile cards expose no existing
-  timestamp label and therefore receive no appended output by default.
+  not receive TikTok-specialized processing. Independently eligible standard
+  timestamps may still use the universal generic rule.
 - A timestamp decoded from a TikTok post ID is a validated fallback with
   date-and-minute precision, not proof of TikTok's exact publication second.
   TikTok markup and embedded-state compatibility remain best-effort.

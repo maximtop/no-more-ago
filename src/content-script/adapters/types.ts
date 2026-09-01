@@ -56,7 +56,6 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
  */
 export const TIMESTAMP_MUTATION_KIND = {
     ATTRIBUTE: "attribute",
-    CHARACTER_DATA: "character-data",
     CHILD_LIST: "child-list",
 } as const;
 
@@ -65,7 +64,6 @@ export const TIMESTAMP_MUTATION_KIND = {
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
     ADJACENT_TIME: "adjacent-time",
-    APPENDED_TIME: "appended-time",
     IN_PLACE_TEXT: "in-place-text",
 } as const;
 
@@ -77,18 +75,10 @@ export const ADJACENT_TIME_PRESENTATION = {
 } as const;
 
 /**
- * Shared presentation descriptor for generated output that preserves its source.
- */
-export const APPENDED_TIME_PRESENTATION = {
-    kind: TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME,
-} as const;
-
-/**
  * Validated presentation strategy carried from adapter extraction to rendering.
  */
 export type TimestampPresentation =
     | typeof ADJACENT_TIME_PRESENTATION
-    | typeof APPENDED_TIME_PRESENTATION
     | {
         /**
          * In-place strategy discriminant.
@@ -288,7 +278,7 @@ export interface TimestampSourceRule {
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
     /**
-     * Whether page-authored character-data changes can create a source for this rule.
+     * Whether discovered source labels require bounded character-data observation.
      */
     readonly observesCharacterData?: boolean;
 

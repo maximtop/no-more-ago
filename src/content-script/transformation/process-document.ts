@@ -296,6 +296,11 @@ interface CandidateCollection {
      * Sources whose trusted candidate lacked a recognized relative presentation.
      */
     readonly presentationRejectedSources: ReadonlySet<Element>;
+
+    /**
+     * Sources whose current page labels require bounded text observation.
+     */
+    readonly textObservedSources: ReadonlySet<Element>;
 }
 
 /**
@@ -377,6 +382,7 @@ function processCandidateCollection(
         discoveredSources,
         blockedSources,
         presentationRejectedSources,
+        textObservedSources,
     } = collection;
 
     if (diagnosticSink && discoveredSources.length > 0) {
@@ -392,8 +398,19 @@ function processCandidateCollection(
     for (const source of discoveredSources) {
         const candidates = candidatesBySource.get(source) ?? [];
         const resolved = resolvedBySource.get(source);
+        const observesPageText = textObservedSources.has(source)
+            && (resolved !== undefined || presentationRejectedSources.has(source));
+        if (observesPageText) {
+            ownedDomMutations?.trackPageTextSource?.(source);
+        } else {
+            ownedDomMutations?.untrackPageTextSource?.(source);
+        }
         if (!resolved) {
-            ownedDomMutations?.untrackSource?.(source);
+            if (observesPageText) {
+                ownedDomMutations?.trackSource?.(source, false);
+            } else {
+                ownedDomMutations?.untrackSource?.(source);
+            }
             restoreTimestampPresentation(source, ownedDomMutations);
             if (blockedSources.has(source)) {
                 continue;
@@ -457,6 +474,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
     const presentationRejectedSources = new Set<Element>();
+    const textObservedSources = new Set<Element>();
     const extractionContext = createExtractionContext(input, url);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
@@ -473,6 +491,9 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             const candidate = rule.extract(element, extractionContext);
             if (candidate?.source === element) {
+                if (rule.observesCharacterData === true) {
+                    textObservedSources.add(element);
+                }
                 if (!rule.isRelativePresentation(candidate, extractionContext)) {
                     presentationRejectedSources.add(element);
                     continue;
@@ -514,6 +535,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             discoveredSources,
             blockedSources,
             presentationRejectedSources,
+            textObservedSources,
         },
         extractionContext.locales,
         started,
@@ -542,6 +564,7 @@ export function reconcileDocumentSources(
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
     const presentationRejectedSources = new Set<Element>();
+    const textObservedSources = new Set<Element>();
     const extractionContext = createExtractionContext(input, url);
     for (const source of input.sources) {
         if (
@@ -563,6 +586,9 @@ export function reconcileDocumentSources(
             }
             const candidate = rule.extract(source, extractionContext);
             if (candidate?.source === source) {
+                if (rule.observesCharacterData === true) {
+                    textObservedSources.add(source);
+                }
                 if (!rule.isRelativePresentation(candidate, extractionContext)) {
                     presentationRejectedSources.add(source);
                     continue;
@@ -583,6 +609,7 @@ export function reconcileDocumentSources(
             discoveredSources,
             blockedSources,
             presentationRejectedSources,
+            textObservedSources,
         },
         extractionContext.locales,
         started,

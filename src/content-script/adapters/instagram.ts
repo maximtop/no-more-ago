@@ -17,7 +17,7 @@ import {
 } from "./types";
 import {
     RELATIVE_PRESENTATION_PROFILE,
-    isRelativeTimestampPresentation,
+    createRelativePresentationClassifier,
 } from "./relative-presentation";
 
 /**
@@ -69,11 +69,10 @@ export const instagramAdapter = {
         INSTAGRAM_TIME_SELECTOR,
         isInstagramTimeElement,
     ),
-    isRelativePresentation: (candidate, context) =>
-        isRelativeTimestampPresentation(candidate, context, [
-            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-        ]),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: (element) => {
         if (!isInstagramTimeElement(element)) {
             return null;
