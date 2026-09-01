@@ -253,6 +253,7 @@ The toolbar popup shows the current hostname and processing status.
   whole tab, including reachable frames.
 - **Report this site** opens a prefilled GitHub issue for missing or broken
   support.
+- **Settings** opens the browser-managed full Options page.
 
 Disabling the extension globally or for a site restores the original page
 content immediately. Enabling it again immediately processes the current page.
@@ -263,8 +264,9 @@ Browser-restricted and non-HTTP(S) documents remain unchanged.
 
 ### Display Settings
 
-Open the extension's options page from the browser extension controls to choose
-how dates are displayed.
+Choose **Settings** in the toolbar popup to open the browser-managed Options
+page and select how dates are displayed. The page also remains available from
+the browser extension controls.
 
 **Date format**
 

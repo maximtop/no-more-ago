@@ -6,7 +6,6 @@
 
 import {
     Alert,
-    Anchor,
     Box,
     Button,
     MantineProvider,
@@ -33,7 +32,10 @@ import {
 } from "../shared/reporting/site-report";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
-import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
+import {
+    openBrowserOptionsPage,
+    type OpenOptionsPage,
+} from "./options-page";
 
 const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
 
@@ -50,6 +52,11 @@ export interface PopupAppProps {
      * State to render without an initial background request.
      */
     readonly initialState?: PopupState;
+
+    /**
+     * Function used to open the browser-managed Options page.
+     */
+    readonly openOptionsPage?: OpenOptionsPage;
 
     /**
      * Service used to open a GitHub report for the current site.
@@ -149,12 +156,14 @@ function siteReportErrorText(error: SiteReportError): string {
  * @param props - Optional dependencies and preloaded popup state.
  * @param props.client - Popup settings client override.
  * @param props.initialState - Preloaded popup state.
+ * @param props.openOptionsPage - Browser Options-page function override.
  * @param props.reporter - Site-report service override.
  * @returns The popup React view.
  */
 export function PopupApp({
     client: suppliedClient,
     initialState,
+    openOptionsPage = openBrowserOptionsPage,
     reporter: suppliedReporter,
 }: PopupAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createPopupClient(), [suppliedClient]);
@@ -413,7 +422,15 @@ export function PopupApp({
                                 {reportNotice}
                             </Alert>
                         ) : null}
-                        <Anchor href={OPTIONS_PAGE_FILE}>Settings</Anchor>
+                        <Button
+                            type="button"
+                            variant="default"
+                            onClick={() => {
+                                void openOptionsPage().catch(() => undefined);
+                            }}
+                        >
+                            Settings
+                        </Button>
                     </Stack>
                 </Paper>
             </main>
