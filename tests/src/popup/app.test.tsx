@@ -43,17 +43,25 @@ beforeAll(() => {
  *
  * @param state - Popup state to render.
  * @param transport - Background message transport.
+ * @param optionsPageOpener - Browser boundary used to open the Options page.
  * @returns - Mounted container and cleanup function.
  */
 async function renderPopup(
     state: PopupState,
     transport: PopupTransport = { sendMessage: () => Promise.resolve(state) },
+    optionsPageOpener = { open: () => Promise.resolve() },
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
     await act(async () => {
-        root.render(<PopupApp initialState={state} client={new PopupClient(transport)} />);
+        root.render(
+            <PopupApp
+                initialState={state}
+                client={new PopupClient(transport)}
+                optionsPageOpener={optionsPageOpener}
+            />,
+        );
     });
     return {
         container,
@@ -84,5 +92,32 @@ describe("PopupApp contract", () => {
         expect(rendered.container.textContent).toContain("Cannot run on this page");
         expect(rendered.container.textContent).not.toMatch(/no rules|adapter/iu);
         await rendered.unmount();
+    });
+
+    it("opens Settings once through the browser Options-page boundary", async () => {
+        let openCalls = 0;
+        const rendered = await renderPopup(
+            active,
+            { sendMessage: () => Promise.resolve(active) },
+            {
+                open: async () => {
+                    openCalls += 1;
+                },
+            },
+        );
+        try {
+            const settings = [...rendered.container.querySelectorAll("button")].find(
+                (candidate) => candidate.textContent === "Settings",
+            );
+            if (!settings) {
+                throw new Error("Settings action is missing");
+            }
+            await act(async () => {
+                settings.click();
+            });
+            expect(openCalls).toBe(1);
+        } finally {
+            await rendered.unmount();
+        }
     });
 });

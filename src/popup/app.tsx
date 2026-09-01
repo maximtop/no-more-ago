@@ -6,7 +6,6 @@
 
 import {
     Alert,
-    Anchor,
     Box,
     Button,
     MantineProvider,
@@ -30,7 +29,10 @@ import {
 } from "../shared/reporting/site-report";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
-import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
+import {
+    createDefaultOptionsPageOpener,
+    type OptionsPageOpener,
+} from "./options-page";
 
 /**
  * Optional dependencies and initial state for the popup UI.
@@ -45,6 +47,11 @@ export interface PopupAppProps {
      * State to render without an initial background request.
      */
     readonly initialState?: PopupState;
+
+    /**
+     * Service used to open the browser-managed Options page.
+     */
+    readonly optionsPageOpener?: OptionsPageOpener;
 
     /**
      * Service used to open a GitHub report for the current site.
@@ -144,15 +151,21 @@ function siteReportErrorText(error: SiteReportError): string {
  * @param props - Optional dependencies and preloaded popup state.
  * @param props.client - Popup settings client override.
  * @param props.initialState - Preloaded popup state.
+ * @param props.optionsPageOpener - Browser Options-page opener override.
  * @param props.reporter - Site-report service override.
  * @returns The popup React view.
  */
 export function PopupApp({
     client: suppliedClient,
     initialState,
+    optionsPageOpener: suppliedOptionsPageOpener,
     reporter: suppliedReporter,
 }: PopupAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createPopupClient(), [suppliedClient]);
+    const optionsPageOpener = useMemo(
+        () => suppliedOptionsPageOpener ?? createDefaultOptionsPageOpener(),
+        [suppliedOptionsPageOpener],
+    );
     const reporter = useMemo(
         () => suppliedReporter ?? createDefaultSiteReportReporter(),
         [suppliedReporter],
@@ -406,7 +419,15 @@ export function PopupApp({
                                 {reportNotice}
                             </Alert>
                         ) : null}
-                        <Anchor href={OPTIONS_PAGE_FILE}>Settings</Anchor>
+                        <Button
+                            type="button"
+                            variant="default"
+                            onClick={() => {
+                                void optionsPageOpener.open();
+                            }}
+                        >
+                            Settings
+                        </Button>
                     </Stack>
                 </Paper>
             </main>
