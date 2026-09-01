@@ -13,11 +13,13 @@ sources with no existing timestamp label remain unchanged.
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
 Facebook, GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web
-K, direct TikTok publications, and LinkedIn have specialized sources for trusted or best-effort
+K, direct TikTok publications, LinkedIn, and Bluesky have specialized sources
+for trusted or best-effort
 timestamp inputs. These integrations preserve page-owned elements and links
 while updating simple labels in place when needed. Instagram uses the standard
 timestamp source with a specialized in-place presentation rule that preserves
-styling hooks. Canonical desktop YouTube watch pages also have specialized
+styling hooks. Bluesky resolves public post times through anonymous requests to
+the public AppView API. Canonical desktop YouTube watch pages also have specialized
 local publication sources for calendar dates and explicitly zoned instants.
 Site markup support is best-effort and may change independently of the
 extension.
@@ -34,7 +36,8 @@ extension.
   Facebook Story payloads, GitHub's relative-time widgets, Hacker News age
   widgets, approved Stack Exchange, Telegram Web K, and TikTok timestamps; the
   approved YouTube watch label and identity-matched loaded data or
-  initial-document metadata; or best-effort LinkedIn ID timestamps. Specialized
+  initial-document metadata; best-effort LinkedIn ID timestamps; or confirmed
+  Bluesky post labels backed by public AppView `indexedAt`. Specialized
   rules take precedence over the generic rule when both accept the same source.
 - **Relative presentation:** the current page-owned label must match a
   conservative localized relative-time pattern. Recognition is best-effort
@@ -87,7 +90,8 @@ Requires Firefox 128 or later.
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted Facebook, GitHub, Hacker News, Stack
 Exchange, Telegram Web K, and supported TikTok timestamps plus best-effort
-LinkedIn ID timestamps can also become exact dates. Instagram's simple standard
+LinkedIn ID timestamps and confirmed Bluesky labels can also become exact dates.
+Instagram's simple standard
 timestamp labels retain their page-owned elements and styles. A supported
 YouTube watch calendar date becomes a localized date without a time, while a
 supported zoned publication instant becomes a localized date and time. Instant
@@ -164,6 +168,15 @@ such as `January 8` stay unchanged. Complex timestamp markup keeps using the
 generic adjacent-output fallback when its own current label is recognized as
 relative. This presentation integration is best-effort and does not infer
 dates from Instagram's visible text.
+
+On the exact `bsky.app` hostname, remote-enriched support covers feed posts,
+profile activity, replies on an individual-post page, thread replies, and one
+level of quoted posts. Other sections are best-effort. Only currently relative
+labels under a confirmed post structure are changed; an already exact expanded
+root timestamp remains untouched. The extension accepts only the matching public
+AppView `indexedAt`, never visible text, localized tooltips, a record key, or
+`record.createdAt`. A failed lookup or validation leaves the original label
+unchanged.
 
 LinkedIn posts, reshares, comments, and replies have a best-effort specialized
 source when one visible timestamp label is locally associated with exactly one
@@ -273,6 +286,7 @@ The toolbar popup shows the current hostname and processing status.
   whole tab, including reachable frames.
 - **Report this site** opens a prefilled GitHub issue for missing or broken
   support.
+- **Settings** opens the browser-managed full Options page.
 
 Disabling the extension globally or for a site restores the original page
 content immediately. Enabling it again immediately processes the current page.
@@ -283,8 +297,9 @@ Browser-restricted and non-HTTP(S) documents remain unchanged.
 
 ### Display Settings
 
-Open the extension's options page from the browser extension controls to choose
-how dates are displayed.
+Choose **Settings** in the toolbar popup to open the browser-managed Options
+page and select how dates are displayed. The page also remains available from
+the browser extension controls.
 
 **Date format**
 
@@ -391,6 +406,7 @@ Choose **Reset all settings** on the options page to restore:
 | --- | --- |
 | Recognized relative label plus a trusted timestamp | The trusted instant or calendar date is shown with the configured presentation. |
 | Absolute date, clock, unknown wording, or absent label | Page content remains unchanged even when machine-readable timestamp data exists. |
+| Bluesky identity, lookup, response, or timestamp cannot be validated | The original relative label remains unchanged. |
 | Relative direct TikTok video/photo label | Matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is rendered in place. |
 | TikTok profile card without an existing timestamp label | No date is appended. |
 | Relative canonical YouTube watch label backed by a calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
@@ -424,7 +440,8 @@ The extension requests:
 No More Ago uses the current visible label only to decide whether its
 presentation is recognized as relative. It never derives the timestamp value
 from visible relative or absolute labels, ARIA labels, nearby text, or elapsed
-time. The Hacker News specialized source
+time. Apart from the explicitly documented Bluesky and TikTok identity inputs,
+link destinations are not timestamp inputs. The Hacker News specialized source
 trusts only the explicit zoned timestamp in its approved `span.age[title]`
 shape. The Stack Exchange source reads `title` only from its listed timestamp
 widgets and accepts only strict explicit-zone values plus the known
@@ -459,6 +476,15 @@ does not inspect message text, authors, identifiers, localized titles, or full
 Telegram URLs. Public `t.me/s/*` pages remain on standard `time[datetime]`
 processing.
 
+Bluesky support sends public actor identifiers from confirmed post permalinks
+and the resulting public AT post URIs to `https://public.api.bsky.app` solely
+to retrieve the server-observed exact post time. Requests are anonymous,
+credential-free, bypass the HTTP cache, and have a finite deadline. They include
+no cookies, authorization headers, account tokens, post content, settings, or
+unrelated page data. Successful mappings remain only in document memory while
+connected sources reference them. Teardown discards them; failure leaves the
+page unchanged and does not start automatic retry.
+
 TikTok support adds no permissions, settings, accounts, network requests, or
 external service. Successful processing does not retain post IDs, raw source
 timestamps, URL paths, authors, titles, or page content in diagnostics.
@@ -478,7 +504,7 @@ source types are deferred.
   HTTP(S) pages whose current label is recognized as relative. Arbitrary,
   absolute, and unknown page labels remain unchanged.
 - Facebook, GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K,
-  TikTok, LinkedIn, and YouTube are best-effort integrations whose markup and,
+  TikTok, LinkedIn, Bluesky, and YouTube are best-effort integrations whose markup and,
   where applicable, payload contracts can change independently of the
   extension.
 - Telegram Web A and Telegram-specific processing outside public `t.me/s/*`

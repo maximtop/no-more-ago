@@ -10,10 +10,10 @@ import {
     reconcileDocumentRegion,
     reconcileDocumentSources,
     processDocument,
-    type DocumentDiagnosticSink,
     type ProcessInput,
     type ReconcileInput,
 } from "./process-document";
+import type { DocumentDiagnosticSink } from "../diagnostics";
 import {
     capturePageOwnedTextChange,
     getOwnedSourceForOutput,
@@ -38,6 +38,10 @@ import {
     type TimestampMutationSourceSelection,
     type TimestampSourceAttribute,
 } from "../adapters/types";
+import type {
+    DocumentTransformationParticipant,
+    DocumentTransformationParticipantFactory,
+} from "./document-transformation-participant";
 
 /**
  * Normalizes legacy source arrays and explicit handled/delegate mapper results.
@@ -78,6 +82,11 @@ export interface DocumentTransformationControllerInput
      * Optional live URL sampler used to close DOM-before-route-signal races.
      */
     readonly urlProvider?: () => URL;
+
+    /**
+     * Optional factory for a document-scoped asynchronous source lifecycle.
+     */
+    readonly participantFactory?: DocumentTransformationParticipantFactory;
 }
 
 /**
@@ -127,6 +136,11 @@ export class DocumentTransformationController {
     private diagnosticSink: DocumentDiagnosticSink | undefined;
 
     /**
+     * Optional site-owned document participant composed by the runtime.
+     */
+    private readonly participant: DocumentTransformationParticipant | undefined;
+
+    /**
      * Stable processing dependencies excluding controller-owned route classification.
      */
     private readonly input: ProcessInput & { readonly root: Document };
@@ -167,8 +181,20 @@ export class DocumentTransformationController {
      * @param input - Document, adapter, presentation, observer, and route dependencies.
      */
     constructor(input: DocumentTransformationControllerInput) {
-        const { routeHandoffClassifier, urlProvider, ...processInput } = input;
-        this.input = processInput;
+        const { participantFactory, routeHandoffClassifier, urlProvider, ...processInput } = input;
+        this.participant = participantFactory?.({
+            getDiagnosticSink: () => this.diagnosticSink,
+            onSourcesChanged: (sources) => {
+                this.reconcileSources(sources);
+            },
+        });
+        this.input = this.participant
+            ? {
+                ...processInput,
+                registry: (processInput.registry ?? defaultRegistry)
+                    .withSpecialized(this.participant.rule),
+            }
+            : processInput;
         this.currentUrl = new URL(input.url.href);
         this.routeHandoffClassifier = routeHandoffClassifier ?? clearDocumentRouteHandoff;
         this.urlProvider = urlProvider;
@@ -360,12 +386,15 @@ export class DocumentTransformationController {
         this.scheduler = scheduler;
         try {
             scheduler.start();
+            this.participant?.start();
             this.activateHandoffSession(generation);
+            this.participant?.inspect(this.input.root);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
             this.phase = "active";
             return this.outputs;
         } catch (error) {
             this.advanceRouteGeneration();
+            this.participant?.stop();
             this.handoffSession?.dispose();
             this.handoffSession = undefined;
             scheduler.stop();
@@ -382,6 +411,7 @@ export class DocumentTransformationController {
      */
     teardown(): void {
         this.advanceRouteGeneration();
+        this.participant?.stop();
         this.handoffSession?.dispose();
         this.handoffSession = undefined;
         this.scheduler?.stop();
@@ -501,6 +531,7 @@ export class DocumentTransformationController {
         this.applyRouteTransition(transition);
         try {
             this.activateHandoffSession(generation);
+            this.participant?.inspect(this.input.root);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
             return true;
         } catch (error) {
@@ -604,6 +635,7 @@ export class DocumentTransformationController {
             if (this.synchronizeCurrentRoute()) {
                 return;
             }
+            this.participant?.inspect(this.input.root);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
         } catch {
             this.failClosed();
@@ -667,6 +699,7 @@ export class DocumentTransformationController {
      */
     private failClosed(): void {
         this.advanceRouteGeneration();
+        this.participant?.stop();
         this.handoffSession?.dispose();
         this.handoffSession = undefined;
         this.scheduler?.stop();
@@ -686,15 +719,24 @@ export class DocumentTransformationController {
         const removedRoots = batch.removedRoots.filter(
             (root) => !isConnectedToDocument(root, this.input.root),
         );
+        for (const root of removedRoots) {
+            this.participant?.release(root);
+        }
         if (removedRoots.length > 0) {
             restoreTimestampPresentations(removedRoots, scheduler);
         }
 
         for (const root of batch.addedRoots) {
             if (isConnectedToDocument(root, this.input.root)) {
+                this.participant?.inspect(root);
                 reconcileDocumentRegion(this.regionProcessInput(root, scheduler));
             }
         }
+
+        this.participant?.inspectSources([
+            ...batch.sourceTargets,
+            ...batch.displacedOutputSources,
+        ].filter((source) => isConnectedToDocument(source, this.input.root)));
 
         const sourceTargets = batch.sourceTargets.filter(
             (target) =>

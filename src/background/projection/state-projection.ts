@@ -14,9 +14,10 @@ import {
     type PopupRuntimeFailure,
     type ReadyPopupStatus,
 } from "../../shared/messaging/view-state-values";
-import type {
-    PopupState,
-    SitesState,
+import {
+    createUnavailablePopupState,
+    type PopupState,
+    type SitesState,
 } from "../../shared/messaging/view-state-schemas";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isFacebookHostname } from "../../shared/url/facebook";
@@ -316,17 +317,9 @@ export class StateProjection {
      * @returns - Unavailable popup state.
      */
     public unavailablePopup(state: ApplicationStateView): PopupState {
-        return {
-            availability: STATE_AVAILABILITY.UNAVAILABLE,
-            revision: null,
-            globalEnabled: null,
-            hostname: null,
-            siteEnabled: null,
-            status: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-                ? POPUP_STATUS.RUNTIME_FAILED
-                : POPUP_STATUS.SETTINGS_UNAVAILABLE,
-            failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-        };
+        return createUnavailablePopupState(
+            state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+        );
     }
 
     /**

@@ -59,6 +59,12 @@ describe("build commands", () => {
                 const background = manifest.background as Record<string, unknown>;
                 expect(manifest.manifest_version).toBe(3);
                 expect(manifest.version).toBe("0.1.0");
+                expect(manifest.permissions).toEqual([
+                    "scripting",
+                    "storage",
+                    "webNavigation",
+                ]);
+                expect(manifest.host_permissions).toEqual(["<all_urls>"]);
                 expect(background[browser === "firefox" ? "scripts" : "service_worker"])
                     .toBeDefined();
                 if (browser === "firefox") {

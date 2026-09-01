@@ -35,18 +35,13 @@ import {
 import type { DisplaySettings } from "../../shared/settings/snapshot";
 import {
     safeDiagnosticSourceTimestamp,
-    type DiagnosticEventInput,
 } from "../../shared/diagnostics/events";
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from "../../shared/diagnostics/contracts";
 import type { TimestampExtractionPolicy } from "./route-handoff";
-
-/**
- * Receives bounded processing facts after page-derived data has been sanitized.
- */
-export type DocumentDiagnosticSink = (event: DiagnosticEventInput) => void;
+import type { DocumentDiagnosticSink } from "../diagnostics";
 
 /**
  * Emits one bounded skip event for a candidate that cannot be rendered.

@@ -25,7 +25,8 @@ HTML and trusted specialized timestamps with exact, localized values only when
 the current page-owned label is recognized as relative time. It ships a generic
 instant-only `time[datetime]` source for HTTP(S) documents,
 specialized sources for Facebook, GitHub, Hacker News, supported Stack Exchange
-Q&A sites, Telegram Web K, TikTok, and best-effort LinkedIn timestamps, plus a
+Q&A sites, Telegram Web K, TikTok, best-effort LinkedIn timestamps, and Bluesky,
+plus a
 best-effort canonical YouTube watch publication source for calendar dates or
 explicitly zoned instants. Facebook uses a narrowly scoped main-world payload
 bridge for selected Story-bearing GraphQL responses. The bridge is inert by
@@ -33,10 +34,10 @@ default, follows the shared content-runtime activity lifecycle, and transfers
 only bounded tracking-token and Unix-seconds records. Instagram uses a
 site-specific presentation rule for its standard timestamps. TikTok direct
 pages use in-place presentation; profile grids have no specialized rule because
-cards expose no existing timestamp label. Public `https://t.me/s/*` pages use
-the generic source.
-Timestamp extraction remains separate from current-label classification,
-semantic validation, presentation, and rendering.
+cards expose no existing timestamp label. Bluesky is remote-enriched through
+anonymous public AppView lookups. Public `https://t.me/s/*` pages use the
+generic source. Timestamp extraction remains separate from current-label
+classification, semantic validation, presentation, and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -70,8 +71,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   contains Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K,
   direct TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
   publication sources, plus an Instagram in-place presentation rule for
-  standard timestamps. Every rule requires an existing recognized relative
-  label before its trusted value can render.
+  standard timestamps. Exact `bsky.app` documents prepend a document-scoped
+  Bluesky rule whose anonymous resolution is limited to the fixed public
+  AppView origin. Every rule requires an existing recognized relative label
+  before its trusted value can render.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -181,6 +184,11 @@ unpacked or temporary extension when manual browser verification is needed.
 - Keep the content-side rule order explicit. Extract and resolve values strictly
   in that order, skip lower extractors after one source resolves, and keep the
   generic `time[datetime]` fallback last.
+- Keep Bluesky public enrichment in its document-local coordinator. Use only
+  credential-free bounded GET requests to `https://public.api.bsky.app`, retain
+  successful caches only while connected sources reference them, abort on a
+  finite request deadline or teardown, and do not add polling, durable state,
+  or presentation-text fallback parsing.
 - Bound loaded page-data parsing. Reuse at most one YouTube player-response
   parse record per document, including invalid results, and invalidate it when
   the selected assignment element or exact text changes or becomes ambiguous.
@@ -365,6 +373,8 @@ Known architectural exclusions to improve when their area changes:
 - Use injected browser capabilities and focused doubles instead of reproducing
   browser internals.
 - Use JSDOM for DOM behavior and offline fixtures for site markup.
+- Inject a fake AppView capability for Bluesky tests; automated tests must not
+  call the live public service.
 - Keep fixture data deterministic and free of network dependencies.
 - Cover a regression when fixing a user-visible failure that can reasonably
   recur.
@@ -436,12 +446,13 @@ Known architectural exclusions to improve when their area changes:
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
 - Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
-  TikTok-, LinkedIn-, and YouTube-specific selectors, timestamp sources,
+  TikTok-, LinkedIn-, Bluesky-, and YouTube-specific selectors, timestamp sources,
   presentation rules, and trusted evidence logic inside their respective
   adapters so adding or repairing a source changes minimal shared business
   logic. Keep TikTok URL, selector, hydration, and ID-decoding knowledge in
   `src/content-script/adapters/tiktok*.ts`. Public `t.me/s/*` support remains on
-  the generic standard timestamp source.
+  the generic standard timestamp source. Keep Bluesky batching, caching, and
+  stale-result state in its focused document-local coordinator.
 - Keep adapter-specific relative-label profiles and retained delimiters inside
   their adapter boundary while using the shared classifier implementation.
   Sources without an existing page-owned timestamp label must remain unowned.

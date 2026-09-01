@@ -19,8 +19,3 @@ body {
 .popup-card {
   padding: 16px;
 }
-
-.popup a {
-  align-self: flex-start;
-  font-size: 0.875rem;
-}

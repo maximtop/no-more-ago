@@ -55,6 +55,19 @@ export class AdapterRegistry {
         const specialized = this.specialized.filter((rule) => rule.matches(url));
         return this.generic.matches(url) ? [...specialized, this.generic] : specialized;
     }
+
+    /**
+     * Returns a registry with one document-scoped specialized rule at highest priority.
+     *
+     * @param rule - Specialized rule to prepend or replace by identifier.
+     * @returns - New registry retaining all other rules and the generic fallback.
+     */
+    withSpecialized(rule: TimestampSourceRule): AdapterRegistry {
+        return new AdapterRegistry(
+            [rule, ...this.specialized.filter((candidate) => candidate.id !== rule.id)],
+            this.generic,
+        );
+    }
 }
 
 /**
