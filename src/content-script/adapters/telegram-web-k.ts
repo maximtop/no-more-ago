@@ -212,7 +212,6 @@ export const telegramWebKAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
         TIMESTAMP_SOURCE_ATTRIBUTE.DATA_TIMESTAMP,
     ],
-    observesCharacterData: true,
     getMutationSources,
     matches: matchesTelegramWebKUrl,
     matchesElement: isTelegramWebKMessage,

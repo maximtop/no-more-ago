@@ -525,6 +525,7 @@ export class DocumentTransformationController {
             this.failClosed();
             throw new Error("Active document controller has no mutation scheduler");
         }
+        scheduler.resetPageTextSources();
         restoreTimestampPresentations(this.input.root, scheduler);
         this.outputs = [];
         this.currentUrl = nextUrl;

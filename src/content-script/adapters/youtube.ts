@@ -81,7 +81,6 @@ function createPublicationCandidate(
 export const youtubePlayerResponseRule: TimestampSourceRule = {
     id: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
     mutationAttributes: [],
-    observesCharacterData: true,
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
@@ -116,7 +115,6 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
 export const youtubeAdapter: TimestampSourceRule = {
     id: YOUTUBE_ADAPTER_ID,
     mutationAttributes: [],
-    observesCharacterData: true,
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,

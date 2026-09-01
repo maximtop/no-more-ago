@@ -68,7 +68,6 @@ export function isFacebookTimestampElement(element: Element): boolean {
 export const facebookAdapter: TimestampSourceRule = {
     id: FACEBOOK_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.HREF],
-    observesCharacterData: true,
     matches: isFacebookUrl,
     matchesElement: isFacebookTimestampElement,
     discover: (root) => discoverElements(

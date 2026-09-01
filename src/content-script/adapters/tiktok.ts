@@ -449,7 +449,6 @@ function hydrationMutationSources(
 export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
     id: TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E],
-    observesCharacterData: true,
     getMutationSources: getLegacyMutationSources,
     getChildMutationSources: hydrationMutationSources(
         LEGACY_DIRECT_SOURCE_SELECTOR,
@@ -493,7 +492,6 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
         TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
         TIMESTAMP_SOURCE_ATTRIBUTE.ID,
     ],
-    observesCharacterData: true,
     getMutationSources: getDirectFeedMutationSources,
     getChildMutationSources: hydrationMutationSources(
         DIRECT_FEED_SOURCE_SELECTOR,

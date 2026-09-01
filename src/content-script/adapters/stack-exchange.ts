@@ -161,7 +161,6 @@ export const stackExchangeAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
         TIMESTAMP_SOURCE_ATTRIBUTE.TITLE,
     ],
-    observesCharacterData: true,
     matches: matchesStackExchangeUrl,
     matchesElement: isStackExchangeTimestampElement,
     discover: (root) => discoverElements(
@@ -171,7 +170,7 @@ export const stackExchangeAdapter = {
     ),
     isRelativePresentation: createRelativePresentationClassifier([
         RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
-    ], ["Over a year ago"]),
+    ], ["Over a year ago", "1 min ago"]),
     extract: (element) => {
         if (!isStackExchangeTimestampElement(element)) {
             return null;

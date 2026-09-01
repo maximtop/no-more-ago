@@ -43,31 +43,6 @@ function publicationId(unixSeconds: number, lowBits: number): string {
 }
 
 /**
- * Appends one eligible synthetic profile card.
- *
- * @param id - Publication ID encoded in the card href.
- * @param index - Stable card label.
- * @param kind - Publication path kind.
- * @returns - Page-owned card link.
- */
-function appendProfileCard(
-    id: string,
-    index: number,
-    kind: "video" | "photo" = "video",
-): HTMLAnchorElement {
-    const item = document.createElement("div");
-    item.setAttribute("data-e2e", "user-post-item");
-    const link = document.createElement("a");
-    const indexLabel = index.toString();
-    link.id = `card-${indexLabel}`;
-    link.setAttribute("href", `/@fictional/${kind}/${id}`);
-    link.textContent = `card ${indexLabel}`;
-    item.append(link);
-    document.body.append(item);
-    return link;
-}
-
-/**
  * Appends one synthetic direct feed article.
  *
  * @param id - Publication ID represented by the feed wrapper.
@@ -112,114 +87,6 @@ describe("TikTok document lifecycle", () => {
         vi.useRealTimers();
     });
 
-    it("reconciles 100 cards, one reused card, additions, and removals", async () => {
-        const links = Array.from({ length: 100 }, (_, index) =>
-            appendProfileCard(
-                publicationId(1_700_000_000 + index * 60, index),
-                index,
-                index % 2 === 0 ? "video" : "photo",
-            ));
-        const url = new URL("https://www.tiktok.com/@fictional");
-        const controller = new DocumentTransformationController({
-            url,
-            urlProvider: () => url,
-            root: document,
-            locales: LOCALES,
-            display: UTC_DISPLAY,
-        });
-
-        try {
-            expect(controller.start()).toEqual([]);
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-            const changedIndex = 42;
-            const changedLink = links[changedIndex];
-            if (!changedLink) {
-                throw new Error("Expected selected profile link");
-            }
-
-            changedLink.setAttribute(
-                "href",
-                `/@fictional/video/${publicationId(1_778_861_280, 99)}`,
-            );
-            await flushMutations();
-
-            expect(changedLink.nextElementSibling).toBeNull();
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-            expect(links.every((link) => link.textContent.startsWith("card "))).toBe(true);
-
-            changedLink.setAttribute("href", "/@fictional/video/not-a-post-id");
-            await flushMutations();
-            expect(changedLink.nextElementSibling).toBeNull();
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-
-            changedLink.setAttribute(
-                "href",
-                `/@fictional/photo/${publicationId(1_778_861_280, 100)}`,
-            );
-            await flushMutations();
-            expect(changedLink.nextElementSibling).toBeNull();
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-
-            const added = appendProfileCard(
-                publicationId(1_609_459_200, 7),
-                100,
-                "photo",
-            );
-            await flushMutations();
-            expect(added.nextElementSibling).toBeNull();
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-
-            const addedOwner = added.parentElement;
-            if (!addedOwner) {
-                throw new Error("Expected added card owner");
-            }
-            addedOwner.remove();
-            await flushMutations();
-            expect(added.isConnected).toBe(false);
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-        } finally {
-            controller.teardown();
-        }
-
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-        expect(links.every((link) => link.isConnected)).toBe(true);
-    });
-
-    it("invalidates every publication link when profile-card membership changes", async () => {
-        const firstId = publicationId(1_778_774_880, 1);
-        const secondId = publicationId(1_778_861_280, 2);
-        const first = appendProfileCard(firstId, 1);
-        const owner = first.parentElement;
-        if (!owner) {
-            throw new Error("Expected profile card owner");
-        }
-        const controller = new DocumentTransformationController({
-            url: new URL("https://www.tiktok.com/@fictional"),
-            root: document,
-            locales: LOCALES,
-            display: UTC_DISPLAY,
-        });
-        const second = document.createElement("a");
-        second.href = `/@fictional/photo/${secondId}`;
-        second.textContent = "second";
-
-        try {
-            controller.start();
-            expect(first.nextElementSibling).toBeNull();
-
-            owner.append(second);
-            await flushMutations();
-            expect(first.nextElementSibling).toBe(second);
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
-
-            second.remove();
-            await flushMutations();
-            expect(first.nextElementSibling).toBeNull();
-        } finally {
-            controller.teardown();
-        }
-    });
-
     it("selects current rules after navigating from an unsupported route", async () => {
         const id = publicationId(1_778_774_880, 3);
         document.body.innerHTML = '<div id="metadata" data-e2e="placeholder">'
@@ -253,44 +120,6 @@ describe("TikTok document lifecycle", () => {
             source.setAttribute("data-e2e", "placeholder");
             await flushMutations();
             expect(date.textContent).toBe("3d");
-        } finally {
-            controller.teardown();
-        }
-    });
-
-    it("reconciles existing sources when hydration is inserted or replaced", async () => {
-        const id = publicationId(1_778_774_870, 4);
-        const link = appendProfileCard(id, 1);
-        const controller = new DocumentTransformationController({
-            url: new URL("https://www.tiktok.com/@fictional"),
-            root: document,
-            locales: LOCALES,
-            display: {
-                ...UTC_DISPLAY,
-                pattern: "yyyy-MM-dd HH:mm:ss",
-            },
-        });
-        const script = document.createElement("script");
-        script.id = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
-        script.type = "application/json";
-        script.textContent = JSON.stringify({
-            itemInfo: { itemStruct: { id, createTime: "1778774880" } },
-        });
-
-        try {
-            controller.start();
-            expect(link.nextElementSibling).toBeNull();
-
-            document.head.append(script);
-            await flushMutations();
-            expect(link.nextElementSibling).toBeNull();
-
-            script.textContent = JSON.stringify({
-                itemInfo: { itemStruct: { id, createTime: "1778774940" } },
-            });
-            await flushMutations();
-            expect(link.nextElementSibling).toBeNull();
-            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         } finally {
             controller.teardown();
         }

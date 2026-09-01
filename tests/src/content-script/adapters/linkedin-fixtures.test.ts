@@ -92,10 +92,10 @@ describe("LinkedIn offline fixtures", () => {
             ["permalink-timestamp", "2024-02-03 04:05:06.789 •"],
         ]],
         ["profile-activity.html", "https://www.linkedin.com/in/example/recent-activity/", [
-            ["reshare-timestamp", "4mo •"],
+            ["reshare-timestamp", "2024-03-04 05:06:07.891 •"],
         ]],
         ["search.html", "https://www.linkedin.com/search/results/content/", [
-            ["search-timestamp", "8mo •"],
+            ["search-timestamp", "2024-01-02 03:04:05.678 •"],
         ]],
         ["comments.html", "https://www.linkedin.com/feed/update/post/", [
             ["comment-timestamp", "2024-04-05 06:07:08.912 • Edited"],

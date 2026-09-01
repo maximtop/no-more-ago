@@ -150,6 +150,39 @@ describe("DocumentTransformationController", () => {
         }
     });
 
+    it("claims an initially blank in-place label when its text becomes relative", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = '<span class="age" '
+            + 'title="2026-08-23T10:15:00Z"><a href="item?id=1"> </a></span>';
+        const source = document.querySelector("span.age");
+        const target = source?.querySelector("a")?.firstChild;
+        if (!source || !(target instanceof Text)) {
+            throw new Error("Expected blank Hacker News label");
+        }
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "utc" },
+            },
+        });
+        try {
+            expect(controller.start()).toEqual([]);
+            expect(target.data).toBe(" ");
+
+            target.data = "2 hours ago";
+            await flushMutations();
+            expect(target.data).toBe("2026-08-23 10:15");
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+        expect(target.data).toBe("2 hours ago");
+    });
+
     it("bounds inherited-language changes to their subtree", async () => {
         document.documentElement.lang = "en";
         document.body.innerHTML = `
@@ -185,11 +218,14 @@ describe("DocumentTransformationController", () => {
             expect(unchangedOutput).toBeInstanceOf(HTMLTimeElement);
             discover.mockClear();
 
+            changedRoot.lang = "de";
+            changedRoot.lang = "fr";
             changedRoot.lang = "zz";
             await flushMutations();
             expect(changedSource.nextElementSibling).toBeNull();
             expect(unchangedSource.nextElementSibling).toBe(unchangedOutput);
             expect(discover).toHaveBeenCalledWith(changedRoot, expect.any(Object));
+            expect(discover).toHaveBeenCalledTimes(1);
             expect(discover.mock.calls.every(([root]) => root === changedRoot))
                 .toBe(true);
             discover.mockClear();
@@ -1806,10 +1842,11 @@ describe("DocumentTransformationController", () => {
         }
     });
 
-    it("applies no-op, clear, and replace as total route transitions", () => {
+    it("applies no-op, clear, and replace as total route transitions", async () => {
         document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
-        if (!source) {
+        const label = source?.firstChild;
+        if (!source || !(label instanceof Text)) {
             throw new Error("Expected route source");
         }
         const sessions: Array<{
@@ -1856,6 +1893,15 @@ describe("DocumentTransformationController", () => {
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         expect(source.hasAttribute("hidden")).toBe(false);
         expect(activate).toHaveBeenCalledOnce();
+
+        const extract = vi.spyOn(genericTimeRule, "extract");
+        try {
+            label.data = "3 hours ago";
+            await flushMutations();
+            expect(extract).not.toHaveBeenCalled();
+        } finally {
+            extract.mockRestore();
+        }
 
         controller.reconcileRoute(new URL("https://example.test/clear"));
         const clearedOutput = document.querySelector("[data-no-more-ago-output]");

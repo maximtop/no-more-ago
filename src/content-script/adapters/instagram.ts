@@ -61,7 +61,6 @@ function isInstagramTimeElement(element: Element): boolean {
 export const instagramAdapter = {
     id: INSTAGRAM_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
-    observesCharacterData: true,
     matches: matchesInstagramUrl,
     matchesElement: isInstagramTimeElement,
     discover: (root) => discoverElements(

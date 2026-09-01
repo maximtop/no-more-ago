@@ -281,11 +281,6 @@ export interface TimestampSourceRule {
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
 
     /**
-     * Whether discovered source labels require bounded character-data observation.
-     */
-    readonly observesCharacterData?: boolean;
-
-    /**
      * Maps an adapter-relevant mutation back to affected source elements.
      *
      * Rules may use this when eligibility depends on descendant attributes, child

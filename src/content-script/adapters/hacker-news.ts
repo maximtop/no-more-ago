@@ -93,7 +93,6 @@ export const hackerNewsAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.CLASS,
         TIMESTAMP_SOURCE_ATTRIBUTE.TITLE,
     ],
-    observesCharacterData: true,
     matches: matchesHackerNewsUrl,
     matchesElement: isHackerNewsAgeElement,
     discover: (root) => discoverElements(root, AGE_SELECTOR, isHackerNewsAgeElement),

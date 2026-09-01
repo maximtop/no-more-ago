@@ -48,6 +48,7 @@ const COMPACT_UNITS = [
 const STYLES = ["long", "short", "narrow"] as const;
 const UNIT_DISPLAYS = ["short", "narrow"] as const;
 const NUMBER_TOKEN = "{number}" as const;
+const MAX_PRESENTATION_TEXT_LENGTH = 512;
 const DEFAULT_IGNORABLES = /[\p{Cf}\u034f]/gu;
 const NUMBER_SEQUENCE = /[\p{Number}]+/gu;
 const PLURAL_SAMPLE_CANDIDATES = [
@@ -72,45 +73,46 @@ const ABSOLUTE_FORMAT_OPTIONS = [
     { hour: "numeric", minute: "2-digit" },
     { timeStyle: "short" },
 ] satisfies readonly Intl.DateTimeFormatOptions[];
-const CALENDAR_COLLISION_FORMAT_OPTIONS = [
-    { month: "numeric", weekday: "long" },
-    { month: "numeric", weekday: "short" },
-    { month: "numeric", weekday: "narrow" },
-    { day: "numeric", month: "long" },
-    { day: "numeric", month: "short" },
-    { day: "numeric", month: "narrow" },
-    { day: "numeric", weekday: "long" },
-    { day: "numeric", weekday: "short" },
-    { day: "numeric", weekday: "narrow" },
-    { year: "numeric", month: "long" },
-    { year: "numeric", month: "short" },
-    { year: "numeric", month: "narrow" },
-] satisfies readonly Intl.DateTimeFormatOptions[];
+const COMPACT_CALENDAR_COLLISIONS: Partial<
+    Record<CanonicalRelativeTimeLocale, readonly string[]>
+> = {
+    ar: [
+        "{number} أ", "{number} ث", "{number} د", "{number} س", "{number} ي",
+    ],
+    bg: ["{number} г.", "{number} д", "{number} с", "{number} ч"],
+    cs: ["{number} s"],
+    da: ["{number} m", "{number} s", "{number} t"],
+    de: ["{number} m"],
+    el: ["{number} δ", "{number} μ"],
+    es: ["{number} a", "{number} d", "{number} s"],
+    "es-419": ["{number} s"],
+    fi: ["{number} s", "{number} t"],
+    fil: ["{number} linggo"],
+    fr: ["{number} h", "{number} j", "{number} s"],
+    hi: ["{number} दि"],
+    hu: ["{number} p"],
+    id: ["{number} j"],
+    it: ["{number} s"],
+    ko: ["{number}년", "{number}일"],
+    lt: ["{number} s"],
+    nl: ["{number} d", "{number} m", "{number} s", "{number} w"],
+    pl: ["{number} s"],
+    "pt-BR": ["{number} s"],
+    "pt-PT": ["{number} s"],
+    ro: [
+        "{number} a", "{number} l", "{number} luni", "{number} m", "{number} s",
+    ],
+    ru: ["{number} с", "{number} ч"],
+    sl: ["{number} s", "{number} t"],
+    sr: ["{number} н", "{number} с", "{number} ч"],
+    sv: ["{number} d", "{number} mån", "{number} s"],
+    uk: ["{number} с"],
+    vi: ["{number} giờ"],
+    "zh-CN": ["{number}年"],
+};
 const directionalCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 const compactCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 const absoluteCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
-
-/**
- * Selects one UTC date for every month-and-weekday combination in a leap year.
- *
- * Number normalization makes additional dates with the same month and weekday
- * redundant while retaining every localized month and weekday label.
- *
- * @returns - Minimal representative calendar dates used for collision checks.
- */
-function calendarCollisionInstants(): readonly Date[] {
-    const instants = new Map<string, Date>();
-    for (let day = 1; day <= 366; day += 1) {
-        const instant = new Date(Date.UTC(2024, 0, day, 12));
-        const key = `${String(instant.getUTCMonth())}:${String(instant.getUTCDay())}`;
-        if (!instants.has(key)) {
-            instants.set(key, instant);
-        }
-    }
-    return [...instants.values()];
-}
-
-const CALENDAR_COLLISION_INSTANTS = calendarCollisionInstants();
 
 /**
  * Normalizes one page label without interpreting its timestamp.
@@ -221,14 +223,8 @@ function absolutePatterns(
         });
         return partsSignature(formatter.formatToParts(ABSOLUTE_REFERENCE_INSTANT));
     }));
-    for (const options of CALENDAR_COLLISION_FORMAT_OPTIONS) {
-        const formatter = new Intl.DateTimeFormat(locale, {
-            ...options,
-            timeZone: "UTC",
-        });
-        for (const instant of CALENDAR_COLLISION_INSTANTS) {
-            patterns.add(partsSignature(formatter.formatToParts(instant)));
-        }
+    for (const signature of COMPACT_CALENDAR_COLLISIONS[locale] ?? []) {
+        patterns.add(signature);
     }
     absoluteCache.set(locale, patterns);
     return patterns;
@@ -353,6 +349,9 @@ export function isRelativeLabelText(
     profiles: readonly RelativePresentationProfile[],
     additionalLiterals: readonly string[] = [],
 ): boolean {
+    if (text.length > MAX_PRESENTATION_TEXT_LENGTH) {
+        return false;
+    }
     const signature = labelSignature(text);
     if (signature.length === 0) {
         return false;
@@ -386,9 +385,7 @@ function readPresentationText(
     const presentation = candidate.presentation;
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
         const text = candidate.source.textContent;
-        return text.trim() === ""
-            ? null
-            : { source: candidate.source, text };
+        return { source: candidate.source, text };
     }
     const pageText = context.readPageText(presentation.target);
     const prefix = presentation.textPrefix ?? "";
@@ -399,7 +396,27 @@ function readPresentationText(
     const end = suffix.length === 0 ? pageText.length : -suffix.length;
     const text = pageText.slice(prefix.length, end);
     const source = presentation.target.parentElement ?? candidate.source;
-    return text.trim() === "" ? null : { source, text };
+    return { source, text };
+}
+
+/**
+ * Selects the smallest bounded page node whose text controls candidate eligibility.
+ *
+ * @param candidate - Trusted-source candidate carrying presentation ownership.
+ * @param context - Current route, locales, and retained page-text capabilities.
+ * @returns - Exact Text target or small adjacent source, or null for oversized content.
+ */
+export function getRelativePresentationObservationTarget(
+    candidate: TimestampCandidate,
+    context: TimestampExtractionContext,
+): Node | null {
+    const current = readPresentationText(candidate, context);
+    if (!current || current.text.length > MAX_PRESENTATION_TEXT_LENGTH) {
+        return null;
+    }
+    return candidate.presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT
+        ? candidate.presentation.target
+        : candidate.source;
 }
 
 /**

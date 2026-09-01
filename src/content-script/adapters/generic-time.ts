@@ -88,7 +88,6 @@ function extractStandardTime(
 export const genericTimeRule = {
     id: GENERIC_TIME_RULE_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
-    observesCharacterData: true,
     matches: isHttpUrl,
     matchesElement: isGenericTimeSource,
     discover: discoverStandardTimes,

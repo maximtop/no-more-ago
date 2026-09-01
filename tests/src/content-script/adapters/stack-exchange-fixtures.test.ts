@@ -59,7 +59,7 @@ describe("Stack Exchange fixtures", () => {
             .toBe("2026-08-29 11:19");
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         controller.teardown();
-        expect(document.querySelector("#first-question")?.textContent).toBe("1 minute ago");
+        expect(document.querySelector("#first-question")?.textContent).toBe("1 min ago");
         expect(document.querySelector("#second-question")?.textContent).toBe("2 hours ago");
     });
 

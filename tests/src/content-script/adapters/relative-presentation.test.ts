@@ -120,6 +120,29 @@ describe("relative presentation classification", () => {
         ])).toBe(false);
     });
 
+    it("rejects a two-digit Bulgarian day fragment that resembles a compact age", () => {
+        const date = new Date("2024-12-01T12:00:00Z");
+        const label = new Intl.DateTimeFormat("bg", {
+            day: "2-digit",
+            month: "narrow",
+            timeZone: "UTC",
+        }).format(date);
+        expect(label).toBe(new Intl.NumberFormat("bg", {
+            style: "unit",
+            unit: "day",
+            unitDisplay: "short",
+        }).format(1));
+        expect(isRelativeLabelText(label, source("bg"), [], [
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ])).toBe(false);
+    });
+
+    it("rejects oversized page labels before normalization", () => {
+        expect(isRelativeLabelText("2 hours ago".padEnd(513), source("en"), [], [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        ])).toBe(false);
+    });
+
     it("recognizes concrete Polish and Ukrainian examples", () => {
         expect(isRelativeLabelText("2 godz. temu", source("pl"), [], [
             RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,

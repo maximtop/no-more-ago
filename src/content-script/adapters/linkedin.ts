@@ -208,7 +208,12 @@ function resolvePresentation(
     }
     const withoutPrefix = text.trimStart();
     if (withoutPrefix.length === 0) {
-        return null;
+        return {
+            label,
+            target,
+            textPrefix: "",
+            textSuffix: "",
+        };
     }
     const prefixLength = text.length - withoutPrefix.length;
     const bulletIndex = withoutPrefix.indexOf("•");
@@ -279,11 +284,11 @@ function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
 }
 
 /**
- * Finds eligible label presentations inside one candidate root.
+ * Finds structurally supported label presentations inside one candidate root.
  *
  * @param root - Candidate local association root.
  * @param context - Processing context.
- * @returns - Eligible page-owned presentations in document order.
+ * @returns - Structural page-owned presentation candidates in document order.
  */
 function collectPresentations(
     root: ParentNode,
@@ -351,7 +356,7 @@ function belongsToRoot(element: Element, root: ParentNode): boolean {
 /**
  * Collects one label's bounded ancestor scopes without crossing its content item.
  *
- * @param presentation - Eligible page-owned label.
+ * @param presentation - Structurally supported page-owned label.
  * @param root - Document or exact source root.
  * @returns - Candidate scopes from nearest to broadest.
  */
@@ -417,7 +422,7 @@ function addLogicalIdCounts(target: LinkedInIdCounts, source: LinkedInIdCounts):
  * Builds one pass-local index instead of rescanning all evidence for every label.
  *
  * @param root - Document or exact source subtree to inspect.
- * @param presentations - Eligible labels inside the root.
+ * @param presentations - Structural label candidates inside the root.
  * @returns - Candidate-scope, evidence, and pending-presentation indexes.
  */
 function createAssociationIndex(
@@ -500,7 +505,7 @@ function getEffectiveEvidence(
 /**
  * Finds one presentation's smallest currently unambiguous local association.
  *
- * @param presentation - Eligible label presentation.
+ * @param presentation - Structural label presentation candidate.
  * @param index - Pass-local association index.
  * @returns - Accepted association, or null while local evidence is unsuitable.
  */
@@ -829,7 +834,6 @@ function getMutationSources(
 export const linkedinAdapter = {
     id: LINKEDIN_ADAPTER_ID,
     mutationAttributes: MUTATION_ATTRIBUTES,
-    observesCharacterData: true,
     getMutationSources,
     matches: matchesLinkedInUrl,
     matchesElement: (element: Element, context: TimestampExtractionContext) =>
@@ -839,7 +843,7 @@ export const linkedinAdapter = {
     isRelativePresentation: createRelativePresentationClassifier([
         RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
         RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-    ], ["just now"]),
+    ], ["just now", "1mo", "1 mo", "1yr", "1 yr"]),
     extract: (element: Element, context: TimestampExtractionContext) => {
         const association = takeAssociation(element, context);
         if (!association) {

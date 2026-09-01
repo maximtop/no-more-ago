@@ -3,6 +3,9 @@
  */
 
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
+import {
+    getRelativePresentationObservationTarget,
+} from "../adapters/relative-presentation";
 import { formatCalendarDate } from "../../shared/date/format-calendar-date";
 import { formatDateWithPresentation } from "../../shared/date/format-default-date";
 import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
@@ -295,7 +298,32 @@ interface CandidateCollection {
     /**
      * Sources whose current page labels require bounded text observation.
      */
-    readonly textObservedSources: ReadonlySet<Element>;
+    readonly textObservationTargets: ReadonlyMap<Element, Node>;
+}
+
+/**
+ * Mutable candidate state shared by regional and exact-source processing.
+ */
+interface CandidateAccumulator {
+    /**
+     * Ordered accepted candidates grouped by source.
+     */
+    readonly candidatesBySource: Map<Element, TimestampCandidate[]>;
+
+    /**
+     * First valid candidate per source.
+     */
+    readonly resolvedBySource: Map<Element, ResolvedTimestamp>;
+
+    /**
+     * Sources with a trusted candidate whose current label was not relative.
+     */
+    readonly presentationRejectedSources: Set<Element>;
+
+    /**
+     * Smallest bounded page node controlling each candidate's label eligibility.
+     */
+    readonly textObservationTargets: Map<Element, Node>;
 }
 
 /**
@@ -333,6 +361,44 @@ function addCandidate(
     const candidates = candidatesBySource.get(candidate.source) ?? [];
     candidates.push(candidate);
     candidatesBySource.set(candidate.source, candidates);
+}
+
+/**
+ * Applies one rule's extraction, label gate, observation, and resolution consistently.
+ *
+ * @param accumulator - Mutable pass-local candidate state.
+ * @param rule - Matching source rule evaluated at its precedence position.
+ * @param source - Exact discovered source element.
+ * @param context - Shared extraction and page-text context.
+ * @param nowMilliseconds - Current plausibility boundary for timestamp resolution.
+ */
+function evaluateRuleCandidate(
+    accumulator: CandidateAccumulator,
+    rule: TimestampSourceRule,
+    source: Element,
+    context: TimestampExtractionContext,
+    nowMilliseconds: number,
+): void {
+    if (accumulator.resolvedBySource.has(source)) {
+        return;
+    }
+    const candidate = rule.extract(source, context);
+    if (candidate?.source !== source) {
+        return;
+    }
+    const observationTarget = getRelativePresentationObservationTarget(candidate, context);
+    if (observationTarget) {
+        accumulator.textObservationTargets.set(source, observationTarget);
+    }
+    if (!rule.isRelativePresentation(candidate, context)) {
+        accumulator.presentationRejectedSources.add(source);
+        return;
+    }
+    addCandidate(accumulator.candidatesBySource, candidate);
+    const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
+    if (resolved) {
+        accumulator.resolvedBySource.set(source, resolved);
+    }
 }
 
 /**
@@ -377,7 +443,7 @@ function processCandidateCollection(
         discoveredSources,
         blockedSources,
         presentationRejectedSources,
-        textObservedSources,
+        textObservationTargets,
     } = collection;
 
     if (diagnosticSink && discoveredSources.length > 0) {
@@ -393,10 +459,11 @@ function processCandidateCollection(
     for (const source of discoveredSources) {
         const candidates = candidatesBySource.get(source) ?? [];
         const resolved = resolvedBySource.get(source);
-        const observesPageText = textObservedSources.has(source)
+        const observationTarget = textObservationTargets.get(source);
+        const observesPageText = observationTarget !== undefined
             && (resolved !== undefined || presentationRejectedSources.has(source));
-        if (observesPageText) {
-            ownedDomMutations?.trackPageTextSource?.(source);
+        if (observationTarget && observesPageText) {
+            ownedDomMutations?.trackPageTextSource?.(source, observationTarget);
         } else {
             ownedDomMutations?.untrackPageTextSource?.(source);
         }
@@ -469,7 +536,13 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
     const presentationRejectedSources = new Set<Element>();
-    const textObservedSources = new Set<Element>();
+    const textObservationTargets = new Map<Element, Node>();
+    const accumulator: CandidateAccumulator = {
+        candidatesBySource,
+        resolvedBySource,
+        presentationRejectedSources,
+        textObservationTargets,
+    };
     const extractionContext = createExtractionContext(input, url);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
@@ -481,24 +554,13 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 blockedSources.add(element);
                 continue;
             }
-            if (resolvedBySource.has(element)) {
-                continue;
-            }
-            const candidate = rule.extract(element, extractionContext);
-            if (candidate?.source === element) {
-                if (rule.observesCharacterData === true) {
-                    textObservedSources.add(element);
-                }
-                if (!rule.isRelativePresentation(candidate, extractionContext)) {
-                    presentationRejectedSources.add(element);
-                    continue;
-                }
-                addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
-                if (resolved) {
-                    resolvedBySource.set(element, resolved);
-                }
-            }
+            evaluateRuleCandidate(
+                accumulator,
+                rule,
+                element,
+                extractionContext,
+                nowMilliseconds,
+            );
         }
     }
 
@@ -530,7 +592,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             discoveredSources,
             blockedSources,
             presentationRejectedSources,
-            textObservedSources,
+            textObservationTargets,
         },
         extractionContext.locales,
         started,
@@ -559,7 +621,13 @@ export function reconcileDocumentSources(
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
     const presentationRejectedSources = new Set<Element>();
-    const textObservedSources = new Set<Element>();
+    const textObservationTargets = new Map<Element, Node>();
+    const accumulator: CandidateAccumulator = {
+        candidatesBySource,
+        resolvedBySource,
+        presentationRejectedSources,
+        textObservationTargets,
+    };
     const extractionContext = createExtractionContext(input, url);
     for (const source of input.sources) {
         if (
@@ -576,24 +644,13 @@ export function reconcileDocumentSources(
                 blockedSources.add(source);
                 continue;
             }
-            if (resolvedBySource.has(source)) {
-                continue;
-            }
-            const candidate = rule.extract(source, extractionContext);
-            if (candidate?.source === source) {
-                if (rule.observesCharacterData === true) {
-                    textObservedSources.add(source);
-                }
-                if (!rule.isRelativePresentation(candidate, extractionContext)) {
-                    presentationRejectedSources.add(source);
-                    continue;
-                }
-                addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
-                if (resolved) {
-                    resolvedBySource.set(source, resolved);
-                }
-            }
+            evaluateRuleCandidate(
+                accumulator,
+                rule,
+                source,
+                extractionContext,
+                nowMilliseconds,
+            );
         }
     }
     return processCandidateCollection(
@@ -604,7 +661,7 @@ export function reconcileDocumentSources(
             discoveredSources,
             blockedSources,
             presentationRejectedSources,
-            textObservedSources,
+            textObservationTargets,
         },
         extractionContext.locales,
         started,

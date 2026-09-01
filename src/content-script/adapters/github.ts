@@ -46,7 +46,6 @@ export const githubAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
         TIMESTAMP_SOURCE_ATTRIBUTE.FORMAT,
     ],
-    observesCharacterData: true,
     matches: matchesGitHubUrl,
     matchesElement: isGitHubTimestampElement,
     discover: (root) => discoverElements(
