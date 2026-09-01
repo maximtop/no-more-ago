@@ -7,22 +7,13 @@
 /**
  * Browser boundary used by the popup's Settings action.
  */
-export interface OptionsPageOpener {
-    /**
-     * Opens the extension's browser-managed Options page.
-     *
-     * @returns A promise settled by the browser after the open attempt.
-     */
-    open(): Promise<void>;
-}
+export type OpenOptionsPage = () => Promise<void>;
 
 /**
- * Creates the production Options-page opener.
+ * Opens the extension's browser-managed Options page.
  *
- * @returns An opener backed by the extension runtime.
+ * @returns A promise settled by the browser after the open attempt.
  */
-export function createDefaultOptionsPageOpener(): OptionsPageOpener {
-    return {
-        open: () => chrome.runtime.openOptionsPage(),
-    };
+export function openBrowserOptionsPage(): Promise<void> {
+    return chrome.runtime.openOptionsPage();
 }

@@ -43,13 +43,13 @@ beforeAll(() => {
  *
  * @param state - Popup state to render.
  * @param transport - Background message transport.
- * @param optionsPageOpener - Browser boundary used to open the Options page.
+ * @param openOptionsPage - Browser boundary used to open the Options page.
  * @returns - Mounted container and cleanup function.
  */
 async function renderPopup(
     state: PopupState,
     transport: PopupTransport = { sendMessage: () => Promise.resolve(state) },
-    optionsPageOpener = { open: () => Promise.resolve() },
+    openOptionsPage = () => Promise.resolve(),
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
     const container = document.createElement("div");
     document.body.append(container);
@@ -59,7 +59,7 @@ async function renderPopup(
             <PopupApp
                 initialState={state}
                 client={new PopupClient(transport)}
-                optionsPageOpener={optionsPageOpener}
+                openOptionsPage={openOptionsPage}
             />,
         );
     });
@@ -99,10 +99,8 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(
             active,
             { sendMessage: () => Promise.resolve(active) },
-            {
-                open: async () => {
-                    openCalls += 1;
-                },
+            async () => {
+                openCalls += 1;
             },
         );
         try {
@@ -125,7 +123,7 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(
             active,
             { sendMessage: () => Promise.resolve(active) },
-            { open: () => Promise.reject(new Error("Options page unavailable")) },
+            () => Promise.reject(new Error("Options page unavailable")),
         );
         try {
             const settings = [...rendered.container.querySelectorAll("button")].find(

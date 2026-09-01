@@ -30,8 +30,8 @@ import {
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import { createPopupClient, type PopupClient } from "./client";
 import {
-    createDefaultOptionsPageOpener,
-    type OptionsPageOpener,
+    openBrowserOptionsPage,
+    type OpenOptionsPage,
 } from "./options-page";
 
 /**
@@ -49,9 +49,9 @@ export interface PopupAppProps {
     readonly initialState?: PopupState;
 
     /**
-     * Service used to open the browser-managed Options page.
+     * Function used to open the browser-managed Options page.
      */
-    readonly optionsPageOpener?: OptionsPageOpener;
+    readonly openOptionsPage?: OpenOptionsPage;
 
     /**
      * Service used to open a GitHub report for the current site.
@@ -151,21 +151,17 @@ function siteReportErrorText(error: SiteReportError): string {
  * @param props - Optional dependencies and preloaded popup state.
  * @param props.client - Popup settings client override.
  * @param props.initialState - Preloaded popup state.
- * @param props.optionsPageOpener - Browser Options-page opener override.
+ * @param props.openOptionsPage - Browser Options-page function override.
  * @param props.reporter - Site-report service override.
  * @returns The popup React view.
  */
 export function PopupApp({
     client: suppliedClient,
     initialState,
-    optionsPageOpener: suppliedOptionsPageOpener,
+    openOptionsPage = openBrowserOptionsPage,
     reporter: suppliedReporter,
 }: PopupAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createPopupClient(), [suppliedClient]);
-    const optionsPageOpener = useMemo(
-        () => suppliedOptionsPageOpener ?? createDefaultOptionsPageOpener(),
-        [suppliedOptionsPageOpener],
-    );
     const reporter = useMemo(
         () => suppliedReporter ?? createDefaultSiteReportReporter(),
         [suppliedReporter],
@@ -423,7 +419,7 @@ export function PopupApp({
                             type="button"
                             variant="default"
                             onClick={() => {
-                                void optionsPageOpener.open().catch(() => undefined);
+                                void openOptionsPage().catch(() => undefined);
                             }}
                         >
                             Settings
