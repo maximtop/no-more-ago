@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import { genericTimeRule } from "../../../../src/content-script/adapters/generic-time";
 import { OWNED_OUTPUT_ATTRIBUTE } from "../../../../src/content-script/ownership-markers";
+import { processDocument } from
+    "../../../../src/content-script/transformation/process-document";
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_KIND,
@@ -14,6 +16,28 @@ import {
 } from "../../../../src/content-script/adapters/types";
 
 describe("genericTimeRule", () => {
+    it.each([
+        ["2 hours ago", true],
+        ["2h", true],
+        ["Aug 22, 2026", false],
+        ["16:08", false],
+        ["2 hrs", false],
+    ])("classifies the current label %s as eligible: %s", (label, eligible) => {
+        document.body.innerHTML =
+            `<time datetime="2026-08-23T10:15:00Z">${label}</time>`;
+
+        const outputs = processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        });
+
+        expect(outputs).toHaveLength(eligible ? 1 : 0);
+        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`))
+            .toHaveLength(eligible ? 1 : 0);
+        expect(document.querySelector("time")?.textContent).toBe(label);
+    });
+
     it.each([
         ["https://example.test/path", true],
         ["http://example.test/path", true],

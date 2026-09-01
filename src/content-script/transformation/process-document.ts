@@ -291,6 +291,11 @@ interface CandidateCollection {
      * Sources withheld from extraction by the active route provenance policy.
      */
     readonly blockedSources: ReadonlySet<Element>;
+
+    /**
+     * Sources whose trusted candidate lacked a recognized relative presentation.
+     */
+    readonly presentationRejectedSources: ReadonlySet<Element>;
 }
 
 /**
@@ -333,12 +338,17 @@ function addCandidate(
 /**
  * Creates the read-only adapter context for one processing pass.
  *
+ * @param input - Processing input carrying static or live locale preferences.
  * @param url - Current route URL for route-specific value provenance.
- * @returns - Context exposing the current route and retained page-authored text reader.
+ * @returns - Context exposing current route, locales, and retained page text.
  */
-function createExtractionContext(url: URL): TimestampExtractionContext {
+function createExtractionContext(
+    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+    url: URL,
+): TimestampExtractionContext {
     return {
         url,
+        locales: input.localesProvider?.() ?? input.locales ?? [],
         readPageText: readPageOwnedText,
     };
 }
@@ -348,15 +358,16 @@ function createExtractionContext(url: URL): TimestampExtractionContext {
  *
  * @param input - Presentation, ownership, and diagnostic dependencies.
  * @param collection - Ordered sources and their adapter candidates.
+ * @param locales - Locale snapshot shared with presentation classification.
  * @param started - Optional start time captured before discovery.
  * @returns - Generated adjacent time outputs from the processed sources.
  */
 function processCandidateCollection(
     input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
     collection: CandidateCollection,
+    locales: readonly string[],
     started: number | undefined,
 ): readonly HTMLTimeElement[] {
-    const locales = input.localesProvider?.() ?? input.locales ?? [];
     const display = input.displayProvider?.() ?? input.display;
     const ownedDomMutations = input.ownedDomMutations;
     const diagnosticSink = input.diagnosticSink;
@@ -365,6 +376,7 @@ function processCandidateCollection(
         resolvedBySource,
         discoveredSources,
         blockedSources,
+        presentationRejectedSources,
     } = collection;
 
     if (diagnosticSink && discoveredSources.length > 0) {
@@ -384,6 +396,10 @@ function processCandidateCollection(
             ownedDomMutations?.untrackSource?.(source);
             restoreTimestampPresentation(source, ownedDomMutations);
             if (blockedSources.has(source)) {
+                continue;
+            }
+            if (candidates.length === 0 && presentationRejectedSources.has(source)) {
+                emitCandidateSkipped(diagnosticSink);
                 continue;
             }
             const sourceTimestamp = getFailureSourceTimestamp(candidates);
@@ -440,7 +456,8 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
-    const extractionContext = createExtractionContext(url);
+    const presentationRejectedSources = new Set<Element>();
+    const extractionContext = createExtractionContext(input, url);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
             if (!discovered.has(element)) {
@@ -456,6 +473,10 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             const candidate = rule.extract(element, extractionContext);
             if (candidate?.source === element) {
+                if (!rule.isRelativePresentation(candidate, extractionContext)) {
+                    presentationRejectedSources.add(element);
+                    continue;
+                }
                 addCandidate(candidatesBySource, candidate);
                 const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
                 if (resolved) {
@@ -487,7 +508,14 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 
     return processCandidateCollection(
         input,
-        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
+        {
+            candidatesBySource,
+            resolvedBySource,
+            discoveredSources,
+            blockedSources,
+            presentationRejectedSources,
+        },
+        extractionContext.locales,
         started,
     );
 }
@@ -513,7 +541,8 @@ export function reconcileDocumentSources(
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
-    const extractionContext = createExtractionContext(url);
+    const presentationRejectedSources = new Set<Element>();
+    const extractionContext = createExtractionContext(input, url);
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -534,6 +563,10 @@ export function reconcileDocumentSources(
             }
             const candidate = rule.extract(source, extractionContext);
             if (candidate?.source === source) {
+                if (!rule.isRelativePresentation(candidate, extractionContext)) {
+                    presentationRejectedSources.add(source);
+                    continue;
+                }
                 addCandidate(candidatesBySource, candidate);
                 const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
                 if (resolved) {
@@ -544,7 +577,14 @@ export function reconcileDocumentSources(
     }
     return processCandidateCollection(
         input,
-        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
+        {
+            candidatesBySource,
+            resolvedBySource,
+            discoveredSources,
+            blockedSources,
+            presentationRejectedSources,
+        },
+        extractionContext.locales,
         started,
     );
 }

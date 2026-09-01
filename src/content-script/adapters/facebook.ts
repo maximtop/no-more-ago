@@ -21,6 +21,10 @@ import {
     type TimestampMutationSourceResult,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 /**
  * Stable identifier for the Facebook Story timestamp adapter.
@@ -107,6 +111,11 @@ export const facebookAdapter: TimestampSourceRule = {
         FACEBOOK_TRACKED_LINK_SELECTOR,
         isFacebookTimestampElement,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element) => {
         if (!isFacebookTimestampElement(element)) {
             return null;

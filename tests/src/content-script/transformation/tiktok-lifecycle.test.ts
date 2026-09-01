@@ -100,20 +100,6 @@ function appendDirectFeedArticle(
     return { article, wrapper, date };
 }
 
-/**
- * Reads the verified generated output following one profile link.
- *
- * @param link - Page-owned profile link.
- * @returns - Owned generated time element.
- */
-function outputAfter(link: HTMLAnchorElement): HTMLTimeElement {
-    const output = link.nextElementSibling;
-    if (!(output instanceof HTMLTimeElement)) {
-        throw new Error(`Expected generated output after ${link.id}`);
-    }
-    return output;
-}
-
 describe("TikTok document lifecycle", () => {
     beforeEach(() => {
         vi.useFakeTimers();
@@ -143,10 +129,8 @@ describe("TikTok document lifecycle", () => {
         });
 
         try {
-            expect(controller.start()).toHaveLength(100);
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(100);
-            const initialOutputs = links.map(outputAfter);
-            const initialTexts = initialOutputs.map((output) => output.textContent);
+            expect(controller.start()).toEqual([]);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
             const changedIndex = 42;
             const changedLink = links[changedIndex];
             if (!changedLink) {
@@ -159,28 +143,22 @@ describe("TikTok document lifecycle", () => {
             );
             await flushMutations();
 
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(100);
-            expect(outputAfter(changedLink)).toBe(initialOutputs[changedIndex]);
-            expect(outputAfter(changedLink).textContent).toBe("2026-05-15 16:08");
-            for (const [index, link] of links.entries()) {
-                if (index !== changedIndex) {
-                    expect(outputAfter(link)).toBe(initialOutputs[index]);
-                    expect(outputAfter(link).textContent).toBe(initialTexts[index]);
-                }
-            }
+            expect(changedLink.nextElementSibling).toBeNull();
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+            expect(links.every((link) => link.textContent.startsWith("card "))).toBe(true);
 
             changedLink.setAttribute("href", "/@fictional/video/not-a-post-id");
             await flushMutations();
             expect(changedLink.nextElementSibling).toBeNull();
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(99);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
 
             changedLink.setAttribute(
                 "href",
                 `/@fictional/photo/${publicationId(1_778_861_280, 100)}`,
             );
             await flushMutations();
-            expect(outputAfter(changedLink).textContent).toBe("2026-05-15 16:08");
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(100);
+            expect(changedLink.nextElementSibling).toBeNull();
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
 
             const added = appendProfileCard(
                 publicationId(1_609_459_200, 7),
@@ -188,8 +166,8 @@ describe("TikTok document lifecycle", () => {
                 "photo",
             );
             await flushMutations();
-            expect(outputAfter(added).textContent).toBe("2021-01-01 00:00");
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(101);
+            expect(added.nextElementSibling).toBeNull();
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
 
             const addedOwner = added.parentElement;
             if (!addedOwner) {
@@ -198,7 +176,7 @@ describe("TikTok document lifecycle", () => {
             addedOwner.remove();
             await flushMutations();
             expect(added.isConnected).toBe(false);
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(100);
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         } finally {
             controller.teardown();
         }
@@ -227,7 +205,7 @@ describe("TikTok document lifecycle", () => {
 
         try {
             controller.start();
-            expect(outputAfter(first).textContent).toBe("2026-05-14 16:08");
+            expect(first.nextElementSibling).toBeNull();
 
             owner.append(second);
             await flushMutations();
@@ -236,7 +214,7 @@ describe("TikTok document lifecycle", () => {
 
             second.remove();
             await flushMutations();
-            expect(outputAfter(first).textContent).toBe("2026-05-14 16:08");
+            expect(first.nextElementSibling).toBeNull();
         } finally {
             controller.teardown();
         }
@@ -246,7 +224,7 @@ describe("TikTok document lifecycle", () => {
         const id = publicationId(1_778_774_880, 3);
         document.body.innerHTML = '<div id="metadata" data-e2e="placeholder">'
             + '<span>Fictional</span><span> · </span>'
-            + '<span id="route-date">page date</span></div>';
+            + '<span id="route-date">3d</span></div>';
         const source = document.getElementById("metadata");
         const date = document.getElementById("route-date");
         if (!source || !date) {
@@ -264,7 +242,7 @@ describe("TikTok document lifecycle", () => {
 
         try {
             controller.start();
-            expect(date.textContent).toBe("page date");
+            expect(date.textContent).toBe("3d");
 
             currentUrl = new URL(`https://www.tiktok.com/@fictional/video/${id}`);
             source.setAttribute("data-e2e", "browser-nickname");
@@ -274,7 +252,7 @@ describe("TikTok document lifecycle", () => {
             currentUrl = new URL("https://www.tiktok.com/foryou");
             source.setAttribute("data-e2e", "placeholder");
             await flushMutations();
-            expect(date.textContent).toBe("page date");
+            expect(date.textContent).toBe("3d");
         } finally {
             controller.teardown();
         }
@@ -301,17 +279,18 @@ describe("TikTok document lifecycle", () => {
 
         try {
             controller.start();
-            expect(outputAfter(link).textContent).toBe("2026-05-14 16:07:50");
+            expect(link.nextElementSibling).toBeNull();
 
             document.head.append(script);
             await flushMutations();
-            expect(outputAfter(link).textContent).toBe("2026-05-14 16:08:00");
+            expect(link.nextElementSibling).toBeNull();
 
             script.textContent = JSON.stringify({
                 itemInfo: { itemStruct: { id, createTime: "1778774940" } },
             });
             await flushMutations();
-            expect(outputAfter(link).textContent).toBe("2026-05-14 16:09:00");
+            expect(link.nextElementSibling).toBeNull();
+            expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         } finally {
             controller.teardown();
         }
@@ -331,7 +310,7 @@ describe("TikTok document lifecycle", () => {
         });
         document.body.innerHTML = '<div id="metadata" data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span>'
-            + '<span id="date">page first</span></div>';
+            + '<span id="date">3d</span></div>';
         const source = document.getElementById("metadata");
         const date = document.getElementById("date");
         const dateText = date?.firstChild;
@@ -356,29 +335,29 @@ describe("TikTok document lifecycle", () => {
             currentUrl = new URL(
                 `https://www.tiktok.com/@fictional/photo/${secondId}`,
             );
-            dateText.data = "page second";
+            dateText.data = "4d";
             await flushMutations();
             expect(date.textContent).toBe("2026-05-15 16:08");
             expect(date.textContent).not.toBe("2026-05-14 16:08");
 
             currentUrl = new URL("https://www.tiktok.com/foryou");
-            dateText.data = "page feed";
+            dateText.data = "5d";
             await flushMutations();
-            expect(date.textContent).toBe("page feed");
+            expect(date.textContent).toBe("5d");
             expect(source.hasAttribute("data-no-more-ago-source")).toBe(false);
         } finally {
             controller.teardown();
         }
 
-        expect(date.textContent).toBe("page feed");
+        expect(date.textContent).toBe("5d");
         expect(document.getElementById("metadata")).toBe(source);
     });
 
     it("moves direct feed ownership between current SPA articles", async () => {
         const firstId = publicationId(1_778_774_880, 10);
         const secondId = publicationId(1_778_861_280, 11);
-        const first = appendDirectFeedArticle(firstId, 0, "page first");
-        const second = appendDirectFeedArticle(secondId, 1, "page second");
+        const first = appendDirectFeedArticle(firstId, 0, " · 3d");
+        const second = appendDirectFeedArticle(secondId, 1, " · 4d");
         let currentUrl = new URL(
             `https://www.tiktok.com/@fictional/video/${firstId}`,
         );
@@ -392,8 +371,8 @@ describe("TikTok document lifecycle", () => {
 
         try {
             controller.start();
-            expect(first.date.textContent).toBe("2026-05-14 16:08");
-            expect(second.date.textContent).toBe("page second");
+            expect(first.date.textContent).toBe(" · 2026-05-14 16:08");
+            expect(second.date.textContent).toBe(" · 4d");
 
             currentUrl = new URL(
                 `https://www.tiktok.com/@fictional/video/${secondId}`,
@@ -402,16 +381,16 @@ describe("TikTok document lifecycle", () => {
             second.wrapper.id = `xgwrapper-0-${secondId}`;
             await flushMutations();
 
-            expect(first.date.textContent).toBe("page first");
-            expect(second.date.textContent).toBe("2026-05-15 16:08");
+            expect(first.date.textContent).toBe(" · 3d");
+            expect(second.date.textContent).toBe(" · 2026-05-15 16:08");
             expect(first.article.isConnected).toBe(true);
             expect(second.article.isConnected).toBe(true);
         } finally {
             controller.teardown();
         }
 
-        expect(first.date.textContent).toBe("page first");
-        expect(second.date.textContent).toBe("page second");
+        expect(first.date.textContent).toBe(" · 3d");
+        expect(second.date.textContent).toBe(" · 4d");
     });
 
     it("retargets a replacement direct-page label without replacing its owner", async () => {
@@ -419,7 +398,7 @@ describe("TikTok document lifecycle", () => {
         document.body.innerHTML = '<div id="replacement-source" '
             + 'data-e2e="browser-nickname" data-kept="yes">'
             + '<span>Fictional</span><span> · </span>'
-            + '<span id="first-target">page first</span></div>';
+            + '<span id="first-target">3d</span></div>';
         const source = document.getElementById("replacement-source");
         const firstTarget = document.getElementById("first-target");
         if (!source || !firstTarget) {
@@ -435,14 +414,14 @@ describe("TikTok document lifecycle", () => {
         });
         const replacement = document.createElement("span");
         replacement.id = "replacement-target";
-        replacement.textContent = "page replacement";
+        replacement.textContent = "4d";
 
         try {
             controller.start();
             expect(firstTarget.textContent).toBe("2026-05-14 16:08");
             firstTarget.replaceWith(replacement);
             await flushMutations();
-            expect(firstTarget.textContent).toBe("page first");
+            expect(firstTarget.textContent).toBe("3d");
             expect(replacement.textContent).toBe("2026-05-14 16:08");
             expect(document.getElementById("replacement-source")).toBe(source);
             expect(source.getAttribute("data-kept")).toBe("yes");
@@ -450,13 +429,21 @@ describe("TikTok document lifecycle", () => {
             controller.teardown();
         }
 
-        expect(replacement.textContent).toBe("page replacement");
+        expect(replacement.textContent).toBe("4d");
         expect(document.getElementById("replacement-source")).toBe(source);
     });
 
-    it("reformats fallback output without changing its source association", () => {
+    it("reformats a direct label without changing its source association", () => {
         const id = publicationId(1_778_774_880, 3);
-        const link = appendProfileCard(id, 1);
+        document.body.innerHTML = '<div id="reformat-source" '
+            + 'data-e2e="browser-nickname">'
+            + '<span>Fictional</span><span> · </span>'
+            + '<span id="reformat-date">3d</span></div>';
+        const source = document.getElementById("reformat-source");
+        const date = document.getElementById("reformat-date");
+        if (!source || !date) {
+            throw new Error("Expected direct reformat fixture");
+        }
         const displays: readonly DisplaySettings[] = [
             { formatMode: "system", timeZone: { mode: "system" } },
             UTC_DISPLAY,
@@ -468,7 +455,7 @@ describe("TikTok document lifecycle", () => {
         ];
         let display = displays[0] ?? UTC_DISPLAY;
         const diagnostics = vi.fn();
-        const url = new URL("https://www.tiktok.com/@fictional");
+        const url = new URL(`https://www.tiktok.com/@fictional/video/${id}`);
         const controller = new DocumentTransformationController({
             url,
             urlProvider: () => url,
@@ -481,12 +468,12 @@ describe("TikTok document lifecycle", () => {
 
         try {
             controller.start();
-            const output = outputAfter(link);
             for (const nextDisplay of displays) {
                 display = nextDisplay;
                 controller.reformatOwned();
-                expect(outputAfter(link)).toBe(output);
-                expect(output.textContent)
+                expect(document.getElementById("reformat-source")).toBe(source);
+                expect(document.getElementById("reformat-date")).toBe(date);
+                expect(date.textContent)
                     .toBe(formatDateWithPresentation(instant, LOCALES, display).text);
             }
             const diagnosticText = JSON.stringify(diagnostics.mock.calls);
@@ -497,14 +484,14 @@ describe("TikTok document lifecycle", () => {
             controller.teardown();
         }
 
-        expect(link.nextElementSibling).toBeNull();
+        expect(date.textContent).toBe("3d");
     });
 
     it("fails closed without retaining invalid TikTok numeric evidence", () => {
         const implausibleId = publicationId(2_000_000_000, 1);
         document.body.innerHTML = '<div data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span>'
-            + '<span id="invalid-date">page date</span></div>';
+            + '<span id="invalid-date">3d</span></div>';
         const date = document.getElementById("invalid-date");
         if (!date) {
             throw new Error("Expected invalid direct date fixture");
@@ -524,7 +511,7 @@ describe("TikTok document lifecycle", () => {
 
         try {
             expect(controller.start()).toEqual([]);
-            expect(date.textContent).toBe("page date");
+            expect(date.textContent).toBe("3d");
             expect(diagnostics).toHaveBeenCalled();
             const diagnosticText = JSON.stringify(diagnostics.mock.calls);
             expect(diagnosticText).not.toContain(implausibleId);
@@ -534,6 +521,6 @@ describe("TikTok document lifecycle", () => {
             controller.teardown();
         }
 
-        expect(date.textContent).toBe("page date");
+        expect(date.textContent).toBe("3d");
     });
 });

@@ -33,6 +33,7 @@ import {
 } from "./route-handoff";
 import {
     TIMESTAMP_MUTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     type TimestampExtractionContext,
     type TimestampMutationSourceSelection,
     type TimestampSourceAttribute,
@@ -204,7 +205,10 @@ export class DocumentTransformationController {
         const observableRules = registry.all();
         const currentRules = registry.matching(this.currentUrl);
         const sourceAttributes = [
-            ...new Set(observableRules.flatMap((rule) => rule.mutationAttributes)),
+            ...new Set([
+                ...observableRules.flatMap((rule) => rule.mutationAttributes),
+                TIMESTAMP_SOURCE_ATTRIBUTE.LANG,
+            ]),
         ];
         const generation = this.advanceRouteGeneration();
         const scheduler = new DocumentMutationScheduler({
@@ -237,18 +241,20 @@ export class DocumentTransformationController {
             ) => {
                 const extractionContext: TimestampExtractionContext = {
                     url: new URL(this.currentUrl.href),
+                    locales: this.input.localesProvider?.() ?? this.input.locales ?? [],
                     readPageText: readPageOwnedText,
                 };
                 const currentRules = registry.matching(this.currentUrl);
-                const applicableRules = mutationKind
-                    === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
-                    ? currentRules.filter((rule) => rule.observesCharacterData === true)
-                    : attributeName
-                        ? currentRules.filter((rule) =>
-                            rule.mutationAttributes.some(
-                                (attribute) => attribute === attributeName,
-                            ))
-                        : currentRules;
+                const applicableRules = attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG
+                    ? currentRules
+                    : mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
+                        ? currentRules.filter((rule) => rule.observesCharacterData === true)
+                        : attributeName
+                            ? currentRules.filter((rule) =>
+                                rule.mutationAttributes.includes(
+                                    attributeName as TimestampSourceAttribute,
+                                ))
+                            : currentRules;
                 const sources: Element[] = [];
                 const seen = new Set<Element>();
                 const addSource = (source: Element): void => {
@@ -264,6 +270,20 @@ export class DocumentTransformationController {
                     }
                 }
                 for (const rule of applicableRules) {
+                    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
+                        for (const source of rule.discover(element, extractionContext)) {
+                            addSource(source);
+                        }
+                        let current: Element | null = element;
+                        while (current && current.ownerDocument === this.input.root) {
+                            if (rule.matchesElement(current, extractionContext)) {
+                                addSource(current);
+                                break;
+                            }
+                            current = current.parentElement;
+                        }
+                        continue;
+                    }
                     let hasCustomMapping = false;
                     if (rule.getMutationSources) {
                         const mutationSelection = normalizeMutationSources(

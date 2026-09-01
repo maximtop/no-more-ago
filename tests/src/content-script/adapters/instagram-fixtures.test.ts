@@ -58,7 +58,7 @@ describe("Instagram fixture", () => {
         expect(document.getElementById("caption-age")).toBe(caption);
         expect(document.getElementById("publication-age")).toBe(publication);
         expect(caption.textContent).toBe("2026-01-08 18:45");
-        expect(publication.textContent).toBe("2026-01-07 22:26");
+        expect(publication.textContent).toBe("January 8");
         expect(caption.parentElement).toBe(captionParent);
         expect(caption.className).toBe(captionClass);
         expect(caption.getAttribute("style")).toBe(captionStyle);

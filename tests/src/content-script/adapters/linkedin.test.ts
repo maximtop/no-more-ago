@@ -16,6 +16,8 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
+import { processDocument } from
+    "../../../../src/content-script/transformation/process-document";
 
 const ACTIVITY_ID = "7147784590025818113";
 const UGC_POST_ID = "7159396357537529858";
@@ -29,6 +31,7 @@ const COMMENT_ID = "7181895116414517252";
  */
 const context = (): TimestampExtractionContext => ({
     url: new URL("https://www.linkedin.com/feed/"),
+    locales: ["en-US"],
     readPageText: (target) => target.data,
 });
 
@@ -105,6 +108,73 @@ describe("linkedinAdapter", () => {
                 textSuffix: " • Edited • ",
             },
         });
+    });
+
+    it("processes the English just-now literal", () => {
+        document.body.innerHTML = `
+            <article>
+                <p componentkey="timestamp"><span id="label">just now • Edited</span></p>
+                <a href="/feed/update/urn:li:activity:${ACTIVITY_ID}/">Post</a>
+            </article>
+        `;
+
+        processDocument({
+            url: context().url,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm:ss.SSS",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        expect(document.getElementById("label")?.textContent)
+            .toBe("2024-01-02 03:04:05.678 • Edited");
+    });
+
+    it("uses inherited Polish for a relative label and rejects an absolute label", () => {
+        document.body.innerHTML = `
+            <article id="polish-post" lang="pl">
+                <p componentkey="polish-time">
+                    <span id="polish-label">2 tyg. • Edited</span>
+                </p>
+                <a href="/feed/update/urn:li:activity:${ACTIVITY_ID}/">Polish post</a>
+            </article>
+            <article id="absolute-post">
+                <p componentkey="absolute-time">
+                    <span id="absolute-label">Aug 22, 2026 • Edited</span>
+                </p>
+                <div componentkey="ContentUrnUgcPostUrn(ugcPostUrn=urn:li:ugcPost:${UGC_POST_ID})">
+                </div>
+            </article>
+        `;
+
+        const extractionContext = context();
+        const candidates = linkedinAdapter
+            .discover(document, extractionContext)
+            .map((source) => linkedinAdapter.extract(source, extractionContext))
+            .filter((candidate) => candidate !== null);
+        expect(candidates).toHaveLength(2);
+        expect(candidates.map((candidate) =>
+            linkedinAdapter.isRelativePresentation(candidate, extractionContext)))
+            .toEqual([true, false]);
+
+        processDocument({
+            url: context().url,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm:ss.SSS",
+                timeZone: { mode: "utc" },
+            },
+        });
+
+        expect(document.getElementById("polish-label")?.textContent)
+            .toBe("2024-01-02 03:04:05.678 • Edited");
+        const absolute = document.getElementById("absolute-label");
+        expect(absolute?.textContent).toBe("Aug 22, 2026 • Edited");
     });
 
     it("accepts only direct LinkedIn feed permalinks as href evidence", () => {

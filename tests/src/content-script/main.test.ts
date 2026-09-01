@@ -116,7 +116,8 @@ describe("content entrypoint", () => {
         } | undefined>)[DOCUMENT_RUNTIME_SLOT];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">relative</time>';
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     });
 
     it("starts immediately while the document is loading", async () => {
@@ -161,7 +162,7 @@ describe("content entrypoint", () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("time")?.textContent).toBe("relative");
+        expect(document.querySelector("time")?.textContent).toBe("2 hours ago");
     });
 
     it(

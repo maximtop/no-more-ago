@@ -38,6 +38,7 @@ const PROFILE_URL = new URL("https://www.tiktok.com/@fictional?lang=en");
 function context(url: URL): TimestampExtractionContext {
     return {
         url,
+        locales: ["en-US"],
         readPageText: (target) => target.data,
     };
 }
@@ -158,6 +159,7 @@ describe("TikTok adapter", () => {
             presentation: {
                 kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
                 target,
+                textPrefix: " · ",
             },
         });
         expect(tiktokDirectFeedAdapter.extract(recommendation, context(VIDEO_URL))).toBeNull();

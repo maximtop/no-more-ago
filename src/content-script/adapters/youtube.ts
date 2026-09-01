@@ -17,6 +17,10 @@ import {
     matchesYouTubeWatchUrl,
 } from "../../shared/adapters/youtube-contract";
 import { readYouTubePlayerResponsePublication } from "./youtube-player-response";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 const WATCH_PUBLICATION_SELECTOR =
     "ytd-watch-metadata #info-strings > yt-formatted-string";
@@ -77,9 +81,14 @@ function createPublicationCandidate(
 export const youtubePlayerResponseRule: TimestampSourceRule = {
     id: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
     mutationAttributes: [],
+    observesCharacterData: true,
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        ]),
     extract: (element, context) => {
         if (!isYouTubeWatchPublicationSource(element)) {
             return null;
@@ -108,9 +117,14 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
 export const youtubeAdapter: TimestampSourceRule = {
     id: YOUTUBE_ADAPTER_ID,
     mutationAttributes: [],
+    observesCharacterData: true,
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        ]),
     extract: (element, context) => {
         if (
             !isYouTubeWatchPublicationSource(element)

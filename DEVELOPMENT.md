@@ -198,7 +198,9 @@ backed by that temporary store.
 
 Generic processing is the final rule in the content-side source precedence.
 It discovers ordinary light-DOM `time[datetime]` elements and accepts only
-complete global date-times with explicit known offsets. Specialized sources,
+complete global date-times with explicit known offsets. Every rule separately
+proves that the current page-owned label is relative before resolution and
+rendering; trusted timestamp data alone is not enough. Specialized sources,
 including GitHub's relative-time widgets, Hacker News age widgets, approved
 Stack Exchange title widgets, Telegram Web K message clocks, and TikTok
 publications, remain content-side rules and take precedence when they accept
@@ -207,8 +209,9 @@ source resolves, lower extractors are not called for that element. GitHub and
 Facebook use the adjacent generated-time presentation. Hacker News, Stack
 Exchange, Telegram Web K, and direct TikTok pages use in-place presentation:
 they retain an existing simple timestamp label and own only that text until
-restoration. TikTok profile grids use appended generated-time presentation,
-which keeps each card link visible. Public `https://t.me/s/*` pages stay on
+restoration. TikTok profile rules retain an appended presentation descriptor,
+but their cards have no page-owned timestamp label, so the shared eligibility
+gate leaves them unowned by default. Public `https://t.me/s/*` pages stay on
 generic `time[datetime]` processing.
 Ordinary specialized sources should not require background registration or
 site-policy branches. A page-main-world transport is an exceptional boundary
@@ -218,10 +221,12 @@ enablement model.
 The Telegram Web K adapter applies only below
 `https://web.telegram.org/k/`. It reads the exact ten-digit Unix-seconds value
 from the owning message bubble's `data-timestamp`, selects one direct ordinary
-clock, and observes `class` and `data-timestamp` changes. It does not guess
-numeric units or parse visible/localized Telegram text. Primary edit-time and
-ambiguous forwarded or saved-message shapes fail closed. Web A remains outside
-the supported source contract.
+label, and observes `class`, `data-timestamp`, and label changes. The label must
+independently match the shared relative classifier; ordinary clocks such as
+`16:08` fail closed. It does not guess numeric units or parse visible/localized
+Telegram text as the timestamp. Primary edit-time and ambiguous forwarded or
+saved-message shapes fail closed. Web A remains outside the supported source
+contract.
 
 The TikTok adapter applies only to HTTPS `www.tiktok.com/@...` profile grids
 and exact direct `video` or `photo` paths. It obtains the publication ID from
@@ -233,12 +238,14 @@ from 2016-01-01 through the current time plus 24 hours. Do not add visible-text
 parsing, legacy hydration containers, page-world hooks, polling, or network
 fallbacks without new evidence and a revised specification.
 
-Direct TikTok sources use the shared in-place text presentation. Profile cards
-use the shared appended-time presentation, which preserves the source link and
-owns one block `<time>` sibling. Keep TikTok URL rules, selectors, embedded
-state traversal, and post-ID semantics inside `adapters/tiktok*.ts`; shared
-formatting, ownership, restoration, and mutation code must remain
-site-agnostic.
+Direct TikTok sources use the shared in-place text presentation and transform
+only a recognized relative label. A retained leading ` · ` separator remains
+page-owned. Profile cards retain their trusted-source infrastructure and the
+appended presentation descriptor, but the classifier rejects that no-label
+shape, so no block `<time>` sibling is created by default. Keep TikTok URL
+rules, selectors, embedded state traversal, and post-ID semantics inside
+`adapters/tiktok*.ts`; shared formatting, ownership, restoration, and mutation
+code must remain site-agnostic.
 
 LinkedIn is a best-effort specialized in-place source with a different value
 provenance: its adapter accepts one strict local content ID and emits a derived
@@ -253,9 +260,10 @@ The canonical YouTube watch rules pair one approved visible label with local
 page data. Recognized loaded player-response data is preferred, with exactly
 one approved `datePublished` metadata value as an initial-document fallback.
 Either source may provide a strict calendar date or a complete explicitly
-zoned instant. Same-document changed-video handoffs admit only current dual-ID
-loaded data; unbound metadata remains quarantined. The content script never
-requests YouTube data.
+zoned instant. The visible Watch label must separately match the relative
+classifier; absolute and unknown labels remain unchanged. Same-document
+changed-video handoffs admit only current dual-ID loaded data; unbound metadata
+remains quarantined. The content script never requests YouTube data.
 
 YouTube history-state updates produce a strict payload-free command for the
 exact frame, coalesced to one in-flight and one pending-latest delivery per
@@ -353,19 +361,24 @@ change.
 
 To add or update a specialized source:
 
-1. Add or update its content-side rule under `src/content-script/adapters`.
-2. Register it in the content-side precedence list before the generic rule.
-3. Add an offline fixture under `tests/src/content-script/fixtures`.
-4. Test trusted timestamp resolution, restoration, and dynamic page updates.
+1. Prove a trusted machine-readable timestamp independently of display text.
+2. Define how the rule proves that the current page-owned label is relative.
+3. Add paired offline fixtures: relative changes; absolute or unknown stays.
+4. Cover text and route changes that can revoke eligibility.
+5. Never persist or report the page label through diagnostics.
+6. Add or update its content-side rule under `src/content-script/adapters`.
+7. Register it in the content-side precedence list before the generic rule.
+8. Add an offline fixture under `tests/src/content-script/fixtures`.
+9. Test trusted timestamp resolution, restoration, and dynamic page updates.
    When a source selects text-in-place presentation, also test retained element
    identity, exact page-owned restoration, target replacement, and page-authored
    label changes while owned.
-5. For a derived-ID source, test the full ID grammar, unsafe and future values,
+10. For a derived-ID source, test the full ID grammar, unsafe and future values,
    local ambiguity, compound text preservation, and proof that relative text
    does not affect the instant.
-6. Keep fixtures synthetic and offline; remove names, content, tracking data,
+11. Keep fixtures synthetic and offline; remove names, content, tracking data,
    authentication state, and real user or content IDs.
-7. Run `pnpm check` and a development build for the affected browser.
+12. Run `pnpm check` and a development build for the affected browser.
 
 Do not add site-specific background activation or registration when the
 universal isolated runtime can obtain the trusted source. Facebook is the only
@@ -499,8 +512,9 @@ permission, persistence rule, or fallback implementation exists for list pages.
 
 For manual verification, load a built artifact from `dist/dev/<browser>`, then:
 
-1. Open a canonical desktop Watch page and confirm that its publication label
-   becomes an exact localized value.
+1. Open a canonical desktop Watch page with a relative publication label and
+   confirm that it becomes an exact localized value; an absolute label should
+   remain unchanged.
 2. Navigate to another Watch video without a full reload and confirm that the
    first video's output is restored before identity-matched data for the second
    video can render.
@@ -573,7 +587,9 @@ source value. Successful events never retain raw source timestamps.
   timestamp is no longer replaced:** check the page with Debug logs enabled.
   For specialized markup changes, update the matching offline fixture and its
   content-side rule; generic processing continues to accept only standard
-  `time[datetime]` values. In-place adapters require one unambiguous simple
+  `time[datetime]` values. Every rule also requires an existing label recognized
+  as relative; absolute dates, clocks, unknown wording, and absent labels are
+  intentionally unchanged. In-place adapters require one unambiguous simple
   label. For Web K, also verify an HTML `div.bubble[data-timestamp]`, one
   bubble-owned `.time-inner`, one direct ordinary `span.i18n`, and a strict
   ten-digit seconds value. For Facebook, verify typed Story evidence, exact
@@ -589,7 +605,9 @@ source value. Successful events never retain raw source timestamps.
   fallback.
 - **A supported TikTok publication is unchanged:** confirm the page uses HTTPS
   `www.tiktok.com`, an exact profile/video/photo path, an unambiguous tested
-  card or direct label shape, and a plausible 19-digit post ID. A universal
+  direct label shape, a recognized relative label, and a plausible 19-digit
+  post ID. Profile cards have no timestamp label and intentionally receive no
+  output by default. A universal
   hydration record is optional, but it is used only when its string-valued
   `id` matches the current post. Do not diagnose the issue by parsing visible
   text or adding a request; capture a privacy-safe minimized fixture instead.

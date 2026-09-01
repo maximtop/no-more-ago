@@ -31,7 +31,7 @@ async function flushMutations(): Promise<void> {
 
 describe("timestamp extraction URL context", () => {
     it("uses the latest provider value for a reconciled source", async () => {
-        document.body.innerHTML = '<span id="source" title="first">relative</span>';
+        document.body.innerHTML = '<span id="source" title="first">2 hours ago</span>';
         const source = document.getElementById("source");
         if (!source) {
             throw new Error("Expected source");
@@ -43,6 +43,7 @@ describe("timestamp extraction URL context", () => {
             matches: (url) => url.hostname === "www.tiktok.com",
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: (element, context) => {
                 seenUrls.push(context.url.href);
                 return {

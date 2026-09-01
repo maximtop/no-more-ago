@@ -13,6 +13,10 @@ import {
 } from "./types";
 import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "../../shared/adapters/github-contract";
 import { discoverElements } from "./discover-elements";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 const GITHUB_TIMESTAMP_SELECTOR = "relative-time, time-ago, time-until" as const;
 
@@ -42,6 +46,7 @@ export const githubAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
         TIMESTAMP_SOURCE_ATTRIBUTE.FORMAT,
     ],
+    observesCharacterData: true,
     matches: matchesGitHubUrl,
     matchesElement: isGitHubTimestampElement,
     discover: (root) => discoverElements(
@@ -49,6 +54,11 @@ export const githubAdapter = {
         GITHUB_TIMESTAMP_SELECTOR,
         isGitHubTimestampElement,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element) => {
         const sourceKind = element.localName as TimestampSourceKind;
         if (!APPROVED_KINDS.has(sourceKind)) {

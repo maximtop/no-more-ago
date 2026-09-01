@@ -153,7 +153,11 @@ describe("DocumentMutationScheduler", () => {
             document,
             onBatch: () => undefined,
             getOwnedSourceForOutput: () => null,
-            sourceAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
+            sourceAttributes: [
+                TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
+                TIMESTAMP_SOURCE_ATTRIBUTE.LANG,
+            ],
+            observeCharacterData: true,
         });
         scheduler.start();
         scheduler.start();
@@ -164,6 +168,7 @@ describe("DocumentMutationScheduler", () => {
             attributes: true,
             attributeFilter: [
                 "datetime",
+                "lang",
                 "hidden",
                 "aria-hidden",
                 "inert",
@@ -171,6 +176,8 @@ describe("DocumentMutationScheduler", () => {
                 "class",
             ],
             attributeOldValue: true,
+            characterData: true,
+            characterDataOldValue: true,
         });
         scheduler.stop();
         document.body.append(document.createElement("section"));

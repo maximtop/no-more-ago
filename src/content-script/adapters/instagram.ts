@@ -15,6 +15,10 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 /**
  * Stable identifier for the Instagram presentation rule.
@@ -57,6 +61,7 @@ function isInstagramTimeElement(element: Element): boolean {
 export const instagramAdapter = {
     id: INSTAGRAM_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
+    observesCharacterData: true,
     matches: matchesInstagramUrl,
     matchesElement: isInstagramTimeElement,
     discover: (root) => discoverElements(
@@ -64,6 +69,11 @@ export const instagramAdapter = {
         INSTAGRAM_TIME_SELECTOR,
         isInstagramTimeElement,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element) => {
         if (!isInstagramTimeElement(element)) {
             return null;

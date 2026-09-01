@@ -38,6 +38,7 @@ describe("appended time presentation", () => {
             matches: () => true,
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: () => ({
                 ruleId: "appended-test",
                 source,

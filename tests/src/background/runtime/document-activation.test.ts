@@ -77,7 +77,7 @@ function installedFrame(readPolicy: () => {
         throw new Error("Expected frame document");
     }
     frameDocument.body.innerHTML =
-        '<time datetime="2026-08-23T10:15:00Z">relative</time>';
+        '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     const messages = frameMessages();
     const handle = installContentRuntime({
         document: frameDocument,

@@ -33,6 +33,7 @@ const WATCH_URL = new URL("https://www.youtube.com/watch?v=testVID0001");
 function context(url: URL = WATCH_URL): TimestampExtractionContext {
     return {
         url,
+        locales: ["en-US"],
         readPageText: (target) => target.data,
     };
 }

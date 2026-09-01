@@ -13,6 +13,10 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 const RELATIVE_TIME_SELECTOR = "span.relativetime[title]" as const;
 const CLEAN_RELATIVE_TIME_SELECTOR = "span.relativetime-clean[title]" as const;
@@ -157,6 +161,7 @@ export const stackExchangeAdapter = {
         TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
         TIMESTAMP_SOURCE_ATTRIBUTE.TITLE,
     ],
+    observesCharacterData: true,
     matches: matchesStackExchangeUrl,
     matchesElement: isStackExchangeTimestampElement,
     discover: (root) => discoverElements(
@@ -164,6 +169,10 @@ export const stackExchangeAdapter = {
         STACK_EXCHANGE_TIMESTAMP_SELECTOR,
         isStackExchangeTimestampElement,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        ], ["Over a year ago"]),
     extract: (element) => {
         if (!isStackExchangeTimestampElement(element)) {
             return null;

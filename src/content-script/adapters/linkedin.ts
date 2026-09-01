@@ -24,6 +24,10 @@ import {
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
 const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
@@ -45,11 +49,8 @@ const LINKEDIN_PERMALINK_PATTERN = new RegExp(
     "^/feed/update/([^/]+)/?$",
     "u",
 );
-const RELATIVE_PRESENTATION_PATTERN = new RegExp(
-    "^(?<prefix>\\s*)(?:\\d+\\s*(?:mo|yr|s|m|h|d|w|y)|just now)"
-        + "(?<suffix>\\s*(?:•[\\s\\S]*)?)$",
-    "iu",
-);
+const PRESENTATION_SEGMENT_PATTERN =
+    /^(?<prefix>\s*)(?<timestamp>.*?\S)(?<suffix>\s*(?:•[\s\S]*)?)$/u;
 const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY,
     TIMESTAMP_SOURCE_ATTRIBUTE.SDUI_ANCHOR_ID,
@@ -187,7 +188,7 @@ export function matchesLinkedInUrl(url: URL): boolean {
 }
 
 /**
- * Resolves the page-authored relative segment and exact preserved delimiters.
+ * Resolves the page-authored timestamp segment and exact preserved delimiters.
  *
  * @param label - Structurally accepted LinkedIn label element.
  * @param context - Processing context with retained page text.
@@ -204,10 +205,11 @@ function resolvePresentation(
     if (!target) {
         return null;
     }
-    const match = context.readPageText(target).match(RELATIVE_PRESENTATION_PATTERN);
+    const match = context.readPageText(target).match(PRESENTATION_SEGMENT_PATTERN);
     const prefix = match?.groups?.prefix;
+    const timestamp = match?.groups?.timestamp;
     const suffix = match?.groups?.suffix;
-    return prefix === undefined || suffix === undefined
+    return prefix === undefined || timestamp === undefined || suffix === undefined
         ? null
         : {
             label,
@@ -836,6 +838,11 @@ export const linkedinAdapter = {
         resolveAssociation(element, context) !== null,
     discover: (root: ParentNode, context: TimestampExtractionContext) =>
         cacheAssociations(resolveAssociations(root, context), context),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ], ["just now"]),
     extract: (element: Element, context: TimestampExtractionContext) => {
         const association = takeAssociation(element, context);
         if (!association) {

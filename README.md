@@ -5,6 +5,11 @@ such as “3 months ago.” It replaces eligible standard and trusted specialize
 timestamps with localized exact values while preserving the original page
 state for restoration.
 
+No More Ago changes an existing timestamp only when the page currently
+presents that label as relative time and the extension also has a trusted
+machine-readable timestamp. Absolute dates, clocks, unknown wording, and
+sources with no existing timestamp label remain unchanged.
+
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
 Facebook, GitHub, Hacker News, supported Stack Exchange Q&A sites, Telegram Web
@@ -31,6 +36,15 @@ extension.
   approved YouTube watch label and identity-matched loaded data or
   initial-document metadata; or best-effort LinkedIn ID timestamps. Specialized
   rules take precedence over the generic rule when both accept the same source.
+- **Relative presentation:** the current page-owned label must match a
+  conservative localized relative-time pattern. Recognition is best-effort
+  for these 40 locales: Arabic, Bulgarian, Catalan, Czech, Danish, German,
+  Greek, English, Spanish, Latin American Spanish, Persian, Finnish, Filipino,
+  French, Hebrew, Hindi, Croatian, Hungarian, Indonesian, Italian, Japanese,
+  Korean, Lithuanian, Norwegian Bokmål, Dutch, Polish, Brazilian Portuguese,
+  European Portuguese, Romanian, Russian, Slovak, Slovenian, Serbian, Swedish,
+  Thai, Turkish, Ukrainian, Vietnamese, Simplified Chinese, and Traditional
+  Chinese. Unknown wording fails closed and stays unchanged.
 - **Global switch:** enables or disables all timestamp processing.
 - **Site switch:** stores an independent preference for the current hostname.
 - **Display settings:** choose the date format and time zone used for output.
@@ -65,10 +79,10 @@ Requires Firefox 128 or later.
 ## Quick Start
 
 1. Install the artifact for your browser.
-2. Open any HTTP(S) page that contains standard `time[datetime]` timestamps.
+2. Open an HTTP(S) page with a relative label backed by a trusted timestamp.
 3. Open the No More Ago toolbar popup.
 4. Leave **Global enabled** and **Enabled on _hostname_** switched on.
-5. Eligible timestamps are replaced with exact dates.
+5. Eligible relative labels are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
 become “Aug 27, 2026, 9:32 PM.” Trusted Facebook, GitHub, Hacker News, Stack
@@ -81,16 +95,22 @@ output follows
 the selected format, browser locale, and time zone; calendar-date output
 preserves the same day in every configured time zone.
 
+For comparison, labels such as `Aug 22, 2026`, `16:08`, or unknown wording
+such as `2 hrs` remain exactly as the page supplied them. The extension does
+not add a date when a source, such as a TikTok profile card, has no existing
+timestamp label.
+
 ## Features
 
 ### Exact Date Replacement
 
 No More Ago processes standard `time[datetime]` values on accessible HTTP(S)
-pages when they contain an unambiguous global date and time. Accepted values
-have a complete date, a valid time, and `Z`, a colonized numeric offset, or a
-compact numeric offset. Date-only, local, malformed, impossible, and
-unknown-zone values remain unchanged. Visible text is never parsed as a
-fallback.
+pages only when the value is an unambiguous global date-time and the current
+visible label is recognized as relative. Accepted values have a complete date,
+a valid time, and `Z`, a colonized numeric offset, or a compact numeric offset.
+Date-only, local, malformed, impossible, and unknown-zone values remain
+unchanged. Visible text is used only to classify relative presentation; it is
+never parsed to obtain the date or time.
 
 GitHub, Hacker News, supported Stack Exchange Q&A sites, and LinkedIn have
 specialized timestamp sources. Hacker News support applies to
@@ -100,6 +120,10 @@ plus the branded Q&A roots `stackoverflow.com`, `serverfault.com`,
 `superuser.com`, `askubuntu.com`, `mathoverflow.net`, and `stackapps.com`.
 Known localized Stack Overflow Q&A hosts are included; service hosts such as
 Chat, API, Data Explorer, Area 51, and blogs are excluded.
+
+These specialized sources still require a current relative label. A trusted
+machine value beside `2 hours ago` may be shown exactly, while the same value
+beside `Aug 22, 2026` or an unknown label remains page-owned and unchanged.
 
 The Stack Exchange adapter accepts only simple labels from these approved
 shapes: `span.relativetime[title]`, `span.relativetime-clean[title]`,
@@ -118,8 +142,10 @@ bridge transfers only the opaque tracking token and Unix-seconds timestamp to
 the isolated content runtime. The page world is not an authentication boundary,
 so the bridge holds no secrets or privileged capability. Messages are bounded
 and structurally validated as page-derived input. The token must exactly match
-the post timestamp link, and the link must use one of Facebook's current bounded
-text or SVG timestamp shapes.
+the post timestamp link, and a current visible compact or directional relative
+label must also be present. A textless SVG shape may still prove source
+association, but it receives no output because it has no page-owned timestamp
+label to classify.
 
 The bridge is inert until existing global and site policy enables the isolated
 runtime. Same-window lifecycle messages make its installed wrappers active or
@@ -132,10 +158,12 @@ unchanged unless they independently satisfy the same Story proof, token
 correlation, and source-shape contract.
 
 On the exact `www.instagram.com` hostname, simple standard `time[datetime]`
-labels are updated in place so their element identity, classes, inline styles,
-and surrounding layout hooks remain page-owned. Complex timestamp markup keeps
-using the generic adjacent-output fallback. This presentation integration is
-best-effort and does not infer dates from Instagram's visible text.
+labels such as `33w` are updated in place so their element identity, classes,
+inline styles, and surrounding layout hooks remain page-owned. Absolute labels
+such as `January 8` stay unchanged. Complex timestamp markup keeps using the
+generic adjacent-output fallback when its own current label is recognized as
+relative. This presentation integration is best-effort and does not infer
+dates from Instagram's visible text.
 
 LinkedIn posts, reshares, comments, and replies have a best-effort specialized
 source when one visible timestamp label is locally associated with exactly one
@@ -146,10 +174,11 @@ creation or allocation time: LinkedIn does not document the encoding, and the
 result is not guaranteed to equal an official `createdAt`, `publishedAt`, or
 visible publication time.
 
-LinkedIn support recognizes only the English-style relative label grammar used
-for `just now` and the `s`, `m`, `h`, `d`, `w`, `mo`, `y`, and `yr` units. Other
-localized label grammars remain unchanged. The adapter never calculates a date
-from that relative label, `Edited`, an ARIA label, or nearby display text.
+LinkedIn uses the shared 40-locale relative classifier for its current label,
+including supported compact forms, localized forms such as Polish `2 tyg.`,
+and the source-owned English phrase `just now`. Unknown or absolute labels
+remain unchanged. The adapter never calculates a date from that label,
+`Edited`, an ARIA label, or nearby display text.
 Missing, malformed, future, or ambiguous ID evidence leaves the label
 unchanged. The adapter makes no LinkedIn API or other timestamp request and
 preserves adjacent metadata, links, attributes, and page-owned element identity
@@ -163,25 +192,28 @@ DOM, and future third-party markup remain outside the compatibility claim.
 
 Public Telegram channel pages under `https://t.me/s/*` use the same standard
 `time[datetime]` path as other HTTP(S) pages. Their complete, explicitly zoned
-post timestamps receive generic validation and reversible adjacent output; no
-Telegram-specific public-page parser is used.
+post timestamps receive generic validation, but output is created only for a
+recognized relative label such as `2 hours ago`. A clock such as `16:08`
+remains unchanged. No Telegram-specific public-page parser is used.
 
 Telegram Web K support applies only to `https://web.telegram.org/k/*`. It
-expands one ordinary message clock from the matching bubble's exact ten-digit
-Unix-seconds `data-timestamp` value, using the current format, locale, and time
-zone. The clock text changes in place, so separate edited indicators, delivery
-status, counters, icons, links, and their event behavior remain page-owned.
-Primary edit-time labels and ambiguous forwarded or saved-message shapes are
-left unchanged. Telegram Web A is unsupported because it does not expose the
-same safe machine-readable instant. The extension never parses Telegram's
-visible or localized clock text as timestamp evidence.
+can replace one ordinary relative message label when its matching bubble has an
+exact ten-digit Unix-seconds `data-timestamp` value. A normal clock such as
+`16:08` remains unchanged by default. Eligible text changes in place, so
+separate edited indicators, delivery status, counters, icons, links, and their
+event behavior remain page-owned. Primary edit-time labels and ambiguous
+forwarded or saved-message shapes are left unchanged. Telegram Web A is
+unsupported because it does not expose the same safe machine-readable instant.
+The extension never parses Telegram's visible or localized label as timestamp
+evidence.
 
 TikTok support applies only to HTTPS `www.tiktok.com` user profiles and direct
 `/@handle/video/<post-id>` or `/@handle/photo/<post-id>` pages whose markup
 matches the tested guest or authenticated shapes. Direct video and photo pages
-replace one simple publication-date label in place. Profile grids add one
-removable exact date beneath each unambiguous video or photo card while
-preserving the card link.
+replace one simple label in place only when it is currently relative, such as
+`3d`; absolute labels such as `5-14` remain unchanged. Profile cards have no
+existing timestamp label, so the extension does not append a date to them by
+default.
 
 For a current publication, the extension first uses a string-valued
 `createTime` from the page's universal hydration JSON when the same record's
@@ -207,9 +239,10 @@ loaded in the document. It prefers identity-matched player publication data,
 then, on an initial full-document load, falls back to exactly one head
 `meta[itemprop="datePublished"]` value. Both sources accept either a strict
 calendar date or a complete explicitly zoned instant. The extension never
-requests YouTube data. If neither eligible local source validates, the label
-stays unchanged; visible relative text and arbitrary attributes are never
-inferred as dates.
+requests YouTube data. The current label must also be recognized as relative,
+such as `3 months ago`; an absolute label such as `Aug 29, 2026` remains
+unchanged even when valid local publication data exists. Visible text and
+arbitrary attributes are never inferred as dates.
 
 The generic runtime watches relevant dynamic content in each reachable
 HTTP(S) document. Newly added or changed timestamps are processed without a
@@ -356,10 +389,12 @@ Choose **Reset all settings** on the options page to restore:
 
 | Situation | Result |
 | --- | --- |
-| Eligible zoned standard, Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K, or LinkedIn timestamp | The trusted or best-effort ID instant is shown with the configured exact-date presentation. |
-| Supported TikTok profile card or direct video/photo publication | A matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is appended to the card or rendered in place. |
-| Eligible canonical YouTube watch calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
-| Eligible canonical YouTube watch zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
+| Recognized relative label plus a trusted timestamp | The trusted instant or calendar date is shown with the configured presentation. |
+| Absolute date, clock, unknown wording, or absent label | Page content remains unchanged even when machine-readable timestamp data exists. |
+| Relative direct TikTok video/photo label | Matching embedded `createTime` is preferred; otherwise a plausible ID-derived date is rendered in place. |
+| TikTok profile card without an existing timestamp label | No date is appended. |
+| Relative canonical YouTube watch label backed by a calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
+| Relative canonical YouTube watch label backed by a zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
 | Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
 | Same-document navigation to a list or unsupported route | Obsolete Watch output is restored and the unsupported route remains unchanged. |
 | YouTube Home, Search, or Channel list page | Publication labels remain unchanged. |
@@ -386,8 +421,10 @@ The extension requests:
   history-state updates into payload-free route signals for the exact frame.
 - **Storage:** keeps settings and optional diagnostic entries locally.
 
-No More Ago does not derive dates from visible relative or absolute labels,
-ARIA labels, nearby text, or elapsed time. The Hacker News specialized source
+No More Ago uses the current visible label only to decide whether its
+presentation is recognized as relative. It never derives the timestamp value
+from visible relative or absolute labels, ARIA labels, nearby text, or elapsed
+time. The Hacker News specialized source
 trusts only the explicit zoned timestamp in its approved `span.age[title]`
 shape. The Stack Exchange source reads `title` only from its listed timestamp
 widgets and accepts only strict explicit-zone values plus the known
@@ -438,8 +475,8 @@ source types are deferred.
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
-  HTTP(S) pages. Arbitrary page labels remain out of scope unless an explicitly
-  registered specialized source accepts them.
+  HTTP(S) pages whose current label is recognized as relative. Arbitrary,
+  absolute, and unknown page labels remain unchanged.
 - Facebook, GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K,
   TikTok, LinkedIn, and YouTube are best-effort integrations whose markup and,
   where applicable, payload contracts can change independently of the
@@ -450,13 +487,14 @@ source types are deferred.
 - TikTok support is limited to tested `www.tiktok.com/@...` profile, direct
   video, and direct photo shapes. For You, Following, search, embeds, LIVE,
   TikTok Studio, short/mobile links, other subdomains, and non-HTTPS pages do
-  not receive TikTok-specialized processing.
+  not receive TikTok-specialized processing. Profile cards expose no existing
+  timestamp label and therefore receive no appended output by default.
 - A timestamp decoded from a TikTok post ID is a validated fallback with
   date-and-minute precision, not proof of TikTok's exact publication second.
   TikTok markup and embedded-state compatibility remain best-effort.
 - YouTube support is limited to canonical desktop
   `www.youtube.com/watch?v=<11-character-video-id>` pages with the approved
-  visible label and recognized loaded publication data, or one
+  visible relative label and recognized loaded publication data, or one
   `datePublished` metadata value at the initial full-document boundary. Values
   must be a strict calendar date or a complete explicitly zoned instant.
   Same-document changed-video handoffs require current dual-ID loaded data;

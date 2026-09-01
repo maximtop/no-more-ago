@@ -11,8 +11,10 @@ import { DocumentTransformationController } from
 
 const FIXTURE_NAMES = [
     "direct-video.html",
+    "direct-video-relative.html",
     "direct-photo.html",
     "direct-feed-video.html",
+    "direct-feed-video-relative.html",
     "profile.html",
     "eligibility-matrix.html",
 ] as const;
@@ -52,6 +54,15 @@ describe("TikTok fixtures", () => {
             dateId: "video-date",
             controlId: "video-control",
             original: "5-14",
+            expected: "5-14",
+        },
+        {
+            fixture: "direct-video-relative.html",
+            url: "https://www.tiktok.com/@fictional/video/7639779880711749733",
+            metadataId: "video-metadata",
+            dateId: "video-date",
+            controlId: "video-control",
+            original: "3d",
             expected: "2026-05-14 16:08",
         },
         {
@@ -61,7 +72,7 @@ describe("TikTok fixtures", () => {
             dateId: "photo-date",
             controlId: "photo-control",
             original: "12-31",
-            expected: "2026-01-01 00:00",
+            expected: "12-31",
         },
         {
             fixture: "direct-feed-video.html",
@@ -70,7 +81,16 @@ describe("TikTok fixtures", () => {
             dateId: "feed-date",
             controlId: "feed-control",
             original: " · 5-14",
-            expected: "2026-05-14 16:08",
+            expected: " · 5-14",
+        },
+        {
+            fixture: "direct-feed-video-relative.html",
+            url: "https://www.tiktok.com/@fictional/video/7639779880711749733",
+            metadataId: "feed-current",
+            dateId: "feed-date",
+            controlId: "feed-control",
+            original: " · 3d",
+            expected: " · 2026-05-14 16:08",
         },
     ])("updates and restores $fixture in place", (fixtureCase) => {
         document.body.innerHTML = fixtures.get(fixtureCase.fixture) ?? "";
@@ -137,7 +157,7 @@ describe("TikTok fixtures", () => {
         expect(document.getElementById(fixtureCase.controlId)).toBe(control);
     });
 
-    it("adds one reversible exact date after each eligible profile card", () => {
+    it("does not append dates to profile cards without page-owned labels", () => {
         document.body.innerHTML = fixtures.get("profile.html") ?? "";
         const video = document.getElementById("profile-video");
         const photo = document.getElementById("profile-photo");
@@ -166,16 +186,10 @@ describe("TikTok fixtures", () => {
         });
 
         try {
-            expect(controller.start()).toHaveLength(3);
-            expect(video.nextElementSibling?.textContent).toBe("2026-05-14 16:08");
-            expect(photo.nextElementSibling?.textContent).toBe("2026-01-01 00:00");
-            expect(fallback.nextElementSibling?.textContent).toBe("2025-07-01 00:00");
-            const videoOutput = video.nextElementSibling;
-            if (!(videoOutput instanceof HTMLTimeElement)) {
-                throw new Error("Expected generated video date");
-            }
-            expect(videoOutput.dateTime).toBe("2026-05-14T16:08:00.000Z");
-            expect(videoOutput.style.display).toBe("block");
+            expect(controller.start()).toEqual([]);
+            expect(video.nextElementSibling).toBeNull();
+            expect(photo.nextElementSibling).toBeNull();
+            expect(fallback.nextElementSibling).toBeNull();
             expect(video.hasAttribute("hidden")).toBe(false);
             expect(photo.hasAttribute("hidden")).toBe(false);
             expect(document.getElementById("profile-invalid")?.nextElementSibling)

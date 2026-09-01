@@ -23,6 +23,10 @@ import {
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    isRelativeTimestampPresentation,
+} from "./relative-presentation";
 
 const PROFILE_ITEM_MARKER = "user-post-item" as const;
 const LEGACY_DIRECT_MARKER = "browser-nickname" as const;
@@ -308,6 +312,21 @@ function findDirectFeedDateTarget(
         return target ? [target] : [];
     });
     return targets.length === 1 ? targets[0] ?? null : null;
+}
+
+/**
+ * Creates an in-place TikTok presentation while retaining its author separator.
+ *
+ * @param target - Exact simple page-owned timestamp text.
+ * @returns - Presentation with an optional retained leading bullet segment.
+ */
+function createDirectPresentation(target: Text): TimestampPresentation {
+    const textPrefix = target.data.match(/^\s*·\s*/u)?.[0] ?? "";
+    return {
+        kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+        target,
+        ...(textPrefix === "" ? {} : { textPrefix }),
+    };
 }
 
 /**
@@ -599,6 +618,11 @@ export const tiktokProfileAdapter: TimestampSourceRule = {
     matches: isProfileUrl,
     matchesElement: isProfileCardLink,
     discover: (root) => discoverElements(root, PROFILE_LINK_SELECTOR, isProfileCardLink),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element, context) => {
         if (!isProfileUrl(context.url) || !isProfileCardLink(element)) {
             return null;
@@ -621,6 +645,7 @@ export const tiktokProfileAdapter: TimestampSourceRule = {
 export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
     id: TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
     mutationAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E],
+    observesCharacterData: true,
     getMutationSources: getLegacyMutationSources,
     getChildMutationSources: hydrationMutationSources(
         LEGACY_DIRECT_SOURCE_SELECTOR,
@@ -633,6 +658,11 @@ export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
         LEGACY_DIRECT_SOURCE_SELECTOR,
         isLegacyDirectSource,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element, context) => {
         const publication = parsePublication(context.url);
         const target = isLegacyDirectSource(element)
@@ -645,7 +675,7 @@ export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
             TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
             element,
             publication,
-            { kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT, target },
+            createDirectPresentation(target),
         );
     },
 };
@@ -660,6 +690,7 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
         TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
         TIMESTAMP_SOURCE_ATTRIBUTE.ID,
     ],
+    observesCharacterData: true,
     getMutationSources: getDirectFeedMutationSources,
     getChildMutationSources: hydrationMutationSources(
         DIRECT_FEED_SOURCE_SELECTOR,
@@ -672,6 +703,11 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
         DIRECT_FEED_SOURCE_SELECTOR,
         isDirectFeedSource,
     ),
+    isRelativePresentation: (candidate, context) =>
+        isRelativeTimestampPresentation(candidate, context, [
+            RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ]),
     extract: (element, context) => {
         const publication = parsePublication(context.url);
         const target = publication && isDirectFeedSource(element)
@@ -684,7 +720,7 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
             TIKTOK_DIRECT_FEED_ADAPTER_ID,
             element,
             publication,
-            { kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT, target },
+            createDirectPresentation(target),
         );
     },
 };

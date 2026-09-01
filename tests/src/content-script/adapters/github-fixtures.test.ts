@@ -29,6 +29,7 @@ const githubPages = [
 
 const extractionContext: TimestampExtractionContext = {
     url: new URL("https://github.com/"),
+    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 
@@ -61,6 +62,11 @@ type SourceFixture =
          * Normalized timestamp expected after trusted resolution.
          */
         readonly instant: string;
+
+        /**
+         * Whether the current page-owned label is relative and may be transformed.
+         */
+        readonly relative: boolean;
     }
     | {
         /**
@@ -81,6 +87,14 @@ type SourceFixture =
 
 const sourceFixtures: readonly SourceFixture[] = [
     {
+        name: "one-relative-time.html",
+        url: "https://github.com/maximtop/no-more-ago/commit/abc",
+        sourceSelector: "relative-time",
+        rawDatetime: "2026-08-23T10:15:00Z",
+        instant: "2026-08-23T10:15:00.000Z",
+        relative: true,
+    },
+    {
         name: "commits.html",
         url: "https://github.com/github/docs/commit/4f8c3170cea7f72cf41fc976f5dbf4e8a0b8567f",
         noOpSelectors: ['a[href="/github/docs/commit/4f8c3170cea7f72cf41fc976f5dbf4e8a0b8567f"]'],
@@ -91,6 +105,7 @@ const sourceFixtures: readonly SourceFixture[] = [
         sourceSelector: "relative-time",
         rawDatetime: "2026-08-22T09:19:17Z",
         instant: "2026-08-22T09:19:17.000Z",
+        relative: false,
     },
     {
         name: "timelines.html",
@@ -103,6 +118,7 @@ const sourceFixtures: readonly SourceFixture[] = [
         sourceSelector: "relative-time",
         rawDatetime: "2023-02-14T14:53:40Z",
         instant: "2023-02-14T14:53:40.000Z",
+        relative: false,
     },
     {
         name: "profiles-activity.html",
@@ -110,6 +126,7 @@ const sourceFixtures: readonly SourceFixture[] = [
         sourceSelector: "relative-time",
         rawDatetime: "2026-08-24T08:04:47Z",
         instant: "2026-08-24T08:04:47.000Z",
+        relative: false,
     },
     {
         name: "search.html",
@@ -122,6 +139,7 @@ const sourceFixtures: readonly SourceFixture[] = [
         sourceSelector: "relative-time",
         rawDatetime: "2026-08-23T16:59:13Z",
         instant: "2026-08-23T16:59:13.000Z",
+        relative: false,
     },
 ];
 
@@ -161,6 +179,7 @@ describe("offline GitHub source fixtures", () => {
                 "sourceSelector" in sourceCase
                     ? document.querySelector(sourceCase.sourceSelector)
                     : null;
+            const sourceMarkup = source?.outerHTML;
             if ("sourceSelector" in sourceCase) {
                 expect(source).not.toBeNull();
                 if (!source) {
@@ -181,7 +200,7 @@ describe("offline GitHub source fixtures", () => {
             if ("noOpSelectors" in sourceCase) {
                 expect(outputs).toHaveLength(0);
                 expect(document.body.innerHTML).toBe(originalMarkup);
-            } else {
+            } else if (sourceCase.relative) {
                 expect(outputs).toHaveLength(1);
                 expect(outputs[0]?.dateTime).toBe(sourceCase.rawDatetime);
                 expect(outputs[0]?.getAttribute("data-no-more-ago-output")).toBeTruthy();
@@ -189,6 +208,10 @@ describe("offline GitHub source fixtures", () => {
                 expect(outputs[0]?.previousElementSibling).toBe(source);
                 expect(new Date(outputs[0]?.dateTime ?? "").toISOString()).toBe(sourceCase.instant);
                 expect(document.querySelector("a")?.getAttribute("href")).toBe(originalLink);
+            } else {
+                expect(outputs).toHaveLength(0);
+                expect(source?.outerHTML).toBe(sourceMarkup);
+                expect(source?.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
             }
             for (const [selector, markup] of noOpMarkup) {
                 expect(document.querySelector(selector)?.outerHTML).toBe(markup);

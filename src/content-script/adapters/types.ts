@@ -43,6 +43,7 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     FORMAT: "format",
     HREF: "href",
     ID: "id",
+    LANG: "lang",
     TITLE: "title",
     DATA_ID: "data-id",
     DATA_URN: "data-urn",
@@ -240,6 +241,11 @@ export interface TimestampExtractionContext {
     readonly url: URL;
 
     /**
+     * Current browser locale preferences used only for presentation classification.
+     */
+    readonly locales: readonly string[];
+
+    /**
      * Returns the latest page-authored value for an in-place target.
      */
     readonly readPageText: (target: Text) => string;
@@ -343,6 +349,18 @@ export interface TimestampSourceRule {
         root: ParentNode,
         context: TimestampExtractionContext,
     ): readonly Element[];
+
+    /**
+     * Proves that a candidate's current page-owned label is presented as relative time.
+     *
+     * @param candidate - Trusted-source candidate whose presentation is classified.
+     * @param context - Current route, locales, and retained page-text capabilities.
+     * @returns - Whether the current page-owned label is recognized as relative.
+     */
+    readonly isRelativePresentation: (
+        candidate: TimestampCandidate,
+        context: TimestampExtractionContext,
+    ) => boolean;
 
     /**
      * Extracts one candidate for the exact discovered source.

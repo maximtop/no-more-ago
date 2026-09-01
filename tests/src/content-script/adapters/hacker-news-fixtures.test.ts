@@ -41,17 +41,17 @@ describe("Hacker News fixtures", () => {
         {
             name: "list.html", url: "https://news.ycombinator.com/news",
             sourceSelector: "span.age", linkSelector: 'a[href="item?id=49476604"]',
-            original: "1 hour ago", expected: "2026-08-28 10:09",
+            original: "1 hour ago", expected: "2026-08-28 10:09", eligible: true,
         },
         {
             name: "discussion.html", url: "https://news.ycombinator.com/item?id=49476604",
             sourceSelector: "span.age", linkSelector: 'a[href="item?id=49476605"]',
-            original: "52 minutes ago", expected: "2026-08-28 10:17",
+            original: "52 minutes ago", expected: "2026-08-28 10:17", eligible: true,
         },
         {
             name: "absolute.html", url: "https://news.ycombinator.com/newest",
             sourceSelector: "#absolute", linkSelector: "#absolute-link",
-            original: "Aug 27, 2026", expected: "2026-08-27 08:04",
+            original: "Aug 27, 2026", expected: "Aug 27, 2026", eligible: false,
         },
     ] as const;
 
@@ -80,6 +80,7 @@ describe("Hacker News fixtures", () => {
         expect(link.textContent).toBe(fixtureCase.expected);
         expect(source.hasAttribute("hidden")).toBe(false);
         expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(source.hasAttribute("data-no-more-ago-source")).toBe(false);
         expect(document.querySelector(fixtureCase.linkSelector)).toBe(link);
         expect(Array.from(source.attributes).map(({ name, value }) => [name, value]))
             .toEqual(sourceAttributes);
@@ -122,7 +123,7 @@ describe("Hacker News fixtures", () => {
             throw new Error("Expected eligible labels");
         }
         expect(linked.textContent.trim()).toBe("2026");
-        expect(absolute.textContent.trim()).toBe("2026");
+        expect(absolute.textContent.trim()).toBe("Aug 27, 2026");
         expect(document.querySelector("#no-link")?.textContent).toBe("2026");
         expect(document.querySelector("time")?.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
         expect(document.querySelector("#missing-title")?.textContent).toContain("missing");
@@ -139,8 +140,8 @@ describe("Hacker News fixtures", () => {
         { mode: "iana" as const, identifier: "Europe/Nicosia" },
     ])("keeps Hacker News and generic presentation in parity (%s)", (timeZone) => {
         document.body.innerHTML = '<span class="age" title="2026-08-28T10:09:07.000000Z">'
-            + '<a href="item?id=1">relative</a></span>'
-            + '<time datetime="2026-08-28T10:09:07Z">generic</time>';
+            + '<a href="item?id=1">1 hour ago</a></span>'
+            + '<time datetime="2026-08-28T10:09:07Z">1 hour ago</time>';
         const controller = new DocumentTransformationController({
             url: new URL("https://news.ycombinator.com/news"), root: document, locales: ["en-US"],
             display: { formatMode: "custom", pattern: "yyyy-MM-dd HH:mm", timeZone },
@@ -150,7 +151,7 @@ describe("Hacker News fixtures", () => {
         const output = outputs[0];
         expect(link?.textContent).toBe(output?.textContent);
         controller.teardown();
-        expect(link?.textContent).toBe("relative");
+        expect(link?.textContent).toBe("1 hour ago");
         expect(output?.isConnected).toBe(false);
     });
 

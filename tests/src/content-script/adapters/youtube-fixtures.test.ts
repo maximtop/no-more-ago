@@ -137,6 +137,23 @@ describe("offline YouTube watch fixture", () => {
         expect(outputs[0]?.textContent).toBe("2026-08-28 21:15 -10:00");
     });
 
+    it("leaves an absolute watch label unchanged despite valid loaded data", () => {
+        loadLocalSourcesFixture();
+        const source = requireWatchSource();
+        source.textContent = "Aug 29, 2026";
+        const original = source.outerHTML;
+
+        const outputs = processDocument({
+            url: WATCH_URL,
+            root: document,
+            locales: ["en-US"],
+        });
+
+        expect(outputs).toEqual([]);
+        expect(source.outerHTML).toBe(original);
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+    });
+
     it("invokes metadata extraction once after loaded data is invalid", () => {
         loadLocalSourcesFixture();
         setPlayerAssignment("invalid");
@@ -194,7 +211,6 @@ describe("offline YouTube watch fixture", () => {
         loadLocalSourcesFixture();
         setPlayerAssignment("2024-02-29");
         const source = requireWatchSource();
-        source.textContent = "unparseable relative publication label";
 
         const outputs = processDocument({
             url: WATCH_URL,
@@ -210,7 +226,7 @@ describe("offline YouTube watch fixture", () => {
         expect(outputs).toHaveLength(1);
         expect(outputs[0]?.dateTime).toBe("2024-02-29");
         expect(outputs[0]?.textContent).toBe(expected);
-        expect(source.textContent).toBe("unparseable relative publication label");
+        expect(source.textContent.trim()).toBe("3 months ago");
     });
 
     it("falls through from invalid loaded data to zoned metadata", () => {
@@ -247,7 +263,11 @@ describe("offline YouTube watch fixture", () => {
             } else if (condition === "mismatched") {
                 setPlayerAssignment("2026-08-29", "testVID0002");
             } else {
-                expect(processDocument({ url: WATCH_URL, root: document })[0]?.dateTime)
+                expect(processDocument({
+                    url: WATCH_URL,
+                    root: document,
+                    locales: ["en-US"],
+                })[0]?.dateTime)
                     .toBe("2026-08-29T10:15:00+03:00");
                 setPlayerAssignment("changed-to-invalid");
             }
@@ -377,7 +397,11 @@ describe("offline YouTube watch fixture", () => {
         const source = requireWatchSource();
         const original = source.outerHTML;
 
-        expect(processDocument({ url: WATCH_URL, root: document })).toHaveLength(1);
+        expect(processDocument({
+            url: WATCH_URL,
+            root: document,
+            locales: ["en-US"],
+        })).toHaveLength(1);
         restoreExactTimes(document);
 
         expect(source.outerHTML).toBe(original);
