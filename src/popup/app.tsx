@@ -423,7 +423,7 @@ export function PopupApp({
                             type="button"
                             variant="default"
                             onClick={() => {
-                                void optionsPageOpener.open();
+                                void optionsPageOpener.open().catch(() => undefined);
                             }}
                         >
                             Settings

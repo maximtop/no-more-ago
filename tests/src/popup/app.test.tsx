@@ -120,4 +120,27 @@ describe("PopupApp contract", () => {
             await rendered.unmount();
         }
     });
+
+    it("contains Settings-opening failures", async () => {
+        const rendered = await renderPopup(
+            active,
+            { sendMessage: () => Promise.resolve(active) },
+            { open: () => Promise.reject(new Error("Options page unavailable")) },
+        );
+        try {
+            const settings = [...rendered.container.querySelectorAll("button")].find(
+                (candidate) => candidate.textContent === "Settings",
+            );
+            if (!settings) {
+                throw new Error("Settings action is missing");
+            }
+            await act(async () => {
+                settings.click();
+                await Promise.resolve();
+            });
+            expect(rendered.container.textContent).toContain("Settings");
+        } finally {
+            await rendered.unmount();
+        }
+    });
 });
