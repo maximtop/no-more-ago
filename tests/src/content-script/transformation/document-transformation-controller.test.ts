@@ -183,6 +183,33 @@ describe("DocumentTransformationController", () => {
         expect(target.data).toBe("2 hours ago");
     });
 
+    it("reclaims a bounded label target after oversized text becomes relative", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z"></time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected oversized generic source");
+        }
+        const target = document.createTextNode("x".repeat(513));
+        source.append(target);
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://example.test/"),
+            locales: ["en-US"],
+        });
+        try {
+            expect(controller.start()).toEqual([]);
+            expect(source.nextElementSibling).toBeNull();
+
+            target.data = "2 hours ago";
+            await flushMutations();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+    });
+
     it("bounds inherited-language changes to their subtree", async () => {
         document.documentElement.lang = "en";
         document.body.innerHTML = `

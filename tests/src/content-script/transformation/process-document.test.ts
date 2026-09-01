@@ -116,6 +116,52 @@ describe("processDocument", () => {
             .not.toContain("Aug 23, 2026");
     });
 
+    it("does not retain label observation for an invalid trusted value", () => {
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00">2 hours ago</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected invalid generic source");
+        }
+        const sink = {
+            beforeOwnedOutputRemoval: vi.fn(),
+            beforeOwnedSourceHiddenChange: vi.fn(),
+            trackPageTextSource: vi.fn(),
+            untrackPageTextSource: vi.fn(),
+            trackSource: vi.fn(),
+            untrackSource: vi.fn(),
+        };
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            ownedDomMutations: sink,
+        })).toEqual([]);
+
+        expect(sink.trackPageTextSource).not.toHaveBeenCalled();
+        expect(sink.untrackPageTextSource).toHaveBeenCalledWith(source);
+        expect(sink.untrackSource).toHaveBeenCalledWith(source);
+    });
+
+    it("fails closed for an adjacent label subtree beyond the node budget", () => {
+        const source = document.createElement("time");
+        source.dateTime = "2026-08-23T10:15:00Z";
+        for (let index = 0; index < 65; index += 1) {
+            source.append(document.createElement("span"));
+        }
+        source.append(document.createTextNode("2 hours ago"));
+        document.body.replaceChildren(source);
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        })).toEqual([]);
+        expect(source.nextElementSibling).toBeNull();
+        expect(source.textContent).toBe("2 hours ago");
+    });
+
     it("formats a derived LinkedIn instant through the public document boundary", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-08-30T00:00:00.000Z"));

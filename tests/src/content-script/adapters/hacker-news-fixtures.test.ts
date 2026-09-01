@@ -37,7 +37,7 @@ describe("Hacker News fixtures", () => {
         }
     });
 
-    const positiveFixtures = [
+    const processingFixtures = [
         {
             name: "list.html", url: "https://news.ycombinator.com/news",
             sourceSelector: "span.age", linkSelector: 'a[href="item?id=49476604"]',
@@ -55,7 +55,7 @@ describe("Hacker News fixtures", () => {
         },
     ] as const;
 
-    it.each(positiveFixtures)("normalizes $name without replacing its link", (fixtureCase) => {
+    it.each(processingFixtures)("processes $name without replacing its link", (fixtureCase) => {
         document.body.innerHTML = fixtures.get(fixtureCase.name) ?? "";
         const source = document.querySelector(fixtureCase.sourceSelector);
         const link = document.querySelector(fixtureCase.linkSelector);

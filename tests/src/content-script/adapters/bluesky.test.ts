@@ -30,7 +30,6 @@ import {
 
 const EXTRACTION_CONTEXT: TimestampExtractionContext = {
     url: new URL("https://bsky.app/"),
-    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 

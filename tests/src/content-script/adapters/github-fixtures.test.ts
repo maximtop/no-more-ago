@@ -29,7 +29,6 @@ const githubPages = [
 
 const extractionContext: TimestampExtractionContext = {
     url: new URL("https://github.com/"),
-    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 

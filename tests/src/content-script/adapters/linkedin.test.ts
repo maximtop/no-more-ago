@@ -15,6 +15,7 @@ import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_VALIDATION_RULE,
     type TimestampExtractionContext,
+    type TimestampPresentationContext,
 } from "../../../../src/content-script/adapters/types";
 import { processDocument } from
     "../../../../src/content-script/transformation/process-document";
@@ -31,6 +32,15 @@ const COMMENT_ID = "7181895116414517252";
  */
 const context = (): TimestampExtractionContext => ({
     url: new URL("https://www.linkedin.com/feed/"),
+    readPageText: (target) => target.data,
+});
+
+/**
+ * Creates presentation-only locale evidence for direct classifier tests.
+ *
+ * @returns - Presentation context that reads current page text.
+ */
+const presentationContext = (): TimestampPresentationContext => ({
     locales: ["en-US"],
     readPageText: (target) => target.data,
 });
@@ -173,7 +183,7 @@ describe("linkedinAdapter", () => {
             .filter((candidate) => candidate !== null);
         expect(candidates).toHaveLength(2);
         expect(candidates.map((candidate) =>
-            linkedinAdapter.isRelativePresentation(candidate, extractionContext)))
+            linkedinAdapter.isRelativePresentation(candidate, presentationContext())))
             .toEqual([true, false]);
 
         processDocument({

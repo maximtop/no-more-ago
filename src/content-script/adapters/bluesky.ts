@@ -27,11 +27,16 @@ const POST_METADATA_SELECTOR = "a[href][aria-label][data-tooltip]" as const;
 const QUOTE_METADATA_SELECTOR =
     "[aria-label][data-tooltip]:not(a):not(button):not(input)" as const;
 const FINGERPRINT_SEPARATOR = "\u0000" as const;
-const COMPACT_RELATIVE_LABEL_PATTERN = /^(?:now|\d+\s*(?:s|m|h|d|w|mo|y))$/iu;
-const BLUESKY_RELATIVE_PRESENTATION_LITERALS = [
-    "now",
-    "1 s", "1 m", "1 h", "1 d", "1 w", "1 mo", "1 y",
-] as const;
+const BLUESKY_NOW_LABEL = "now" as const;
+const BLUESKY_COMPACT_UNITS = ["s", "m", "h", "d", "w", "mo", "y"] as const;
+const COMPACT_RELATIVE_LABEL_PATTERN = new RegExp(
+    `^(?:${BLUESKY_NOW_LABEL}|\\d+\\s*(?:${BLUESKY_COMPACT_UNITS.join("|")}))$`,
+    "iu",
+);
+const BLUESKY_RELATIVE_PRESENTATION_PATTERNS: readonly string[] = [
+    BLUESKY_NOW_LABEL,
+    ...BLUESKY_COMPACT_UNITS.flatMap((unit) => [`1${unit}`, `1 ${unit}`]),
+];
 
 /**
  * Stable identifier for the Bluesky source rule.
@@ -663,7 +668,7 @@ export function createBlueskyAdapter(
             .map(({ source }) => source),
         isRelativePresentation: createRelativePresentationClassifier([
             RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-        ], BLUESKY_RELATIVE_PRESENTATION_LITERALS),
+        ], BLUESKY_RELATIVE_PRESENTATION_PATTERNS),
         extract: (element) => {
             const current = readCurrentResolution(element);
             if (!current) {

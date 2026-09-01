@@ -234,7 +234,17 @@ export interface TimestampExtractionContext {
     readonly url: URL;
 
     /**
-     * Current browser locale preferences used only for presentation classification.
+     * Returns the latest page-authored value for an in-place target.
+     */
+    readonly readPageText: (target: Text) => string;
+}
+
+/**
+ * Read-only context supplied only while classifying current timestamp presentation.
+ */
+export interface TimestampPresentationContext {
+    /**
+     * Current browser locale preferences used for relative-label classification.
      */
     readonly locales: readonly string[];
 
@@ -342,12 +352,12 @@ export interface TimestampSourceRule {
      * Proves that a candidate's current page-owned label is presented as relative time.
      *
      * @param candidate - Trusted-source candidate whose presentation is classified.
-     * @param context - Current route, locales, and retained page-text capabilities.
+     * @param context - Current locales and retained page-text capabilities.
      * @returns - Whether the current page-owned label is recognized as relative.
      */
     readonly isRelativePresentation: (
         candidate: TimestampCandidate,
-        context: TimestampExtractionContext,
+        context: TimestampPresentationContext,
     ) => boolean;
 
     /**

@@ -38,7 +38,6 @@ const INDEXED_AT = "2026-08-31T10:15:00.000Z" as const;
 const QUOTE_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
 const EXTRACTION_CONTEXT: TimestampExtractionContext = {
     url: new URL("https://bsky.app/"),
-    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 let feedFixture = "";

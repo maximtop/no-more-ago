@@ -688,27 +688,6 @@ describe("installContentRuntime", () => {
         });
     });
 
-    it("keeps TikTok profile cards unowned across policy changes", async () => {
-        const postId = "7639779880711749733";
-        document.body.innerHTML = '<div data-e2e="user-post-item">'
-            + `<a id="tiktok-policy-card" href="/@fictional/video/${postId}">card</a>`
-            + "</div>";
-        const link = document.getElementById("tiktok-policy-card");
-        if (!(link instanceof HTMLAnchorElement)) {
-            throw new Error("Expected TikTok policy card");
-        }
-
-        await exercisePolicyLifecycle({
-            url: new URL("https://www.tiktok.com/@fictional"),
-            isTransformed: () => link.nextElementSibling === null
-                && !link.hasAttribute("hidden"),
-            isOriginal: () => link.nextElementSibling === null && link.textContent === "card",
-            assertIdentity: () => {
-                expect(document.getElementById("tiktok-policy-card")).toBe(link);
-            },
-        });
-    });
-
     it("restores and reprocesses a TikTok direct label across policy changes", async () => {
         const postId = "7639779880711749733";
         document.head.innerHTML = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" '

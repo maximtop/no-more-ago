@@ -23,6 +23,7 @@ import {
     type TimestampSourceRule,
 } from "./types";
 import {
+    MAX_PRESENTATION_TEXT_LENGTH,
     RELATIVE_PRESENTATION_PROFILE,
     createRelativePresentationClassifier,
 } from "./relative-presentation";
@@ -31,7 +32,6 @@ const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
 const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
 const MAX_ASSOCIATION_DEPTH = 8;
 const MAX_MUTATION_SCAN_ELEMENTS = 128;
-const MAX_PRESENTATION_TEXT_LENGTH = 512;
 const LABEL_SELECTOR = [
     "p[componentkey] > span",
     ".update-components-actor__sub-description span[aria-hidden='true']",

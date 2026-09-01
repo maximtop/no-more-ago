@@ -7,6 +7,14 @@
  */
 export interface OwnedDomMutationSink {
     /**
+     * Applies one reconciliation's text-target changes with one final observer rebuild.
+     *
+     * @param update - Synchronous rendering or restoration work.
+     * @returns - Value returned by the supplied work.
+     */
+    batchTextObservationUpdates?<Result>(update: () => Result): Result;
+
+    /**
      * Records removal of a verified generated output.
      *
      * @param output - Extension-owned time node about to be removed.

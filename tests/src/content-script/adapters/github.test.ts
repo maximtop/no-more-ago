@@ -15,7 +15,6 @@ import {
 const GITHUB_URL = new URL("https://github.com/any/path");
 const extractionContext: TimestampExtractionContext = {
     url: GITHUB_URL,
-    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 

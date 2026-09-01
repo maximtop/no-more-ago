@@ -5,7 +5,7 @@
 import {
     TIMESTAMP_PRESENTATION_KIND,
     type TimestampCandidate,
-    type TimestampExtractionContext,
+    type TimestampPresentationContext,
     type TimestampSourceRule,
 } from "./types";
 
@@ -48,7 +48,13 @@ const COMPACT_UNITS = [
 const STYLES = ["long", "short", "narrow"] as const;
 const UNIT_DISPLAYS = ["short", "narrow"] as const;
 const NUMBER_TOKEN = "{number}" as const;
-const MAX_PRESENTATION_TEXT_LENGTH = 512;
+
+/**
+ * Maximum page-owned timestamp-label length accepted by presentation parsers.
+ */
+export const MAX_PRESENTATION_TEXT_LENGTH = 512;
+
+const MAX_PRESENTATION_NODE_COUNT = 64;
 const DEFAULT_IGNORABLES = /[\p{Cf}\u034f]/gu;
 const NUMBER_SEQUENCE = /[\p{Number}]+/gu;
 const PLURAL_SAMPLE_CANDIDATES = [
@@ -60,19 +66,14 @@ const PLURAL_SAMPLE_CANDIDATES = [
     1_000_000,
     10_000_000,
 ];
-const ABSOLUTE_REFERENCE_INSTANT = new Date("2026-08-22T16:08:09Z");
-const ABSOLUTE_FORMAT_OPTIONS = [
-    { dateStyle: "short" },
-    { dateStyle: "medium" },
-    { dateStyle: "long" },
-    { dateStyle: "full" },
-    { year: "numeric" },
-    { month: "numeric" },
-    { day: "numeric" },
-    { hour: "numeric" },
-    { hour: "numeric", minute: "2-digit" },
-    { timeStyle: "short" },
-] satisfies readonly Intl.DateTimeFormatOptions[];
+
+/**
+ * Finite intersection of compact-unit signatures and absolute Intl date/time fragments.
+ *
+ * This map is precomputed with the required Node 24 Intl data from every one- and
+ * two-field date/time combination across representative months, weekdays, and hours.
+ * The behavior test reconstructs that corpus so an ICU change fails closed.
+ */
 const COMPACT_CALENDAR_COLLISIONS: Partial<
     Record<CanonicalRelativeTimeLocale, readonly string[]>
 > = {
@@ -95,6 +96,7 @@ const COMPACT_CALENDAR_COLLISIONS: Partial<
     it: ["{number} s"],
     ko: ["{number}년", "{number}일"],
     lt: ["{number} s"],
+    nb: ["{number} m", "{number} t"],
     nl: ["{number} d", "{number} m", "{number} s", "{number} w"],
     pl: ["{number} s"],
     "pt-BR": ["{number} s"],
@@ -103,6 +105,7 @@ const COMPACT_CALENDAR_COLLISIONS: Partial<
         "{number} a", "{number} l", "{number} luni", "{number} m", "{number} s",
     ],
     ru: ["{number} с", "{number} ч"],
+    sk: ["{number} s"],
     sl: ["{number} s", "{number} t"],
     sr: ["{number} н", "{number} с", "{number} ч"],
     sv: ["{number} d", "{number} mån", "{number} s"],
@@ -112,7 +115,6 @@ const COMPACT_CALENDAR_COLLISIONS: Partial<
 };
 const directionalCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 const compactCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
-const absoluteCache = new Map<CanonicalRelativeTimeLocale, ReadonlySet<string>>();
 
 /**
  * Normalizes one page label without interpreting its timestamp.
@@ -204,33 +206,6 @@ function directionalPatterns(
 }
 
 /**
- * Builds representative absolute date, date-fragment, and clock signatures.
- *
- * @param locale - Canonical locale whose ambiguous absolute shapes are needed.
- * @returns - Cached normalized absolute signatures.
- */
-function absolutePatterns(
-    locale: CanonicalRelativeTimeLocale,
-): ReadonlySet<string> {
-    const cached = absoluteCache.get(locale);
-    if (cached) {
-        return cached;
-    }
-    const patterns = new Set(ABSOLUTE_FORMAT_OPTIONS.map((options) => {
-        const formatter = new Intl.DateTimeFormat(locale, {
-            ...options,
-            timeZone: "UTC",
-        });
-        return partsSignature(formatter.formatToParts(ABSOLUTE_REFERENCE_INSTANT));
-    }));
-    for (const signature of COMPACT_CALENDAR_COLLISIONS[locale] ?? []) {
-        patterns.add(signature);
-    }
-    absoluteCache.set(locale, patterns);
-    return patterns;
-}
-
-/**
  * Builds localized bare number-plus-unit signatures for proven age widgets.
  *
  * @param locale - Canonical locale whose compact patterns are needed.
@@ -244,7 +219,7 @@ function compactAgePatterns(
         return cached;
     }
     const patterns = new Set<string>();
-    const absolute = absolutePatterns(locale);
+    const absolute = new Set(COMPACT_CALENDAR_COLLISIONS[locale] ?? []);
     const samples = pluralSamples(locale);
     for (const unitDisplay of UNIT_DISPLAYS) {
         for (const unit of COMPACT_UNITS) {
@@ -339,7 +314,7 @@ function activeLocales(
  * @param source - Element supplying inherited language semantics.
  * @param preferredLocales - Current browser locale preference snapshot.
  * @param profiles - Adapter-approved relative pattern families.
- * @param additionalLiterals - Exact extra relative phrases owned by the adapter.
+ * @param additionalPatterns - Extra adapter-owned templates normalized like page labels.
  * @returns - Whether the complete normalized label is recognized as relative.
  */
 export function isRelativeLabelText(
@@ -347,7 +322,7 @@ export function isRelativeLabelText(
     source: Element,
     preferredLocales: readonly string[],
     profiles: readonly RelativePresentationProfile[],
-    additionalLiterals: readonly string[] = [],
+    additionalPatterns: readonly string[] = [],
 ): boolean {
     if (text.length > MAX_PRESENTATION_TEXT_LENGTH) {
         return false;
@@ -360,7 +335,11 @@ export function isRelativeLabelText(
     if (locales.length === 0) {
         return false;
     }
-    if (additionalLiterals.some((literal) => labelSignature(literal) === signature)) {
+    if (locales.some((locale) =>
+        (COMPACT_CALENDAR_COLLISIONS[locale] ?? []).includes(signature))) {
+        return false;
+    }
+    if (additionalPatterns.some((pattern) => labelSignature(pattern) === signature)) {
         return true;
     }
     return locales.some((locale) => profiles.some((profile) => {
@@ -372,6 +351,69 @@ export function isRelativeLabelText(
 }
 
 /**
+ * Checks whether one candidate label subtree stays within the fixed node budget.
+ *
+ * @param root - Candidate adjacent-label root.
+ * @returns - Whether the complete subtree fits the observation budget.
+ */
+function hasBoundedPresentationSubtree(root: Node): boolean {
+    const remaining: Node[] = [root];
+    let visited = 0;
+    while (remaining.length > 0) {
+        const node = remaining.pop();
+        if (!node) {
+            continue;
+        }
+        visited += 1;
+        if (visited > MAX_PRESENTATION_NODE_COUNT) {
+            return false;
+        }
+        let child = node.lastChild;
+        while (child) {
+            remaining.push(child);
+            child = child.previousSibling;
+        }
+    }
+    return true;
+}
+
+/**
+ * Reads one adjacent label without traversing unbounded page-controlled content.
+ *
+ * @param root - Candidate adjacent-label root.
+ * @returns - DOM-order text, or null after either fixed budget is exceeded.
+ */
+function readBoundedPresentationText(root: Node): string | null {
+    const remaining: Node[] = [root];
+    let text = "";
+    let visited = 0;
+    while (remaining.length > 0) {
+        const node = remaining.pop();
+        if (!node) {
+            continue;
+        }
+        visited += 1;
+        if (visited > MAX_PRESENTATION_NODE_COUNT) {
+            return null;
+        }
+        if (node.nodeType === Node.TEXT_NODE) {
+            const value = (node as Text).data;
+            if (text.length + value.length > MAX_PRESENTATION_TEXT_LENGTH) {
+                return null;
+            }
+            text += value;
+            continue;
+        }
+        let child = node.lastChild;
+        while (child) {
+            remaining.push(child);
+            child = child.previousSibling;
+        }
+    }
+    return text;
+}
+
+/**
  * Reads only the current page-owned segment selected by a candidate.
  *
  * @param candidate - Trusted-source candidate carrying presentation ownership.
@@ -380,12 +422,12 @@ export function isRelativeLabelText(
  */
 function readPresentationText(
     candidate: TimestampCandidate,
-    context: TimestampExtractionContext,
+    context: TimestampPresentationContext,
 ): { readonly source: Element; readonly text: string } | null {
     const presentation = candidate.presentation;
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
-        const text = candidate.source.textContent;
-        return { source: candidate.source, text };
+        const text = readBoundedPresentationText(candidate.source);
+        return text === null ? null : { source: candidate.source, text };
     }
     const pageText = context.readPageText(presentation.target);
     const prefix = presentation.textPrefix ?? "";
@@ -403,36 +445,32 @@ function readPresentationText(
  * Selects the smallest bounded page node whose text controls candidate eligibility.
  *
  * @param candidate - Trusted-source candidate carrying presentation ownership.
- * @param context - Current route, locales, and retained page-text capabilities.
- * @returns - Exact Text target or small adjacent source, or null for oversized content.
+ * @returns - Exact Text target, bounded adjacent source, or null for a large subtree.
  */
 export function getRelativePresentationObservationTarget(
     candidate: TimestampCandidate,
-    context: TimestampExtractionContext,
 ): Node | null {
-    const current = readPresentationText(candidate, context);
-    if (!current || current.text.length > MAX_PRESENTATION_TEXT_LENGTH) {
-        return null;
-    }
     return candidate.presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT
         ? candidate.presentation.target
-        : candidate.source;
+        : hasBoundedPresentationSubtree(candidate.source)
+            ? candidate.source
+            : null;
 }
 
 /**
  * Applies locale profiles to the exact page-owned label carried by a candidate.
  *
  * @param candidate - Trusted-source candidate whose presentation is classified.
- * @param context - Current route, locales, and retained page-text capabilities.
+ * @param context - Current locales and retained page-text capabilities.
  * @param profiles - Adapter-approved relative pattern families.
- * @param additionalLiterals - Exact extra relative phrases owned by the adapter.
+ * @param additionalPatterns - Extra adapter-owned normalized templates.
  * @returns - Whether the candidate has an existing recognized relative label.
  */
 export function isRelativeTimestampPresentation(
     candidate: TimestampCandidate,
-    context: TimestampExtractionContext,
+    context: TimestampPresentationContext,
     profiles: readonly RelativePresentationProfile[],
-    additionalLiterals: readonly string[] = [],
+    additionalPatterns: readonly string[] = [],
 ): boolean {
     const presentation = readPresentationText(candidate, context);
     return presentation !== null && isRelativeLabelText(
@@ -440,7 +478,7 @@ export function isRelativeTimestampPresentation(
         presentation.source,
         context.locales,
         profiles,
-        additionalLiterals,
+        additionalPatterns,
     );
 }
 
@@ -448,17 +486,17 @@ export function isRelativeTimestampPresentation(
  * Creates one adapter classifier while keeping its allowed profiles local.
  *
  * @param profiles - Adapter-approved relative pattern families.
- * @param additionalLiterals - Exact extra relative phrases owned by the adapter.
+ * @param additionalPatterns - Extra adapter-owned normalized templates.
  * @returns - Rule callback that classifies the candidate's page-owned label.
  */
 export function createRelativePresentationClassifier(
     profiles: readonly RelativePresentationProfile[],
-    additionalLiterals: readonly string[] = [],
+    additionalPatterns: readonly string[] = [],
 ): TimestampSourceRule["isRelativePresentation"] {
     return (candidate, context) => isRelativeTimestampPresentation(
         candidate,
         context,
         profiles,
-        additionalLiterals,
+        additionalPatterns,
     );
 }

@@ -34,7 +34,6 @@ const PROFILE_URL = new URL("https://www.tiktok.com/@fictional?lang=en");
 function context(url: URL): TimestampExtractionContext {
     return {
         url,
-        locales: ["en-US"],
         readPageText: (target) => target.data,
     };
 }

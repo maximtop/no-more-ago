@@ -263,7 +263,6 @@ export class DocumentTransformationController {
             ) => {
                 const extractionContext: TimestampExtractionContext = {
                     url: new URL(this.currentUrl.href),
-                    locales: this.input.localesProvider?.() ?? this.input.locales ?? [],
                     readPageText: readPageOwnedText,
                 };
                 const currentRules = registry.matching(this.currentUrl);

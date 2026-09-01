@@ -41,7 +41,6 @@ const TRACKING_TOKEN = "AZ-facebook-story-tracking-token-1234567890";
 const FACEBOOK_URL = new URL("https://www.facebook.com/Meta");
 const extractionContext: TimestampExtractionContext = {
     url: FACEBOOK_URL,
-    locales: ["en-US"],
     readPageText: (target) => target.data,
 };
 

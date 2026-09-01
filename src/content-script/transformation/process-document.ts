@@ -33,6 +33,7 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate,
     type TimestampExtractionContext,
+    type TimestampPresentationContext,
     type TimestampSourceRule,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
@@ -369,51 +370,67 @@ function addCandidate(
  * @param accumulator - Mutable pass-local candidate state.
  * @param rule - Matching source rule evaluated at its precedence position.
  * @param source - Exact discovered source element.
- * @param context - Shared extraction and page-text context.
+ * @param extractionContext - Current route and page-text extraction context.
+ * @param presentationContext - Current locale and page-text classification context.
  * @param nowMilliseconds - Current plausibility boundary for timestamp resolution.
  */
 function evaluateRuleCandidate(
     accumulator: CandidateAccumulator,
     rule: TimestampSourceRule,
     source: Element,
-    context: TimestampExtractionContext,
+    extractionContext: TimestampExtractionContext,
+    presentationContext: TimestampPresentationContext,
     nowMilliseconds: number,
 ): void {
     if (accumulator.resolvedBySource.has(source)) {
         return;
     }
-    const candidate = rule.extract(source, context);
+    const candidate = rule.extract(source, extractionContext);
     if (candidate?.source !== source) {
         return;
     }
-    const observationTarget = getRelativePresentationObservationTarget(candidate, context);
+    const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
+    if (!resolved) {
+        addCandidate(accumulator.candidatesBySource, candidate);
+        return;
+    }
+    const observationTarget = getRelativePresentationObservationTarget(candidate);
     if (observationTarget) {
         accumulator.textObservationTargets.set(source, observationTarget);
     }
-    if (!rule.isRelativePresentation(candidate, context)) {
+    if (!rule.isRelativePresentation(candidate, presentationContext)) {
         accumulator.presentationRejectedSources.add(source);
         return;
     }
     addCandidate(accumulator.candidatesBySource, candidate);
-    const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
-    if (resolved) {
-        accumulator.resolvedBySource.set(source, resolved);
-    }
+    accumulator.resolvedBySource.set(source, resolved);
 }
 
 /**
  * Creates the read-only adapter context for one processing pass.
  *
- * @param input - Processing input carrying static or live locale preferences.
  * @param url - Current route URL for route-specific value provenance.
- * @returns - Context exposing current route, locales, and retained page text.
+ * @returns - Context exposing current route and retained page text.
  */
 function createExtractionContext(
-    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
     url: URL,
 ): TimestampExtractionContext {
     return {
         url,
+        readPageText: readPageOwnedText,
+    };
+}
+
+/**
+ * Creates the presentation-only context for one processing pass.
+ *
+ * @param input - Processing input carrying static or live locale preferences.
+ * @returns - Context exposing current locales and retained page text.
+ */
+function createPresentationContext(
+    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+): TimestampPresentationContext {
+    return {
         locales: input.localesProvider?.() ?? input.locales ?? [],
         readPageText: readPageOwnedText,
     };
@@ -456,53 +473,60 @@ function processCandidateCollection(
 
     const outputs: HTMLTimeElement[] = [];
     let renderedCount = 0;
-    for (const source of discoveredSources) {
-        const candidates = candidatesBySource.get(source) ?? [];
-        const resolved = resolvedBySource.get(source);
-        const observationTarget = textObservationTargets.get(source);
-        const observesPageText = observationTarget !== undefined
-            && (resolved !== undefined || presentationRejectedSources.has(source));
-        if (observationTarget && observesPageText) {
-            ownedDomMutations?.trackPageTextSource?.(source, observationTarget);
-        } else {
-            ownedDomMutations?.untrackPageTextSource?.(source);
-        }
-        if (!resolved) {
-            if (observesPageText) {
-                ownedDomMutations?.trackSource?.(source, false);
+    const processSources = (): void => {
+        for (const source of discoveredSources) {
+            const candidates = candidatesBySource.get(source) ?? [];
+            const resolved = resolvedBySource.get(source);
+            const observationTarget = textObservationTargets.get(source);
+            const observesPageText = observationTarget !== undefined
+                && (resolved !== undefined || presentationRejectedSources.has(source));
+            if (observationTarget && observesPageText) {
+                ownedDomMutations?.trackPageTextSource?.(source, observationTarget);
             } else {
-                ownedDomMutations?.untrackSource?.(source);
+                ownedDomMutations?.untrackPageTextSource?.(source);
             }
-            restoreTimestampPresentation(source, ownedDomMutations);
-            if (blockedSources.has(source)) {
+            if (!resolved) {
+                if (observesPageText) {
+                    ownedDomMutations?.trackSource?.(source, false);
+                } else {
+                    ownedDomMutations?.untrackSource?.(source);
+                }
+                restoreTimestampPresentation(source, ownedDomMutations);
+                if (blockedSources.has(source)) {
+                    continue;
+                }
+                if (candidates.length === 0 && presentationRejectedSources.has(source)) {
+                    emitCandidateSkipped(diagnosticSink);
+                    continue;
+                }
+                const sourceTimestamp = getFailureSourceTimestamp(candidates);
+                diagnosticSink?.({
+                    category: DIAGNOSTIC_CATEGORY.SKIP,
+                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                    count: 1,
+                    ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
+                });
                 continue;
             }
-            if (candidates.length === 0 && presentationRejectedSources.has(source)) {
-                emitCandidateSkipped(diagnosticSink);
-                continue;
-            }
-            const sourceTimestamp = getFailureSourceTimestamp(candidates);
-            diagnosticSink?.({
-                category: DIAGNOSTIC_CATEGORY.SKIP,
-                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-                count: 1,
-                ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
-            });
-            continue;
-        }
-        const result = renderResolvedTimestamp(
-            resolved,
-            locales,
-            display,
-            diagnosticSink,
-            ownedDomMutations,
-        );
-        if (result) {
-            renderedCount += 1;
-            if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
-                outputs.push(result.output);
+            const result = renderResolvedTimestamp(
+                resolved,
+                locales,
+                display,
+                diagnosticSink,
+                ownedDomMutations,
+            );
+            if (result) {
+                renderedCount += 1;
+                if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
+                    outputs.push(result.output);
+                }
             }
         }
+    };
+    if (ownedDomMutations?.batchTextObservationUpdates) {
+        ownedDomMutations.batchTextObservationUpdates(processSources);
+    } else {
+        processSources();
     }
     if (diagnosticSink && started !== undefined && discoveredSources.length > 0) {
         diagnosticSink({
@@ -543,7 +567,8 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         presentationRejectedSources,
         textObservationTargets,
     };
-    const extractionContext = createExtractionContext(input, url);
+    const extractionContext = createExtractionContext(url);
+    const presentationContext = createPresentationContext(input);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
             if (!discovered.has(element)) {
@@ -559,6 +584,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 rule,
                 element,
                 extractionContext,
+                presentationContext,
                 nowMilliseconds,
             );
         }
@@ -594,7 +620,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             presentationRejectedSources,
             textObservationTargets,
         },
-        extractionContext.locales,
+        presentationContext.locales,
         started,
     );
 }
@@ -628,7 +654,8 @@ export function reconcileDocumentSources(
         presentationRejectedSources,
         textObservationTargets,
     };
-    const extractionContext = createExtractionContext(input, url);
+    const extractionContext = createExtractionContext(url);
+    const presentationContext = createPresentationContext(input);
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -649,6 +676,7 @@ export function reconcileDocumentSources(
                 rule,
                 source,
                 extractionContext,
+                presentationContext,
                 nowMilliseconds,
             );
         }
@@ -663,7 +691,7 @@ export function reconcileDocumentSources(
             presentationRejectedSources,
             textObservationTargets,
         },
-        extractionContext.locales,
+        presentationContext.locales,
         started,
     );
 }
