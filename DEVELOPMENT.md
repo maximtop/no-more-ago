@@ -16,6 +16,11 @@
     - [Runtime Architecture](#runtime-architecture)
     - [Release Builds](#release-builds)
     - [Makefile Aliases](#makefile-aliases)
+  - [Releasing](#releasing)
+    - [Cut a Release](#cut-a-release)
+    - [Chrome Web Store Deployment](#chrome-web-store-deployment)
+    - [Store Configuration](#store-configuration)
+    - [Local Store Commands](#local-store-commands)
   - [Common Tasks](#common-tasks)
     - [Run a Focused Test](#run-a-focused-test)
     - [Add or Update a Site Adapter](#add-or-update-a-site-adapter)
@@ -34,6 +39,8 @@ Install these tools before working on the project:
   `git@github.com:maximtop/no-more-ago.git` repository.
 - Chrome or Edge 102+, or Firefox 128+, for manual extension testing.
 - GNU Make only if you want to use the optional Makefile aliases.
+- Go 1.26+ with `go-webext` only for the optional
+  [local store commands](#local-store-commands).
 
 Confirm the active versions:
 
@@ -63,8 +70,10 @@ Commit `package.json` and `pnpm-lock.yaml` together when dependencies change.
 ### Configure the Environment
 
 No environment file, service, database, API token, or required environment
-variable is needed. Settings and diagnostic data are stored by the browser in
-`chrome.storage.local`.
+variable is needed for development. Settings and diagnostic data are stored by
+the browser in `chrome.storage.local`. The optional gitignored `.env` described
+in [Store Configuration](#store-configuration) is read only by the local Chrome
+Web Store commands.
 
 The build command recognizes one optional variable:
 
@@ -334,7 +343,7 @@ archives.
 
 Outputs are written to `dist/release/<browser>` and
 `dist/release/<browser>.zip`. Release builds are local packaging operations;
-publication and store submission are outside this guide.
+tagged releases and store submission are described in [Releasing](#releasing).
 
 ### Makefile Aliases
 
@@ -352,6 +361,118 @@ The Makefile wraps one-shot pnpm builds and does not support watch mode.
 | `make release edge` | `pnpm release edge` |
 
 Prefer the direct pnpm commands in scripts, documentation, and troubleshooting.
+The Makefile also provides the [local store commands](#local-store-commands).
+
+## Releasing
+
+Releases are produced by GitHub Actions from a version tag. `version` in
+`package.json` is the single source of truth: the build writes it into every
+generated manifest, and the release workflow refuses a tag that does not match
+it.
+
+### Cut a Release
+
+1. Bump `version` in `package.json` (semantic `X.Y.Z`) in a normal pull
+   request and merge it to `master`.
+2. Tag the merged commit and push the tag:
+
+   ~~~sh
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ~~~
+
+3. `.github/workflows/release.yml` checks that the tag matches `package.json`
+   and is reachable from `master`, runs `pnpm check`, builds every browser
+   target with `pnpm release`, verifies the manifest versions, and publishes a
+   GitHub Release with:
+   - `no-more-ago-<version>-chrome.zip`, `no-more-ago-<version>-edge.zip`,
+     and `no-more-ago-<version>-firefox.zip`
+   - `no-more-ago-<version>-source.zip`, the tagged repository state
+   - `SHA256SUMS.txt`
+
+Run the workflow manually (**Actions → Release → Run workflow**, or
+`gh workflow run release.yml`) for a dry run: it executes the same checks and
+build and uploads the archives as a workflow artifact, but publishes nothing.
+
+### Chrome Web Store Deployment
+
+`.github/workflows/deploy-chrome-store.yml` submits the Chrome archive of an
+already published GitHub Release to the Chrome Web Store. It runs automatically
+after a tag release when the `CHROME_AUTO_DEPLOY_ENABLED` repository variable
+is `true`, and manually with a published release tag as the retry path:
+
+~~~sh
+gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
+~~~
+
+The workflow:
+
+1. Rejects tags that do not match `vX.Y.Z` and releases that are drafts or
+   pre-releases.
+2. Downloads the archive already attached to the release, never a fresh
+   rebuild, and verifies its SHA-256 checksum and the manifest version inside.
+3. Uploads it with the pinned `go-webext` v0.4.2 through Chrome Web Store API
+   v2 and refuses to continue unless the store reports
+   `Upload State: SUCCEEDED` for that exact version.
+4. Submits the draft for review with deferred (staged) publishing and writes
+   the store status to the job summary.
+
+Nothing goes live automatically. When the review verdict arrives, publish the
+approved version by hand in the Chrome Web Store Developer Dashboard. A staged
+submission left unpublished expires back to a draft after about 30 days;
+re-run the workflow with the same tag to submit it again. A green run proves a
+successful submission, not approval. Uploading a version that is already
+published or already under review fails; ship a new version instead.
+
+Edge Add-ons and Firefox Add-ons submissions remain manual uploads of the
+release archives.
+
+### Store Configuration
+
+Configure these in the GitHub repository under **Settings → Secrets and
+variables → Actions**. Workflows reference them by name only; no value is ever
+committed.
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Variable | `CHROME_APP_ID` | Extension ID from the Developer Dashboard item URL. |
+| Variable | `CHROME_AUTO_DEPLOY_ENABLED` | `true` to deploy after every tag release; unset keeps manual runs only. |
+| Secret | `CHROME_CLIENT_ID` | OAuth 2.0 client ID from a Google Cloud project with the Chrome Web Store API enabled. |
+| Secret | `CHROME_CLIENT_SECRET` | Secret of that OAuth client. |
+| Secret | `CHROME_REFRESH_TOKEN` | Refresh token granted for the `https://www.googleapis.com/auth/chromewebstore` scope. |
+| Secret | `CHROME_PUBLISHER_ID` | Publisher ID from the Developer Dashboard account page. |
+
+The OAuth consent screen must be **In production**; refresh tokens issued while
+it is in **Testing** expire after seven days. The four secrets belong to the
+Google account and are shared by every extension it publishes; only
+`CHROME_APP_ID` is specific to this extension. Set them from the command line
+without leaving values in shell history:
+
+~~~sh
+gh variable set CHROME_APP_ID --body "<extension-id>"
+gh secret set CHROME_CLIENT_ID
+~~~
+
+`gh secret set` without `--body` prompts for the value. For the local store
+commands, copy `.env.example` to `.env` and fill in the same values. `.env` is
+gitignored; never commit it or print its values.
+
+### Local Store Commands
+
+The Makefile offers a local fallback for the same store operations. It needs
+`go-webext`, which loads the credentials from `.env` by itself:
+
+~~~sh
+go install github.com/adguardteam/go-webext@v0.4.2
+~~~
+
+| Command | What it does |
+| --- | --- |
+| `make chrome_status` | Print the store item status, including draft and review state. |
+| `make chrome_update` | Upload `dist/release/chrome.zip` as the new draft. Build it first with `pnpm release chrome`. |
+| `make chrome_publish` | Submit the uploaded draft for review with deferred publishing. |
+
+Prefer the workflow for real releases: it deploys the exact archive attached
+to the GitHub Release, while the local upload ships whatever was built last.
 
 ## Common Tasks
 

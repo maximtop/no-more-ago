@@ -86,6 +86,9 @@ has an obvious, simpler standard-library replacement.
 
 ~~~text
 .
+├── .env.example                # Chrome Web Store credential names for a local .env
+├── .github/
+│   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── src/
 │   ├── assets/                 # Extension icons
 │   ├── background/             # Service-worker composition root
@@ -104,7 +107,8 @@ has an obvious, simpler standard-library replacement.
 │   └── shared/                 # Cross-context schemas and contracts
 ├── scripts/
 │   ├── build.ts                # Build command entry point
-│   └── build/                  # Build pipeline and artifacts
+│   ├── build/                  # Build pipeline and artifacts
+│   └── release/                # Release validation for store deployment
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
@@ -138,9 +142,13 @@ Run commands from the repository root.
 | `pnpm check` | Run lint, type checking, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development
-and release builds. Prefer the direct pnpm commands above. There is no separate
-formatter or development server. Load the relevant artifact from `dist/` as an
-unpacked or temporary extension when manual browser verification is needed.
+and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
+fallbacks that drive the Chrome Web Store with `go-webext` and the gitignored
+`.env`. Prefer the direct pnpm commands above, and the tag-driven release and
+deployment workflows described in `DEVELOPMENT.md` for real releases. There is
+no separate formatter or development server. Load the relevant artifact from
+`dist/` as an unpacked or temporary extension when manual browser verification
+is needed.
 
 ## Contribution Instructions
 
