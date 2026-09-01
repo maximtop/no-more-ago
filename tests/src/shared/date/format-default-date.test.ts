@@ -154,6 +154,60 @@ describe("formatDefaultDate", () => {
         expect(after).toEqual({ text: "2026-03-08 03:01 -04:00" });
     });
 
+    it("formats both occurrences of the New York fall-back hour", () => {
+        const timeZone = "America/New_York";
+        const locales = ["en-GB"];
+        const systemFormatter = new Intl.DateTimeFormat(locales, {
+            dateStyle: "medium",
+            timeStyle: "short",
+            timeZone,
+        });
+        const offsetFormatter = new Intl.DateTimeFormat(["en-US"], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+            timeZone,
+            timeZoneName: "longOffset",
+        });
+        const systemDisplay = {
+            formatMode: "system" as const,
+            timeZone: { mode: "iana" as const, identifier: timeZone },
+        };
+        const customDisplay = {
+            formatMode: "custom" as const,
+            pattern: "yyyy-MM-dd HH:mm XXX",
+            timeZone: { mode: "iana" as const, identifier: timeZone },
+        };
+        const cases = [
+            {
+                instant: new Date("2026-11-01T05:30:00.000Z"),
+                offset: "GMT-04:00",
+                customText: "2026-11-01 01:30 -04:00",
+            },
+            {
+                instant: new Date("2026-11-01T06:30:00.000Z"),
+                offset: "GMT-05:00",
+                customText: "2026-11-01 01:30 -05:00",
+            },
+        ] as const;
+
+        expect(cases[1].instant.getTime() - cases[0].instant.getTime()).toBe(3_600_000);
+
+        for (const { instant, offset, customText } of cases) {
+            const offsetParts = offsetFormatter.formatToParts(instant);
+
+            expect(formatDateWithPresentation(instant, locales, systemDisplay)).toEqual({
+                text: systemFormatter.format(instant),
+            });
+            expect(offsetParts.find((part) => part.type === "hour")?.value).toBe("01");
+            expect(offsetParts.find((part) => part.type === "minute")?.value).toBe("30");
+            expect(offsetParts.find((part) => part.type === "timeZoneName")?.value).toBe(offset);
+            expect(formatDateWithPresentation(instant, locales, customDisplay)).toEqual({
+                text: customText,
+            });
+        }
+    });
+
     it("retains the custom pattern when a saved zone is unavailable", () => {
         expect(
             formatDateWithPresentation(
