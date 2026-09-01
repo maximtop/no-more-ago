@@ -45,6 +45,7 @@ jobs:
         env:
             GH_TOKEN: ${{ github.token }}
             GO_WEBEXT_VERSION: v0.4.2
+            RELEASE_TAG: ${{ inputs.tag }}
             CHROME_API_VERSION: v2
             CHROME_APP_ID: ${{ vars.CHROME_APP_ID }}
             CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
@@ -68,8 +69,6 @@ jobs:
 
             - name: Resolve and validate release
               id: release
-              env:
-                  RELEASE_TAG: ${{ inputs.tag }}
               run: |
                   set -euo pipefail
                   if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -79,11 +78,11 @@ jobs:
 
                   RELEASE_JSON="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
                     --json isDraft,isPrerelease,assets)"
-                  if [[ "$(jq -r '.isDraft' <<< "$RELEASE_JSON")" != false ]]; then
+                  if [[ "$(jq -r '.isDraft' <<< "$RELEASE_JSON")" != "false" ]]; then
                     echo "Release $RELEASE_TAG is a draft; publish it before deploying to the store" >&2
                     exit 1
                   fi
-                  if [[ "$(jq -r '.isPrerelease' <<< "$RELEASE_JSON")" != false ]]; then
+                  if [[ "$(jq -r '.isPrerelease' <<< "$RELEASE_JSON")" != "false" ]]; then
                     echo "Release $RELEASE_TAG is a pre-release; store deployment ships full releases only" >&2
                     exit 1
                   fi
@@ -91,7 +90,7 @@ jobs:
                   # The release workflow publishes only tags reachable from
                   # master; a release created by hand must meet the same bar.
                   COMPARE_STATUS="$(gh api "repos/$GITHUB_REPOSITORY/compare/master...$RELEASE_TAG" --jq '.status')"
-                  if [[ "$COMPARE_STATUS" != identical && "$COMPARE_STATUS" != behind ]]; then
+                  if [[ "$COMPARE_STATUS" != "identical" && "$COMPARE_STATUS" != "behind" ]]; then
                     echo "Release commit must be reachable from master (compare status: $COMPARE_STATUS)" >&2
                     exit 1
                   fi
@@ -109,7 +108,6 @@ jobs:
 
             - name: Download release assets
               env:
-                  RELEASE_TAG: ${{ inputs.tag }}
                   CHROME_ASSET: ${{ steps.release.outputs.asset }}
               run: |
                   set -euo pipefail
@@ -130,7 +128,7 @@ jobs:
                   # entries are ignored, and an archive that is not listed
                   # fails with "no file was verified".
                   sha256sum --check --strict --ignore-missing SHA256SUMS.txt
-                  if [[ "$(unzip -Z1 "$CHROME_ASSET" | grep -cxF manifest.json)" != 1 ]]; then
+                  if [[ "$(unzip -Z1 "$CHROME_ASSET" | grep -cxF manifest.json)" != "1" ]]; then
                     echo "$CHROME_ASSET must contain exactly one root manifest.json" >&2
                     exit 1
                   fi
@@ -150,7 +148,7 @@ jobs:
               id: install
               run: |
                   set -euo pipefail
-                  go install "github.com/adguardteam/go-webext@${GO_WEBEXT_VERSION}"
+                  go install "github.com/adguardteam/go-webext@$GO_WEBEXT_VERSION"
                   echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
             - name: Upload to Chrome Web Store
@@ -185,7 +183,6 @@ jobs:
             - name: Report store status
               if: always() && steps.install.outcome == 'success'
               env:
-                  RELEASE_TAG: ${{ inputs.tag }}
                   VERSION: ${{ steps.release.outputs.version }}
                   UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
                   PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
@@ -203,13 +200,14 @@ jobs:
                     echo "## Chrome Web Store deployment"
                     echo
                     echo "- Release: \`$RELEASE_TAG\` (version $VERSION)"
-                    if [[ "$PUBLISH_OUTCOME" == success ]]; then
+                    if [[ "$PUBLISH_OUTCOME" == "success" ]]; then
                       echo "- Submitted for review with deferred (staged) publishing"
                       echo "- After approval, publish manually in the Developer Dashboard within 30 days"
                     else
                       echo "- Upload step: \`$UPLOAD_OUTCOME\`; submission step: \`$PUBLISH_OUTCOME\`; review was not confirmed"
                     fi
-                    echo "- Store status call: \`$STATUS_OUTCOME\`. It reports published and submitted state only; draft processing is visible in the Developer Dashboard"
+                    echo "- Store status call: \`$STATUS_OUTCOME\`"
+                    echo "- The status covers published and submitted state only; draft processing is visible in the Developer Dashboard"
                     echo
                     echo '```'
                     cat "$RUNNER_TEMP/status-output.txt"

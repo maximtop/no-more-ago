@@ -381,22 +381,23 @@ hand in the GitHub UI.
    git tag vX.Y.Z && git push origin vX.Y.Z
    ~~~
 
-3. `.github/workflows/release.yml` checks that the tag matches `package.json`,
-   is reachable from `master`, and has no release yet, then runs `pnpm check`,
-   builds every browser target with `pnpm release`, verifies the manifest
+3. `.github/workflows/release.yml` rejects a tag that does not match
+   `package.json`, is not reachable from `master`, or already has a release,
+   then runs `pnpm check`, builds every browser target, verifies the manifest
    versions, and publishes a GitHub Release with:
    - `no-more-ago-<version>-chrome.zip`, `no-more-ago-<version>-edge.zip`,
      and `no-more-ago-<version>-firefox.zip`
    - `no-more-ago-<version>-source.zip`, the tagged repository state
-   - `SHA256SUMS.txt`
+   - `SHA256SUMS.txt`, GNU `sha256sum` lines with the bare archive names
 
 Release notes are a fixed sentence followed by the notes GitHub generates from
 the pull requests merged since the previous tag; there is no changelog file.
 Edit them afterwards with `gh release edit vX.Y.Z --notes` when needed.
 
-The release is created as a draft and published once every asset is uploaded.
-If the run fails after the draft exists, delete the release (the tag stays)
-and re-run the workflow:
+`gh release create` uploads the assets to a draft and publishes it last; a
+failed upload deletes the draft again, so a failed run normally leaves no
+release behind and can simply be re-run. If a draft survives (a cancelled run,
+or a release created by hand), delete it first; the tag stays:
 
 ~~~sh
 gh release delete vX.Y.Z --yes
@@ -423,20 +424,16 @@ the retry path:
 gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
 ~~~
 
-The workflow:
-
-1. Rejects tags that do not match `vX.Y.Z`, releases that are drafts or
-   pre-releases, and release commits that are not reachable from `master`.
-2. Selects the release asset ending in `-chrome.zip`, downloads it together
-   with `SHA256SUMS.txt` (never a fresh rebuild), and verifies its SHA-256
-   checksum and the manifest version inside.
-3. Uploads it with the `go-webext` version pinned by `GO_WEBEXT_VERSION` in
-   the workflow, through Chrome Web Store API v2, and refuses to continue
-   unless the store reports `Upload State: SUCCEEDED` for that exact version.
-4. Submits the draft for review with deferred (staged) publishing and writes
-   the store status to the job summary. The status shows the published and
-   submitted revisions only; draft processing is visible in the Developer
-   Dashboard.
+The workflow fails fast when `CHROME_APP_ID` or any of the four secrets below
+is unset, rejects tags that do not match `vX.Y.Z`, drafts, pre-releases, and
+release commits that are not reachable from `master`, downloads the release
+asset ending in `-chrome.zip` together with `SHA256SUMS.txt` (never a fresh
+rebuild), verifies the checksum and the manifest version inside, uploads the
+archive with the `go-webext` version pinned by `GO_WEBEXT_VERSION`, refuses to
+continue unless the store confirms the upload of that exact version, submits
+the draft for review with deferred (staged) publishing, and writes the store
+status to the job summary. The status covers the published and submitted
+revisions only; draft processing is visible in the Developer Dashboard.
 
 Nothing goes live automatically. When the review verdict arrives, publish the
 approved version by hand in the Chrome Web Store Developer Dashboard. A staged
@@ -446,12 +443,16 @@ successful submission, not approval.
 
 Failure recovery:
 
-- **`invalid_grant`, `deleted_client`, or another authentication error:**
-  the OAuth client or refresh token is dead and nothing was uploaded. Mint a
-  new refresh token (OAuth Playground with the
-  `https://www.googleapis.com/auth/chromewebstore` scope) or reuse the values
-  the other extension repositories already use, update
-  `CHROME_REFRESH_TOKEN`, and re-run.
+- **`invalid_grant` or another authentication error:** the refresh token is
+  dead and nothing was uploaded. Mint a new one for the existing OAuth client
+  (OAuth Playground with the `https://www.googleapis.com/auth/chromewebstore`
+  scope) or reuse the value the other extension repositories already use,
+  update `CHROME_REFRESH_TOKEN`, and re-run.
+- **`deleted_client`:** the OAuth client itself is gone, so no token can be
+  issued for it. Create a new Web application client in the Google Cloud
+  project with `https://developers.google.com/oauthplayground` as an
+  authorized redirect URI, update `CHROME_CLIENT_ID` and
+  `CHROME_CLIENT_SECRET`, then mint and store a new refresh token.
 - **Upload did not reach `SUCCEEDED`:** the store is still processing the
   draft. Wait, then re-run with the same tag; re-uploading the same version
   replaces the draft.
@@ -460,10 +461,13 @@ Failure recovery:
   submission is repeated.
 - **Upload rejected because the version is already published:** ship a new
   version.
-- **Upload rejected because a submission is pending review or staged:** the
-  store refuses every package upload in that state regardless of version.
-  Wait for the verdict or cancel the review in the Developer Dashboard, then
-  re-run with the same tag.
+- **Upload rejected because a submission is pending review:** the store
+  refuses every package upload in that state regardless of version. Wait for
+  the verdict or cancel the review in the Developer Dashboard, then re-run
+  with the same tag.
+- **Upload rejected because an approved submission is staged:** publish the
+  staged version in the Developer Dashboard, or let the 30-day expiry return
+  it to a draft, then re-run with the same tag.
 - **Review rejected:** no workflow signal exists; the verdict arrives by
   e-mail. Address the feedback and ship a new version.
 
@@ -478,8 +482,8 @@ listing. One-time setup:
 1. Create the item in the Chrome Web Store Developer Dashboard by uploading
    any release archive by hand, and complete the listing, privacy, and
    distribution tabs there.
-2. Copy the item ID from the dashboard URL into the `CHROME_APP_ID` repository
-   variable and into the local `.env`.
+2. Copy the item ID from the dashboard item URL into the `CHROME_APP_ID`
+   repository variable and into the local `.env`.
 3. Add the four secrets below and run the deploy workflow manually once.
 4. Set `CHROME_AUTO_DEPLOY_ENABLED` to `true` so later tagged releases deploy
    on their own.
@@ -490,7 +494,7 @@ committed.
 
 | Kind | Name | Description |
 | --- | --- | --- |
-| Variable | `CHROME_APP_ID` | Extension ID from the Developer Dashboard item URL. |
+| Variable | `CHROME_APP_ID` | Item ID from the Developer Dashboard item URL. |
 | Variable | `CHROME_AUTO_DEPLOY_ENABLED` | `true` to deploy after every tagged release; unset keeps manual runs only. |
 | Secret | `CHROME_CLIENT_ID` | OAuth 2.0 client ID from a Google Cloud project with the Chrome Web Store API enabled. |
 | Secret | `CHROME_CLIENT_SECRET` | Secret of that OAuth client. |
@@ -504,7 +508,7 @@ Google account and are shared by every extension it publishes; only
 without leaving values in shell history:
 
 ~~~sh
-gh variable set CHROME_APP_ID --body "<extension-id>"
+gh variable set CHROME_APP_ID --body "<item-id>"
 gh secret set CHROME_CLIENT_ID
 ~~~
 
@@ -523,10 +527,10 @@ the workflow. Install the version the workflow pins:
 go install github.com/adguardteam/go-webext@v0.4.2
 ~~~
 
-| Command | Purpose |
+| Command | Result |
 | --- | --- |
 | `make chrome_status` | Print the published and submitted (review) state of the store item. |
-| `make chrome_update` | Upload `dist/release/chrome.zip` as the new draft after checking that its manifest version matches `package.json`. Build it first with `pnpm release chrome`. |
+| `make chrome_update` | Build `dist/release/chrome.zip` with `pnpm release chrome` and upload it as the new draft. |
 | `make chrome_publish` | Submit the uploaded draft for review with deferred publishing. |
 
 When calling `go-webext` directly instead, set `CHROME_API_VERSION=v2`. Prefer

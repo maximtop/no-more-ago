@@ -34,7 +34,6 @@ jobs:
         env:
             # Every run that is not a tag push is a dry run.
             DRY_RUN: ${{ github.event_name != 'push' }}
-            GH_TOKEN: ${{ github.token }}
         steps:
             - name: Check out repository
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,7 +46,7 @@ jobs:
             - name: Validate version and tagged commit
               id: context
               env:
-                  RELEASE_REF: ${{ github.ref }}
+                  GH_TOKEN: ${{ github.token }}
               run: |
                   set -euo pipefail
                   PACKAGE_VERSION="$(jq -er '.version' package.json)"
@@ -56,28 +55,33 @@ jobs:
                     exit 1
                   fi
 
-                  RELEASE_TAG="v$PACKAGE_VERSION"
                   if [[ "$DRY_RUN" == "false" ]]; then
-                    RELEASE_TAG="${RELEASE_REF#refs/tags/}"
-                    if [[ "$RELEASE_TAG" != "v$PACKAGE_VERSION" ]]; then
-                      echo "Tag $RELEASE_TAG does not match package.json version $PACKAGE_VERSION" >&2
+                    if [[ "$GITHUB_REF_NAME" != "v$PACKAGE_VERSION" ]]; then
+                      echo "Tag $GITHUB_REF_NAME does not match package.json version $PACKAGE_VERSION" >&2
                       exit 1
                     fi
                     if ! git merge-base --is-ancestor HEAD origin/master; then
                       echo "Tagged commit must be reachable from master" >&2
                       exit 1
                     fi
-                    if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                      echo "Release $RELEASE_TAG already exists; delete it before publishing this tag again" >&2
+                    RELEASE_STATE="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                      --json isDraft --jq 'if .isDraft then "draft" else "published" end' 2>/dev/null || true)"
+                    if [[ "$RELEASE_STATE" == "draft" ]]; then
+                      echo "A draft release for $GITHUB_REF_NAME is left over from an earlier run;" \
+                        "delete it with: gh release delete $GITHUB_REF_NAME --yes" >&2
+                      exit 1
+                    elif [[ "$RELEASE_STATE" == "published" ]]; then
+                      echo "Release $GITHUB_REF_NAME is already published;" \
+                        "to retry the store deployment run deploy-chrome-store.yml with this tag" >&2
                       exit 1
                     fi
                   fi
 
                   echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-                  echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+                  echo "prefix=no-more-ago-$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
 
-            - name: Set up pnpm
-              uses: ./.github/actions/setup-pnpm
+            - name: Set up toolchain and dependencies
+              uses: ./.github/actions/setup-toolchain
 
             - name: Run quality checks
               run: pnpm check
@@ -88,6 +92,7 @@ jobs:
             - name: Assemble release archives with checksums
               env:
                   VERSION: ${{ steps.context.outputs.version }}
+                  PREFIX: ${{ steps.context.outputs.prefix }}
               run: |
                   set -euo pipefail
                   mkdir -p release-artifacts
@@ -100,52 +105,56 @@ jobs:
                       echo "$MANIFEST version $BUILT_VERSION does not match $VERSION" >&2
                       exit 1
                     fi
-                    cp "$ZIP" "release-artifacts/no-more-ago-$VERSION-$BROWSER.zip"
+                    cp "$ZIP" "release-artifacts/$PREFIX-$BROWSER.zip"
                   done
-                  git archive --format=zip -o "release-artifacts/no-more-ago-$VERSION-source.zip" HEAD
+                  git archive --format=zip -o "release-artifacts/$PREFIX-source.zip" HEAD
+                  # The checksum file lists bare asset names, so it is generated
+                  # and later checked inside the directory holding the assets.
                   (cd release-artifacts && sha256sum ./*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
             - name: Upload workflow artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
               with:
-                  name: no-more-ago-${{ steps.context.outputs.version }}
+                  name: ${{ steps.context.outputs.prefix }}
                   path: release-artifacts/
                   if-no-files-found: error
                   retention-days: 30
+                  # A re-run of the same tag is a new attempt of the same run.
+                  overwrite: true
 
             - name: Publish GitHub Release
+              id: publish
               if: env.DRY_RUN == 'false'
               env:
-                  RELEASE_TAG: ${{ steps.context.outputs.tag }}
+                  GH_TOKEN: ${{ github.token }}
                   VERSION: ${{ steps.context.outputs.version }}
               run: |
                   set -euo pipefail
-                  # The release starts as a draft so a failed asset upload leaves
-                  # a draft, which the store deployment refuses, instead of a
-                  # published release without archives.
-                  gh release create "$RELEASE_TAG" \
+                  # gh creates the release as a draft, uploads every asset, and
+                  # publishes it last; a failed upload deletes the draft again.
+                  gh release create "$GITHUB_REF_NAME" \
                     --repo "$GITHUB_REPOSITORY" \
-                    --draft \
                     --verify-tag \
                     --title "No More Ago $VERSION" \
                     --notes "Store-ready archives for Chrome, Edge, and Firefox, the source archive, and SHA-256 checksums." \
                     --generate-notes \
                     release-artifacts/*.zip \
                     release-artifacts/SHA256SUMS.txt
-                  gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
 
             - name: Write release summary
               if: always()
               env:
-                  RELEASE_TAG: ${{ steps.context.outputs.tag }}
+                  PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
               run: |
                   set -euo pipefail
                   if [[ -f release-artifacts/SHA256SUMS.txt ]]; then
                     {
                       if [[ "$DRY_RUN" == "true" ]]; then
                         echo "## Dry run: nothing was published"
+                      elif [[ "$PUBLISH_OUTCOME" == "success" ]]; then
+                        echo "## Release $GITHUB_REF_NAME"
                       else
-                        echo "## Release $RELEASE_TAG"
+                        echo "## Release $GITHUB_REF_NAME was not published (publish step: $PUBLISH_OUTCOME)"
                       fi
                       echo '```'
                       cat release-artifacts/SHA256SUMS.txt

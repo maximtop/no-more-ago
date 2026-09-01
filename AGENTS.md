@@ -87,7 +87,7 @@ has an obvious, simpler standard-library replacement.
 ~~~text
 .
 ├── .github/
-│   ├── actions/                # Composite pnpm setup shared by the workflows
+│   ├── actions/                # Composite toolchain setup shared by workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── src/
 │   ├── assets/                 # Extension icons
@@ -111,7 +111,7 @@ has an obvious, simpler standard-library replacement.
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
-├── .env.example                # Chrome Web Store credential names for a local .env
+├── .env.example                # Variable names for the local store commands
 ├── eslint.config.ts            # Lint, style, and JSDoc rules
 ├── rspack.config.ts            # Browser bundle entry points
 ├── tsconfig.json               # Strict TypeScript configuration
@@ -420,10 +420,12 @@ Known architectural exclusions to improve when their area changes:
 - Assemble manifests from `src/manifest/common.json` and one browser-specific
   variant. Keep browser differences declarative where possible.
 - Treat the GitHub Release asset names (`no-more-ago-<version>-<browser>.zip`,
-  `no-more-ago-<version>-source.zip`, and `SHA256SUMS.txt`) as one contract
-  shared by `release.yml`, `deploy-chrome-store.yml` (which selects the Chrome
-  archive by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the README
-  installation steps. Change them together.
+  `no-more-ago-<version>-source.zip`, and `SHA256SUMS.txt`) and the checksum
+  file format (GNU `sha256sum` lines with bare asset names, generated and
+  checked inside the directory holding the assets) as one contract shared by
+  `release.yml`, `deploy-chrome-store.yml` (which selects the Chrome archive
+  by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the README installation
+  steps. Change them together.
 - Keep settings in one typed, schema-versioned document and persist the current
   and previous snapshots together.
 - Route settings writes through the background settings service so concurrent

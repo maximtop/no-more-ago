@@ -28,11 +28,17 @@ override SELECTED_BROWSER := $(firstword $(BROWSER_GOALS))
 override SELECTED_ARGS := $(if $(SELECTED_BROWSER),$(SELECTED_BROWSER),)
 
 # Local Chrome Web Store fallback. go-webext loads the credentials from the
-# gitignored .env itself; make reads only the item ID from that file.
+# gitignored .env itself; make reads only the item ID from that file, accepting
+# an optional export prefix, whitespace, quotes, and a trailing comment.
 override CHROME_ZIP := dist/release/chrome.zip
-export CHROME_API_VERSION := v2
+override CHROME_API_VERSION := v2
+export CHROME_API_VERSION
 ifneq ($(STORE_GOALS),)
-  override CHROME_APP_ID := $(strip $(shell sed -n 's/^CHROME_APP_ID=//p' .env 2>/dev/null | tr -d '"\r'))
+  override CHROME_APP_ID := $(strip $(shell \
+    sed -nE 's/^[[:space:]]*(export[[:space:]]+)?CHROME_APP_ID[[:space:]]*=[[:space:]]*//p' .env 2>/dev/null \
+    | tail -n 1 \
+    | sed -E 's/[[:space:]]+\#.*$$//' \
+    | tr -d "\"'\r"))
   ifeq ($(CHROME_APP_ID),)
     $(error CHROME_APP_ID is empty; fill in .env (see .env.example))
   endif
@@ -53,9 +59,10 @@ chrome firefox edge:
 chrome_status:
 	@go-webext status chrome -a "$(CHROME_APP_ID)"
 
+# A fresh build guarantees that the uploaded manifest carries the package.json
+# version.
 chrome_update:
-	@test -f "$(CHROME_ZIP)" || { echo "$(CHROME_ZIP) is missing; run pnpm release chrome first" >&2; exit 1; }
-	@unzip -p "$(CHROME_ZIP)" manifest.json | node -e 'const zip = JSON.parse(require("fs").readFileSync(0, "utf8")).version; const pkg = require("./package.json").version; if (zip !== pkg) { console.error("$(CHROME_ZIP) manifest version " + zip + " does not match package.json version " + pkg); process.exit(1); }'
+	@pnpm release chrome
 	@go-webext update chrome -a "$(CHROME_APP_ID)" -f "$(CHROME_ZIP)"
 
 chrome_publish:
