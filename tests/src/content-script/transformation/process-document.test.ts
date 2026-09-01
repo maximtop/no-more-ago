@@ -48,6 +48,120 @@ describe("processDocument", () => {
         document.body.innerHTML = fixture;
     });
 
+    it("keeps accepted and rejected visible labels out of diagnostics", () => {
+        document.body.innerHTML = `
+            <time id="unknown" datetime="2026-08-23T10:15:00Z">2 hrs</time>
+            <time id="polish" lang="pl"
+                datetime="2026-08-22T10:15:00Z">2 godz. temu</time>
+        `;
+        const diagnosticSink = vi.fn();
+
+        const outputs = processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            diagnosticSink,
+        });
+
+        expect(outputs).toHaveLength(1);
+        expect(document.getElementById("unknown")
+            ?.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
+        expect(document.getElementById("polish")?.nextElementSibling).toBe(outputs[0]);
+        const diagnostics = JSON.stringify(diagnosticSink.mock.calls);
+        expect(diagnostics).not.toContain("2 hrs");
+        expect(diagnostics).not.toContain("2 godz. temu");
+    });
+
+    it("requires relative presentation before resolving a trusted candidate", () => {
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00Z">Aug 23, 2026</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected source");
+        }
+        const rule: TimestampSourceRule = {
+            id: "eligibility-gate-test",
+            mutationAttributes: [],
+            matches: () => true,
+            matchesElement: (element) => element === source,
+            discover: () => [source],
+            extract: () => ({
+                ruleId: "eligibility-gate-test",
+                source,
+                sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                rawDatetime: "2026-08-23T10:15:00Z",
+                presentation: ADJACENT_TIME_PRESENTATION,
+                validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                visibilityPolicy:
+                    TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+            }),
+            isRelativePresentation: () => false,
+        };
+        const diagnosticSink = vi.fn();
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            registry: new AdapterRegistry([], rule),
+            diagnosticSink,
+        })).toEqual([]);
+        expect(source.textContent).toBe("Aug 23, 2026");
+        expect(diagnosticSink).toHaveBeenCalledWith({
+            category: DIAGNOSTIC_CATEGORY.SKIP,
+            reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
+            count: 1,
+        });
+        expect(JSON.stringify(diagnosticSink.mock.calls))
+            .not.toContain("Aug 23, 2026");
+    });
+
+    it("does not retain label observation for an invalid trusted value", () => {
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00">2 hours ago</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected invalid generic source");
+        }
+        const sink = {
+            beforeOwnedOutputRemoval: vi.fn(),
+            beforeOwnedSourceHiddenChange: vi.fn(),
+            trackPageTextSource: vi.fn(),
+            untrackPageTextSource: vi.fn(),
+            trackSource: vi.fn(),
+            untrackSource: vi.fn(),
+        };
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+            ownedDomMutations: sink,
+        })).toEqual([]);
+
+        expect(sink.trackPageTextSource).not.toHaveBeenCalled();
+        expect(sink.untrackPageTextSource).toHaveBeenCalledWith(source);
+        expect(sink.untrackSource).toHaveBeenCalledWith(source);
+    });
+
+    it("fails closed for an adjacent label subtree beyond the node budget", () => {
+        const source = document.createElement("time");
+        source.dateTime = "2026-08-23T10:15:00Z";
+        for (let index = 0; index < 65; index += 1) {
+            source.append(document.createElement("span"));
+        }
+        source.append(document.createTextNode("2 hours ago"));
+        document.body.replaceChildren(source);
+
+        expect(processDocument({
+            url: new URL("https://example.test/"),
+            root: document,
+            locales: ["en-US"],
+        })).toEqual([]);
+        expect(source.nextElementSibling).toBeNull();
+        expect(source.textContent).toBe("2 hours ago");
+    });
+
     it("formats a derived LinkedIn instant through the public document boundary", () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-08-30T00:00:00.000Z"));
@@ -109,7 +223,7 @@ describe("processDocument", () => {
 
     it("keeps generic time datetime available on LinkedIn", () => {
         document.body.innerHTML = `
-            <time datetime="2026-08-23T10:15:00Z">one week ago</time>
+            <time datetime="2026-08-23T10:15:00Z">1 week ago</time>
         `;
 
         const outputs = processDocument({
@@ -312,7 +426,7 @@ describe("processDocument", () => {
             return diagnosticSink;
         };
 
-        const numericFailure = runTelegram("123456789", "numeric failure");
+        const numericFailure = runTelegram("123456789", "2 hours ago");
         expect(numericFailure).toHaveBeenCalledWith({
             category: DIAGNOSTIC_CATEGORY.SKIP,
             reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
@@ -320,7 +434,7 @@ describe("processDocument", () => {
             sourceTimestamp: "123456789",
         });
 
-        const proseFailure = runTelegram("not-a-timestamp", "prose failure");
+        const proseFailure = runTelegram("not-a-timestamp", "2 hours ago");
         const proseSkip = proseFailure.mock.calls
             .map(([value]) => value as Record<string, unknown>)
             .find((event) => event.reason === DIAGNOSTIC_REASON.INVALID_TIMESTAMP);
@@ -332,7 +446,8 @@ describe("processDocument", () => {
 
         const success = runTelegram("1778774880", "16:08");
         expect(document.getElementById("telegram-diagnostic-clock")?.textContent)
-            .toBe("2026-05-14 16:08");
+            .toBe("16:08");
+        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
         expect(success.mock.calls.every(([value]) =>
             !("sourceTimestamp" in (value as Record<string, unknown>))
         )).toBe(true);
@@ -341,7 +456,7 @@ describe("processDocument", () => {
     });
 
     it("omits rejected numeric values from generic source diagnostics", () => {
-        document.body.innerHTML = '<time datetime="123456789">account-like value</time>';
+        document.body.innerHTML = '<time datetime="123456789">2 hours ago</time>';
         const diagnosticSink = vi.fn();
 
         processDocument({
@@ -357,7 +472,7 @@ describe("processDocument", () => {
             count: 1,
         });
         expect(JSON.stringify(diagnosticSink.mock.calls)).not.toContain("123456789");
-        expect(JSON.stringify(diagnosticSink.mock.calls)).not.toContain("account-like value");
+        expect(JSON.stringify(diagnosticSink.mock.calls)).not.toContain("2 hours ago");
     });
 
     it("reconciles one owned source in a bounded region and restores invalid values", () => {
@@ -419,8 +534,8 @@ describe("processDocument", () => {
         ],
     ])("restores an invalid owned source without a mutation sink (%s)", (_label, invalidate) => {
         document.body.innerHTML = `
-      <relative-time id="first" datetime="2026-08-23T10:15:00Z">first</relative-time>
-      <relative-time id="second" datetime="2026-08-23T11:15:00Z">second</relative-time>`;
+      <relative-time id="first" datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>
+      <relative-time id="second" datetime="2026-08-23T11:15:00Z">3 hours ago</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
         if (!first || !second) {
@@ -459,8 +574,8 @@ describe("processDocument", () => {
 
     it("restores an owned source after formatting fails without touching others", () => {
         document.body.innerHTML = `
-      <relative-time id="first" datetime="2026-08-23T10:15:00Z">first</relative-time>
-      <relative-time id="second" datetime="2026-08-23T11:15:00Z">second</relative-time>`;
+      <relative-time id="first" datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>
+      <relative-time id="second" datetime="2026-08-23T11:15:00Z">3 hours ago</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
         if (!first || !second) {
@@ -497,7 +612,7 @@ describe("processDocument", () => {
             }),
         ).toEqual([]);
 
-        expect(first.textContent).toBe("first");
+        expect(first.textContent).toBe("2 hours ago");
         expect(first.hasAttribute("hidden")).toBe(false);
         expect(first.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
         expect(firstOutput.isConnected).toBe(false);
@@ -528,10 +643,13 @@ describe("processDocument", () => {
     });
 
     it.each([
-        ["hidden", '<time datetime="2026-08-23T10:15Z" hidden>hidden</time>'],
-        ["aria", '<time datetime="2026-08-23T10:15Z" aria-hidden="true">aria</time>'],
-        ["inert", '<time datetime="2026-08-23T10:15Z" inert>inert</time>'],
-        ["style", '<time datetime="2026-08-23T10:15Z" style="display: none">style</time>'],
+        ["hidden", '<time datetime="2026-08-23T10:15Z" hidden>2 hours ago</time>'],
+        ["aria", '<time datetime="2026-08-23T10:15Z" aria-hidden="true">2 hours ago</time>'],
+        ["inert", '<time datetime="2026-08-23T10:15Z" inert>2 hours ago</time>'],
+        [
+            "style",
+            '<time datetime="2026-08-23T10:15Z" style="display: none">2 hours ago</time>',
+        ],
     ])("does not create output for a generic %s source", (_name, markup) => {
         document.body.innerHTML = markup;
         expect(processDocument({
@@ -539,12 +657,12 @@ describe("processDocument", () => {
             root: document,
             locales: ["en-US"],
         })).toEqual([]);
-        expect(document.querySelector("time")?.textContent).toBe(_name);
+        expect(document.querySelector("time")?.textContent).toBe("2 hours ago");
     });
 
     it("does not extract a lower source after a higher source resolves", () => {
         document.body.innerHTML =
-            '<time datetime="2026-08-23T10:15Z">relative</time>';
+            '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
         if (!source) {
             throw new Error("Expected overlap source");
@@ -577,6 +695,7 @@ describe("processDocument", () => {
             matches: () => true,
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: higherExtract,
         };
         const lower: TimestampSourceRule = {
@@ -585,6 +704,7 @@ describe("processDocument", () => {
             matches: () => true,
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: lowerExtract,
         };
         const registry = new AdapterRegistry([higher], lower);
@@ -620,6 +740,7 @@ describe("processDocument", () => {
             matches: () => true,
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: () => ({
                 ruleId: "in-place-test",
                 source,
@@ -656,7 +777,7 @@ describe("processDocument", () => {
     it(
         "quarantines a blocked source without extraction or invalid diagnostics",
         () => {
-            document.body.innerHTML = '<span id="source">relative</span>';
+            document.body.innerHTML = '<span id="source">2 hours ago</span>';
             const source = document.getElementById("source");
             if (!source) {
                 throw new Error("Expected policy source");
@@ -678,6 +799,7 @@ describe("processDocument", () => {
                 matches: () => true,
                 matchesElement: (element) => element === source,
                 discover: () => [source],
+                isRelativePresentation: () => true,
                 extract,
             });
             const registry = new AdapterRegistry(
@@ -715,7 +837,7 @@ describe("processDocument", () => {
     );
 
     it("keeps an allowed valid higher source lazy under extraction policy", () => {
-        document.body.innerHTML = '<span id="source">relative</span>';
+        document.body.innerHTML = '<span id="source">2 hours ago</span>';
         const source = document.getElementById("source");
         if (!source) {
             throw new Error("Expected policy source");
@@ -737,6 +859,7 @@ describe("processDocument", () => {
                 matches: () => true,
                 matchesElement: (element) => element === source,
                 discover: () => [source],
+                isRelativePresentation: () => true,
                 extract: higherExtract,
             }],
             {
@@ -745,6 +868,7 @@ describe("processDocument", () => {
                 matches: () => true,
                 matchesElement: (element) => element === source,
                 discover: () => [source],
+                isRelativePresentation: () => true,
                 extract: lowerExtract,
             },
         );
@@ -774,6 +898,7 @@ describe("processDocument", () => {
             matches: () => true,
             matchesElement: (element) => element === discovered,
             discover: () => [discovered],
+            isRelativePresentation: () => true,
             extract: () => ({
                 ruleId: "mismatched",
                 source: foreign,
@@ -791,6 +916,7 @@ describe("processDocument", () => {
             matches: () => false,
             matchesElement: () => false,
             discover: () => [],
+            isRelativePresentation: () => true,
             extract: () => null,
         };
 

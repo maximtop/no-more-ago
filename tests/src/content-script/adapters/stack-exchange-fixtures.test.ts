@@ -88,8 +88,10 @@ describe("Stack Exchange fixtures", () => {
 
         controller.start();
         expect(document.querySelector("#last-activity")?.textContent).toBe("2026-04-08 05:35");
-        expect(document.querySelector("#edited")?.textContent.trim()).toBe("2024-03-04 17:37");
-        expect(document.querySelector("#comment")?.textContent).toBe("2021-03-31 09:07");
+        expect(document.querySelector("#edited")?.textContent.trim())
+            .toBe("Mar 4, 2024 at 17:37");
+        expect(document.querySelector("#comment")?.textContent)
+            .toBe("Mar 31, 2021 at 9:07");
         expect(document.querySelector("#user-card")?.textContent).toBe("2020-07-12 23:52");
         expect(document.querySelector("#asked")?.nextElementSibling?.textContent)
             .toBe("2026-08-29 13:39");
@@ -112,6 +114,7 @@ describe("Stack Exchange fixtures", () => {
     it("keeps rejected title shapes unchanged", () => {
         document.body.innerHTML = fixtures.get("eligibility-matrix.html") ?? "";
         const unchangedIds = [
+            "valid-license",
             "arbitrary",
             "local",
             "padded",
@@ -138,7 +141,6 @@ describe("Stack Exchange fixtures", () => {
         controller.start();
         const expectedYears = new Map([
             ["valid-relative", "2026"],
-            ["valid-license", "2021"],
             ["valid-card", "2020"],
             ["valid-activity", "2026"],
         ]);
@@ -191,16 +193,16 @@ describe("Stack Exchange fixtures", () => {
         activity.id = "dynamic-activity";
         activity.href = "?other";
         activity.title = "2028-08-29 13:39:19Z";
-        activity.textContent = "last activity";
+        activity.textContent = "4 months ago";
         feed.append(activity);
         await flushMutations();
-        expect(activity.textContent).toBe("last activity");
+        expect(activity.textContent).toBe("4 months ago");
         activity.setAttribute("href", "?lastactivity");
         await flushMutations();
         expect(activity.textContent).toBe("2028");
 
         controller.teardown();
-        expect(activity.textContent).toBe("last activity");
+        expect(activity.textContent).toBe("4 months ago");
     });
 
     it("reconciles user-card datetime eligibility with only the specialized adapter", async () => {
@@ -238,7 +240,7 @@ describe("Stack Exchange fixtures", () => {
         document.body.innerHTML = Array.from(
             { length: 20 },
             (_, index) => `<span class="relativetime" title="2026-08-29 13:39:19Z">`
-                + `${String(index)} minutes ago</span>`,
+                + `${String(index + 1)} minutes ago</span>`,
         ).join("");
         const sources = Array.from(document.querySelectorAll("span"));
         const controller = new DocumentTransformationController({
@@ -259,13 +261,13 @@ describe("Stack Exchange fixtures", () => {
             if (!(target instanceof Text)) {
                 throw new Error("Expected owned Stack Exchange label");
             }
-            target.data = `refreshed ${String(index)} minutes ago`;
+            target.data = `${String(index + 21)} minutes ago`;
         }
         await flushMutations();
         expect(sources.every((source) => source.textContent === "2026")).toBe(true);
         controller.teardown();
         for (const [index, source] of sources.entries()) {
-            expect(source.textContent).toBe(`refreshed ${String(index)} minutes ago`);
+            expect(source.textContent).toBe(`${String(index + 21)} minutes ago`);
         }
     });
 });

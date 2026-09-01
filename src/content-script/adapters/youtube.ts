@@ -17,6 +17,10 @@ import {
     matchesYouTubeWatchUrl,
 } from "../../shared/adapters/youtube-contract";
 import { readYouTubePlayerResponsePublication } from "./youtube-player-response";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 const WATCH_PUBLICATION_SELECTOR =
     "ytd-watch-metadata #info-strings > yt-formatted-string";
@@ -80,6 +84,9 @@ export const youtubePlayerResponseRule: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element, context) => {
         if (!isYouTubeWatchPublicationSource(element)) {
             return null;
@@ -111,6 +118,9 @@ export const youtubeAdapter: TimestampSourceRule = {
     matches: matchesYouTubeWatchUrl,
     matchesElement: isYouTubeWatchPublicationSource,
     discover: discoverYouTubeWatchPublicationSources,
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element, context) => {
         if (
             !isYouTubeWatchPublicationSource(element)

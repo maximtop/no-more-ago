@@ -33,6 +33,7 @@ import {
 } from "./route-handoff";
 import {
     TIMESTAMP_MUTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     type TimestampExtractionContext,
     type TimestampMutationSourceSelection,
     type TimestampSourceAttribute,
@@ -228,9 +229,11 @@ export class DocumentTransformationController {
         this.synchronizeCurrentRoute();
         const registry = this.input.registry ?? defaultRegistry;
         const observableRules = registry.all();
-        const currentRules = registry.matching(this.currentUrl);
         const sourceAttributes = [
-            ...new Set(observableRules.flatMap((rule) => rule.mutationAttributes)),
+            ...new Set([
+                ...observableRules.flatMap((rule) => rule.mutationAttributes),
+                TIMESTAMP_SOURCE_ATTRIBUTE.LANG,
+            ]),
         ];
         const generation = this.advanceRouteGeneration();
         const scheduler = new DocumentMutationScheduler({
@@ -249,9 +252,6 @@ export class DocumentTransformationController {
                     return false;
                 }
             },
-            observeCharacterData: currentRules.some(
-                (rule) => rule.observesCharacterData === true,
-            ),
             getSourceMutationRoots: (
                 element,
                 attributeName,
@@ -266,13 +266,12 @@ export class DocumentTransformationController {
                     readPageText: readPageOwnedText,
                 };
                 const currentRules = registry.matching(this.currentUrl);
-                const applicableRules = mutationKind
-                    === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
-                    ? currentRules.filter((rule) => rule.observesCharacterData === true)
+                const applicableRules = attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG
+                    ? currentRules
                     : attributeName
                         ? currentRules.filter((rule) =>
-                            rule.mutationAttributes.some(
-                                (attribute) => attribute === attributeName,
+                            rule.mutationAttributes.includes(
+                                attributeName as TimestampSourceAttribute,
                             ))
                         : currentRules;
                 const sources: Element[] = [];
@@ -284,12 +283,24 @@ export class DocumentTransformationController {
                     }
                 };
 
-                if (mutationKind !== TIMESTAMP_MUTATION_KIND.CHARACTER_DATA) {
-                    for (const trackedSource of trackedSources) {
-                        addSource(trackedSource);
-                    }
+                for (const trackedSource of trackedSources) {
+                    addSource(trackedSource);
                 }
                 for (const rule of applicableRules) {
+                    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
+                        for (const source of rule.discover(element, extractionContext)) {
+                            addSource(source);
+                        }
+                        let current: Element | null = element;
+                        while (current && current.ownerDocument === this.input.root) {
+                            if (rule.matchesElement(current, extractionContext)) {
+                                addSource(current);
+                                break;
+                            }
+                            current = current.parentElement;
+                        }
+                        continue;
+                    }
                     let hasCustomMapping = false;
                     if (rule.getMutationSources) {
                         const mutationSelection = normalizeMutationSources(
@@ -513,12 +524,12 @@ export class DocumentTransformationController {
             this.failClosed();
             throw new Error("Active document controller has no mutation scheduler");
         }
+        scheduler.resetPageTextSources();
         restoreTimestampPresentations(this.input.root, scheduler);
         this.outputs = [];
         this.currentUrl = nextUrl;
         this.applyRouteTransition(transition);
         try {
-            scheduler.setObserveCharacterData(this.observesCharacterData(nextUrl));
             this.activateHandoffSession(generation);
             this.participant?.inspect(this.input.root);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
@@ -555,18 +566,6 @@ export class DocumentTransformationController {
         const currentRules = registry.matching(currentUrl);
         return previousRules.length === currentRules.length
             && previousRules.every((rule, index) => rule.id === currentRules[index]?.id);
-    }
-
-    /**
-     * Checks whether current route rules require document-wide text observation.
-     *
-     * @param url - Route whose matching rules are inspected.
-     * @returns - Whether at least one current rule discovers text-only sources.
-     */
-    private observesCharacterData(url: URL): boolean {
-        return (this.input.registry ?? defaultRegistry).matching(url).some(
-            (rule) => rule.observesCharacterData === true,
-        );
     }
 
     /**

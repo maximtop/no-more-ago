@@ -13,17 +13,20 @@ import {
 import { findSimpleTextTarget } from "./simple-text-target";
 import {
     TIMESTAMP_PRESENTATION_KIND,
-    TIMESTAMP_MUTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
-    type TimestampMutationKind,
     type TimestampMutationSourceResult,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
+import {
+    MAX_PRESENTATION_TEXT_LENGTH,
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
 const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
@@ -44,11 +47,6 @@ const EVIDENCE_SELECTOR = [
 const LINKEDIN_PERMALINK_PATTERN = new RegExp(
     "^/feed/update/([^/]+)/?$",
     "u",
-);
-const RELATIVE_PRESENTATION_PATTERN = new RegExp(
-    "^(?<prefix>\\s*)(?:\\d+\\s*(?:mo|yr|s|m|h|d|w|y)|just now)"
-        + "(?<suffix>\\s*(?:•[\\s\\S]*)?)$",
-    "iu",
 );
 const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY,
@@ -187,7 +185,7 @@ export function matchesLinkedInUrl(url: URL): boolean {
 }
 
 /**
- * Resolves the page-authored relative segment and exact preserved delimiters.
+ * Resolves the page-authored timestamp segment and exact preserved delimiters.
  *
  * @param label - Structurally accepted LinkedIn label element.
  * @param context - Processing context with retained page text.
@@ -204,17 +202,35 @@ function resolvePresentation(
     if (!target) {
         return null;
     }
-    const match = context.readPageText(target).match(RELATIVE_PRESENTATION_PATTERN);
-    const prefix = match?.groups?.prefix;
-    const suffix = match?.groups?.suffix;
-    return prefix === undefined || suffix === undefined
-        ? null
-        : {
+    const text = context.readPageText(target);
+    if (text.length > MAX_PRESENTATION_TEXT_LENGTH) {
+        return null;
+    }
+    const withoutPrefix = text.trimStart();
+    if (withoutPrefix.length === 0) {
+        return {
             label,
             target,
-            textPrefix: prefix,
-            textSuffix: suffix,
+            textPrefix: "",
+            textSuffix: "",
         };
+    }
+    const prefixLength = text.length - withoutPrefix.length;
+    const bulletIndex = withoutPrefix.indexOf("•");
+    const timestampRegion = bulletIndex === -1
+        ? withoutPrefix
+        : withoutPrefix.slice(0, bulletIndex);
+    const timestamp = timestampRegion.trimEnd();
+    if (timestamp.length === 0) {
+        return null;
+    }
+    const suffixStart = prefixLength + timestamp.length;
+    return {
+        label,
+        target,
+        textPrefix: text.slice(0, prefixLength),
+        textSuffix: text.slice(suffixStart),
+    };
 }
 
 /**
@@ -268,11 +284,11 @@ function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
 }
 
 /**
- * Finds eligible label presentations inside one candidate root.
+ * Finds structurally supported label presentations inside one candidate root.
  *
  * @param root - Candidate local association root.
  * @param context - Processing context.
- * @returns - Eligible page-owned presentations in document order.
+ * @returns - Structural page-owned presentation candidates in document order.
  */
 function collectPresentations(
     root: ParentNode,
@@ -340,7 +356,7 @@ function belongsToRoot(element: Element, root: ParentNode): boolean {
 /**
  * Collects one label's bounded ancestor scopes without crossing its content item.
  *
- * @param presentation - Eligible page-owned label.
+ * @param presentation - Structurally supported page-owned label.
  * @param root - Document or exact source root.
  * @returns - Candidate scopes from nearest to broadest.
  */
@@ -406,7 +422,7 @@ function addLogicalIdCounts(target: LinkedInIdCounts, source: LinkedInIdCounts):
  * Builds one pass-local index instead of rescanning all evidence for every label.
  *
  * @param root - Document or exact source subtree to inspect.
- * @param presentations - Eligible labels inside the root.
+ * @param presentations - Structural label candidates inside the root.
  * @returns - Candidate-scope, evidence, and pending-presentation indexes.
  */
 function createAssociationIndex(
@@ -489,7 +505,7 @@ function getEffectiveEvidence(
 /**
  * Finds one presentation's smallest currently unambiguous local association.
  *
- * @param presentation - Eligible label presentation.
+ * @param presentation - Structural label presentation candidate.
  * @param index - Pass-local association index.
  * @returns - Accepted association, or null while local evidence is unsuitable.
  */
@@ -794,7 +810,6 @@ function isRelevantAttributeMutation(
  * @param attributeName - Changed adapter attribute, when applicable.
  * @param oldValue - Attribute value before the mutation.
  * @param context - Processing context.
- * @param mutationKind - Kind of DOM mutation being mapped.
  * @returns - Exact candidate source requiring reconciliation.
  */
 function getMutationSources(
@@ -802,17 +817,7 @@ function getMutationSources(
     attributeName: TimestampSourceAttribute | undefined,
     oldValue: string | null,
     context: TimestampExtractionContext,
-    mutationKind: TimestampMutationKind,
 ): TimestampMutationSourceResult {
-    if (
-        mutationKind === TIMESTAMP_MUTATION_KIND.CHARACTER_DATA
-        && (
-            !element.matches(LABEL_SELECTOR)
-            || !resolvePresentation(element, context)
-        )
-    ) {
-        return { handled: true, sources: [] };
-    }
     if (
         attributeName
         && !isRelevantAttributeMutation(element, attributeName, oldValue)
@@ -829,13 +834,16 @@ function getMutationSources(
 export const linkedinAdapter = {
     id: LINKEDIN_ADAPTER_ID,
     mutationAttributes: MUTATION_ATTRIBUTES,
-    observesCharacterData: true,
     getMutationSources,
     matches: matchesLinkedInUrl,
     matchesElement: (element: Element, context: TimestampExtractionContext) =>
         resolveAssociation(element, context) !== null,
     discover: (root: ParentNode, context: TimestampExtractionContext) =>
         cacheAssociations(resolveAssociations(root, context), context),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ], ["just now", "1mo", "1 mo", "1yr", "1 yr"]),
     extract: (element: Element, context: TimestampExtractionContext) => {
         const association = takeAssociation(element, context);
         if (!association) {

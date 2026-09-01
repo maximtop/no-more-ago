@@ -17,13 +17,26 @@ import {
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml" as const;
 const POST_METADATA_SELECTOR = "a[href][aria-label][data-tooltip]" as const;
 const QUOTE_METADATA_SELECTOR =
     "[aria-label][data-tooltip]:not(a):not(button):not(input)" as const;
 const FINGERPRINT_SEPARATOR = "\u0000" as const;
-const COMPACT_RELATIVE_LABEL_PATTERN = /^(?:now|\d+\s*(?:s|m|h|d|w|mo|y))$/iu;
+const BLUESKY_NOW_LABEL = "now" as const;
+const BLUESKY_COMPACT_UNITS = ["s", "m", "h", "d", "w", "mo", "y"] as const;
+const COMPACT_RELATIVE_LABEL_PATTERN = new RegExp(
+    `^(?:${BLUESKY_NOW_LABEL}|\\d+\\s*(?:${BLUESKY_COMPACT_UNITS.join("|")}))$`,
+    "iu",
+);
+const BLUESKY_RELATIVE_PRESENTATION_PATTERNS: readonly string[] = [
+    BLUESKY_NOW_LABEL,
+    ...BLUESKY_COMPACT_UNITS.flatMap((unit) => [`1${unit}`, `1 ${unit}`]),
+];
 
 /**
  * Stable identifier for the Bluesky source rule.
@@ -653,6 +666,9 @@ export function createBlueskyAdapter(
         })
             .filter(({ source }) => readCurrentResolution(source) !== null)
             .map(({ source }) => source),
+        isRelativePresentation: createRelativePresentationClassifier([
+            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+        ], BLUESKY_RELATIVE_PRESENTATION_PATTERNS),
         extract: (element) => {
             const current = readCurrentResolution(element);
             if (!current) {

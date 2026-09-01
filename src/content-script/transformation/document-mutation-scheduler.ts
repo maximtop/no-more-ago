@@ -9,6 +9,7 @@ import {
 import { capturePageOwnedTextChange } from "./render-timestamp-presentation";
 import {
     TIMESTAMP_MUTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
     type TimestampMutationKind,
 } from "../adapters/types";
 
@@ -87,11 +88,6 @@ interface SchedulerInput {
     readonly sourceAttributes?: readonly string[];
 
     /**
-     * Whether the document observer must discover newly eligible text-only sources.
-     */
-    readonly observeCharacterData?: boolean;
-
-    /**
      * Resolves eligible sources affected by one mutation.
      *
      * @param element - Mutated element or child-list container.
@@ -149,10 +145,28 @@ function addUnique(items: Element[], seen: Set<Element>, value: Element): void {
  * @returns - Minimal ordered roots with covered descendants removed.
  */
 function collapseRoots(roots: readonly Element[]): Element[] {
-    return roots.filter(
-        (root, index) =>
-            !roots.some((other, otherIndex) => otherIndex !== index && other.contains(root)),
-    );
+    const candidates = new Set(roots);
+    const emitted = new Set<Element>();
+    const collapsed: Element[] = [];
+    for (const root of roots) {
+        if (emitted.has(root)) {
+            continue;
+        }
+        emitted.add(root);
+        let ancestor = root.parentElement;
+        let covered = false;
+        while (ancestor) {
+            if (candidates.has(ancestor)) {
+                covered = true;
+                break;
+            }
+            ancestor = ancestor.parentElement;
+        }
+        if (!covered) {
+            collapsed.push(root);
+        }
+    }
+    return collapsed;
 }
 
 /**
@@ -182,7 +196,7 @@ export class DocumentMutationScheduler {
     private observer: MutationObserver | undefined;
 
     /**
-     * Character-data observer retained only while in-place sources are owned.
+     * Character-data observer retained only while exact page-label targets are tracked.
      */
     private textObserver: MutationObserver | undefined;
 
@@ -190,11 +204,6 @@ export class DocumentMutationScheduler {
      * Monotonic lifecycle token that invalidates callbacks queued before a stop or restart.
      */
     private generation = 0;
-
-    /**
-     * Whether the document-wide observer currently receives character-data changes.
-     */
-    private observeCharacterData: boolean;
 
     /**
      * Maps page-removed output nodes to their generation so restoration is not reported twice.
@@ -215,7 +224,6 @@ export class DocumentMutationScheduler {
     private readonly expectedTextChanges = new Map<
         Text,
         {
-            readonly documentObserved: boolean;
             readonly oldValue: string;
             readonly text: string;
         }[]
@@ -227,25 +235,34 @@ export class DocumentMutationScheduler {
     private readonly textTargetsBySource = new Map<Element, Text>();
 
     /**
-     * Active in-place sources indexed by their exact page-owned text targets.
+     * Smallest observed page-label targets indexed by discovered source.
      */
-    private readonly textSourcesByTarget = new Map<Text, Element>();
+    private readonly pageTextTargetsBySource = new Map<Element, Node>();
 
     /**
-     * Expected changes already consumed by the text observer but not the document observer.
+     * Discovered sources indexed by their exact observed target node.
      */
-    private readonly expectedTextChangesSeenByTextObserver = new Map<
-        Text,
-        { readonly oldValue: string; readonly text: string }[]
-    >();
+    private readonly pageTextSourcesByTarget = new Map<Node, Set<Element>>();
 
     /**
-     * Expected changes already consumed by the document observer but not the text observer.
+     * Nested reconciliation depth used to rebuild the shared text observer once per pass.
      */
-    private readonly expectedTextChangesSeenByDocumentObserver = new Map<
-        Text,
-        { readonly oldValue: string; readonly text: string }[]
-    >();
+    private textObservationBatchDepth = 0;
+
+    /**
+     * Whether target-map changes require one observer rebuild after the outer batch.
+     */
+    private textObservationRebuildPending = false;
+
+    /**
+     * Page sources captured while a synchronous observer rebuild drains pending records.
+     */
+    private readonly pendingTextSourceTargets = new Set<Element>();
+
+    /**
+     * Prevents duplicate microtasks for pending text-source reconciliation.
+     */
+    private textSourceFlushScheduled = false;
 
     /**
      * Sources retained for exact invalidation even when they ignore page visibility.
@@ -267,9 +284,7 @@ export class DocumentMutationScheduler {
      *
      * @param input - Document, observer, callbacks, and scheduling dependencies.
      */
-    constructor(private readonly input: SchedulerInput) {
-        this.observeCharacterData = input.observeCharacterData === true;
-    }
+    constructor(private readonly input: SchedulerInput) {}
 
     /**
      * Builds the current document-wide observer options.
@@ -289,12 +304,6 @@ export class DocumentMutationScheduler {
             attributes: true,
             attributeFilter,
             attributeOldValue: true,
-            ...(this.observeCharacterData
-                ? {
-                    characterData: true,
-                    characterDataOldValue: true,
-                }
-                : {}),
         };
     }
 
@@ -327,21 +336,6 @@ export class DocumentMutationScheduler {
     }
 
     /**
-     * Reconfigures document-wide text observation when route applicability changes.
-     *
-     * @param enabled - Whether current matching rules discover text-only sources.
-     */
-    setObserveCharacterData(enabled: boolean): void {
-        if (this.observeCharacterData === enabled) {
-            return;
-        }
-        this.observeCharacterData = enabled;
-        if (this.phase === "observing" && this.observer) {
-            this.observer.observe(this.input.document, this.observationOptions());
-        }
-    }
-
-    /**
      * Disconnects the observer and drops any pending mutation batch.
      */
     stop(): void {
@@ -357,9 +351,12 @@ export class DocumentMutationScheduler {
         this.expectedHiddenChanges.clear();
         this.expectedTextChanges.clear();
         this.textTargetsBySource.clear();
-        this.textSourcesByTarget.clear();
-        this.expectedTextChangesSeenByTextObserver.clear();
-        this.expectedTextChangesSeenByDocumentObserver.clear();
+        this.pageTextTargetsBySource.clear();
+        this.pageTextSourcesByTarget.clear();
+        this.textObservationBatchDepth = 0;
+        this.textObservationRebuildPending = false;
+        this.pendingTextSourceTargets.clear();
+        this.textSourceFlushScheduled = false;
         this.trackedSources.clear();
         this.sourcesByRelevantElement.clear();
         this.relevantElementsBySource.clear();
@@ -400,6 +397,45 @@ export class DocumentMutationScheduler {
     }
 
     /**
+     * Registers the narrowest valid character-data options for one page-label target.
+     *
+     * @param observer - Shared lifecycle-bound text observer.
+     * @param target - Exact Text node or small adjacent label element.
+     */
+    private observeTextTarget(observer: MutationObserver, target: Node): void {
+        observer.observe(target, {
+            characterData: true,
+            characterDataOldValue: true,
+            ...(target.nodeType === Node.TEXT_NODE ? {} : { subtree: true }),
+        });
+    }
+
+    /**
+     * Applies one reconciliation's text-target changes with at most one observer rebuild.
+     *
+     * @param update - Synchronous reconciliation work that may retarget observations.
+     * @returns - Value returned by the supplied work.
+     */
+    batchTextObservationUpdates<Result>(update: () => Result): Result {
+        if (this.textObservationBatchDepth === 0) {
+            this.capturePendingTextChanges();
+        }
+        this.textObservationBatchDepth += 1;
+        try {
+            return update();
+        } finally {
+            this.textObservationBatchDepth -= 1;
+            if (
+                this.textObservationBatchDepth === 0
+                && this.textObservationRebuildPending
+            ) {
+                this.textObservationRebuildPending = false;
+                this.rebuildTextObservation();
+            }
+        }
+    }
+
+    /**
      * Registers bounded character-data observation for one owned in-place source.
      *
      * @param source - Owned source whose label changes must be observed.
@@ -420,25 +456,24 @@ export class DocumentMutationScheduler {
             return;
         }
         if (current) {
-            this.untrackOwnedTextSource(source);
+            this.capturePendingTextChanges();
         }
         this.textTargetsBySource.set(source, target);
-        this.textSourcesByTarget.set(target, source);
-        const observer = this.textObserver ?? this.createTextObserver();
-        observer.observe(source, {
-            characterData: true,
-            characterDataOldValue: true,
-            subtree: true,
-        });
+        if (current) {
+            this.expectedTextChanges.delete(current);
+            this.requestTextObservationRebuild();
+            return;
+        }
+        this.observeTextTarget(this.textObserver ?? this.createTextObserver(), target);
     }
 
     /**
-     * Retargets an observed in-place source while retaining its existing subtree observation.
+     * Retargets an observed in-place source and rebuilds the exact target set.
      *
      * @param source - Source that remains owned across the label replacement.
      * @param previousTarget - Previously retained text target.
      * @param target - Replacement text target within the same source.
-     * @returns - Whether the source was retargeted without rebuilding observation.
+     * @returns - Whether the source was retargeted.
      */
     replaceOwnedTextSource(source: Element, previousTarget: Text, target: Text): boolean {
         if (
@@ -450,11 +485,10 @@ export class DocumentMutationScheduler {
         ) {
             return false;
         }
-        this.captureTextChanges(this.textObserver?.takeRecords() ?? []);
+        this.capturePendingTextChanges();
         this.textTargetsBySource.set(source, target);
-        this.textSourcesByTarget.delete(previousTarget);
-        this.textSourcesByTarget.set(target, source);
         this.expectedTextChanges.delete(previousTarget);
+        this.requestTextObservationRebuild();
         return true;
     }
 
@@ -477,27 +511,202 @@ export class DocumentMutationScheduler {
         if (released.length === 0) {
             return;
         }
-        const observer = this.textObserver;
-        this.captureTextChanges(observer?.takeRecords() ?? []);
-        observer?.disconnect();
+        this.capturePendingTextChanges();
         for (const source of released) {
             const target = this.textTargetsBySource.get(source);
             this.textTargetsBySource.delete(source);
             if (target) {
-                this.textSourcesByTarget.delete(target);
                 this.expectedTextChanges.delete(target);
             }
         }
-        if (this.textTargetsBySource.size === 0) {
+        this.requestTextObservationRebuild();
+    }
+
+    /**
+     * Registers bounded character-data observation for one discovered label source.
+     *
+     * @param source - Candidate source whose current text controls eligibility.
+     * @param target - Smallest current page node containing the candidate label.
+     */
+    trackPageTextSource(source: Element, target: Node): void {
+        if (
+            this.phase !== "observing"
+            || source.ownerDocument !== this.input.document
+            || target.ownerDocument !== this.input.document
+            || !source.isConnected
+            || (source !== target && !source.contains(target))
+        ) {
+            return;
+        }
+        const current = this.pageTextTargetsBySource.get(source);
+        if (current === target) {
+            return;
+        }
+        if (current) {
+            this.capturePendingTextChanges();
+            const currentSources = this.pageTextSourcesByTarget.get(current);
+            currentSources?.delete(source);
+            if (currentSources?.size === 0) {
+                this.pageTextSourcesByTarget.delete(current);
+            }
+        }
+        this.pageTextTargetsBySource.set(source, target);
+        const sources = this.pageTextSourcesByTarget.get(target) ?? new Set<Element>();
+        sources.add(source);
+        this.pageTextSourcesByTarget.set(target, sources);
+        if (current) {
+            this.requestTextObservationRebuild();
+            return;
+        }
+        this.observeTextTarget(this.textObserver ?? this.createTextObserver(), target);
+    }
+
+    /**
+     * Releases candidate-label observation for one source.
+     *
+     * @param source - Source that no longer exposes an observable presentation candidate.
+     */
+    untrackPageTextSource(source: Element): void {
+        this.untrackPageTextSources([source]);
+    }
+
+    /**
+     * Releases several candidate-label observations in one observer rebuild.
+     *
+     * @param sources - Discovered sources whose page-label targets are released.
+     */
+    private untrackPageTextSources(sources: readonly Element[]): void {
+        const released = sources.filter((source) =>
+            this.pageTextTargetsBySource.has(source));
+        if (released.length === 0) {
+            return;
+        }
+        this.capturePendingTextChanges();
+        for (const source of released) {
+            const target = this.pageTextTargetsBySource.get(source);
+            this.pageTextTargetsBySource.delete(source);
+            if (!target) {
+                continue;
+            }
+            const targetSources = this.pageTextSourcesByTarget.get(target);
+            targetSources?.delete(source);
+            if (targetSources?.size === 0) {
+                this.pageTextSourcesByTarget.delete(target);
+            }
+        }
+        this.requestTextObservationRebuild();
+    }
+
+    /**
+     * Clears route-scoped page-label subscriptions before a replacement pass.
+     */
+    resetPageTextSources(): void {
+        if (this.pageTextTargetsBySource.size === 0) {
+            return;
+        }
+        this.captureTextChanges(this.textObserver?.takeRecords() ?? []);
+        this.pendingTextSourceTargets.clear();
+        this.pageTextTargetsBySource.clear();
+        this.pageTextSourcesByTarget.clear();
+        this.requestTextObservationRebuild();
+    }
+
+    /**
+     * Rebuilds immediately or defers one rebuild to the end of the active text batch.
+     */
+    private requestTextObservationRebuild(): void {
+        if (this.textObservationBatchDepth > 0) {
+            this.textObservationRebuildPending = true;
+            return;
+        }
+        this.rebuildTextObservation();
+    }
+
+    /**
+     * Drains queued native text records before their source indexes are changed.
+     */
+    private capturePendingTextChanges(): void {
+        const observer = this.textObserver;
+        if (!observer) {
+            return;
+        }
+        const sourceTargets: Element[] = [];
+        this.captureTextChanges(observer.takeRecords(), sourceTargets);
+        this.queuePendingTextSourceTargets(sourceTargets);
+    }
+
+    /**
+     * Retains drained page-text invalidations for one non-reentrant microtask flush.
+     *
+     * @param sources - Sources affected by native records drained during a rebuild.
+     */
+    private queuePendingTextSourceTargets(sources: readonly Element[]): void {
+        for (const source of sources) {
+            if (source.ownerDocument === this.input.document && source.isConnected) {
+                this.pendingTextSourceTargets.add(source);
+            }
+        }
+        if (this.pendingTextSourceTargets.size === 0 || this.textSourceFlushScheduled) {
+            return;
+        }
+        const generation = this.generation;
+        this.textSourceFlushScheduled = true;
+        queueMicrotask(() => {
+            if (this.phase !== "observing" || this.generation !== generation) {
+                return;
+            }
+            this.textSourceFlushScheduled = false;
+            const sourceTargets = [...this.pendingTextSourceTargets].filter(
+                (source) => source.ownerDocument === this.input.document && source.isConnected,
+            );
+            this.pendingTextSourceTargets.clear();
+            if (sourceTargets.length > 0) {
+                this.input.onBatch({
+                    addedRoots: [],
+                    sourceTargets,
+                    visibilityRoots: [],
+                    removedRoots: [],
+                    displacedOutputSources: [],
+                });
+            }
+        });
+    }
+
+    /**
+     * Moves retained rebuild-time text invalidations into the current mutation batch.
+     *
+     * @param sources - Current ordered source-target collection.
+     * @param seen - Constant-time membership index for the collection.
+     */
+    private drainPendingTextSourceTargets(sources: Element[], seen: Set<Element>): void {
+        for (const source of this.pendingTextSourceTargets) {
+            if (source.ownerDocument === this.input.document && source.isConnected) {
+                addUnique(sources, seen, source);
+            }
+        }
+        this.pendingTextSourceTargets.clear();
+    }
+
+    /**
+     * Rebuilds the shared targeted observer while preserving pending source invalidations.
+     */
+    private rebuildTextObservation(): void {
+        const observer = this.textObserver;
+        if (!observer) {
+            return;
+        }
+        this.capturePendingTextChanges();
+        observer.disconnect();
+        const targets = new Set<Node>([
+            ...this.textTargetsBySource.values(),
+            ...this.pageTextTargetsBySource.values(),
+        ]);
+        if (targets.size === 0) {
             this.textObserver = undefined;
             return;
         }
-        for (const activeSource of this.textTargetsBySource.keys()) {
-            observer?.observe(activeSource, {
-                characterData: true,
-                characterDataOldValue: true,
-                subtree: true,
-            });
+        for (const target of targets) {
+            this.observeTextTarget(observer, target);
         }
     }
 
@@ -544,8 +753,6 @@ export class DocumentMutationScheduler {
         }
         const changes = this.expectedTextChanges.get(target) ?? [];
         changes.push({
-            documentObserved: this.observeCharacterData
-                && target.isConnected,
             oldValue: target.data,
             text,
         });
@@ -595,8 +802,20 @@ export class DocumentMutationScheduler {
      * @param source - Timestamp source no longer tracked at its previous location.
      */
     untrackSource(source: Element): void {
-        this.trackedSources.delete(source);
-        this.untrackSourceVisibility(source);
+        this.untrackSources([source]);
+    }
+
+    /**
+     * Removes several sources from visibility and label indexes in one rebuild.
+     *
+     * @param sources - Sources no longer tracked in the current document lifecycle.
+     */
+    private untrackSources(sources: readonly Element[]): void {
+        for (const source of sources) {
+            this.trackedSources.delete(source);
+            this.untrackSourceVisibility(source);
+        }
+        this.untrackPageTextSources(sources);
     }
 
     /**
@@ -672,11 +891,9 @@ export class DocumentMutationScheduler {
      * @param roots - Subtrees removed from the observed document.
      */
     private untrackRemovedRoots(roots: readonly Element[]): void {
-        for (const source of [...this.trackedSources]) {
-            if (roots.some((root) => source === root || root.contains(source))) {
-                this.untrackSource(source);
-            }
-        }
+        const removed = [...this.trackedSources].filter((source) =>
+            roots.some((root) => source === root || root.contains(source)));
+        this.untrackSources(removed);
     }
 
     /**
@@ -707,32 +924,13 @@ export class DocumentMutationScheduler {
      * @param target - Changed owned text target.
      * @param oldValue - Value captured before the mutation.
      * @param newValue - Value produced by the mutation.
-     * @param observerKind - Observer whose delivery is being consumed.
      * @returns - Whether the record is extension-authored.
      */
     private consumeExpectedTextChange(
         target: Text,
         oldValue: string | null,
         newValue: string,
-        observerKind: "document" | "text",
     ): boolean {
-        const counterpartChanges = observerKind === "document"
-            ? this.expectedTextChangesSeenByTextObserver
-            : this.expectedTextChangesSeenByDocumentObserver;
-        const counterpart = counterpartChanges.get(target);
-        const duplicate = counterpart?.[0];
-        if (
-            counterpart
-            && duplicate
-            && duplicate.oldValue === oldValue
-            && duplicate.text === newValue
-        ) {
-            counterpart.shift();
-            if (counterpart.length === 0) {
-                counterpartChanges.delete(target);
-            }
-            return true;
-        }
         const changes = this.expectedTextChanges.get(target);
         const expected = changes?.[0];
         if (!changes || !expected || expected.oldValue !== oldValue || expected.text !== newValue) {
@@ -742,15 +940,26 @@ export class DocumentMutationScheduler {
         if (changes.length === 0) {
             this.expectedTextChanges.delete(target);
         }
-        if (expected.documentObserved) {
-            const observedChanges = observerKind === "document"
-                ? this.expectedTextChangesSeenByDocumentObserver
-                : this.expectedTextChangesSeenByTextObserver;
-            const observed = observedChanges.get(target) ?? [];
-            observed.push(expected);
-            observedChanges.set(target, observed);
-        }
         return true;
+    }
+
+    /**
+     * Finds discovered sources whose exact observed target owns one changed label.
+     *
+     * @param target - Page-authored text node delivered by the targeted observer.
+     * @returns - Nearest observed sources, or an empty collection after release.
+     */
+    private findPageTextSources(target: Text): readonly Element[] {
+        const sources: Element[] = [];
+        const seen = new Set<Element>();
+        let current: Node | null = target;
+        while (current && current !== this.input.document) {
+            for (const source of this.pageTextSourcesByTarget.get(current) ?? []) {
+                addUnique(sources, seen, source);
+            }
+            current = current.parentNode;
+        }
+        return sources;
     }
 
     /**
@@ -769,12 +978,17 @@ export class DocumentMutationScheduler {
             }
             const target = record.target as Text;
             const newValue = newValues.get(record) ?? target.data;
-            if (this.consumeExpectedTextChange(target, record.oldValue, newValue, "text")) {
+            if (this.consumeExpectedTextChange(target, record.oldValue, newValue)) {
                 continue;
             }
-            const source = capture(target, newValue);
-            if (source && sources && seenSources) {
-                addUnique(sources, seenSources, source);
+            const ownedSource = capture(target, newValue);
+            const affectedSources = ownedSource
+                ? [ownedSource]
+                : this.findPageTextSources(target);
+            if (sources && seenSources) {
+                for (const source of affectedSources) {
+                    addUnique(sources, seenSources, source);
+                }
             }
         }
     }
@@ -798,46 +1012,21 @@ export class DocumentMutationScheduler {
         const visibilityRootSet = new Set<Element>();
         const removedRootSet = new Set<Element>();
         const displacedOutputSourceSet = new Set<Element>();
+        const languageRoots = collapseRoots([...new Set(records.flatMap((record) =>
+            record.type === "attributes"
+                && record.attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG
+                && record.target.nodeType === Node.ELEMENT_NODE
+                ? [record.target as Element]
+                : []))]);
+        const languageRootSet = new Set(languageRoots);
+        const processedLanguageRoots = new Set<Element>();
         this.captureTextChanges(this.textObserver?.takeRecords() ?? [], sourceTargets);
         for (const source of sourceTargets) {
             sourceTargetSet.add(source);
         }
-        const characterDataNewValues = this.getCharacterDataNewValues(records);
-
+        this.drainPendingTextSourceTargets(sourceTargets, sourceTargetSet);
         for (const record of records) {
             if (record.type === "characterData") {
-                if (
-                    !this.observeCharacterData
-                    || record.target.nodeType !== Node.TEXT_NODE
-                ) {
-                    continue;
-                }
-                const target = record.target as Text;
-                const newValue = characterDataNewValues.get(record) ?? target.data;
-                if (
-                    this.consumeExpectedTextChange(
-                        target,
-                        record.oldValue,
-                        newValue,
-                        "document",
-                    )
-                    || this.textSourcesByTarget.has(target)
-                ) {
-                    continue;
-                }
-                const parent = target.parentElement;
-                if (!parent) {
-                    continue;
-                }
-                for (const source of this.input.getSourceMutationRoots?.(
-                    parent,
-                    undefined,
-                    record.oldValue,
-                    this.findTrackedSources(parent),
-                    TIMESTAMP_MUTATION_KIND.CHARACTER_DATA,
-                ) ?? []) {
-                    addUnique(sourceTargets, sourceTargetSet, source);
-                }
                 continue;
             }
             if (record.type === "attributes") {
@@ -849,6 +1038,15 @@ export class DocumentMutationScheduler {
                     continue;
                 }
                 const attributeName = record.attributeName;
+                if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
+                    if (
+                        !languageRootSet.has(target)
+                        || processedLanguageRoots.has(target)
+                    ) {
+                        continue;
+                    }
+                    processedLanguageRoots.add(target);
+                }
                 const changesSource = attributeName !== null
                     && (this.input.sourceAttributes ?? []).includes(attributeName);
                 if (changesSource) {
@@ -978,6 +1176,7 @@ export class DocumentMutationScheduler {
         const normalizedAdded = collapseRoots(addedRoots);
         const normalizedRemoved = collapseRoots(removedRoots);
         this.untrackRemovedRoots(normalizedRemoved);
+        this.drainPendingTextSourceTargets(sourceTargets, sourceTargetSet);
         const normalizedTargets = sourceTargets.filter(
             (target) => !coveredBy(normalizedAdded, target),
         );

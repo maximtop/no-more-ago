@@ -87,7 +87,7 @@ describe("document ownership integration", () => {
     it("keeps ownership and nearby content unchanged with safe diagnostics", () => {
         document.body.innerHTML = '<a id="link" href="/private">'
             + '<relative-time datetime="2026-08-23T10:15:00Z">'
-            + "confidential relative text</relative-time></a>"
+            + "2 hours ago</relative-time></a>"
             + '<span id="foreign">private nearby text</span>';
         const link = document.getElementById("link");
         const source = link?.querySelector("relative-time");
@@ -107,11 +107,11 @@ describe("document ownership integration", () => {
 
         expect(outputs).toHaveLength(1);
         expect(link.querySelectorAll("time:not([hidden])")).toHaveLength(1);
-        expect(source.textContent).toBe("confidential relative text");
+        expect(source.textContent).toBe("2 hours ago");
         expect(foreign.outerHTML).toBe(foreignBefore);
         expect(diagnostics).toHaveBeenCalled();
         const payload = JSON.stringify(diagnostics.mock.calls);
-        expect(payload).not.toContain("confidential relative text");
+        expect(payload).not.toContain("2 hours ago");
         expect(payload).not.toContain("private nearby text");
         expect(payload).not.toContain("2026-08-23");
         expect(payload).not.toContain("token=secret");

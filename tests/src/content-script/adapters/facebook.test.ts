@@ -20,9 +20,13 @@ import {
 } from "../../../../src/content-script/adapters/types";
 import {
     clearFacebookTimestampRecords,
+    getFacebookTimestampRecord,
     storeFacebookTimestampUpdate,
 } from "../../../../src/content-script/facebook/timestamp-store";
-import { OWNED_OUTPUT_ATTRIBUTE } from
+import {
+    OWNED_OUTPUT_ATTRIBUTE,
+    OWNED_SOURCE_ATTRIBUTE,
+} from
     "../../../../src/content-script/ownership-markers";
 import { processDocument } from
     "../../../../src/content-script/transformation/process-document";
@@ -139,7 +143,7 @@ describe("Facebook Story adapter", () => {
         expect(document.getElementById("comment")?.textContent).toBe("1d");
     });
 
-    it("accepts the SVG-sprite timestamp shape used by dynamic feed posts", () => {
+    it("leaves a textless SVG Story timestamp unowned", () => {
         document.body.innerHTML = `
             <a id="timestamp" href="${trackedUrl()}" role="link" tabindex="0"
                 target="_blank">
@@ -156,6 +160,19 @@ describe("Facebook Story adapter", () => {
         expect(facebookAdapter.discover(document, extractionContext)).toEqual([timestamp]);
         expect(timestamp && facebookAdapter.extract(timestamp, extractionContext))
             .toMatchObject({ rawDatetime: "1787343300" });
+
+        expect(processDocument({
+            url: FACEBOOK_URL,
+            root: document,
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm:ss",
+                timeZone: { mode: "utc" },
+            },
+        })).toEqual([]);
+        expect(timestamp?.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
+        expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
     });
 
     it("does not ingest initial payload scripts as an adapter side effect", () => {
@@ -200,13 +217,17 @@ describe("Facebook Story adapter", () => {
         }
         expect(timestamp.hidden).toBe(true);
 
-        text.data = "1d";
+        text.data = "Aug 28, 2026";
         await new Promise<void>((resolve) => {
             setTimeout(resolve, 0);
         });
 
         expect(timestamp.hidden).toBe(false);
         expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
+        expect(getFacebookTimestampRecord(timestamp)).toEqual({
+            trackingToken: TRACKING_TOKEN,
+            rawDatetime: "1787933301",
+        });
         controller.teardown();
     });
 });

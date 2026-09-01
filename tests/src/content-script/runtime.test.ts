@@ -116,7 +116,7 @@ function setWatchMarkup(videoId: string, publication: string, includePlayer = tr
             : "");
     document.body.innerHTML = `
         <ytd-watch-metadata>
-            <div id="info-strings"><yt-formatted-string>relative</yt-formatted-string></div>
+            <div id="info-strings"><yt-formatted-string>3 months ago</yt-formatted-string></div>
         </ytd-watch-metadata>`;
 }
 
@@ -303,7 +303,7 @@ describe("installContentRuntime", () => {
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
         document.head.innerHTML = "";
         document.body.innerHTML =
-            '<time datetime="2026-08-23T10:15:00Z">relative</time>';
+            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     });
 
     afterEach(() => {
@@ -672,7 +672,7 @@ describe("installContentRuntime", () => {
     it("restores and reprocesses Telegram Web K across site policy refreshes", async () => {
         document.body.innerHTML = '<div class="bubble" data-timestamp="1778774880">'
             + '<span class="time-inner"><span id="telegram-policy-clock" '
-            + 'class="i18n">16:08</span></span></div>';
+            + 'class="i18n">2 hours ago</span></span></div>';
         const clock = document.getElementById("telegram-policy-clock");
         if (!clock) {
             throw new Error("Expected Telegram policy clock");
@@ -680,31 +680,10 @@ describe("installContentRuntime", () => {
 
         await exercisePolicyLifecycle({
             url: new URL("https://web.telegram.org/k/#@fictional"),
-            isTransformed: () => clock.textContent !== "16:08",
-            isOriginal: () => clock.textContent === "16:08",
+            isTransformed: () => clock.textContent !== "2 hours ago",
+            isOriginal: () => clock.textContent === "2 hours ago",
             assertIdentity: () => {
                 expect(document.getElementById("telegram-policy-clock")).toBe(clock);
-            },
-        });
-    });
-
-    it("removes and recreates TikTok profile output across policy changes", async () => {
-        const postId = "7639779880711749733";
-        document.body.innerHTML = '<div data-e2e="user-post-item">'
-            + `<a id="tiktok-policy-card" href="/@fictional/video/${postId}">card</a>`
-            + "</div>";
-        const link = document.getElementById("tiktok-policy-card");
-        if (!(link instanceof HTMLAnchorElement)) {
-            throw new Error("Expected TikTok policy card");
-        }
-
-        await exercisePolicyLifecycle({
-            url: new URL("https://www.tiktok.com/@fictional"),
-            isTransformed: () => link.nextElementSibling instanceof HTMLTimeElement
-                && !link.hasAttribute("hidden"),
-            isOriginal: () => link.nextElementSibling === null && link.textContent === "card",
-            assertIdentity: () => {
-                expect(document.getElementById("tiktok-policy-card")).toBe(link);
             },
         });
     });
@@ -717,7 +696,7 @@ describe("installContentRuntime", () => {
             + '"createTime":"1778774880"}}}</script>';
         document.body.innerHTML = '<div data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span>'
-            + '<span id="tiktok-policy-date">5-14</span></div>';
+            + '<span id="tiktok-policy-date">3d</span></div>';
         const date = document.getElementById("tiktok-policy-date");
         if (!date) {
             throw new Error("Expected TikTok policy date");
@@ -725,8 +704,8 @@ describe("installContentRuntime", () => {
 
         await exercisePolicyLifecycle({
             url: new URL(`https://www.tiktok.com/@fictional/video/${postId}`),
-            isTransformed: () => date.textContent !== "5-14",
-            isOriginal: () => date.textContent === "5-14",
+            isTransformed: () => date.textContent !== "3d",
+            isOriginal: () => date.textContent === "3d",
             assertIdentity: () => {
                 expect(document.getElementById("tiktok-policy-date")).toBe(date);
             },
@@ -1142,7 +1121,7 @@ describe("installContentRuntime", () => {
             document.head.querySelector("meta")?.setAttribute("content", "2026-08-04");
             const label = document.querySelector("yt-formatted-string");
             if (label) {
-                label.textContent = "new relative label";
+                label.textContent = "2 months ago";
             }
             await flushMutations();
             expect(watchOutput()).toBeNull();
@@ -1169,7 +1148,7 @@ describe("installContentRuntime", () => {
         currentHref = WATCH_B;
         setWatchPlayer("testVID0002", "2026-08-02");
         const label = requireWatchLabel();
-        label.textContent = "new video relative label";
+        label.textContent = "2 months ago";
         await flushMutations();
         await flushMutations();
 

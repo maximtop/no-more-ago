@@ -12,16 +12,12 @@ import {
     matchesTikTokUrl,
     TIKTOK_DIRECT_FEED_ADAPTER_ID,
     TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
-    TIKTOK_PROFILE_ADAPTER_ID,
     tiktokAdapters,
     tiktokDirectFeedAdapter,
     tiktokLegacyDirectAdapter,
-    tiktokProfileAdapter,
 } from "../../../../src/content-script/adapters/tiktok";
 import {
     TIMESTAMP_PRESENTATION_KIND,
-    TIMESTAMP_SOURCE_KIND,
-    TIMESTAMP_VALIDATION_RULE,
     type TimestampExtractionContext,
 } from "../../../../src/content-script/adapters/types";
 
@@ -62,8 +58,8 @@ describe("TikTok adapter", () => {
     });
 
     it.each([
-        ["https://www.tiktok.com/@fictional", true],
-        ["https://www.tiktok.com/@fictional/", true],
+        ["https://www.tiktok.com/@fictional", false],
+        ["https://www.tiktok.com/@fictional/", false],
         [`https://www.tiktok.com/@fictional/video/${VIDEO_ID}`, true],
         ["https://www.tiktok.com/@fictional/photo/7590176113704304842", true],
         ["http://www.tiktok.com/@fictional", false],
@@ -81,29 +77,6 @@ describe("TikTok adapter", () => {
         [`https://www.tiktok.com/@fictional/video/${VIDEO_ID}/extra`, false],
     ])("matches TikTok URL %s as %s", (value, expected) => {
         expect(matchesTikTokUrl(new URL(value))).toBe(expected);
-    });
-
-    it("extracts a matching profile card with appended presentation", () => {
-        installHydration();
-        document.body.innerHTML = '<div data-e2e="user-post-item">'
-            + `<a id="card" href="/@fictional/video/${VIDEO_ID}">`
-            + '<img alt="fixture"></a></div>';
-        const source = document.getElementById("card");
-        if (!(source instanceof HTMLAnchorElement)) {
-            throw new Error("Expected profile card link");
-        }
-
-        expect(tiktokProfileAdapter.discover(document, context(PROFILE_URL))).toEqual([source]);
-        expect(tiktokProfileAdapter.extract(source, context(PROFILE_URL))).toMatchObject({
-            ruleId: TIKTOK_PROFILE_ADAPTER_ID,
-            source,
-            sourceKind: TIMESTAMP_SOURCE_KIND.TIKTOK_PUBLICATION,
-            rawDatetime: "2026-05-14T16:08:00.000Z",
-            presentation: {
-                kind: TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME,
-            },
-            validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
-        });
     });
 
     it("extracts only the simple direct publication date target", () => {
@@ -158,6 +131,7 @@ describe("TikTok adapter", () => {
             presentation: {
                 kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
                 target,
+                textPrefix: " · ",
             },
         });
         expect(tiktokDirectFeedAdapter.extract(recommendation, context(VIDEO_URL))).toBeNull();
@@ -192,7 +166,7 @@ describe("TikTok adapter", () => {
                 GENERIC_TIME_RULE_ID,
             ]);
         expect(defaultRegistry.matching(PROFILE_URL).map(({ id }) => id))
-            .toEqual([TIKTOK_PROFILE_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
+            .toEqual([GENERIC_TIME_RULE_ID]);
         expect(defaultRegistry.matching(
             new URL("https://www.tiktok.com/foryou"),
         ).map(({ id }) => id)).toEqual([GENERIC_TIME_RULE_ID]);
@@ -201,18 +175,15 @@ describe("TikTok adapter", () => {
     it("bounds the sources reconsidered after a hydration replacement", () => {
         const fragment = document.createDocumentFragment();
         for (let index = 0; index < 2_100; index += 1) {
-            const owner = document.createElement("div");
-            owner.setAttribute("data-e2e", "user-post-item");
-            const link = document.createElement("a");
-            link.href = `/@fictional/video/${VIDEO_ID}`;
-            owner.append(link);
-            fragment.append(owner);
+            const source = document.createElement("div");
+            source.setAttribute("data-e2e", "browser-nickname");
+            fragment.append(source);
         }
         document.body.append(fragment);
         const script = document.createElement("script");
         script.id = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
         script.type = "application/json";
-        const selection = tiktokProfileAdapter.getChildMutationSources?.(
+        const selection = tiktokLegacyDirectAdapter.getChildMutationSources?.(
             document.head,
             [script],
             [],
@@ -220,6 +191,6 @@ describe("TikTok adapter", () => {
         const sources = "sources" in selection ? selection.sources : selection;
 
         expect(sources).toHaveLength(2_000);
-        expect(sources.every((source) => source instanceof HTMLAnchorElement)).toBe(true);
+        expect(sources.every((source) => source instanceof HTMLDivElement)).toBe(true);
     });
 });

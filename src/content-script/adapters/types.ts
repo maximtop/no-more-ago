@@ -46,6 +46,7 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
     FORMAT: "format",
     HREF: "href",
     ID: "id",
+    LANG: "lang",
     TITLE: "title",
     DATA_ID: "data-id",
     DATA_URN: "data-urn",
@@ -58,7 +59,6 @@ export const TIMESTAMP_SOURCE_ATTRIBUTE = {
  */
 export const TIMESTAMP_MUTATION_KIND = {
     ATTRIBUTE: "attribute",
-    CHARACTER_DATA: "character-data",
     CHILD_LIST: "child-list",
 } as const;
 
@@ -67,7 +67,6 @@ export const TIMESTAMP_MUTATION_KIND = {
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
     ADJACENT_TIME: "adjacent-time",
-    APPENDED_TIME: "appended-time",
     IN_PLACE_TEXT: "in-place-text",
 } as const;
 
@@ -79,18 +78,10 @@ export const ADJACENT_TIME_PRESENTATION = {
 } as const;
 
 /**
- * Shared presentation descriptor for generated output that preserves its source.
- */
-export const APPENDED_TIME_PRESENTATION = {
-    kind: TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME,
-} as const;
-
-/**
  * Validated presentation strategy carried from adapter extraction to rendering.
  */
 export type TimestampPresentation =
     | typeof ADJACENT_TIME_PRESENTATION
-    | typeof APPENDED_TIME_PRESENTATION
     | {
         /**
          * In-place strategy discriminant.
@@ -249,6 +240,21 @@ export interface TimestampExtractionContext {
 }
 
 /**
+ * Read-only context supplied only while classifying current timestamp presentation.
+ */
+export interface TimestampPresentationContext {
+    /**
+     * Current browser locale preferences used for relative-label classification.
+     */
+    readonly locales: readonly string[];
+
+    /**
+     * Returns the latest page-authored value for an in-place target.
+     */
+    readonly readPageText: (target: Text) => string;
+}
+
+/**
  * Explicit ownership result for an adapter-specific mutation mapper.
  */
 export interface TimestampMutationSourceResult {
@@ -283,11 +289,6 @@ export interface TimestampSourceRule {
      * Attributes whose page-authored changes affect this rule.
      */
     readonly mutationAttributes: readonly TimestampSourceAttribute[];
-
-    /**
-     * Whether page-authored character-data changes can create a source for this rule.
-     */
-    readonly observesCharacterData?: boolean;
 
     /**
      * Maps an adapter-relevant mutation back to affected source elements.
@@ -346,6 +347,18 @@ export interface TimestampSourceRule {
         root: ParentNode,
         context: TimestampExtractionContext,
     ): readonly Element[];
+
+    /**
+     * Proves that a candidate's current page-owned label is presented as relative time.
+     *
+     * @param candidate - Trusted-source candidate whose presentation is classified.
+     * @param context - Current locales and retained page-text capabilities.
+     * @returns - Whether the current page-owned label is recognized as relative.
+     */
+    readonly isRelativePresentation: (
+        candidate: TimestampCandidate,
+        context: TimestampPresentationContext,
+    ) => boolean;
 
     /**
      * Extracts one candidate for the exact discovered source.

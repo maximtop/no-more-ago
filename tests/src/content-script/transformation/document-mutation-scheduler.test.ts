@@ -153,7 +153,10 @@ describe("DocumentMutationScheduler", () => {
             document,
             onBatch: () => undefined,
             getOwnedSourceForOutput: () => null,
-            sourceAttributes: [TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME],
+            sourceAttributes: [
+                TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME,
+                TIMESTAMP_SOURCE_ATTRIBUTE.LANG,
+            ],
         });
         scheduler.start();
         scheduler.start();
@@ -164,6 +167,7 @@ describe("DocumentMutationScheduler", () => {
             attributes: true,
             attributeFilter: [
                 "datetime",
+                "lang",
                 "hidden",
                 "aria-hidden",
                 "inert",
@@ -261,6 +265,95 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
         restoreExactText(source);
         expect(target.data).toBe("page refreshed");
+    });
+
+    it("observes page text only beneath a discovered candidate source", async () => {
+        document.body.innerHTML = `<article id="candidate">
+                <time id="label">Aug 23, 2026</time>
+                <p id="inside-unrelated">inside unrelated</p>
+            </article>
+            <p id="outside-unrelated">outside unrelated</p>`;
+        const source = document.getElementById("candidate");
+        const target = document.getElementById("label")?.firstChild;
+        const insideUnrelated = document.getElementById("inside-unrelated")?.firstChild;
+        const outsideUnrelated = document.getElementById("outside-unrelated")?.firstChild;
+        if (
+            !source
+            || !(target instanceof Text)
+            || !(insideUnrelated instanceof Text)
+            || !(outsideUnrelated instanceof Text)
+        ) {
+            throw new Error("Expected candidate and unrelated text");
+        }
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        scheduler.trackSource(source, false);
+        scheduler.trackPageTextSource(source, target);
+
+        insideUnrelated.data = "inside unrelated changed";
+        outsideUnrelated.data = "outside unrelated changed";
+        await flushMutations();
+        expect(batches).toEqual([]);
+
+        target.data = "2 hours ago";
+        await flushMutations();
+        expect(batches).toHaveLength(1);
+        expect(batches[0]?.sourceTargets).toEqual([source]);
+
+        batches.length = 0;
+        scheduler.untrackSource(source);
+        target.data = "released";
+        await flushMutations();
+        expect(batches).toEqual([]);
+        scheduler.stop();
+    });
+
+    it("releases candidate-label targets covered by one removed subtree", async () => {
+        const wrapper = document.createElement("section");
+        const removedSources = Array.from({ length: 50 }, (_, index) => {
+            const source = document.createElement("time");
+            source.append(document.createTextNode(`${String(index)} hours ago`));
+            wrapper.append(source);
+            return source;
+        });
+        const activeSource = document.createElement("time");
+        const activeTarget = document.createTextNode("2 hours ago");
+        activeSource.append(activeTarget);
+        document.body.append(wrapper, activeSource);
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        for (const source of [...removedSources, activeSource]) {
+            const target = source.firstChild;
+            if (!(target instanceof Text)) {
+                throw new Error("Expected candidate text target");
+            }
+            scheduler.trackSource(source, false);
+            scheduler.trackPageTextSource(source, target);
+        }
+
+        wrapper.remove();
+        await flushMutations();
+        batches.length = 0;
+        const releasedTarget = removedSources[0]?.firstChild;
+        if (!(releasedTarget instanceof Text)) {
+            throw new Error("Expected released candidate target");
+        }
+        releasedTarget.data = "released update";
+        activeTarget.data = "active update";
+        await flushMutations();
+
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual([activeSource]);
+        scheduler.stop();
     });
 
     it("stops character-data observation after an in-place source is released", async () => {
@@ -367,48 +460,88 @@ describe("DocumentMutationScheduler", () => {
         expect(activeTarget.data).toBe("active page update");
     });
 
-    it("retargets several owned labels without rebuilding text observation", async () => {
-        const observe = vi.spyOn(MutationObserver.prototype, "observe");
-        const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+    it("retargets several owned labels to their replacement text nodes", async () => {
         const sources = Array.from({ length: 4 }, (_, index) => {
             const source = document.createElement("span");
             source.append(document.createTextNode(`relative ${String(index)}`));
             document.body.append(source);
             return source;
         });
+        const batches: AffectedMutationBatch[] = [];
         const scheduler = new DocumentMutationScheduler({
             document,
-            onBatch: () => undefined,
+            onBatch: (batch) => batches.push(batch),
             getOwnedSourceForOutput: () => null,
         });
         scheduler.start();
-        for (const source of sources) {
-            const target = source.firstChild;
-            if (!(target instanceof Text)) {
-                throw new Error("Expected initial text target");
+        scheduler.batchTextObservationUpdates(() => {
+            for (const source of sources) {
+                const target = source.firstChild;
+                if (!(target instanceof Text)) {
+                    throw new Error("Expected initial text target");
+                }
+                renderExactText(source, target, "2026", scheduler);
             }
-            renderExactText(source, target, "2026", scheduler);
-        }
+        });
         await flushMutations();
-        observe.mockClear();
-        disconnect.mockClear();
+        batches.length = 0;
 
-        for (const [index, source] of sources.entries()) {
-            const replacement = document.createTextNode(`refreshed ${String(index)}`);
-            source.replaceChildren(replacement);
-            renderExactText(source, replacement, "2027", scheduler);
-        }
-        expect(disconnect).not.toHaveBeenCalled();
+        const replacements: Text[] = [];
+        scheduler.batchTextObservationUpdates(() => {
+            for (const [index, source] of sources.entries()) {
+                const replacement = document.createTextNode(`refreshed ${String(index)}`);
+                replacements.push(replacement);
+                source.replaceChildren(replacement);
+                renderExactText(source, replacement, "2027", scheduler);
+            }
+        });
         await flushMutations();
-        expect(disconnect).not.toHaveBeenCalled();
-        expect(observe).not.toHaveBeenCalled();
+        batches.length = 0;
+
+        for (const [index, replacement] of replacements.entries()) {
+            replacement.data = `page update ${String(index)}`;
+        }
+        await flushMutations();
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual(sources);
 
         scheduler.stop();
         for (const source of sources) {
             restoreExactText(source);
         }
-        observe.mockRestore();
-        disconnect.mockRestore();
+        expect(sources.map((source) => source.textContent)).toEqual([
+            "page update 0", "page update 1", "page update 2", "page update 3",
+        ]);
+    });
+
+    it("preserves a pending page-label invalidation while retargeting observation", async () => {
+        const source = document.createElement("time");
+        const originalTarget = document.createTextNode("absolute");
+        source.append(originalTarget);
+        document.body.append(source);
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        scheduler.trackSource(source, false);
+        scheduler.trackPageTextSource(source, originalTarget);
+
+        originalTarget.data = "2 hours ago";
+        const replacement = document.createTextNode("3 hours ago");
+        source.replaceChildren(replacement);
+        scheduler.batchTextObservationUpdates(() => {
+            scheduler.trackPageTextSource(source, replacement);
+        });
+        await flushMutations();
+
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual([source]);
+        batches.length = 0;
+        replacement.data = "4 hours ago";
+        await flushMutations();
+        expect(batches.flatMap((batch) => batch.sourceTargets)).toEqual([source]);
+        scheduler.stop();
     });
 
     it("captures an undelivered same-value page write before stopping", async () => {

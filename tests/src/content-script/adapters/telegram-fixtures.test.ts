@@ -71,7 +71,7 @@ describe("Telegram fixtures", () => {
             expect(document.getElementById("ordinary-clock")?.textContent)
                 .toBe("2026-05-14 16:08");
             expect(document.getElementById("edited-clock")?.textContent)
-                .toBe("2026-05-14 16:09");
+                .toBe("16:09");
             expect(document.getElementById("edited-badge")?.textContent).toBe("edited");
             expect(document.getElementById("delivery-state")?.textContent).toBe("read");
             expect(document.getElementById("ordinary-views")).toBe(views);
@@ -88,7 +88,8 @@ describe("Telegram fixtures", () => {
             fetchMock.mockRestore();
         }
 
-        expect(document.getElementById("ordinary-clock")?.textContent).toBe("16:08");
+        expect(document.getElementById("ordinary-clock")?.textContent)
+            .toBe("2 hours ago");
         expect(document.getElementById("edited-clock")?.textContent).toBe("16:09");
         expect(document.getElementById("ordinary-status")).toBe(status);
         expect(document.getElementById("ordinary-views")).toBe(views);
@@ -141,7 +142,8 @@ describe("Telegram fixtures", () => {
         } finally {
             controller.teardown();
         }
-        expect(document.getElementById("eligible-clock")?.textContent).toBe("16:08");
+        expect(document.getElementById("eligible-clock")?.textContent)
+            .toBe("2 hours ago");
     });
 
     it("uses generic public-channel timestamps and preserves their link", async () => {
@@ -171,6 +173,8 @@ describe("Telegram fixtures", () => {
             .toEqual(linkAttributes);
         expect(document.getElementById("public-local")?.nextElementSibling).toBeNull();
         expect(document.getElementById("public-malformed")?.nextElementSibling).toBeNull();
+        expect(document.getElementById("public-absolute-clock")?.nextElementSibling)
+            .toBeNull();
         link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         expect(listener).toHaveBeenCalledOnce();
 
@@ -180,11 +184,11 @@ describe("Telegram fixtures", () => {
         document.getElementById("telegram-public-channel")?.append(article);
         await flushMutations();
         expect(document.getElementById("dynamic-public-clock")?.nextElementSibling?.textContent)
-            .toBe("2026-05-15 16:08");
+            .toBeUndefined();
 
         controller.teardown();
         expect(document.getElementById("public-link")).toBe(link);
-        expect(source.textContent).toBe("16:08");
+        expect(source.textContent).toBe("2 hours ago");
         expect(source.nextElementSibling).toBeNull();
         expect(document.getElementById("dynamic-public-clock")?.textContent).toBe("16:08");
         expect(document.getElementById("dynamic-public-clock")?.nextElementSibling).toBeNull();

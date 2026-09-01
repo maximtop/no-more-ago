@@ -14,6 +14,10 @@ import {
 import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
 import { discoverElements } from "./discover-elements";
 import { isHtmlElement } from "./html-element";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 /**
  * Stable identifier for the generic standard-time source rule.
@@ -87,5 +91,9 @@ export const genericTimeRule = {
     matches: isHttpUrl,
     matchesElement: isGenericTimeSource,
     discover: discoverStandardTimes,
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: extractStandardTime,
 } satisfies TimestampSourceRule;

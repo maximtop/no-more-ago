@@ -38,7 +38,6 @@ const FACEBOOK_URL = new URL("https://www.facebook.com/fixture-feed");
 const INITIAL_TIMESTAMP = "1787933301" as const;
 const DYNAMIC_TIMESTAMP = "1787343300" as const;
 const INITIAL_TEXT = "2026-08-28 16:08:21" as const;
-const DYNAMIC_TEXT = "2026-08-21 20:15:00" as const;
 const OWNED_SELECTOR = `[${OWNED_SOURCE_ATTRIBUTE}], [${OWNED_OUTPUT_ATTRIBUTE}]`;
 
 let contentRuntime: ContentRuntimeHandle | undefined;
@@ -285,14 +284,13 @@ describe("Facebook offline fixture matrix", () => {
         await flushRuntime();
 
         const dynamic = requiredElement("dynamic-timestamp");
-        await vi.waitFor(() => {
-            expect(outputFor(dynamic).dateTime).toBe(DYNAMIC_TIMESTAMP);
-        });
-        expect(outputFor(dynamic).textContent).toBe(DYNAMIC_TEXT);
+        expect(dynamic.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
+        expect(dynamic.nextElementSibling?.hasAttribute(OWNED_OUTPUT_ATTRIBUTE))
+            .not.toBe(true);
         expect(document.querySelectorAll(
             `[${OWNED_OUTPUT_ATTRIBUTE}][datetime^="178"]`,
-        )).toHaveLength(2);
-        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(3);
+        )).toHaveLength(1);
+        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
 
         for (const [index, element] of rejected.entries()) {
             expect(document.getElementById(element.id)).toBe(element);
@@ -306,7 +304,7 @@ describe("Facebook offline fixture matrix", () => {
     });
 
     it.each(["evidence-first", "source-first"] as const)(
-        "handles dynamic evidence in %s order",
+        "keeps a textless dynamic source unowned in %s order",
         async (order) => {
             loadFixture(false);
             vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
@@ -323,13 +321,11 @@ describe("Facebook offline fixture matrix", () => {
             }
             await flushRuntime();
 
-            await vi.waitFor(() => {
-                expect(outputFor(requiredElement("dynamic-timestamp")).textContent)
-                    .toBe(DYNAMIC_TEXT);
-            });
+            const dynamic = requiredElement("dynamic-timestamp");
+            expect(dynamic.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
             expect(document.querySelectorAll(
                 `[${OWNED_OUTPUT_ATTRIBUTE}][datetime="${DYNAMIC_TIMESTAMP}"]`,
-            )).toHaveLength(1);
+            )).toHaveLength(0);
         },
     );
 
@@ -342,12 +338,9 @@ describe("Facebook offline fixture matrix", () => {
         for (let index = 0; index < batchSize; index += 1) {
             const indexText = String(index);
             const token = `older-story-token-${String(index).padStart(12, "0")}`;
-            const labelId = `older-label-${indexText}`;
             const article = document.createElement("article");
             article.innerHTML = `<a id="older-${indexText}" href="/older?__cft__[0]=${token}"`
-                + ` role="link" tabindex="0" target="_blank"><span aria-labelledby="${labelId}">`
-                + '<svg><use href="#fixture-date"></use></svg></span></a>'
-                + `<span id="${labelId}" hidden>older</span>`;
+                + '><span>1͏d͏</span></a>';
             feed.append(article);
             records.push({
                 trackingToken: token,
@@ -381,8 +374,7 @@ describe("Facebook offline fixture matrix", () => {
         await flushRuntime();
         expect(outputFor(first).dateTime).toBe(records[0]?.rawDatetime);
 
-        first.innerHTML = '<span aria-labelledby="older-label-0">'
-            + '<svg><use href="#fixture-date"></use></svg></span>';
+        first.innerHTML = "<span>1͏d͏</span>";
         await flushRuntime();
         outputFor(first).remove();
         await flushRuntime();
@@ -409,7 +401,7 @@ describe("Facebook offline fixture matrix", () => {
         await dispatchFixtureRecords("dynamic-response.txt");
         await flushRuntime();
         await vi.waitFor(() => {
-            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(3);
+            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
         });
 
         enabled = false;
@@ -427,7 +419,7 @@ describe("Facebook offline fixture matrix", () => {
         await dispatchFixtureRecords("dynamic-response.txt");
         await flushRuntime();
         await vi.waitFor(() => {
-            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(3);
+            expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
         });
 
         await dispatchFixtureRecords("conflicting-response.txt");
@@ -437,7 +429,7 @@ describe("Facebook offline fixture matrix", () => {
             expect(initial.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
         });
         expect(initial.hasAttribute("hidden")).toBe(false);
-        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
+        expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
 
         const dynamicPost = requiredElement("dynamic-post");
         dynamicPost.remove();

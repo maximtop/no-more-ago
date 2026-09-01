@@ -21,8 +21,9 @@
 ## Project Overview
 
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
-HTML and trusted specialized timestamps with exact, localized values. It ships
-a generic instant-only `time[datetime]` source for HTTP(S) documents,
+HTML and trusted specialized timestamps with exact, localized values only when
+the current page-owned label is recognized as relative time. It ships a generic
+instant-only `time[datetime]` source for HTTP(S) documents,
 specialized sources for Facebook, GitHub, Hacker News, supported Stack Exchange
 Q&A sites, Telegram Web K, TikTok, best-effort LinkedIn timestamps, and Bluesky,
 plus a
@@ -32,10 +33,11 @@ bridge for selected Story-bearing GraphQL responses. The bridge is inert by
 default, follows the shared content-runtime activity lifecycle, and transfers
 only bounded tracking-token and Unix-seconds records. Instagram uses a
 site-specific presentation rule for its standard timestamps. TikTok direct
-pages use in-place presentation and profile grids use appended generated-time
-presentation. Bluesky is remote-enriched through anonymous public AppView
-lookups. Public `https://t.me/s/*` pages use the generic source. Extraction
-remains separate from shared semantic validation, presentation, and rendering.
+pages use in-place presentation; profile grids have no specialized rule because
+cards expose no existing timestamp label. Bluesky is remote-enriched through
+anonymous public AppView lookups. Public `https://t.me/s/*` pages use the
+generic source. Timestamp extraction remains separate from current-label
+classification, semantic validation, presentation, and rendering.
 
 The extension provides a global switch, per-domain switches, date format and
 time-zone settings, and opt-in diagnostic logs. The UI is English-only.
@@ -55,6 +57,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
 - **Storage:** `chrome.storage.local` stores settings and opt-in diagnostics.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
+- **Relative labels:** A conservative shared classifier covers 40 confirmed
+  locales using current page language and browser locale evidence. Unknown,
+  absolute, clock, and absent labels fail closed.
 - **Testing:** Vitest with JSDOM and offline HTML fixtures.
 - **Static checks:** ESLint with type-aware TypeScript and JSDoc rules.
 - **Browser targets:** Chrome, Firefox, and Edge.
@@ -64,11 +69,12 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Current site support:** Generic HTTP(S) `time[datetime]` processing is
   available, including public `https://t.me/s/*` pages. The production registry
   contains Facebook, GitHub, Hacker News, Stack Exchange, Telegram Web K,
-  TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
+  direct TikTok, best-effort LinkedIn, and canonical desktop YouTube watch-page
   publication sources, plus an Instagram in-place presentation rule for
   standard timestamps. Exact `bsky.app` documents prepend a document-scoped
-  Bluesky rule whose anonymous resolution is limited to the fixed public AppView
-  origin.
+  Bluesky rule whose anonymous resolution is limited to the fixed public
+  AppView origin. Every rule requires an existing recognized relative label
+  before its trusted value can render.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -168,6 +174,10 @@ unpacked or temporary extension when manual browser verification is needed.
   frame IDs. Disable must stop inspection and clear temporary associations.
 - Keep site knowledge in adapters. Shared timestamp validation, formatting,
   restoration, settings, and diagnostics must remain site-agnostic.
+- Require every `TimestampSourceRule` to keep trusted timestamp extraction
+  separate from current-label classification. Use the shared 40-locale
+  classifier where applicable, never derive the timestamp from the label, and
+  fail closed when presentation evidence is absent or unknown.
 - Keep the content script lightweight. Process matching mutations
   incrementally, avoid repeated whole-document scans, and release observers
   when the extension or domain is disabled.
@@ -368,6 +378,9 @@ Known architectural exclusions to improve when their area changes:
 - Keep fixture data deterministic and free of network dependencies.
 - Cover a regression when fixing a user-visible failure that can reasonably
   recur.
+- For every production timestamp rule, pair an eligible relative-label case
+  with an absolute, unknown, ambiguous, or absent-label case. Assert observable
+  transformation or non-transformation through the public processing boundary.
 - Do not add test-only hooks or production events solely to inspect internal
   implementation steps.
 - There is no required coverage threshold or end-to-end suite currently. Add
@@ -440,6 +453,9 @@ Known architectural exclusions to improve when their area changes:
   `src/content-script/adapters/tiktok*.ts`. Public `t.me/s/*` support remains on
   the generic standard timestamp source. Keep Bluesky batching, caching, and
   stale-result state in its focused document-local coordinator.
+- Keep adapter-specific relative-label profiles and retained delimiters inside
+  their adapter boundary while using the shared classifier implementation.
+  Sources without an existing page-owned timestamp label must remain unowned.
 - Keep Facebook DOM recognition in its adapter and its main/isolated payload
   lifecycle under `src/content-script/facebook`.
 - Keep YouTube route matching, selectors, loaded publication properties, and

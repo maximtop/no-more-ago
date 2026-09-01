@@ -1,5 +1,5 @@
 /**
- * @file Discovers trusted TikTok profile-card and direct-publication timestamps.
+ * @file Discovers trusted TikTok direct-publication timestamps.
  */
 
 import { discoverElements } from "./discover-elements";
@@ -13,7 +13,6 @@ import {
     TIKTOK_HYDRATION_SELECTOR,
 } from "./tiktok-timestamp";
 import {
-    APPENDED_TIME_PRESENTATION,
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
     TIMESTAMP_SOURCE_KIND,
@@ -23,25 +22,21 @@ import {
     type TimestampSourceAttribute,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
-const PROFILE_ITEM_MARKER = "user-post-item" as const;
 const LEGACY_DIRECT_MARKER = "browser-nickname" as const;
 const DIRECT_FEED_MARKER = "recommend-list-item-container" as const;
-const PROFILE_ITEM_SELECTOR = `[data-e2e="${PROFILE_ITEM_MARKER}"]` as const;
-const PROFILE_LINK_SELECTOR = `${PROFILE_ITEM_SELECTOR} a[href]` as const;
 const LEGACY_DIRECT_SOURCE_SELECTOR = `[data-e2e="${LEGACY_DIRECT_MARKER}"]` as const;
 const DIRECT_FEED_SOURCE_SELECTOR =
     `article[data-e2e="${DIRECT_FEED_MARKER}"]` as const;
-const PROFILE_PATH = /^\/@[^/]+\/?$/u;
+const AUTHOR_PROFILE_PATH = /^\/@[^/]+\/?$/u;
 const PUBLICATION_PATH = /^\/(@[^/]+)\/(video|photo)\/([^/]+)\/?$/u;
 const DIRECT_FEED_WRAPPER_ID = /^xgwrapper-\d+-(.+)$/u;
 const MAXIMUM_HYDRATION_RECONCILIATION_SOURCES = 2_000;
 const MAXIMUM_HYDRATION_RECONCILIATION_VISITS = 100_000;
-
-/**
- * Stable identifier for TikTok profile-card timestamps.
- */
-export const TIKTOK_PROFILE_ADAPTER_ID = "tiktok-profile" as const;
 
 /**
  * Stable identifier for legacy TikTok direct-page metadata.
@@ -115,16 +110,6 @@ function getDirectFeedPostId(value: string): string | null {
 }
 
 /**
- * Checks whether a URL is one exact supported profile grid.
- *
- * @param url - Candidate TikTok URL.
- * @returns - Whether the URL has the exact user-profile path shape.
- */
-function isProfileUrl(url: URL): boolean {
-    return hasTikTokOrigin(url) && PROFILE_PATH.test(url.pathname);
-}
-
-/**
  * Checks one serialized link destination against the exact TikTok profile shape.
  *
  * @param href - Current or prior serialized link destination.
@@ -136,80 +121,20 @@ function isProfileHref(href: string | null): boolean {
     }
     try {
         const url = new URL(href, `https://${TIKTOK_HOSTNAME}/`);
-        return hasTikTokOrigin(url) && PROFILE_PATH.test(url.pathname);
+        return hasTikTokOrigin(url) && AUTHOR_PROFILE_PATH.test(url.pathname);
     } catch {
         return false;
     }
 }
 
 /**
- * Checks whether a URL belongs to any confirmed TikTok surface.
+ * Checks whether a URL belongs to a confirmed TikTok publication surface.
  *
  * @param url - URL considered for adapter selection.
- * @returns - Whether the URL is a profile, video, or photo surface.
+ * @returns - Whether the URL is a direct video or photo surface.
  */
 export function matchesTikTokUrl(url: URL): boolean {
-    return isProfileUrl(url) || parsePublication(url) !== null;
-}
-
-/**
- * Parses a profile link against the exact TikTok origin.
- *
- * @param element - Candidate HTML anchor.
- * @param href - Current or prior serialized href.
- * @returns - Publication identity, or null for another destination.
- */
-function parseLinkPublication(
-    element: Element,
-    href: string | null = element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF),
-): TikTokPublication | null {
-    if (href === null) {
-        return null;
-    }
-    try {
-        return parsePublication(new URL(href, `https://${TIKTOK_HOSTNAME}/`));
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Lists all supported publication links owned directly by one profile card.
- *
- * @param owner - Profile card whose publication membership is inspected.
- * @returns - Exact supported publication links owned by the card.
- */
-function profilePublicationLinks(owner: Element): readonly Element[] {
-    const ownsCurrentMarker = owner.matches(PROFILE_ITEM_SELECTOR);
-    return Array.from(owner.querySelectorAll("a[href]")).filter(
-        (link) => {
-            const currentOwner = link.closest(PROFILE_ITEM_SELECTOR);
-            return (currentOwner === owner || (!ownsCurrentMarker && currentOwner === null))
-                && parseLinkPublication(link) !== null;
-        },
-    );
-}
-
-/**
- * Checks whether one link is the only publication link owned by its card.
- *
- * @param element - Candidate profile-card source.
- * @returns - Whether the link has an unambiguous supported card owner.
- */
-function isProfileCardLink(element: Element): boolean {
-    if (
-        !isHtmlElement(element)
-        || element.localName !== "a"
-        || parseLinkPublication(element) === null
-    ) {
-        return false;
-    }
-    const owner = element.closest(PROFILE_ITEM_SELECTOR);
-    if (!owner) {
-        return false;
-    }
-    const links = profilePublicationLinks(owner);
-    return links.length === 1 && links[0] === element;
+    return parsePublication(url) !== null;
 }
 
 /**
@@ -311,6 +236,21 @@ function findDirectFeedDateTarget(
 }
 
 /**
+ * Creates an in-place TikTok presentation while retaining its author separator.
+ *
+ * @param target - Exact simple page-owned timestamp text.
+ * @returns - Presentation with an optional retained leading bullet segment.
+ */
+function createDirectPresentation(target: Text): TimestampPresentation {
+    const textPrefix = target.data.match(/^\s*·\s*/u)?.[0] ?? "";
+    return {
+        kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+        target,
+        ...(textPrefix === "" ? {} : { textPrefix }),
+    };
+}
+
+/**
  * Checks whether one changed subtree contains the exact hydration script.
  *
  * @param node - Added or removed page-authored node.
@@ -323,25 +263,6 @@ function containsHydrationScript(node: Node): boolean {
     const element = node as Element;
     return isTikTokHydrationScript(element)
         || element.querySelector(TIKTOK_HYDRATION_SELECTOR) !== null;
-}
-
-/**
- * Checks whether one changed subtree contains a supported profile publication link.
- *
- * @param node - Added or removed page-authored node.
- * @returns - Whether profile-card publication membership may have changed.
- */
-function containsPublicationLink(node: Node): boolean {
-    if (node.nodeType !== 1) {
-        return false;
-    }
-    const element = node as Element;
-    if (isHtmlElement(element) && element.localName === "a") {
-        return parseLinkPublication(element) !== null;
-    }
-    return Array.from(element.querySelectorAll("a[href]")).some(
-        (link) => parseLinkPublication(link) !== null,
-    );
 }
 
 /**
@@ -434,69 +355,6 @@ function createCandidate(
 }
 
 /**
- * Maps profile-card attribute changes to every publication link whose eligibility changed.
- *
- * @param element - Element whose adapter-declared attribute changed.
- * @param attributeName - Changed attribute.
- * @param oldValue - Previous serialized value.
- * @returns - Exact profile-card links requiring reconciliation.
- */
-function getProfileMutationSources(
-    element: Element,
-    attributeName: TimestampSourceAttribute | undefined,
-    oldValue: string | null,
-): readonly Element[] {
-    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.HREF) {
-        if (!isHtmlElement(element) || element.localName !== "a") {
-            return [];
-        }
-        const owner = element.closest(PROFILE_ITEM_SELECTOR);
-        const sources = owner ? [...profilePublicationLinks(owner)] : [];
-        if (parseLinkPublication(element, oldValue) !== null && !sources.includes(element)) {
-            sources.push(element);
-        }
-        return sources;
-    }
-    if (attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E) {
-        return [];
-    }
-    const currentValue = element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E);
-    if (currentValue !== PROFILE_ITEM_MARKER && oldValue !== PROFILE_ITEM_MARKER) {
-        return [];
-    }
-    return profilePublicationLinks(element);
-}
-
-/**
- * Invalidates all publication links when card membership or hydration changes.
- *
- * @param element - Element whose child list changed.
- * @param addedNodes - Nodes added by the mutation.
- * @param removedNodes - Nodes removed by the mutation.
- * @returns - Exact or bounded profile sources requiring reconciliation.
- */
-function getProfileChildMutationSources(
-    element: Element,
-    addedNodes: readonly Node[],
-    removedNodes: readonly Node[],
-): readonly Element[] {
-    if (changesHydration(element, addedNodes, removedNodes)) {
-        return discoverHydrationSources(
-            element.ownerDocument,
-            PROFILE_LINK_SELECTOR,
-            isProfileCardLink,
-        );
-    }
-    if (![...addedNodes, ...removedNodes].some(containsPublicationLink)) {
-        return [];
-    }
-    const owner = element.matches(PROFILE_ITEM_SELECTOR)
-        ? element
-        : element.closest(PROFILE_ITEM_SELECTOR);
-    return owner ? profilePublicationLinks(owner) : [];
-}
-
-/**
  * Maps legacy metadata marker changes to the affected source.
  *
  * @param element - Element whose adapter-declared attribute changed.
@@ -586,36 +444,6 @@ function hydrationMutationSources(
 }
 
 /**
- * TikTok profile-card timestamp source.
- */
-export const tiktokProfileAdapter: TimestampSourceRule = {
-    id: TIKTOK_PROFILE_ADAPTER_ID,
-    mutationAttributes: [
-        TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E,
-        TIMESTAMP_SOURCE_ATTRIBUTE.HREF,
-    ],
-    getMutationSources: getProfileMutationSources,
-    getChildMutationSources: getProfileChildMutationSources,
-    matches: isProfileUrl,
-    matchesElement: isProfileCardLink,
-    discover: (root) => discoverElements(root, PROFILE_LINK_SELECTOR, isProfileCardLink),
-    extract: (element, context) => {
-        if (!isProfileUrl(context.url) || !isProfileCardLink(element)) {
-            return null;
-        }
-        const publication = parseLinkPublication(element);
-        return publication
-            ? createCandidate(
-                TIKTOK_PROFILE_ADAPTER_ID,
-                element,
-                publication,
-                APPENDED_TIME_PRESENTATION,
-            )
-            : null;
-    },
-};
-
-/**
  * Legacy TikTok direct-page timestamp source.
  */
 export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
@@ -633,6 +461,10 @@ export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
         LEGACY_DIRECT_SOURCE_SELECTOR,
         isLegacyDirectSource,
     ),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: (element, context) => {
         const publication = parsePublication(context.url);
         const target = isLegacyDirectSource(element)
@@ -645,7 +477,7 @@ export const tiktokLegacyDirectAdapter: TimestampSourceRule = {
             TIKTOK_LEGACY_DIRECT_ADAPTER_ID,
             element,
             publication,
-            { kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT, target },
+            createDirectPresentation(target),
         );
     },
 };
@@ -672,6 +504,10 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
         DIRECT_FEED_SOURCE_SELECTOR,
         isDirectFeedSource,
     ),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: (element, context) => {
         const publication = parsePublication(context.url);
         const target = publication && isDirectFeedSource(element)
@@ -684,7 +520,7 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
             TIKTOK_DIRECT_FEED_ADAPTER_ID,
             element,
             publication,
-            { kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT, target },
+            createDirectPresentation(target),
         );
     },
 };
@@ -693,7 +529,6 @@ export const tiktokDirectFeedAdapter: TimestampSourceRule = {
  * Ordered TikTok source rules registered before the generic fallback.
  */
 export const tiktokAdapters = [
-    tiktokProfileAdapter,
     tiktokLegacyDirectAdapter,
     tiktokDirectFeedAdapter,
 ] as const;

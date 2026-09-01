@@ -13,6 +13,10 @@ import {
 import { findSimpleTextTarget } from "./simple-text-target";
 import { discoverElements } from "./discover-elements";
 import { isHtmlElement } from "./html-element";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 const AGE_SELECTOR = "span.age[title]" as const;
 
@@ -92,6 +96,9 @@ export const hackerNewsAdapter = {
     matches: matchesHackerNewsUrl,
     matchesElement: isHackerNewsAgeElement,
     discover: (root) => discoverElements(root, AGE_SELECTOR, isHackerNewsAgeElement),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ]),
     extract: (element) => {
         if (!isHackerNewsAgeElement(element)) {
             return null;

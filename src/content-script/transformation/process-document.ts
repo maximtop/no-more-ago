@@ -3,6 +3,9 @@
  */
 
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
+import {
+    getRelativePresentationObservationTarget,
+} from "../adapters/relative-presentation";
 import { formatCalendarDate } from "../../shared/date/format-calendar-date";
 import { formatDateWithPresentation } from "../../shared/date/format-default-date";
 import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
@@ -30,6 +33,7 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate,
     type TimestampExtractionContext,
+    type TimestampPresentationContext,
     type TimestampSourceRule,
 } from "../adapters/types";
 import type { DisplaySettings } from "../../shared/settings/snapshot";
@@ -286,6 +290,41 @@ interface CandidateCollection {
      * Sources withheld from extraction by the active route provenance policy.
      */
     readonly blockedSources: ReadonlySet<Element>;
+
+    /**
+     * Sources whose trusted candidate lacked a recognized relative presentation.
+     */
+    readonly presentationRejectedSources: ReadonlySet<Element>;
+
+    /**
+     * Sources whose current page labels require bounded text observation.
+     */
+    readonly textObservationTargets: ReadonlyMap<Element, Node>;
+}
+
+/**
+ * Mutable candidate state shared by regional and exact-source processing.
+ */
+interface CandidateAccumulator {
+    /**
+     * Ordered accepted candidates grouped by source.
+     */
+    readonly candidatesBySource: Map<Element, TimestampCandidate[]>;
+
+    /**
+     * First valid candidate per source.
+     */
+    readonly resolvedBySource: Map<Element, ResolvedTimestamp>;
+
+    /**
+     * Sources with a trusted candidate whose current label was not relative.
+     */
+    readonly presentationRejectedSources: Set<Element>;
+
+    /**
+     * Smallest bounded page node controlling each candidate's label eligibility.
+     */
+    readonly textObservationTargets: Map<Element, Node>;
 }
 
 /**
@@ -326,14 +365,73 @@ function addCandidate(
 }
 
 /**
+ * Applies one rule's extraction, label gate, observation, and resolution consistently.
+ *
+ * @param accumulator - Mutable pass-local candidate state.
+ * @param rule - Matching source rule evaluated at its precedence position.
+ * @param source - Exact discovered source element.
+ * @param extractionContext - Current route and page-text extraction context.
+ * @param presentationContext - Current locale and page-text classification context.
+ * @param nowMilliseconds - Current plausibility boundary for timestamp resolution.
+ */
+function evaluateRuleCandidate(
+    accumulator: CandidateAccumulator,
+    rule: TimestampSourceRule,
+    source: Element,
+    extractionContext: TimestampExtractionContext,
+    presentationContext: TimestampPresentationContext,
+    nowMilliseconds: number,
+): void {
+    if (accumulator.resolvedBySource.has(source)) {
+        return;
+    }
+    const candidate = rule.extract(source, extractionContext);
+    if (candidate?.source !== source) {
+        return;
+    }
+    const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
+    if (!resolved) {
+        addCandidate(accumulator.candidatesBySource, candidate);
+        return;
+    }
+    const observationTarget = getRelativePresentationObservationTarget(candidate);
+    if (observationTarget) {
+        accumulator.textObservationTargets.set(source, observationTarget);
+    }
+    if (!rule.isRelativePresentation(candidate, presentationContext)) {
+        accumulator.presentationRejectedSources.add(source);
+        return;
+    }
+    addCandidate(accumulator.candidatesBySource, candidate);
+    accumulator.resolvedBySource.set(source, resolved);
+}
+
+/**
  * Creates the read-only adapter context for one processing pass.
  *
  * @param url - Current route URL for route-specific value provenance.
- * @returns - Context exposing the current route and retained page-authored text reader.
+ * @returns - Context exposing current route and retained page text.
  */
-function createExtractionContext(url: URL): TimestampExtractionContext {
+function createExtractionContext(
+    url: URL,
+): TimestampExtractionContext {
     return {
         url,
+        readPageText: readPageOwnedText,
+    };
+}
+
+/**
+ * Creates the presentation-only context for one processing pass.
+ *
+ * @param input - Processing input carrying static or live locale preferences.
+ * @returns - Context exposing current locales and retained page text.
+ */
+function createPresentationContext(
+    input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
+): TimestampPresentationContext {
+    return {
+        locales: input.localesProvider?.() ?? input.locales ?? [],
         readPageText: readPageOwnedText,
     };
 }
@@ -343,15 +441,16 @@ function createExtractionContext(url: URL): TimestampExtractionContext {
  *
  * @param input - Presentation, ownership, and diagnostic dependencies.
  * @param collection - Ordered sources and their adapter candidates.
+ * @param locales - Locale snapshot shared with presentation classification.
  * @param started - Optional start time captured before discovery.
  * @returns - Generated adjacent time outputs from the processed sources.
  */
 function processCandidateCollection(
     input: ProcessInput | ReconcileInput | ReconcileSourcesInput,
     collection: CandidateCollection,
+    locales: readonly string[],
     started: number | undefined,
 ): readonly HTMLTimeElement[] {
-    const locales = input.localesProvider?.() ?? input.locales ?? [];
     const display = input.displayProvider?.() ?? input.display;
     const ownedDomMutations = input.ownedDomMutations;
     const diagnosticSink = input.diagnosticSink;
@@ -360,6 +459,8 @@ function processCandidateCollection(
         resolvedBySource,
         discoveredSources,
         blockedSources,
+        presentationRejectedSources,
+        textObservationTargets,
     } = collection;
 
     if (diagnosticSink && discoveredSources.length > 0) {
@@ -372,37 +473,60 @@ function processCandidateCollection(
 
     const outputs: HTMLTimeElement[] = [];
     let renderedCount = 0;
-    for (const source of discoveredSources) {
-        const candidates = candidatesBySource.get(source) ?? [];
-        const resolved = resolvedBySource.get(source);
-        if (!resolved) {
-            ownedDomMutations?.untrackSource?.(source);
-            restoreTimestampPresentation(source, ownedDomMutations);
-            if (blockedSources.has(source)) {
+    const processSources = (): void => {
+        for (const source of discoveredSources) {
+            const candidates = candidatesBySource.get(source) ?? [];
+            const resolved = resolvedBySource.get(source);
+            const observationTarget = textObservationTargets.get(source);
+            const observesPageText = observationTarget !== undefined
+                && (resolved !== undefined || presentationRejectedSources.has(source));
+            if (observationTarget && observesPageText) {
+                ownedDomMutations?.trackPageTextSource?.(source, observationTarget);
+            } else {
+                ownedDomMutations?.untrackPageTextSource?.(source);
+            }
+            if (!resolved) {
+                if (observesPageText) {
+                    ownedDomMutations?.trackSource?.(source, false);
+                } else {
+                    ownedDomMutations?.untrackSource?.(source);
+                }
+                restoreTimestampPresentation(source, ownedDomMutations);
+                if (blockedSources.has(source)) {
+                    continue;
+                }
+                if (candidates.length === 0 && presentationRejectedSources.has(source)) {
+                    emitCandidateSkipped(diagnosticSink);
+                    continue;
+                }
+                const sourceTimestamp = getFailureSourceTimestamp(candidates);
+                diagnosticSink?.({
+                    category: DIAGNOSTIC_CATEGORY.SKIP,
+                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                    count: 1,
+                    ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
+                });
                 continue;
             }
-            const sourceTimestamp = getFailureSourceTimestamp(candidates);
-            diagnosticSink?.({
-                category: DIAGNOSTIC_CATEGORY.SKIP,
-                reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-                count: 1,
-                ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
-            });
-            continue;
-        }
-        const result = renderResolvedTimestamp(
-            resolved,
-            locales,
-            display,
-            diagnosticSink,
-            ownedDomMutations,
-        );
-        if (result) {
-            renderedCount += 1;
-            if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
-                outputs.push(result.output);
+            const result = renderResolvedTimestamp(
+                resolved,
+                locales,
+                display,
+                diagnosticSink,
+                ownedDomMutations,
+            );
+            if (result) {
+                renderedCount += 1;
+                if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
+                    outputs.push(result.output);
+                }
             }
         }
+    };
+    if (ownedDomMutations?.batchTextObservationUpdates) {
+        ownedDomMutations.batchTextObservationUpdates(processSources);
+    } else {
+        processSources();
     }
     if (diagnosticSink && started !== undefined && discoveredSources.length > 0) {
         diagnosticSink({
@@ -435,7 +559,16 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
+    const presentationRejectedSources = new Set<Element>();
+    const textObservationTargets = new Map<Element, Node>();
+    const accumulator: CandidateAccumulator = {
+        candidatesBySource,
+        resolvedBySource,
+        presentationRejectedSources,
+        textObservationTargets,
+    };
     const extractionContext = createExtractionContext(url);
+    const presentationContext = createPresentationContext(input);
     for (const rule of rules) {
         for (const element of rule.discover(root, extractionContext)) {
             if (!discovered.has(element)) {
@@ -446,17 +579,14 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 blockedSources.add(element);
                 continue;
             }
-            if (resolvedBySource.has(element)) {
-                continue;
-            }
-            const candidate = rule.extract(element, extractionContext);
-            if (candidate?.source === element) {
-                addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
-                if (resolved) {
-                    resolvedBySource.set(element, resolved);
-                }
-            }
+            evaluateRuleCandidate(
+                accumulator,
+                rule,
+                element,
+                extractionContext,
+                presentationContext,
+                nowMilliseconds,
+            );
         }
     }
 
@@ -482,7 +612,15 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
 
     return processCandidateCollection(
         input,
-        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
+        {
+            candidatesBySource,
+            resolvedBySource,
+            discoveredSources,
+            blockedSources,
+            presentationRejectedSources,
+            textObservationTargets,
+        },
+        presentationContext.locales,
         started,
     );
 }
@@ -508,7 +646,16 @@ export function reconcileDocumentSources(
     const discoveredSources: Element[] = [];
     const discovered = new Set<Element>();
     const blockedSources = new Set<Element>();
+    const presentationRejectedSources = new Set<Element>();
+    const textObservationTargets = new Map<Element, Node>();
+    const accumulator: CandidateAccumulator = {
+        candidatesBySource,
+        resolvedBySource,
+        presentationRejectedSources,
+        textObservationTargets,
+    };
     const extractionContext = createExtractionContext(url);
+    const presentationContext = createPresentationContext(input);
     for (const source of input.sources) {
         if (
             discovered.has(source)
@@ -524,22 +671,27 @@ export function reconcileDocumentSources(
                 blockedSources.add(source);
                 continue;
             }
-            if (resolvedBySource.has(source)) {
-                continue;
-            }
-            const candidate = rule.extract(source, extractionContext);
-            if (candidate?.source === source) {
-                addCandidate(candidatesBySource, candidate);
-                const resolved = resolveTrustedTimestamp(candidate, nowMilliseconds);
-                if (resolved) {
-                    resolvedBySource.set(source, resolved);
-                }
-            }
+            evaluateRuleCandidate(
+                accumulator,
+                rule,
+                source,
+                extractionContext,
+                presentationContext,
+                nowMilliseconds,
+            );
         }
     }
     return processCandidateCollection(
         input,
-        { candidatesBySource, resolvedBySource, discoveredSources, blockedSources },
+        {
+            candidatesBySource,
+            resolvedBySource,
+            discoveredSources,
+            blockedSources,
+            presentationRejectedSources,
+            textObservationTargets,
+        },
+        presentationContext.locales,
         started,
     );
 }

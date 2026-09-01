@@ -13,6 +13,10 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 const RELATIVE_TIME_SELECTOR = "span.relativetime[title]" as const;
 const CLEAN_RELATIVE_TIME_SELECTOR = "span.relativetime-clean[title]" as const;
@@ -164,6 +168,9 @@ export const stackExchangeAdapter = {
         STACK_EXCHANGE_TIMESTAMP_SELECTOR,
         isStackExchangeTimestampElement,
     ),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+    ], ["Over a year ago", "1 min ago"]),
     extract: (element) => {
         if (!isStackExchangeTimestampElement(element)) {
             return null;

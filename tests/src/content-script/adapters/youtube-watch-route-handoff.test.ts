@@ -73,7 +73,7 @@ describe("classifyYouTubeWatchRouteHandoff", () => {
             <ytd-watch-metadata>
                 <div id="info-strings"><yt-formatted-string>2 days ago</yt-formatted-string></div>
             </ytd-watch-metadata>
-            <time datetime="2026-08-23T10:15Z">generic</time>`;
+            <time datetime="2026-08-23T10:15Z">2 hours ago</time>`;
         const watchSource = document.querySelector("yt-formatted-string");
         const genericSource = document.querySelector("time");
         if (!watchSource || !genericSource) {

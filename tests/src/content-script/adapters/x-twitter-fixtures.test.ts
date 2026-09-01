@@ -44,6 +44,11 @@ interface ExpectedSource {
      * Deterministic UTC presentation.
      */
     readonly text: string;
+
+    /**
+     * Whether the current visible label is relative and eligible for output.
+     */
+    readonly relative: boolean;
 }
 
 /**
@@ -87,6 +92,7 @@ const fixtureCases: FixtureCase[] = [
                 rawDatetime: "2026-08-20T08:30:00.000Z",
                 instant: "2026-08-20T08:30:00.000Z",
                 text: "2026-08-20 08:30",
+                relative: true,
             },
         ],
         unrelatedSelector: '[data-unrelated="feed"]',
@@ -100,6 +106,7 @@ const fixtureCases: FixtureCase[] = [
                 rawDatetime: "2026-08-21T14:45:00.000Z",
                 instant: "2026-08-21T14:45:00.000Z",
                 text: "2026-08-21 14:45",
+                relative: false,
             },
         ],
         unrelatedSelector: '[data-unrelated="individual-post"]',
@@ -113,18 +120,21 @@ const fixtureCases: FixtureCase[] = [
                 rawDatetime: "2026-08-22T09:00:00Z",
                 instant: "2026-08-22T09:00:00.000Z",
                 text: "2026-08-22 09:00",
+                relative: true,
             },
             {
                 id: "thread-reply-one",
                 rawDatetime: "2026-08-22T10:15:00Z",
                 instant: "2026-08-22T10:15:00.000Z",
                 text: "2026-08-22 10:15",
+                relative: true,
             },
             {
                 id: "thread-reply-two",
                 rawDatetime: "2026-08-22T11:40:00Z",
                 instant: "2026-08-22T11:40:00.000Z",
                 text: "2026-08-22 11:40",
+                relative: true,
             },
         ],
         unrelatedSelector: '[data-unrelated="thread"]',
@@ -138,12 +148,14 @@ const fixtureCases: FixtureCase[] = [
                 rawDatetime: "2026-08-23T12:00:00Z",
                 instant: "2026-08-23T12:00:00.000Z",
                 text: "2026-08-23 12:00",
+                relative: true,
             },
             {
                 id: "quoted-inner",
                 rawDatetime: "2026-08-22T22:10:00Z",
                 instant: "2026-08-22T22:10:00.000Z",
                 text: "2026-08-22 22:10",
+                relative: true,
             },
         ],
         unrelatedSelector: '[data-unrelated="quoted-post"]',
@@ -157,12 +169,14 @@ const fixtureCases: FixtureCase[] = [
                 rawDatetime: "2026-08-24T15:45:00Z",
                 instant: "2026-08-24T15:45:00.000Z",
                 text: "2026-08-24 15:45",
+                relative: true,
             },
             {
                 id: "card-inner-offset",
                 rawDatetime: "2026-08-24T18:20:00+02:30",
                 instant: "2026-08-24T15:50:00.000Z",
                 text: "2026-08-24 15:50",
+                relative: true,
             },
         ],
         unrelatedSelector: '[data-unrelated="nested-card"]',
@@ -197,6 +211,11 @@ describe("offline X/Twitter public-surface fixtures", () => {
                 const unrelatedBefore = document.querySelector(
                     unrelatedSelector,
                 )?.outerHTML;
+                const originalTextById = new Map(sources.map(({ id }) => [
+                    id,
+                    document.querySelector(`[data-source-id="${id}"]`)?.textContent,
+                ]));
+                const relativeSources = sources.filter(({ relative }) => relative);
 
                 expect(defaultRegistry.matching(url).map(({ id }) => id))
                     .toEqual([GENERIC_TIME_RULE_ID]);
@@ -207,10 +226,10 @@ describe("offline X/Twitter public-surface fixtures", () => {
                     display,
                 });
 
-                expect(outputs).toHaveLength(sources.length);
+                expect(outputs).toHaveLength(relativeSources.length);
                 expect(document.querySelectorAll(
                     `[${OWNED_OUTPUT_ATTRIBUTE}]`,
-                )).toHaveLength(sources.length);
+                )).toHaveLength(relativeSources.length);
                 const tokens = new Set<string>();
                 for (const expected of sources) {
                     const source = document.querySelector(
@@ -220,6 +239,13 @@ describe("offline X/Twitter public-surface fixtures", () => {
                         throw new Error(`Missing time source ${expected.id}`);
                     }
                     const output = source.nextElementSibling;
+                    if (!expected.relative) {
+                        expect(source.getAttribute(OWNED_SOURCE_ATTRIBUTE)).toBeNull();
+                        expect(source.hidden).toBe(false);
+                        expect(output).toBeNull();
+                        expect(source.textContent).toBe(originalTextById.get(expected.id));
+                        continue;
+                    }
                     if (!(output instanceof HTMLTimeElement)) {
                         throw new Error(`Missing output for ${expected.id}`);
                     }
@@ -236,7 +262,7 @@ describe("offline X/Twitter public-surface fixtures", () => {
                         tokens.add(token);
                     }
                 }
-                expect(tokens.size).toBe(sources.length);
+                expect(tokens.size).toBe(relativeSources.length);
                 expect(document.querySelector(unrelatedSelector)?.outerHTML)
                     .toBe(unrelatedBefore);
                 restoreExactTimes(document);

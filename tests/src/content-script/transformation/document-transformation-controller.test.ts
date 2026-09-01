@@ -44,6 +44,7 @@ const noMatchRule: TimestampSourceRule = {
     matches: () => false,
     matchesElement: () => false,
     discover: () => [],
+    isRelativePresentation: () => true,
     extract: () => null,
 };
 
@@ -89,7 +90,7 @@ interface GenericControllerFixture {
  * @returns - Source and controller sharing the fixture document.
  */
 function createGenericControllerFixture(
-    markup = '<time datetime="2026-08-23T10:15Z">relative</time>',
+    markup = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>',
 ): GenericControllerFixture {
     document.body.innerHTML = markup;
     const source = document.querySelector("time");
@@ -111,6 +112,164 @@ describe("DocumentTransformationController", () => {
         await Promise.resolve();
         await Promise.resolve();
     };
+
+    it("restores and reclaims a source as its page label changes mode", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected source");
+        }
+        const label = source.firstChild;
+        if (!(label instanceof Text)) {
+            throw new Error("Expected source label");
+        }
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://example.test/"),
+            locales: ["en-US"],
+        });
+        try {
+            controller.start();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+
+            label.data = "Aug 23, 2026";
+            await flushMutations();
+            expect(source.textContent).toBe("Aug 23, 2026");
+            expect(source.nextElementSibling).toBeNull();
+
+            label.data = "2 hours ago";
+            await flushMutations();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+            expect(document.querySelectorAll("[data-no-more-ago-output]"))
+                .toHaveLength(1);
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+    });
+
+    it("claims an initially blank in-place label when its text becomes relative", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = '<span class="age" '
+            + 'title="2026-08-23T10:15:00Z"><a href="item?id=1"> </a></span>';
+        const source = document.querySelector("span.age");
+        const target = source?.querySelector("a")?.firstChild;
+        if (!source || !(target instanceof Text)) {
+            throw new Error("Expected blank Hacker News label");
+        }
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://news.ycombinator.com/item?id=1"),
+            locales: ["en-US"],
+            display: {
+                formatMode: "custom",
+                pattern: "yyyy-MM-dd HH:mm",
+                timeZone: { mode: "utc" },
+            },
+        });
+        try {
+            expect(controller.start()).toEqual([]);
+            expect(target.data).toBe(" ");
+
+            target.data = "2 hours ago";
+            await flushMutations();
+            expect(target.data).toBe("2026-08-23 10:15");
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+        expect(target.data).toBe("2 hours ago");
+    });
+
+    it("reclaims a bounded label target after oversized text becomes relative", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z"></time>';
+        const source = document.querySelector("time");
+        if (!source) {
+            throw new Error("Expected oversized generic source");
+        }
+        const target = document.createTextNode("x".repeat(513));
+        source.append(target);
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://example.test/"),
+            locales: ["en-US"],
+        });
+        try {
+            expect(controller.start()).toEqual([]);
+            expect(source.nextElementSibling).toBeNull();
+
+            target.data = "2 hours ago";
+            await flushMutations();
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+    });
+
+    it("bounds inherited-language changes to their subtree", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = `
+            <section id="changed">
+                <time datetime="2026-08-23T10:15:00Z">2 hours ago</time>
+            </section>
+            <section id="unchanged">
+                <time datetime="2026-08-22T10:15:00Z">3 hours ago</time>
+            </section>
+        `;
+        const changedRoot = document.getElementById("changed");
+        const sources = document.querySelectorAll("time");
+        const changedSource = sources[0];
+        const unchangedSource = sources[1];
+        const changedLabel = changedSource?.firstChild;
+        if (
+            !changedRoot
+            || !(changedSource instanceof HTMLTimeElement)
+            || !(unchangedSource instanceof HTMLTimeElement)
+            || !(changedLabel instanceof Text)
+        ) {
+            throw new Error("Expected language-change fixture");
+        }
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://example.test/"),
+            locales: ["en-US"],
+        });
+        const discover = vi.spyOn(genericTimeRule, "discover");
+        try {
+            controller.start();
+            const unchangedOutput = unchangedSource.nextElementSibling;
+            expect(unchangedOutput).toBeInstanceOf(HTMLTimeElement);
+            discover.mockClear();
+
+            changedRoot.lang = "de";
+            changedRoot.lang = "fr";
+            changedRoot.lang = "zz";
+            await flushMutations();
+            expect(changedSource.nextElementSibling).toBeNull();
+            expect(unchangedSource.nextElementSibling).toBe(unchangedOutput);
+            expect(discover).toHaveBeenCalledWith(changedRoot, expect.any(Object));
+            expect(discover).toHaveBeenCalledTimes(1);
+            expect(discover.mock.calls.every(([root]) => root === changedRoot))
+                .toBe(true);
+            discover.mockClear();
+
+            changedLabel.data = "2 godziny temu";
+            changedRoot.lang = "pl";
+            await flushMutations();
+            expect(changedSource.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+            expect(unchangedSource.nextElementSibling).toBe(unchangedOutput);
+            expect(document.querySelectorAll("[data-no-more-ago-output]"))
+                .toHaveLength(2);
+        } finally {
+            controller.teardown();
+            discover.mockRestore();
+            document.documentElement.removeAttribute("lang");
+        }
+    });
 
     it("resolves Bluesky in place after startup and restores exact page content", async () => {
         document.head.innerHTML = '<base href="https://bsky.app/">';
@@ -308,6 +467,7 @@ describe("DocumentTransformationController", () => {
             matchesElement: (element) => element === source,
             getMutationSources: () => [],
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: (element) => evidence.title === "ready"
                 ? {
                     ruleId: "delegating-mapper",
@@ -338,7 +498,7 @@ describe("DocumentTransformationController", () => {
         controller.teardown();
     });
 
-    it("scopes document-wide character observation to current route rules", () => {
+    it("keeps character-data observation off the document-wide observer", () => {
         document.body.innerHTML = "<main></main>";
         const observe = vi.spyOn(MutationObserver.prototype, "observe");
         const controller = new DocumentTransformationController({
@@ -352,13 +512,15 @@ describe("DocumentTransformationController", () => {
             const documentOptions = (): MutationObserverInit | undefined =>
                 observe.mock.calls.filter(([target]) => target === document).at(-1)?.[1];
             expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 
             controller.reconcileRoute(new URL("https://www.linkedin.com/feed/"));
-            expect(documentOptions()?.characterData).toBe(true);
-            expect(documentOptions()?.characterDataOldValue).toBe(true);
+            expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 
             controller.reconcileRoute(new URL("https://example.test/next"));
             expect(documentOptions()?.characterData).toBeUndefined();
+            expect(documentOptions()?.characterDataOldValue).toBeUndefined();
         } finally {
             controller.teardown();
             observe.mockRestore();
@@ -735,7 +897,7 @@ describe("DocumentTransformationController", () => {
 
     it("reformats only its existing owned sources when presentation changes", () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
-            + 'relative</relative-time><span id="foreign">foreign</span>';
+            + '2 hours ago</relative-time><span id="foreign">foreign</span>';
         let display: DisplaySettings = {
             formatMode: "system",
             timeZone: { mode: "iana", identifier: "America/New_York" },
@@ -773,7 +935,7 @@ describe("DocumentTransformationController", () => {
 
     it("processes additions and restores removed subtrees", async () => {
         document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">initial</relative-time>';
+            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const initial = document.querySelector("relative-time");
         if (!initial) {
             throw new Error("Expected initial source");
@@ -790,8 +952,10 @@ describe("DocumentTransformationController", () => {
         }
 
         const wrapper = document.createElement("section");
-        wrapper.innerHTML = '<relative-time datetime="2026-08-24T10:15:00Z">new</relative-time>'
-            + '<relative-time datetime="2026-08-25T10:15:00Z">newer</relative-time>';
+        wrapper.innerHTML =
+            '<relative-time datetime="2026-08-24T10:15:00Z">3 hours ago</relative-time>'
+            + '<relative-time datetime="2026-08-25T10:15:00Z">'
+            + "4 hours ago</relative-time>";
         document.body.append(wrapper);
         await flushMutations();
         expect(wrapper.querySelectorAll("time[data-no-more-ago-output]")).toHaveLength(2);
@@ -844,7 +1008,7 @@ describe("DocumentTransformationController", () => {
         "repairs moved outputs and preserves original hidden state (%s)",
         async (initiallyHidden) => {
             document.body.innerHTML = `<relative-time${initiallyHidden ? " hidden" : ""} `
-                + 'datetime="2026-08-23T10:15:00Z">source</relative-time>';
+                + 'datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
             const source = document.querySelector("relative-time");
             if (!source) {
                 throw new Error("Expected source");
@@ -877,7 +1041,7 @@ describe("DocumentTransformationController", () => {
 
     it("does not restore a page-removed hidden state for an initially hidden source", async () => {
         document.body.innerHTML = '<relative-time hidden datetime="2026-08-23T10:15:00Z">'
-            + "source</relative-time>";
+            + "2 hours ago</relative-time>";
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -900,7 +1064,7 @@ describe("DocumentTransformationController", () => {
 
     it("moves owned subtrees and creates fresh pairs after reinsertion", async () => {
         document.body.innerHTML = '<main id="one">'
-            + '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>'
+            + '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>'
             + '</main><main id="two"></main>';
         const wrapper = document.getElementById("one");
         const destination = document.getElementById("two");
@@ -940,7 +1104,7 @@ describe("DocumentTransformationController", () => {
 
     it("does not recurse when invalidation removes an owned output", async () => {
         document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
+            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -965,9 +1129,9 @@ describe("DocumentTransformationController", () => {
 
     it("reconciles combined ownership mutations once", async () => {
         document.body.innerHTML = `
-      <relative-time id="moved" datetime="2026-08-23T10:15:00Z">moved</relative-time>
-      <relative-time id="removed" datetime="2026-08-23T11:15:00Z">removed</relative-time>
-      <relative-time id="outside" datetime="2026-08-23T12:15:00Z">outside</relative-time>`;
+      <relative-time id="moved" datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>
+      <relative-time id="removed" datetime="2026-08-23T11:15:00Z">3 hours ago</relative-time>
+      <relative-time id="outside" datetime="2026-08-23T12:15:00Z">4 hours ago</relative-time>`;
         const moved = document.getElementById("moved");
         const removed = document.getElementById("removed");
         if (!moved || !removed) {
@@ -985,6 +1149,7 @@ describe("DocumentTransformationController", () => {
                 const own = root instanceof Element && root.matches("relative-time") ? [root] : [];
                 return [...own, ...Array.from(root.querySelectorAll("relative-time"))];
             },
+            isRelativePresentation: () => true,
             extract: (element) => {
                 visits.push(element);
                 const datetime = element.getAttribute("datetime");
@@ -1029,7 +1194,8 @@ describe("DocumentTransformationController", () => {
         removed.remove();
         removedOutput.remove();
         const added = document.createElement("section");
-        added.innerHTML = '<relative-time datetime="2026-08-25T10:15:00Z">added</relative-time>';
+        added.innerHTML = '<relative-time datetime="2026-08-25T10:15:00Z">'
+            + "5 hours ago</relative-time>";
         document.body.append(added);
         document.body.append(document.createTextNode("unrelated"));
         await flushMutations();
@@ -1048,7 +1214,7 @@ describe("DocumentTransformationController", () => {
 
     it("rolls back observer setup and succeeds on a later start", () => {
         document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
+            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -1078,8 +1244,8 @@ describe("DocumentTransformationController", () => {
 
     it("restores a partial initial pass before retrying with the same adapter", () => {
         document.body.innerHTML = `
-      <relative-time id="first" datetime="2026-08-23T10:15:00Z">first</relative-time>
-      <relative-time id="second" datetime="2026-08-24T10:15:00Z">second</relative-time>`;
+      <relative-time id="first" datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>
+      <relative-time id="second" datetime="2026-08-24T10:15:00Z">3 hours ago</relative-time>`;
         const first = document.getElementById("first");
         const second = document.getElementById("second");
         if (!first || !second) {
@@ -1095,6 +1261,7 @@ describe("DocumentTransformationController", () => {
                 ...(root instanceof Element && root.matches("relative-time") ? [root] : []),
                 ...Array.from(root.querySelectorAll("relative-time")),
             ],
+            isRelativePresentation: () => true,
             extract: (element) => {
                 if (shouldThrow && element === second) {
                     throw new Error("candidate extraction failed");
@@ -1130,7 +1297,8 @@ describe("DocumentTransformationController", () => {
 
     it("bounds dynamic discovery and batches exact-source datetime changes", async () => {
         document.body.innerHTML =
-            '<relative-time id="outside" datetime="2026-08-23T10:15:00Z">outside</relative-time>';
+            '<relative-time id="outside" datetime="2026-08-23T10:15:00Z">'
+            + "2 hours ago</relative-time>";
         const roots: ParentNode[] = [];
         const visits: Element[] = [];
         const adapter: TimestampSourceRule = {
@@ -1143,6 +1311,7 @@ describe("DocumentTransformationController", () => {
                 const own = root instanceof Element && root.matches("relative-time") ? [root] : [];
                 return [...own, ...Array.from(root.querySelectorAll("relative-time"))];
             },
+            isRelativePresentation: () => true,
             extract: (element) => {
                 visits.push(element);
                 return {
@@ -1211,7 +1380,7 @@ describe("DocumentTransformationController", () => {
 
     it("leaves forged output detach and reparent operations untouched", async () => {
         document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
+            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -1243,7 +1412,7 @@ describe("DocumentTransformationController", () => {
 
     it("performs one invalidation reconciliation after observer drains", async () => {
         document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">source</relative-time>';
+            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
         const source = document.querySelector("relative-time");
         if (!source) {
             throw new Error("Expected source");
@@ -1258,6 +1427,7 @@ describe("DocumentTransformationController", () => {
                 ...(root instanceof Element && root.matches("relative-time") ? [root] : []),
                 ...Array.from(root.querySelectorAll("relative-time")),
             ],
+            isRelativePresentation: () => true,
             extract: (element) => {
                 visits += 1;
                 const datetime = element.getAttribute("datetime");
@@ -1292,7 +1462,7 @@ describe("DocumentTransformationController", () => {
     });
 
     it("reacquires extension-owned hidden state when a page removes it", async () => {
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
         if (!source) {
             throw new Error("Expected generic source");
@@ -1408,7 +1578,7 @@ describe("DocumentTransformationController", () => {
         controller.start();
         expect(link.textContent).toBe("1 hour ago");
 
-        link.replaceChildren(document.createTextNode("updated relative label"));
+        link.replaceChildren(document.createTextNode("2 hours ago"));
         await flushMutations();
         expect(link.textContent).toBe("2026");
         controller.teardown();
@@ -1485,7 +1655,7 @@ describe("DocumentTransformationController", () => {
             wrapper.title = "2026-08-28T10:09:07Z";
             const link = document.createElement("a");
             link.href = "item?id=1";
-            link.textContent = "new relative";
+            link.textContent = "2 hours ago";
             wrapper.append(link);
             document.querySelector("#one")?.append(wrapper);
             await flushMutations();
@@ -1498,7 +1668,7 @@ describe("DocumentTransformationController", () => {
             if (!(target instanceof Text)) {
                 throw new Error("Expected dynamic text target");
             }
-            target.data = "page refreshed label";
+            target.data = "3 hours ago";
             await flushMutations();
             expect(link.textContent).toBe("2027");
             document.querySelector("#two")?.append(wrapper);
@@ -1508,32 +1678,32 @@ describe("DocumentTransformationController", () => {
             const replacement = document.createElement("a");
             replacement.id = "replacement-link";
             replacement.href = "item?id=2";
-            replacement.textContent = "replacement relative";
+            replacement.textContent = "4 hours ago";
             wrapper.replaceChildren(replacement);
             await flushMutations();
             expect(replacement.textContent).toBe("2027");
-            expect(originalLink.textContent).toBe("page refreshed label");
+            expect(originalLink.textContent).toBe("3 hours ago");
             const replacementTarget = replacement.firstChild;
             if (!(replacementTarget instanceof Text)) {
                 throw new Error("Expected replacement text target");
             }
             document.querySelector("#two")?.replaceChildren();
             await flushMutations();
-            expect(replacement.textContent).toBe("replacement relative");
+            expect(replacement.textContent).toBe("4 hours ago");
             wrapper.title = "2027-08-28T10:09:07";
             document.querySelector("#one")?.append(wrapper);
             await flushMutations();
-            expect(replacement.textContent).toBe("replacement relative");
+            expect(replacement.textContent).toBe("4 hours ago");
             wrapper.title = "2027-08-28T10:09:07Z";
             await flushMutations();
             for (const invalidTitle of ["   ", "not a timestamp"]) {
                 wrapper.title = invalidTitle;
                 await flushMutations();
-                expect(replacement.textContent).toBe("replacement relative");
+                expect(replacement.textContent).toBe("4 hours ago");
             }
             wrapper.removeAttribute("title");
             await flushMutations();
-            expect(replacement.textContent).toBe("replacement relative");
+            expect(replacement.textContent).toBe("4 hours ago");
             visits.length = 0;
             await flushMutations();
             await flushMutations();
@@ -1590,7 +1760,7 @@ describe("DocumentTransformationController", () => {
             )).toBe(true);
             expect(inspected.every((element) => element === source)).toBe(true);
             expect(source.hasAttribute("hidden")).toBe(false);
-            expect(source.textContent).toBe("relative");
+            expect(source.textContent).toBe("2 hours ago");
             expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
         } finally {
             controller.teardown();
@@ -1627,7 +1797,7 @@ describe("DocumentTransformationController", () => {
         "reconciles generic sources when ancestor accessibility suppression changes",
         async () => {
             const { controller } = createGenericControllerFixture(
-                '<section><time datetime="2026-08-23T10:15Z">relative</time></section>',
+                '<section><time datetime="2026-08-23T10:15Z">2 hours ago</time></section>',
             );
             const section = document.querySelector("section");
             if (!section) {
@@ -1652,7 +1822,7 @@ describe("DocumentTransformationController", () => {
             }) as CSSStyleDeclaration,
         );
         const { source, controller } = createGenericControllerFixture(
-            '<time class="page-hidden" datetime="2026-08-23T10:15Z">relative</time>',
+            '<time class="page-hidden" datetime="2026-08-23T10:15Z">2 hours ago</time>',
         );
         try {
             controller.start();
@@ -1678,7 +1848,7 @@ describe("DocumentTransformationController", () => {
         );
         const { source, controller } = createGenericControllerFixture(
             '<section class="page-hidden"><time datetime="2026-08-23T10:15Z">'
-            + "relative</time></section>",
+            + "2 hours ago</time></section>",
         );
         const section = source.parentElement;
         if (!section) {
@@ -1699,10 +1869,11 @@ describe("DocumentTransformationController", () => {
         }
     });
 
-    it("applies no-op, clear, and replace as total route transitions", () => {
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+    it("applies no-op, clear, and replace as total route transitions", async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
-        if (!source) {
+        const label = source?.firstChild;
+        if (!source || !(label instanceof Text)) {
             throw new Error("Expected route source");
         }
         const sessions: Array<{
@@ -1750,6 +1921,15 @@ describe("DocumentTransformationController", () => {
         expect(source.hasAttribute("hidden")).toBe(false);
         expect(activate).toHaveBeenCalledOnce();
 
+        const extract = vi.spyOn(genericTimeRule, "extract");
+        try {
+            label.data = "3 hours ago";
+            await flushMutations();
+            expect(extract).not.toHaveBeenCalled();
+        } finally {
+            extract.mockRestore();
+        }
+
         controller.reconcileRoute(new URL("https://example.test/clear"));
         const clearedOutput = document.querySelector("[data-no-more-ago-output]");
         expect(clearedOutput).toBeInstanceOf(HTMLTimeElement);
@@ -1771,7 +1951,7 @@ describe("DocumentTransformationController", () => {
     });
 
     it("restores before activating and passing a replacement route", () => {
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
         if (!source) {
             throw new Error("Expected route source");
@@ -1799,6 +1979,7 @@ describe("DocumentTransformationController", () => {
             matches: () => true,
             matchesElement: (element) => element === source,
             discover: () => [source],
+            isRelativePresentation: () => true,
             extract: (element) => {
                 events.push("pass");
                 return {
@@ -1837,7 +2018,7 @@ describe("DocumentTransformationController", () => {
     });
 
     it("fails closed and restores ownership when changed-route classification throws", () => {
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">relative</time>';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector("time");
         if (!source) {
             throw new Error("Expected route source");

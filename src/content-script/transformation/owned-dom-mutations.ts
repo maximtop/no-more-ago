@@ -7,6 +7,14 @@
  */
 export interface OwnedDomMutationSink {
     /**
+     * Applies one reconciliation's text-target changes with one final observer rebuild.
+     *
+     * @param update - Synchronous rendering or restoration work.
+     * @returns - Value returned by the supplied work.
+     */
+    batchTextObservationUpdates?<Result>(update: () => Result): Result;
+
+    /**
      * Records removal of a verified generated output.
      *
      * @param output - Extension-owned time node about to be removed.
@@ -38,12 +46,12 @@ export interface OwnedDomMutationSink {
     trackOwnedTextSource?(source: Element, target: Text): void;
 
     /**
-     * Retargets an already observed in-place source without rebuilding other observations.
+     * Retargets an already observed in-place source.
      *
      * @param source - Source that remains owned across the target replacement.
      * @param previousTarget - Previously retained page-owned text node.
      * @param target - Replacement page-owned text node inside the same source.
-     * @returns - Whether the active observation was retargeted in place.
+     * @returns - Whether the active observation was retargeted.
      */
     replaceOwnedTextSource?(
         source: Element,
@@ -64,6 +72,21 @@ export interface OwnedDomMutationSink {
      * @param sources - Sources whose owned labels are no longer rendered.
      */
     untrackOwnedTextSources?(sources: readonly Element[]): void;
+
+    /**
+     * Registers bounded character-data observation for a discovered page label.
+     *
+     * @param source - Candidate source whose current label controls eligibility.
+     * @param target - Smallest page node containing only the candidate label.
+     */
+    trackPageTextSource?(source: Element, target: Node): void;
+
+    /**
+     * Releases candidate-label observation for one discovered source.
+     *
+     * @param source - Source that no longer has an observable presentation candidate.
+     */
+    untrackPageTextSource?(source: Element): void;
 
     /**
      * Registers a discovered source for ancestor visibility tracking.

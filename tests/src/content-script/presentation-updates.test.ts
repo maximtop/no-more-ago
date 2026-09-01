@@ -71,7 +71,7 @@ function setWatchMarkup(publication: string): Element {
     document.body.innerHTML = `
         <ytd-watch-metadata>
             <div id="info-strings">
-                <yt-formatted-string>unparseable publication label</yt-formatted-string>
+                <yt-formatted-string>3 months ago</yt-formatted-string>
             </div>
         </ytd-watch-metadata>`;
     const source = document.querySelector("yt-formatted-string");
@@ -127,7 +127,8 @@ describe("document presentation updates", () => {
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
         document.head.innerHTML = "";
-        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">relative</time>';
+        document.body.innerHTML =
+            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
         forbiddenFetch.mockClear();
         vi.stubGlobal("fetch", forbiddenFetch);
     });
@@ -240,7 +241,7 @@ describe("document presentation updates", () => {
         const output = requireWatchOutput();
         expect(output.dateTime).toBe("2024-02-29");
         expect(output.textContent).toBe("2024/02/29");
-        pageSource.textContent = "changed page-owned relative copy";
+        pageSource.textContent = "2 months ago";
         await flushRuntime();
 
         expect(source.dispatch({
@@ -255,7 +256,7 @@ describe("document presentation updates", () => {
         expect(requireWatchOutput()).toBe(output);
         expect(output.dateTime).toBe("2024-02-29");
         expect(output.textContent).toBe("29/02/2024");
-        expect(pageSource.textContent).toBe("changed page-owned relative copy");
+        expect(pageSource.textContent).toBe("2 months ago");
 
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,

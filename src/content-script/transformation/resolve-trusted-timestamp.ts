@@ -57,10 +57,7 @@ function resolvePresentation(
     presentation: TimestampPresentation,
 ): TimestampPresentation | null {
     const kind: string = presentation.kind;
-    if (
-        kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME
-        || kind === TIMESTAMP_PRESENTATION_KIND.APPENDED_TIME
-    ) {
+    if (kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
         return presentation;
     }
     if (

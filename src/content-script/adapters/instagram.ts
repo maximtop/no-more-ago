@@ -15,6 +15,10 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
 } from "./types";
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from "./relative-presentation";
 
 /**
  * Stable identifier for the Instagram presentation rule.
@@ -64,6 +68,10 @@ export const instagramAdapter = {
         INSTAGRAM_TIME_SELECTOR,
         isInstagramTimeElement,
     ),
+    isRelativePresentation: createRelativePresentationClassifier([
+        RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
+        RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+    ]),
     extract: (element) => {
         if (!isInstagramTimeElement(element)) {
             return null;

@@ -67,11 +67,14 @@ describe("Telegram Web K document lifecycle", () => {
             controller.start();
             document.getElementById("live")?.insertAdjacentHTML(
                 "beforeend",
-                messageMarkup("live-message", "1778774880", "16:08"),
+                messageMarkup("live-message", "1778774880", "2 hours ago"),
             );
             const historyBatch = document.createElement("div");
-            historyBatch.innerHTML = messageMarkup("history-one", "1778774940", "16:09")
-                + messageMarkup("history-two", "1778775000", "16:10");
+            historyBatch.innerHTML = messageMarkup(
+                "history-one",
+                "1778774940",
+                "3 hours ago",
+            ) + messageMarkup("history-two", "1778775000", "4 hours ago");
             document.getElementById("history")?.append(historyBatch);
             await flushMutations();
 
@@ -86,9 +89,12 @@ describe("Telegram Web K document lifecycle", () => {
             controller.teardown();
         }
 
-        expect(document.getElementById("live-message-clock")?.textContent).toBe("16:08");
-        expect(document.getElementById("history-one-clock")?.textContent).toBe("16:09");
-        expect(document.getElementById("history-two-clock")?.textContent).toBe("16:10");
+        expect(document.getElementById("live-message-clock")?.textContent)
+            .toBe("2 hours ago");
+        expect(document.getElementById("history-one-clock")?.textContent)
+            .toBe("3 hours ago");
+        expect(document.getElementById("history-two-clock")?.textContent)
+            .toBe("4 hours ago");
     });
 
     it("bounds work for a large history, one insertion, and an irrelevant mutation", async () => {
@@ -98,7 +104,7 @@ describe("Telegram Web K document lifecycle", () => {
             (_, index) => messageMarkup(
                 `bulk-${String(index)}`,
                 "1778774880",
-                `page ${String(index)}`,
+                `${String(index + 1)} hours ago`,
             ),
         ).join("");
         document.body.innerHTML = `<main id="bulk-history">${rows}</main>`;
@@ -132,7 +138,7 @@ describe("Telegram Web K document lifecycle", () => {
             const visitsBeforeInsertion = extract.mock.calls.length;
             document.getElementById("bulk-history")?.insertAdjacentHTML(
                 "beforeend",
-                messageMarkup("bulk-new", "1778774940", "new page label"),
+                messageMarkup("bulk-new", "1778774940", "3 hours ago"),
             );
             await flushMutations();
             expect(extract.mock.calls.length - visitsBeforeInsertion).toBeLessThanOrEqual(1);
@@ -152,7 +158,7 @@ describe("Telegram Web K document lifecycle", () => {
     });
 
     it("preserves an owned clock through unrelated message changes", async () => {
-        document.body.innerHTML = messageMarkup("tracked", "1778774880", "16:08")
+        document.body.innerHTML = messageMarkup("tracked", "1778774880", "2 hours ago")
             + '<div id="unrelated" class="bubble"><span>unchanged</span></div>';
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
@@ -193,7 +199,7 @@ describe("Telegram Web K document lifecycle", () => {
     });
 
     it("reconciles eligibility when relevant descendant classes change", async () => {
-        document.body.innerHTML = messageMarkup("shape", "1778774880", "16:08");
+        document.body.innerHTML = messageMarkup("shape", "1778774880", "2 hours ago");
         const bubble = document.getElementById("shape");
         const timeInner = document.querySelector("#shape .time-inner");
         const clock = document.getElementById("shape-clock");
@@ -216,33 +222,33 @@ describe("Telegram Web K document lifecycle", () => {
 
             clock.classList.remove("i18n");
             await flushMutations();
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
             clock.classList.add("i18n");
             await flushMutations();
             expect(clock.textContent).toBe("2026-05-14 16:08");
 
             timeInner.classList.remove("time-inner");
             await flushMutations();
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
             timeInner.classList.add("time-inner");
             await flushMutations();
             expect(clock.textContent).toBe("2026-05-14 16:08");
 
             forwardedLabel.classList.add("bubble-name-forwarded");
             await flushMutations();
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
             forwardedLabel.classList.remove("bubble-name-forwarded");
             await flushMutations();
             expect(clock.textContent).toBe("2026-05-14 16:08");
         } finally {
             controller.teardown();
         }
-        expect(clock.textContent).toBe("16:08");
+        expect(clock.textContent).toBe("2 hours ago");
     });
 
     it("releases stale ownership across moves, removals, and replacements", async () => {
         document.body.innerHTML = '<main><section id="first">'
-            + messageMarkup("moving", "1778774880", "16:08")
+            + messageMarkup("moving", "1778774880", "2 hours ago")
             + '</section><section id="second"></section></main>';
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
@@ -267,23 +273,28 @@ describe("Telegram Web K document lifecycle", () => {
 
             bubble.remove();
             await flushMutations();
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
             expect(bubble.isConnected).toBe(false);
 
-            second.innerHTML = messageMarkup("replacement", "1778774940", "16:09");
+            second.innerHTML = messageMarkup("replacement", "1778774940", "3 hours ago");
             await flushMutations();
             expect(document.getElementById("replacement-clock")?.textContent)
                 .toBe("2026-05-14 16:09");
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
         } finally {
             controller.teardown();
         }
 
-        expect(document.getElementById("replacement-clock")?.textContent).toBe("16:09");
+        expect(document.getElementById("replacement-clock")?.textContent)
+            .toBe("3 hours ago");
     });
 
     it("reprocesses an exact source when data-timestamp changes", async () => {
-        document.body.innerHTML = messageMarkup("dynamic-bubble", "1778774880", "16:08");
+        document.body.innerHTML = messageMarkup(
+            "dynamic-bubble",
+            "1778774880",
+            "2 hours ago",
+        );
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
             root: document,
@@ -304,18 +315,18 @@ describe("Telegram Web K document lifecycle", () => {
             expect(clock.textContent).toBe("2026-05-15 16:08");
             bubble.removeAttribute("data-timestamp");
             await flushMutations();
-            expect(clock.textContent).toBe("16:08");
+            expect(clock.textContent).toBe("2 hours ago");
             bubble.setAttribute("data-timestamp", "1778774880");
             await flushMutations();
             expect(clock.textContent).toBe("2026-05-14 16:08");
         } finally {
             controller.teardown();
         }
-        expect(clock.textContent).toBe("16:08");
+        expect(clock.textContent).toBe("2 hours ago");
     });
 
     it("restores the latest page label while a forwarded shape is ambiguous", async () => {
-        document.body.innerHTML = messageMarkup("changing", "1778774880", "16:08");
+        document.body.innerHTML = messageMarkup("changing", "1778774880", "2 hours ago");
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
             root: document,
@@ -330,23 +341,23 @@ describe("Telegram Web K document lifecycle", () => {
 
         try {
             controller.start();
-            target.data = "16:10";
+            target.data = "3 hours ago";
             await flushMutations();
             expect(target.data).toBe("2026-05-14 16:08");
             bubble.classList.add("forwarded");
             await flushMutations();
-            expect(target.data).toBe("16:10");
+            expect(target.data).toBe("3 hours ago");
             bubble.classList.remove("forwarded");
             await flushMutations();
             expect(target.data).toBe("2026-05-14 16:08");
         } finally {
             controller.teardown();
         }
-        expect(target.data).toBe("16:10");
+        expect(target.data).toBe("3 hours ago");
     });
 
     it("leaves replacement primary-edit markup unchanged and releases ownership", async () => {
-        document.body.innerHTML = messageMarkup("edited", "1778774880", "16:08");
+        document.body.innerHTML = messageMarkup("edited", "1778774880", "2 hours ago");
         const controller = new DocumentTransformationController({
             url: TELEGRAM_WEB_K_URL,
             root: document,
@@ -373,7 +384,7 @@ describe("Telegram Web K document lifecycle", () => {
     });
 
     it("reformats only owned clocks for system, UTC, and IANA settings", () => {
-        document.body.innerHTML = messageMarkup("settings", "1778774880", "16:08")
+        document.body.innerHTML = messageMarkup("settings", "1778774880", "2 hours ago")
             + '<div id="unrelated-settings" class="bubble"><span>unchanged</span></div>';
         const displays: readonly DisplaySettings[] = [
             {
@@ -415,6 +426,6 @@ describe("Telegram Web K document lifecycle", () => {
         } finally {
             controller.teardown();
         }
-        expect(clock.textContent).toBe("16:08");
+        expect(clock.textContent).toBe("2 hours ago");
     });
 });
