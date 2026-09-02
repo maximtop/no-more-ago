@@ -63,7 +63,7 @@ jobs:
                   done
                   if [[ "${#MISSING[@]}" -gt 0 ]]; then
                     echo "Missing store configuration: ${MISSING[*]}" >&2
-                    echo "Set the CHROME_APP_ID repository variable and the secrets listed in DEVELOPMENT.md" >&2
+                    echo "Set CHROME_APP_ID and the secrets listed in DEVELOPMENT.md" >&2
                     exit 1
                   fi
 
@@ -78,28 +78,34 @@ jobs:
 
                   RELEASE_JSON="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
                     --json isDraft,isPrerelease,assets)"
-                  if [[ "$(jq -r '.isDraft' <<< "$RELEASE_JSON")" != "false" ]]; then
-                    echo "Release $RELEASE_TAG is a draft; publish it before deploying to the store" >&2
+                  IS_DRAFT="$(jq -r '.isDraft' <<< "$RELEASE_JSON")"
+                  if [[ "$IS_DRAFT" != "false" ]]; then
+                    echo "Release $RELEASE_TAG is a draft; publish it before deploying" >&2
                     exit 1
                   fi
-                  if [[ "$(jq -r '.isPrerelease' <<< "$RELEASE_JSON")" != "false" ]]; then
-                    echo "Release $RELEASE_TAG is a pre-release; store deployment ships full releases only" >&2
+                  IS_PRERELEASE="$(jq -r '.isPrerelease' <<< "$RELEASE_JSON")"
+                  if [[ "$IS_PRERELEASE" != "false" ]]; then
+                    echo "Release $RELEASE_TAG is a pre-release and is not deployed" >&2
                     exit 1
                   fi
 
                   # The release workflow publishes only tags reachable from
                   # master; a release created by hand must meet the same bar.
-                  COMPARE_STATUS="$(gh api "repos/$GITHUB_REPOSITORY/compare/master...$RELEASE_TAG" --jq '.status')"
+                  COMPARE="repos/$GITHUB_REPOSITORY/compare/master...$RELEASE_TAG"
+                  COMPARE_STATUS="$(gh api "$COMPARE" --jq '.status')"
                   if [[ "$COMPARE_STATUS" != "identical" && "$COMPARE_STATUS" != "behind" ]]; then
-                    echo "Release commit must be reachable from master (compare status: $COMPARE_STATUS)" >&2
+                    echo "Release commit is not on master (compare status: $COMPARE_STATUS)" >&2
                     exit 1
                   fi
 
                   # The Chrome archive is the one release asset ending in
                   # -chrome.zip, so the asset name is owned by release.yml alone.
-                  CHROME_ASSET="$(jq -r '[.assets[].name | select(endswith("-chrome.zip"))] | if length == 1 then .[0] else empty end' <<< "$RELEASE_JSON")"
+                  CHROME_ASSET="$(jq -r '
+                    [.assets[].name | select(endswith("-chrome.zip"))]
+                    | if length == 1 then .[0] else empty end
+                  ' <<< "$RELEASE_JSON")"
                   if [[ -z "$CHROME_ASSET" ]]; then
-                    echo "Release $RELEASE_TAG must have exactly one asset ending in -chrome.zip" >&2
+                    echo "Release $RELEASE_TAG needs exactly one asset ending in -chrome.zip" >&2
                     exit 1
                   fi
 
@@ -134,7 +140,7 @@ jobs:
                   fi
                   ZIP_VERSION="$(unzip -p "$CHROME_ASSET" manifest.json | jq -er '.version')"
                   if [[ "$ZIP_VERSION" != "$VERSION" ]]; then
-                    echo "$CHROME_ASSET manifest version $ZIP_VERSION does not match release version $VERSION" >&2
+                    echo "$CHROME_ASSET manifest version $ZIP_VERSION does not match $VERSION" >&2
                     exit 1
                   fi
 
@@ -165,8 +171,8 @@ jobs:
                   # review unless the store confirmed this exact version as the
                   # draft. Re-uploading the same version replaces the draft.
                   if ! grep -qxF "Upload State: SUCCEEDED" "$RUNNER_TEMP/upload-output.txt"; then
-                    echo "Upload did not reach SUCCEEDED; refusing to submit an unconfirmed draft" >&2
-                    echo "Re-run this workflow with the same tag once the store finishes processing" >&2
+                    echo "Upload did not reach SUCCEEDED; not submitting an unconfirmed draft" >&2
+                    echo "Re-run with the same tag once the store finishes processing" >&2
                     exit 1
                   fi
                   if ! grep -qxF "Version: $VERSION" "$RUNNER_TEMP/upload-output.txt"; then
@@ -175,7 +181,7 @@ jobs:
                   fi
 
             - name: Submit for review with deferred publishing
-              id: publish
+              id: submit
               run: |
                   set -euo pipefail
                   go-webext publish chrome -a "$CHROME_APP_ID" --staged 2>&1
@@ -185,7 +191,7 @@ jobs:
               env:
                   VERSION: ${{ steps.release.outputs.version }}
                   UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
-                  PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+                  SUBMIT_OUTCOME: ${{ steps.submit.outcome }}
               run: |
                   set -euo pipefail
                   # The summary is written even when the status call fails,
@@ -200,14 +206,16 @@ jobs:
                     echo "## Chrome Web Store deployment"
                     echo
                     echo "- Release: \`$RELEASE_TAG\` (version $VERSION)"
-                    if [[ "$PUBLISH_OUTCOME" == "success" ]]; then
+                    if [[ "$SUBMIT_OUTCOME" == "success" ]]; then
                       echo "- Submitted for review with deferred (staged) publishing"
-                      echo "- After approval, publish manually in the Developer Dashboard within 30 days"
+                      echo "- After approval, publish it in the Developer Dashboard within 30 days"
                     else
-                      echo "- Upload step: \`$UPLOAD_OUTCOME\`; submission step: \`$PUBLISH_OUTCOME\`; review was not confirmed"
+                      echo "- Upload step \`$UPLOAD_OUTCOME\`, submission step \`$SUBMIT_OUTCOME\`"
+                      echo "- The review was not confirmed"
                     fi
                     echo "- Store status call: \`$STATUS_OUTCOME\`"
-                    echo "- The status covers published and submitted state only; draft processing is visible in the Developer Dashboard"
+                    echo "- The status covers published and submitted state only"
+                    echo "- Draft processing is visible in the Developer Dashboard"
                     echo
                     echo '```'
                     cat "$RUNNER_TEMP/status-output.txt"

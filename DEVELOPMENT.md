@@ -388,7 +388,7 @@ hand in the GitHub UI.
    - `no-more-ago-<version>-chrome.zip`, `no-more-ago-<version>-edge.zip`,
      and `no-more-ago-<version>-firefox.zip`
    - `no-more-ago-<version>-source.zip`, the tagged repository state
-   - `SHA256SUMS.txt`, GNU `sha256sum` lines with the bare archive names
+   - `SHA256SUMS.txt`, GNU `sha256sum` lines with the bare asset names
 
 Release notes are a fixed sentence followed by the notes GitHub generates from
 the pull requests merged since the previous tag; there is no changelog file.
@@ -396,17 +396,20 @@ Edit them afterwards with `gh release edit vX.Y.Z --notes` when needed.
 
 `gh release create` uploads the assets to a draft and publishes it last; a
 failed upload deletes the draft again, so a failed run normally leaves no
-release behind and can simply be re-run. If a draft survives (a cancelled run,
-or a release created by hand), delete it first; the tag stays:
+release behind and can simply be re-run. If a draft survives a cancelled run,
+or a release for the tag was created by hand, the tag run refuses to continue:
+delete that release first; the tag stays:
 
 ~~~sh
 gh release delete vX.Y.Z --yes
 ~~~
 
 A manual run (**Actions → Release → Run workflow**, or the command below)
-is a dry run: it executes the same checks and build and uploads the archives
-as a workflow artifact, but publishes nothing. `gh workflow run` needs the
-workflow file on `master`; pass `--ref` to dry-run the copy on a branch.
+is a dry run: it checks that the `package.json` version is semantic, runs
+`pnpm check`, builds, verifies the manifest versions, and uploads the archives
+as a workflow artifact, but skips the tag gates and publishes nothing.
+`gh workflow run` needs the workflow file on `master`; pass `--ref` to dry-run
+the copy on a branch.
 
 ~~~sh
 gh workflow run release.yml --ref <branch>
@@ -424,16 +427,18 @@ the retry path:
 gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
 ~~~
 
-The workflow fails fast when `CHROME_APP_ID` or any of the four secrets below
-is unset, rejects tags that do not match `vX.Y.Z`, drafts, pre-releases, and
-release commits that are not reachable from `master`, downloads the release
-asset ending in `-chrome.zip` together with `SHA256SUMS.txt` (never a fresh
-rebuild), verifies the checksum and the manifest version inside, uploads the
-archive with the `go-webext` version pinned by `GO_WEBEXT_VERSION`, refuses to
-continue unless the store confirms the upload of that exact version, submits
-the draft for review with deferred (staged) publishing, and writes the store
-status to the job summary. The status covers the published and submitted
-revisions only; draft processing is visible in the Developer Dashboard.
+The workflow refuses to run when `CHROME_APP_ID` or any of the four secrets
+below is unset, and rejects tags that do not match `vX.Y.Z`, draft and
+pre-release releases, and release commits that are not reachable from
+`master`. It downloads the release asset ending in `-chrome.zip` together
+with `SHA256SUMS.txt`, never a fresh rebuild, and verifies the checksum and
+the manifest version inside. It then uploads the archive through Chrome Web
+Store API v2 with the `go-webext` version pinned by `GO_WEBEXT_VERSION` in
+the workflow, refuses to continue unless the store confirms the upload of
+that exact version, submits the draft for review with deferred (staged)
+publishing, and writes the store status to the job summary. The status covers
+the published and submitted state only; draft processing is visible in the
+Developer Dashboard.
 
 Nothing goes live automatically. When the review verdict arrives, publish the
 approved version by hand in the Chrome Web Store Developer Dashboard. A staged
@@ -443,11 +448,14 @@ successful submission, not approval.
 
 Failure recovery:
 
-- **`invalid_grant` or another authentication error:** the refresh token is
-  dead and nothing was uploaded. Mint a new one for the existing OAuth client
-  (OAuth Playground with the `https://www.googleapis.com/auth/chromewebstore`
-  scope) or reuse the value the other extension repositories already use,
-  update `CHROME_REFRESH_TOKEN`, and re-run.
+- **`invalid_grant`:** the refresh token is dead and nothing was uploaded.
+  Mint a new one for the existing OAuth client (OAuth Playground with the
+  `https://www.googleapis.com/auth/chromewebstore` scope) or reuse the value
+  the other extension repositories already use, update `CHROME_REFRESH_TOKEN`,
+  and re-run.
+- **`invalid_client`:** `CHROME_CLIENT_ID` or `CHROME_CLIENT_SECRET` is wrong;
+  the refresh token is fine. Fix those two secrets and re-run.
+- **A 5xx from the token endpoint:** transient on Google's side; re-run.
 - **`deleted_client`:** the OAuth client itself is gone, so no token can be
   issued for it. Create a new Web application client in the Google Cloud
   project with `https://developers.google.com/oauthplayground` as an
@@ -480,12 +488,15 @@ The store item must exist before any deployment: the API cannot create the
 listing. One-time setup:
 
 1. Create the item in the Chrome Web Store Developer Dashboard by uploading
-   any release archive by hand, and complete the listing, privacy, and
-   distribution tabs there.
-2. Copy the item ID from the dashboard item URL into the `CHROME_APP_ID`
-   repository variable and into the local `.env`.
-3. Add the four secrets below and run the deploy workflow manually once.
-4. Set `CHROME_AUTO_DEPLOY_ENABLED` to `true` so later tagged releases deploy
+   any release archive by hand, complete the listing, privacy, and
+   distribution tabs there, and leave the item as an unsubmitted draft.
+2. Copy the item ID from the Developer Dashboard item URL into the
+   `CHROME_APP_ID` repository variable and into the local `.env`.
+3. Add the four secrets below.
+4. Cut a release with `CHROME_AUTO_DEPLOY_ENABLED` still unset (the deploy
+   job shows as skipped, which is expected), then run the deploy workflow once
+   by hand with that tag.
+5. Set `CHROME_AUTO_DEPLOY_ENABLED` to `true` so later tagged releases deploy
    on their own.
 
 Configure these in the GitHub repository under **Settings → Secrets and
@@ -535,7 +546,8 @@ go install github.com/adguardteam/go-webext@v0.4.2
 
 When calling `go-webext` directly instead, set `CHROME_API_VERSION=v2`. Prefer
 the workflow for real releases: it deploys the exact archive attached to the
-GitHub Release, while the local upload ships whatever was built last.
+GitHub Release, while the local upload ships a fresh build of the working
+tree, including uncommitted changes.
 
 ## Common Tasks
 

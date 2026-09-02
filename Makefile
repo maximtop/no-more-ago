@@ -9,7 +9,8 @@ override STORE_GOALS := $(filter $(FIXED_STORE),$(GOALS))
 override OTHER_GOALS := $(filter-out $(FIXED_MODES) $(FIXED_BROWSERS) $(FIXED_STORE),$(GOALS))
 
 ifneq ($(OTHER_GOALS),)
-  $(error Usage: make [dev|release] [chrome|firefox|edge] or make chrome_status|chrome_update|chrome_publish)
+  $(error Usage: make [dev|release] [chrome|firefox|edge] \
+    or make chrome_status|chrome_update|chrome_publish)
 endif
 ifeq ($(words $(MODE_GOALS)),0)
   ifneq ($(BROWSER_GOALS),)
@@ -30,12 +31,12 @@ override SELECTED_ARGS := $(if $(SELECTED_BROWSER),$(SELECTED_BROWSER),)
 # Local Chrome Web Store fallback. go-webext loads the credentials from the
 # gitignored .env itself; make reads only the item ID from that file, accepting
 # an optional export prefix, whitespace, quotes, and a trailing comment.
-override CHROME_ZIP := dist/release/chrome.zip
 override CHROME_API_VERSION := v2
 export CHROME_API_VERSION
 ifneq ($(STORE_GOALS),)
   override CHROME_APP_ID := $(strip $(shell \
-    sed -nE 's/^[[:space:]]*(export[[:space:]]+)?CHROME_APP_ID[[:space:]]*=[[:space:]]*//p' .env 2>/dev/null \
+    sed -nE 's/^[[:space:]]*(export[[:space:]]+)?CHROME_APP_ID[[:space:]]*=[[:space:]]*//p' \
+      .env 2>/dev/null \
     | tail -n 1 \
     | sed -E 's/[[:space:]]+\#.*$$//' \
     | tr -d "\"'\r"))
@@ -63,7 +64,7 @@ chrome_status:
 # version.
 chrome_update:
 	@pnpm release chrome
-	@go-webext update chrome -a "$(CHROME_APP_ID)" -f "$(CHROME_ZIP)"
+	@go-webext update chrome -a "$(CHROME_APP_ID)" -f "dist/release/chrome.zip"
 
 chrome_publish:
 	@go-webext publish chrome -a "$(CHROME_APP_ID)" --staged

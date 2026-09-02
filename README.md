@@ -57,12 +57,19 @@ extension.
 ## Installation
 
 No More Ago is not published in browser stores yet. Installation currently
-requires a browser-specific archive: download
-`no-more-ago-<version>-<browser>.zip` and `SHA256SUMS.txt` from the
-repository's GitHub Releases page and verify the archive with
-`shasum -a 256 --ignore-missing -c SHA256SUMS.txt` in the download directory,
-or build `dist/release/<browser>.zip` from source by following the
+requires a browser-specific archive from the repository's GitHub Releases
+page, or a local build made by following the
 [development guide](DEVELOPMENT.md).
+
+1. Download `no-more-ago-<version>-<browser>.zip` and `SHA256SUMS.txt` from
+   the release, or build `dist/release/<browser>.zip` from source.
+2. Verify a downloaded archive in the download directory:
+
+   ~~~sh
+   shasum -a 256 --ignore-missing -c SHA256SUMS.txt
+   ~~~
+
+3. Follow the steps for your browser below.
 
 ### Chrome and Edge
 

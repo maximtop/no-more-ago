@@ -43,7 +43,7 @@ jobs:
                   fetch-depth: 0
                   persist-credentials: false
 
-            - name: Validate version and tagged commit
+            - name: Validate version, tag, and release state
               id: context
               env:
                   GH_TOKEN: ${{ github.token }}
@@ -57,22 +57,33 @@ jobs:
 
                   if [[ "$DRY_RUN" == "false" ]]; then
                     if [[ "$GITHUB_REF_NAME" != "v$PACKAGE_VERSION" ]]; then
-                      echo "Tag $GITHUB_REF_NAME does not match package.json version $PACKAGE_VERSION" >&2
+                      echo "Tag $GITHUB_REF_NAME does not match package.json ($PACKAGE_VERSION)" >&2
                       exit 1
                     fi
                     if ! git merge-base --is-ancestor HEAD origin/master; then
                       echo "Tagged commit must be reachable from master" >&2
                       exit 1
                     fi
-                    RELEASE_STATE="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-                      --json isDraft --jq 'if .isDraft then "draft" else "published" end' 2>/dev/null || true)"
+                    # gh exits non-zero when no release exists for the tag; that is
+                    # the normal case. Any other failure must not pass as "absent".
+                    RELEASE_STATE=""
+                    if ! RELEASE_STATE="$(gh release view "$GITHUB_REF_NAME" \
+                      --repo "$GITHUB_REPOSITORY" --json isDraft \
+                      --jq 'if .isDraft then "draft" else "published" end' \
+                      2>"$RUNNER_TEMP/release-view.err")"; then
+                      if ! grep -qF "release not found" "$RUNNER_TEMP/release-view.err"; then
+                        cat "$RUNNER_TEMP/release-view.err" >&2
+                        exit 1
+                      fi
+                    fi
                     if [[ "$RELEASE_STATE" == "draft" ]]; then
-                      echo "A draft release for $GITHUB_REF_NAME is left over from an earlier run;" \
-                        "delete it with: gh release delete $GITHUB_REF_NAME --yes" >&2
+                      echo "A draft release for $GITHUB_REF_NAME exists" >&2
+                      echo "Delete it with: gh release delete $GITHUB_REF_NAME --yes" >&2
                       exit 1
                     elif [[ "$RELEASE_STATE" == "published" ]]; then
-                      echo "Release $GITHUB_REF_NAME is already published;" \
-                        "to retry the store deployment run deploy-chrome-store.yml with this tag" >&2
+                      echo "Release $GITHUB_REF_NAME is already published" >&2
+                      echo "Created by release.yml: retry with deploy-chrome-store.yml" >&2
+                      echo "Created by hand: delete it (gh release delete --yes) and re-run" >&2
                       exit 1
                     fi
                   fi
@@ -110,7 +121,8 @@ jobs:
                   git archive --format=zip -o "release-artifacts/$PREFIX-source.zip" HEAD
                   # The checksum file lists bare asset names, so it is generated
                   # and later checked inside the directory holding the assets.
-                  (cd release-artifacts && sha256sum ./*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+                  (cd release-artifacts && sha256sum -- *.zip > SHA256SUMS.txt)
+                  cat release-artifacts/SHA256SUMS.txt
 
             - name: Upload workflow artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -132,11 +144,13 @@ jobs:
                   set -euo pipefail
                   # gh creates the release as a draft, uploads every asset, and
                   # publishes it last; a failed upload deletes the draft again.
+                  NOTES="Store-ready archives for Chrome, Firefox, and Edge,"
+                  NOTES="$NOTES the source archive, and SHA-256 checksums."
                   gh release create "$GITHUB_REF_NAME" \
                     --repo "$GITHUB_REPOSITORY" \
                     --verify-tag \
                     --title "No More Ago $VERSION" \
-                    --notes "Store-ready archives for Chrome, Edge, and Firefox, the source archive, and SHA-256 checksums." \
+                    --notes "$NOTES" \
                     --generate-notes \
                     release-artifacts/*.zip \
                     release-artifacts/SHA256SUMS.txt
@@ -154,7 +168,8 @@ jobs:
                       elif [[ "$PUBLISH_OUTCOME" == "success" ]]; then
                         echo "## Release $GITHUB_REF_NAME"
                       else
-                        echo "## Release $GITHUB_REF_NAME was not published (publish step: $PUBLISH_OUTCOME)"
+                        echo "## Release $GITHUB_REF_NAME was not published"
+                        echo "Publish step outcome: \`$PUBLISH_OUTCOME\`"
                       fi
                       echo '```'
                       cat release-artifacts/SHA256SUMS.txt
