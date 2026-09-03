@@ -18,6 +18,7 @@
     - [Makefile Aliases](#makefile-aliases)
   - [Common Tasks](#common-tasks)
     - [Run a Focused Test](#run-a-focused-test)
+    - [Verify the Settings Surfaces](#verify-the-settings-surfaces)
     - [Add or Update a Site Adapter](#add-or-update-a-site-adapter)
     - [Verify Facebook Support](#verify-facebook-support)
     - [Debug the Extension](#debug-the-extension)
@@ -162,9 +163,19 @@ details.
 
 The background registers one universal content runtime for HTTP and HTTPS
 documents at `document_start`, with `allFrames` enabled. It is controlled by
-global processing policy; a per-site preference affects the current
-top-level hostname and all reachable frames in that tab. Each frame uses its
-own URL to select applicable content rules.
+global processing policy and the run mode: `All supported sites` processes a
+tab unless its top-level hostname is in Excluded sites, and `Selected sites
+only` processes it only when that hostname is in Allowed sites. The decision
+covers all reachable frames in that tab. Each frame uses its own URL to select
+applicable content rules.
+
+Settings changes travel one way. A popup or Settings page sends a typed command
+to the background, which serializes it, commits the new schema V6 snapshot, and
+then announces the committed revision with a `no-more-ago:settings-changed`
+message. Every open popup and Settings page, in every tab and window, compares
+that revision with the one it renders and refetches its own projections when
+the announcement is newer. Delivery to a closed page rejects and is ignored, so
+a command never fails because nothing was listening.
 
 Facebook is the one current integration that also needs page-main-world data.
 The background registers `facebook-payload-bridge.js` at `document_start` in
@@ -377,6 +388,31 @@ pnpm test tests/src/content-script/adapters/bluesky.test.ts \
 
 Inject a fake `BlueskyAppView` through the runtime or a generic participant
 factory for controller tests. Tests must not contact the live public service.
+
+### Verify the Settings Surfaces
+
+Load `dist/dev/chrome` as an unpacked extension and walk this matrix. Repeat
+the popup rows in Firefox with `dist/dev/firefox`.
+
+| Check | Expectation |
+| --- | --- |
+| Popup on a supported page | One hostname, `Active`, run mode `All supported sites` |
+| Site switch off | Status becomes `Excluded on this site`; hostname appears in Excluded sites |
+| Settings, run mode `Selected sites only` | Warning about the empty allowlist; popup shows `Not selected for this site` |
+| Popup site switch on | Hostname appears in Allowed sites; status returns to `Active` |
+| Switch modes twice | Both lists return unchanged |
+| Global switch off | Run mode and both lists stay visible and editable in Settings |
+| Two Settings tabs | A change in one appears in the other without a reload |
+| Popup open while Settings changes the mode | Popup summary and status update |
+| Display, custom pattern | Preview follows every keystroke; an invalid pattern says it must be fixed |
+| Display, IANA zone | Invalid identifier blocks the save with an inline error |
+| Appearance Dark | Popup and Settings both switch immediately and after reopening |
+| Appearance System | Both surfaces follow the browser color scheme |
+| Diagnostics | Download and Clear are unavailable until Debug logs is on |
+| Reset | Run mode, both lists, display, appearance, and diagnostics return to defaults |
+| Restricted page | `Cannot run on this page`, no site switch, no report action |
+| Widths 320 and desktop | No horizontal scrolling, no clipped text, in both themes |
+| Keyboard only | Every primary scenario completes with a visible focus ring |
 
 ### Add or Update a Site Adapter
 

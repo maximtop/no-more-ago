@@ -6,6 +6,8 @@ import * as v from "valibot";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
 import { DIAGNOSTIC_BROWSER_FAMILIES } from "../diagnostics/contracts";
 import { diagnosticEventSchema } from "../diagnostics/events";
+import { APPEARANCES } from "../settings/snapshot";
+import { SITE_SCOPE_MODES } from "../settings/site-scope";
 import { SITE_SETTINGS_SURFACES } from "./view-state-values";
 import type {
     DebugState,
@@ -19,6 +21,7 @@ import type {
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
 } from "./response-schemas";
 import type { DocumentState } from "./document-state";
 
@@ -46,6 +49,11 @@ export const GET_SITES_STATE_MESSAGE = "no-more-ago:get-sites-state" as const;
  * Changes a single site's activation setting.
  */
 export const SET_SITE_ENABLED_MESSAGE = "no-more-ago:set-site-enabled" as const;
+
+/**
+ * Changes the active site scope mode.
+ */
+export const SET_SITE_SCOPE_MODE_MESSAGE = "no-more-ago:set-site-scope-mode" as const;
 
 /**
  * Requests the current display configuration.
@@ -142,6 +150,14 @@ export const setSiteEnabledMessageSchema = v.strictObject({
 });
 
 /**
+ * Exact request for a scope-mode change.
+ */
+export const setSiteScopeModeMessageSchema = v.strictObject({
+    type: v.literal(SET_SITE_SCOPE_MODE_MESSAGE),
+    mode: v.picklist(SITE_SCOPE_MODES),
+});
+
+/**
  * Exact request for display state.
  */
 export const getDisplayStateMessageSchema = v.strictObject({
@@ -154,6 +170,7 @@ export const getDisplayStateMessageSchema = v.strictObject({
 export const setDisplaySettingsMessageSchema = v.strictObject({
     type: v.literal(SET_DISPLAY_SETTINGS_MESSAGE),
     display: v.unknown(),
+    appearance: v.picklist(APPEARANCES),
 });
 
 /**
@@ -201,6 +218,7 @@ export const backgroundMessageSchema = v.union([
     setGlobalEnabledMessageSchema,
     getSitesStateMessageSchema,
     setSiteEnabledMessageSchema,
+    setSiteScopeModeMessageSchema,
     getDisplayStateMessageSchema,
     setDisplaySettingsMessageSchema,
     resetAllSettingsMessageSchema,
@@ -279,6 +297,11 @@ export type GetSitesStateMessage = v.InferOutput<typeof getSitesStateMessageSche
  * Site activation request inferred from its schema.
  */
 export type SetSiteEnabledMessage = v.InferOutput<typeof setSiteEnabledMessageSchema>;
+
+/**
+ * Scope-mode request inferred from its schema.
+ */
+export type SetSiteScopeModeMessage = v.InferOutput<typeof setSiteScopeModeMessageSchema>;
 
 /**
  * Display-state request inferred from its schema.
@@ -360,6 +383,7 @@ export type BackgroundResponse =
     | DebugState
     | SetGlobalEnabledResponse
     | SetSiteEnabledResponse
+    | SetSiteScopeModeResponse
     | SetDisplaySettingsResponse
     | ResetAllSettingsResponse
     | SetDebugEnabledResponse

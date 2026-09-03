@@ -6,12 +6,18 @@
 
 import * as v from "valibot";
 import {
+    GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_POPUP_STATE_MESSAGE,
+    RESET_ALL_SETTINGS_MESSAGE,
+    getDiagnosticsSnapshotResponseSchema,
+    type DiagnosticsSnapshot,
+    type DiagnosticsSnapshotError,
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
 } from "../shared/messaging/contracts";
 import { popupStateSchema } from "../shared/messaging/view-state-schemas";
 import {
+    resetAllSettingsResponseSchema,
     setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
 } from "../shared/messaging/response-schemas";
@@ -100,6 +106,33 @@ export type PopupSiteSetResult =
     };
 
 /**
+ * Diagnostics snapshot or the reason it could not be read.
+ */
+export type PopupDiagnosticsResult =
+    | {
+        /**
+         * Indicates that a validated diagnostic snapshot was returned.
+         */
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+
+        /**
+         * Validated diagnostic snapshot ready for export.
+         */
+        readonly snapshot: DiagnosticsSnapshot;
+    }
+    | {
+        /**
+         * Indicates that no diagnostic snapshot could be returned.
+         */
+        readonly kind: typeof CLIENT_RESULT_KIND.ERROR;
+
+        /**
+         * Stable reason the snapshot request failed.
+         */
+        readonly error: DiagnosticsSnapshotError;
+    };
+
+/**
  * Wraps popup messages and validates their background responses.
  */
 export class PopupClient {
@@ -178,6 +211,45 @@ export class PopupClient {
             return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
         }
         return this.rereadAfterAmbiguousSiteResponse();
+    }
+
+    /**
+     * Restores every setting to its default. The command is dispatched once,
+     * because a lost response may follow a committed write.
+     *
+     * @returns - Whether the background confirmed the reset.
+     */
+    public async resetAllSettings(): Promise<boolean> {
+        try {
+            const response = await this.transport.sendMessage({
+                type: RESET_ALL_SETTINGS_MESSAGE,
+            });
+            return v.is(resetAllSettingsResponseSchema, response) && response.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Retrieves retained diagnostics for the recovery view without throwing.
+     *
+     * @returns - A snapshot, or the service error that prevented reading it.
+     */
+    public async getDiagnosticsSnapshot(): Promise<PopupDiagnosticsResult> {
+        let response: unknown;
+        try {
+            response = await this.transport.sendMessage({
+                type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
+            });
+        } catch {
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+        }
+        if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+        }
+        return response.ok
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
     }
 
     /**

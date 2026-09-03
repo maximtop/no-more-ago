@@ -21,11 +21,14 @@ import {
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
+    SET_SITE_SCOPE_MODE_MESSAGE,
     backgroundMessageSchema,
     clearDiagnosticsResponseSchema,
     diagnosticsSnapshotSchema,
 } from "../../../../src/shared/messaging/contracts";
 import { SITE_SETTINGS_SURFACE } from "../../../../src/shared/messaging/view-state-values";
+import { APPEARANCE } from "../../../../src/shared/settings/snapshot";
+import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 
 describe("background message contracts", () => {
     it("accepts every request shape used by extension views", () => {
@@ -41,9 +44,11 @@ describe("background message contracts", () => {
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             },
             { type: GET_DISPLAY_STATE_MESSAGE },
+            { type: SET_SITE_SCOPE_MODE_MESSAGE, mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED },
             {
                 type: SET_DISPLAY_SETTINGS_MESSAGE,
                 display: { formatMode: "system", timeZone: { mode: "system" } },
+                appearance: APPEARANCE.SYSTEM,
             },
             { type: RESET_ALL_SETTINGS_MESSAGE },
             { type: GET_DEBUG_STATE_MESSAGE },
@@ -54,6 +59,26 @@ describe("background message contracts", () => {
         for (const message of messages) {
             expect(v.is(backgroundMessageSchema, message)).toBe(true);
         }
+    });
+
+    it("accepts the scope-mode request and the display request with appearance", () => {
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_SITE_SCOPE_MODE_MESSAGE,
+            mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+        })).toBe(true);
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_SITE_SCOPE_MODE_MESSAGE,
+            mode: "everything",
+        })).toBe(false);
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_DISPLAY_SETTINGS_MESSAGE,
+            display: { formatMode: "system", timeZone: { mode: "system" } },
+            appearance: APPEARANCE.DARK,
+        })).toBe(true);
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_DISPLAY_SETTINGS_MESSAGE,
+            display: { formatMode: "system", timeZone: { mode: "system" } },
+        })).toBe(false);
     });
 
     it("rejects unknown, incomplete, and extended request envelopes", () => {

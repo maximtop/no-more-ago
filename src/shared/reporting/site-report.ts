@@ -4,7 +4,7 @@
 
 import * as v from "valibot";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
-import { isCanonicalHostname } from "../settings/snapshot";
+import { isCanonicalHostname } from "../settings/hostname";
 
 /**
  * GitHub issue composer used for site reports.

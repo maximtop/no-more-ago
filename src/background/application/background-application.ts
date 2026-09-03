@@ -5,9 +5,11 @@
 import type { DiagnosticSender } from "../../shared/diagnostics/events";
 import type { ActivationReconcileResult } from "../runtime/document-activation";
 import type {
+    Appearance,
     DisplaySettings,
-    SettingsSnapshotV5,
+    SettingsSnapshotV6,
 } from "../../shared/settings/snapshot";
+import type { SiteScopeMode } from "../../shared/settings/site-scope";
 import { ActivationManager } from "./activation-manager";
 import { ApplicationLifecycle } from "./lifecycle";
 import {
@@ -35,6 +37,7 @@ import type {
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
 } from "../../shared/messaging/response-schemas";
 import type { SiteSettingsSurface } from "../../shared/messaging/view-state-values";
 import { SettingsCommands } from "../settings/commands";
@@ -48,6 +51,7 @@ export type {
     ApplicationPhase,
     BackgroundApplicationOptions,
     LifecycleReason,
+    SettingsBroadcast,
 } from "./contracts";
 
 /**
@@ -99,6 +103,7 @@ export class BackgroundApplication {
             this.projection,
             this.diagnostics,
             documentRefresh,
+            options.broadcast,
         );
     }
 
@@ -116,7 +121,7 @@ export class BackgroundApplication {
      *
      * @returns - Current snapshot, when settings are available.
      */
-    public get currentSnapshot(): SettingsSnapshotV5 | undefined {
+    public get currentSnapshot(): SettingsSnapshotV6 | undefined {
         return this.lifecycle.snapshot;
     }
 
@@ -257,13 +262,27 @@ export class BackgroundApplication {
     }
 
     /**
-     * Validates and persists display settings.
+     * Validates and persists display settings together with the appearance choice.
      *
      * @param display - Typed display settings payload.
+     * @param appearance - Requested appearance for both extension surfaces.
      * @returns - Persisted display state and refresh failures.
      */
-    public setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
-        return this.commands.setDisplaySettings(display);
+    public setDisplaySettings(
+        display: DisplaySettings,
+        appearance: Appearance,
+    ): Promise<SetDisplaySettingsResponse> {
+        return this.commands.setDisplaySettings(display, appearance);
+    }
+
+    /**
+     * Persists the active site scope mode and reconciles matching documents.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - Persisted sites state.
+     */
+    public setSiteScopeMode(mode: SiteScopeMode): Promise<SetSiteScopeModeResponse> {
+        return this.commands.setSiteScopeMode(mode);
     }
 
     /**

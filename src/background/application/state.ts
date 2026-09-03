@@ -2,7 +2,7 @@
  * @file Read-only lifecycle state shared by background collaborators.
  */
 
-import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
+import type { SettingsSnapshotV6 } from "../../shared/settings/snapshot";
 import type { ApplicationFailure, ApplicationPhase } from "./contracts";
 
 /**
@@ -17,7 +17,7 @@ export interface ApplicationStateView {
     /**
      * Last successfully loaded settings snapshot.
      */
-    readonly snapshot: SettingsSnapshotV5 | undefined;
+    readonly snapshot: SettingsSnapshotV6 | undefined;
 
     /**
      * Failure retained while the application is unavailable.

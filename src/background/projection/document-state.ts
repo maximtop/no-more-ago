@@ -10,7 +10,7 @@ import {
 } from "../../shared/messaging/view-state-values";
 import type { DocumentState } from "../../shared/messaging/document-state";
 import { parseHttpUrl } from "../../shared/url/http";
-import { isSiteEnabled } from "../../shared/settings/snapshot";
+import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
 import { deriveDisplayState } from "./display-state";
@@ -43,7 +43,7 @@ export function deriveDocumentState(
         revision: state.snapshot.revision,
         enabled: state.snapshot.globalEnabled
             && topLevelUrl !== null
-            && isSiteEnabled(state.snapshot.sitePreferences, topLevelUrl.hostname),
+            && isSiteProcessingEnabled(state.snapshot.siteScope, topLevelUrl.hostname),
         display: state.snapshot.display,
         debugEnabled: state.snapshot.debugEnabled,
         ...("error" in displayState ? { error: displayState.error } : {}),

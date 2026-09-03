@@ -14,6 +14,7 @@ import {
     REGISTRATION_OUTCOME,
     TAB_ACTION,
 } from "../../../../src/background/runtime/document-activation";
+import { DEFAULT_SITE_SCOPE } from "../../../../src/shared/settings/site-scope";
 
 describe("ActivationManager", () => {
     it("preserves an unrelated tab failure until that tab succeeds", async () => {
@@ -79,12 +80,12 @@ describe("ActivationManager", () => {
         await manager.reconcile(
             ACTIVATION_POLICY.ENABLED,
             1,
-            {},
+            DEFAULT_SITE_SCOPE,
         );
         await manager.reconcile(
             ACTIVATION_POLICY.ENABLED,
             2,
-            {},
+            DEFAULT_SITE_SCOPE,
             ["a.test"],
         );
 
@@ -98,7 +99,7 @@ describe("ActivationManager", () => {
         await manager.reconcile(
             ACTIVATION_POLICY.ENABLED,
             3,
-            {},
+            DEFAULT_SITE_SCOPE,
             ["b.test"],
         );
 
@@ -146,11 +147,11 @@ describe("ActivationManager", () => {
         };
         const manager = new ActivationManager(coordinator);
 
-        await manager.reconcile(ACTIVATION_POLICY.ENABLED, 1, {});
+        await manager.reconcile(ACTIVATION_POLICY.ENABLED, 1, DEFAULT_SITE_SCOPE);
         await manager.reconcile(
             ACTIVATION_POLICY.ENABLED,
             2,
-            {},
+            DEFAULT_SITE_SCOPE,
             ["b.test"],
         );
 

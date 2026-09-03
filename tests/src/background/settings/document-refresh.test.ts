@@ -13,6 +13,7 @@ import {
 } from "../../../../src/shared/messaging/document-messages";
 import { REFRESH_FAILURE_REASON } from "../../../../src/shared/messaging/view-state-values";
 import { createSettingsSnapshot } from "../../../../src/shared/settings/snapshot";
+import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 
 describe("DocumentRefresh", () => {
     it("broadcasts display changes only to distinct enabled HTTP(S) tabs", async () => {
@@ -33,11 +34,15 @@ describe("DocumentRefresh", () => {
                     : undefined,
             )),
         };
-        const snapshot = createSettingsSnapshot(
-            3,
-            true,
-            { "disabled.test": false },
-        );
+        const snapshot = createSettingsSnapshot({
+            revision: 3,
+            globalEnabled: true,
+            siteScope: {
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                excludedSites: ["disabled.test"],
+                allowedSites: [],
+            },
+        });
 
         const failures = await new DocumentRefresh(tabs).refreshDisplay(
             snapshot,
@@ -60,6 +65,39 @@ describe("DocumentRefresh", () => {
         expect(failures).toEqual([]);
     });
 
+    it("broadcasts only to allowed tabs in selected-only mode", async () => {
+        const tabs = {
+            query: vi.fn(() => Promise.resolve([
+                { id: 1, url: "https://allowed.test/page" },
+                { id: 2, url: "https://other.test/page" },
+            ])),
+            getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
+            sendMessage: vi.fn((_: number, message: unknown) => Promise.resolve(
+                message && typeof message === "object" && "revision" in message
+                    ? { type: PRESENTATION_UPDATED_MESSAGE, revision: message.revision }
+                    : undefined,
+            )),
+        };
+        const snapshot = createSettingsSnapshot({
+            revision: 5,
+            globalEnabled: true,
+            siteScope: {
+                mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                excludedSites: [],
+                allowedSites: ["allowed.test"],
+            },
+        });
+
+        await new DocumentRefresh(tabs).refreshDisplay(
+            snapshot,
+            snapshot.display,
+            snapshot.revision,
+        );
+
+        expect(tabs.sendMessage).toHaveBeenCalledTimes(1);
+        expect(tabs.sendMessage).toHaveBeenCalledWith(1, expect.anything(), { frameId: 0 });
+    });
+
     it("contains tab broadcast failures", async () => {
         const tabs = {
             query: vi.fn(() => Promise.resolve([
@@ -68,7 +106,7 @@ describe("DocumentRefresh", () => {
             getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
             sendMessage: vi.fn(() => Promise.reject(new Error("unreachable"))),
         };
-        const snapshot = createSettingsSnapshot(4, true);
+        const snapshot = createSettingsSnapshot({ revision: 4, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDebugPolicy(
             snapshot,
@@ -94,7 +132,7 @@ describe("DocumentRefresh", () => {
                 revision: 3,
             })),
         };
-        const snapshot = createSettingsSnapshot(4, true);
+        const snapshot = createSettingsSnapshot({ revision: 4, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDisplay(
             snapshot,
@@ -117,7 +155,7 @@ describe("DocumentRefresh", () => {
             getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
             sendMessage: vi.fn(() => Promise.resolve(undefined)),
         };
-        const snapshot = createSettingsSnapshot(5, true);
+        const snapshot = createSettingsSnapshot({ revision: 5, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDisplay(
             snapshot,
@@ -149,7 +187,7 @@ describe("DocumentRefresh", () => {
                     : undefined,
             )),
         };
-        const snapshot = createSettingsSnapshot(5, true);
+        const snapshot = createSettingsSnapshot({ revision: 5, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDebugPolicy(
             snapshot,
@@ -171,7 +209,7 @@ describe("DocumentRefresh", () => {
                     ? Promise.reject(new Error("unreachable frame"))
                     : Promise.resolve({ type: PRESENTATION_UPDATED_MESSAGE, revision: 5 })),
         };
-        const snapshot = createSettingsSnapshot(5, true);
+        const snapshot = createSettingsSnapshot({ revision: 5, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDisplay(
             snapshot,
@@ -198,7 +236,7 @@ describe("DocumentRefresh", () => {
                 revision: 5,
             })),
         };
-        const snapshot = createSettingsSnapshot(5, true);
+        const snapshot = createSettingsSnapshot({ revision: 5, globalEnabled: true });
 
         const failures = await new DocumentRefresh(tabs).refreshDisplay(
             snapshot,
@@ -225,7 +263,7 @@ describe("DocumentRefresh", () => {
                 getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
                 sendMessage: vi.fn(() => new Promise<never>(() => undefined)),
             };
-            const snapshot = createSettingsSnapshot(6, true);
+            const snapshot = createSettingsSnapshot({ revision: 6, globalEnabled: true });
 
             const refresh = new DocumentRefresh(tabs).refreshDisplay(
                 snapshot,

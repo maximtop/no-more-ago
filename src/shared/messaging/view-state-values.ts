@@ -8,7 +8,8 @@
 export const POPUP_STATUS = {
     ACTIVE: "active",
     GLOBAL_DISABLED: "global-disabled",
-    SITE_DISABLED: "site-disabled",
+    SITE_EXCLUDED: "site-excluded",
+    SITE_NOT_SELECTED: "site-not-selected",
     INACCESSIBLE: "inaccessible",
     RUNTIME_FAILED: "runtime-failed",
     SETTINGS_UNAVAILABLE: "settings-unavailable",
@@ -44,7 +45,8 @@ export const SITE_SETTINGS_SURFACES = [
 export const POPUP_READY_STATUSES = [
     POPUP_STATUS.ACTIVE,
     POPUP_STATUS.GLOBAL_DISABLED,
-    POPUP_STATUS.SITE_DISABLED,
+    POPUP_STATUS.SITE_EXCLUDED,
+    POPUP_STATUS.SITE_NOT_SELECTED,
     POPUP_STATUS.INACCESSIBLE,
     POPUP_STATUS.RUNTIME_FAILED,
 ] as const;

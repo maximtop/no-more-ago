@@ -2,15 +2,27 @@
  * @file Owns loading and mutation state for the options-page site settings.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
 import type { SitesState } from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
+import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
+
+/**
+ * Busy marker used while the scope mode is being saved. It can never collide with
+ * a hostname because a canonical hostname contains no `#`.
+ */
+export const SCOPE_BUSY_KEY = "#scope-mode" as const;
+
+/**
+ * Busy marker used while global activation is being saved.
+ */
+export const GLOBAL_BUSY_KEY = "#global" as const;
 
 /**
  * Dependencies and optional initial state for site settings.
@@ -47,23 +59,44 @@ export interface SitesController {
     readonly loading: boolean;
 
     /**
-     * Hostname currently being saved, when a mutation is in flight.
+     * Hostname, scope, or global marker currently being saved, when a mutation is in flight.
      */
-    readonly savingHostname: string | undefined;
+    readonly busy: string | undefined;
 
     /**
-     * Changes whether processing is enabled for one exact hostname.
-     *
-     * @param hostname Exact hostname whose setting should change.
-     * @param enabled Whether processing should be enabled for the hostname.
-     * @returns A promise that settles after the command outcome has been applied.
+     * Hostnames in the list the active scope mode owns.
      */
-    changeSite(hostname: string, enabled: boolean): Promise<void>;
+    readonly activeHostnames: readonly string[];
+
+    /**
+     * Changes global activation and rereads this surface's projection.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
+    changeGlobal(enabled: boolean): Promise<void>;
+
+    /**
+     * Changes the active scope mode without touching either hostname list.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
+    changeScopeMode(mode: SiteScopeMode): Promise<void>;
+
+    /**
+     * Changes whether processing applies to one exact hostname under the active mode.
+     *
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
+    changeSiteProcessing(hostname: string, enabled: boolean): Promise<void>;
 
     /**
      * Applies authoritative site settings returned by a cross-feature command.
      *
-     * @param state Validated site settings to render.
+     * @param state - Validated site settings to render.
      */
     applyState(state: SitesState): void;
 
@@ -76,27 +109,51 @@ export interface SitesController {
      * Replaces site controls with the fail-closed unavailable projection.
      */
     markUnavailable(): void;
+
+    /**
+     * Rereads the authoritative projection after another surface changed settings.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
+    reload(): Promise<void>;
 }
 
 const UNAVAILABLE_SITES_STATE: SitesState = {
     availability: STATE_AVAILABILITY.UNAVAILABLE,
     revision: null,
     globalEnabled: null,
-    sites: [],
+    scopeMode: null,
+    excludedSites: [],
+    allowedSites: [],
     failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
 };
 
 /**
+ * Selects the hostname list the active scope mode owns.
+ *
+ * @param state - Current sites projection.
+ * @returns - Active hostnames, or an empty list while settings are unavailable.
+ */
+function activeHostnamesOf(state: SitesState | undefined): readonly string[] {
+    if (!state || state.availability !== STATE_AVAILABILITY.READY) {
+        return [];
+    }
+    return state.scopeMode === SITE_SCOPE_MODE.SELECTED_ONLY
+        ? state.allowedSites
+        : state.excludedSites;
+}
+
+/**
  * Creates the site-settings controller for the options page.
  *
- * @param options Controller dependencies and optional preloaded state.
- * @returns Current site settings together with mutation and reset commands.
+ * @param options - Controller dependencies and optional preloaded state.
+ * @returns - Current site settings together with mutation and reset commands.
  */
 export function useSitesController(options: SitesControllerOptions): SitesController {
     const { client, initialState, onNoticeChange } = options;
     const [state, setState] = useState<SitesState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);
-    const [savingHostname, setSavingHostname] = useState<string>();
+    const [busy, setBusy] = useState<string>();
 
     useEffect(() => {
         if (initialState) {
@@ -124,54 +181,97 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         };
     }, [client, initialState]);
 
-    const changeSite = async (hostname: string, enabled: boolean): Promise<void> => {
+    const reload = useCallback(async (): Promise<void> => {
+        try {
+            setState(await client.getState());
+        } catch {
+            setState(UNAVAILABLE_SITES_STATE);
+        }
+    }, [client]);
+
+    const applySites = (next: SitesState, outcome: OptionsNotice): void => {
         if (
-            !state
-            || state.availability !== STATE_AVAILABILITY.READY
-            || savingHostname !== undefined
+            next.availability !== STATE_AVAILABILITY.READY
+            || state?.availability !== STATE_AVAILABILITY.READY
+            || next.revision >= state.revision
         ) {
+            setState(next);
+        }
+        onNoticeChange(outcome);
+    };
+
+    const changeSiteProcessing = async (hostname: string, enabled: boolean): Promise<void> => {
+        if (!state || state.availability !== STATE_AVAILABILITY.READY || busy !== undefined) {
             return;
         }
-        setSavingHostname(hostname);
+        setBusy(hostname);
         onNoticeChange(undefined);
         const result = await client.setSiteEnabled(hostname, enabled);
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            const responseState = result.response.state;
-            if (
-                responseState.availability !== STATE_AVAILABILITY.READY ||
-                responseState.revision >= state.revision
-            ) {
-                setState(responseState);
-            }
-            if (!result.response.ok) {
-                onNoticeChange(
-                    result.response.error === "save-failed"
+            applySites(
+                result.response.state,
+                result.response.ok
+                    ? undefined
+                    : result.response.error === "save-failed"
                         ? "save-failed"
                         : result.response.error === "invalid-hostname"
                             ? "invalid-hostname"
                             : "unknown",
-                );
-            }
+            );
         } else if (result.state) {
-            if (
-                result.state.availability !== STATE_AVAILABILITY.READY
-                || result.state.revision >= state.revision
-            ) {
-                setState(result.state);
-            }
-            onNoticeChange("interrupted");
+            applySites(result.state, "interrupted");
         } else {
             setState(UNAVAILABLE_SITES_STATE);
             onNoticeChange("unknown");
         }
-        setSavingHostname(undefined);
+        setBusy(undefined);
+    };
+
+    const changeScopeMode = async (mode: SiteScopeMode): Promise<void> => {
+        if (!state || state.availability !== STATE_AVAILABILITY.READY || busy !== undefined) {
+            return;
+        }
+        setBusy(SCOPE_BUSY_KEY);
+        onNoticeChange(undefined);
+        const result = await client.setSiteScopeMode(mode);
+        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
+            applySites(
+                result.response.state,
+                result.response.ok
+                    ? undefined
+                    : result.response.error === "save-failed" ? "save-failed" : "unknown",
+            );
+        } else if (result.state) {
+            applySites(result.state, "interrupted");
+        } else {
+            setState(UNAVAILABLE_SITES_STATE);
+            onNoticeChange("unknown");
+        }
+        setBusy(undefined);
+    };
+
+    const changeGlobal = async (enabled: boolean): Promise<void> => {
+        if (!state || state.availability !== STATE_AVAILABILITY.READY || busy !== undefined) {
+            return;
+        }
+        setBusy(GLOBAL_BUSY_KEY);
+        onNoticeChange(undefined);
+        const accepted = await client.setGlobalEnabled(enabled);
+        await reload();
+        if (!accepted) {
+            onNoticeChange("save-failed");
+        }
+        setBusy(undefined);
     };
 
     return {
         state,
         loading,
-        savingHostname,
-        changeSite,
+        busy,
+        activeHostnames: activeHostnamesOf(state),
+        changeGlobal,
+        changeScopeMode,
+        changeSiteProcessing,
         applyState: setState,
         clearNotice: () => {
             onNoticeChange(undefined);
@@ -179,5 +279,6 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         markUnavailable: () => {
             setState(UNAVAILABLE_SITES_STATE);
         },
+        reload,
     };
 }

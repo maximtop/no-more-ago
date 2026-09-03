@@ -12,7 +12,7 @@ import {
     downloadDiagnosticsZip,
     type DiagnosticArchiveSnapshot,
     type DownloadRuntime,
-} from "../../../../src/options/diagnostics/archive";
+} from "../../../../src/shared/diagnostics/archive";
 
 const snapshot: DiagnosticArchiveSnapshot = {
     entries: [{

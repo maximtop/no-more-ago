@@ -23,6 +23,8 @@ export type DisplayNotice =
     | "save-failed"
     | "interrupted"
     | "partial-refresh"
+    | "saved"
+    | "external-change"
     | "unknown"
     | undefined;
 
@@ -51,7 +53,30 @@ export interface DisplayDraft {
     readonly identifier: string;
 }
 
-const PREVIEW_INSTANT = new Date("2026-08-25T12:34:00.000Z");
+/**
+ * Preview text and whether it is a rendered value or an instruction.
+ */
+export interface DisplayPreview {
+    /**
+     * Whether the text is the rendered fixture rather than a correction hint.
+     */
+    readonly ok: boolean;
+
+    /**
+     * Rendered fixture, or the sentence naming what must be fixed first.
+     */
+    readonly text: string;
+}
+
+/**
+ * Fixed instant previewed by the Display section.
+ */
+export const DISPLAY_PREVIEW_INSTANT = new Date("2026-08-27T19:32:28.000Z");
+
+/**
+ * Label naming the previewed fixture beside the rendered value.
+ */
+export const DISPLAY_PREVIEW_SOURCE = "Fixed fixture · 2026-08-27T19:32:28Z" as const;
 
 /**
  * Converts saved display settings into fields for the editable form.
@@ -138,6 +163,12 @@ export function displayNoticeText(notice: DisplayNotice): string | undefined {
         return "Display settings were saved, but one or more open pages could not be refreshed. "
             + "New dates will use the saved setting.";
     }
+    if (notice === "saved") {
+        return "Display settings saved.";
+    }
+    if (notice === "external-change") {
+        return "Display settings were changed in another window. Saving here replaces them.";
+    }
     if (notice === "unknown") {
         return "Could not confirm whether the display settings were saved. Reopen Settings to "
             + "try again.";
@@ -178,16 +209,26 @@ export function customPatternError(pattern: string): string | undefined {
 }
 
 /**
- * Creates a localized preview for a valid custom-format draft.
+ * Renders the fixture with the current draft, or explains what must be fixed.
  *
- * @param draft Current display form fields.
- * @returns A presentation preview, or undefined when custom formatting is not ready.
+ * @param draft - Current display form fields.
+ * @returns - Preview text and whether it is a rendered value.
  */
-export function previewDisplayDraft(draft: DisplayDraft): DatePresentationResult | undefined {
-    if (draft.formatMode !== "custom" || customPatternError(draft.pattern)) {
-        return undefined;
+export function previewDisplayDraft(draft: DisplayDraft): DisplayPreview {
+    if (draft.formatMode === "custom" && customPatternError(draft.pattern)) {
+        return { ok: false, text: "Fix the pattern to preview" };
     }
-    return formatDateWithPresentation(PREVIEW_INSTANT, previewLocales(), displayFromDraft(draft));
+    if (draft.timeZoneMode === "iana" && validateIdentifier(draft.identifier)) {
+        return { ok: false, text: "Fix the time zone to preview" };
+    }
+    const result: DatePresentationResult = formatDateWithPresentation(
+        DISPLAY_PREVIEW_INSTANT,
+        previewLocales(),
+        displayFromDraft(draft),
+    );
+    return result.text.length === 0
+        ? { ok: false, text: "Fix the pattern to preview" }
+        : { ok: true, text: result.text };
 }
 
 /**

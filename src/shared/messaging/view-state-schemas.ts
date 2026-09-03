@@ -4,7 +4,8 @@
 
 import * as v from "valibot";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import type { DisplaySettings } from "../settings/snapshot";
+import { APPEARANCE, APPEARANCES, type DisplaySettings } from "../settings/snapshot";
+import { SITE_SCOPE_MODES } from "../settings/site-scope";
 import {
     POPUP_READY_STATUSES,
     POPUP_RUNTIME_FAILURES,
@@ -21,12 +22,17 @@ const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
 const settingsFailureSchema = v.picklist(SETTINGS_STATE_FAILURES);
 const popupStatusSchema = v.picklist(POPUP_READY_STATUSES);
 const popupFailureSchema = v.picklist(POPUP_RUNTIME_FAILURES);
+const scopeModeSchema = v.picklist(SITE_SCOPE_MODES);
+const appearanceSchema = v.picklist(APPEARANCES);
+const hostnameListSchema = v.pipe(v.array(v.string()), v.readonly());
 const readyPopupStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
     hostname: v.nullable(v.string()),
     siteEnabled: v.nullable(v.boolean()),
+    scopeMode: scopeModeSchema,
+    appearance: appearanceSchema,
     status: popupStatusSchema,
     failure: v.optional(popupFailureSchema),
 });
@@ -36,29 +42,31 @@ const unavailablePopupStateSchema = v.strictObject({
     globalEnabled: v.null(),
     hostname: v.nullable(v.string()),
     siteEnabled: v.null(),
+    scopeMode: v.null(),
+    appearance: appearanceSchema,
     status: v.picklist(POPUP_UNAVAILABLE_STATUSES),
     failure: settingsFailureSchema,
 });
-const siteListEntrySchema = v.strictObject({
-    hostname: v.string(),
-    enabled: v.boolean(),
-});
 
 /**
- * Complete ready site-preferences state accepted after a successful reset.
+ * Complete ready site-scope state accepted after a successful reset.
  */
 export const readySitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
-    sites: v.array(siteListEntrySchema),
+    scopeMode: scopeModeSchema,
+    excludedSites: hostnameListSchema,
+    allowedSites: hostnameListSchema,
 });
 
 const unavailableSitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     globalEnabled: v.null(),
-    sites: v.tuple([]),
+    scopeMode: v.null(),
+    excludedSites: v.tuple([]),
+    allowedSites: v.tuple([]),
     failure: settingsFailureSchema,
 });
 const readyDisplayStateSchema = v.strictObject({
@@ -68,6 +76,7 @@ const readyDisplayStateSchema = v.strictObject({
         v.unknown(),
         v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
     ),
+    appearance: appearanceSchema,
     debugEnabled: v.boolean(),
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
@@ -75,6 +84,7 @@ const unavailableDisplayStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     display: v.null(),
+    appearance: appearanceSchema,
     failure: settingsFailureSchema,
 });
 const readyDebugStateSchema = v.strictObject({
@@ -163,6 +173,8 @@ export function createUnavailablePopupState(
         globalEnabled: null,
         hostname: null,
         siteEnabled: null,
+        scopeMode: null,
+        appearance: APPEARANCE.SYSTEM,
         status: failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
             ? POPUP_STATUS.RUNTIME_FAILED
             : POPUP_STATUS.SETTINGS_UNAVAILABLE,
@@ -171,12 +183,7 @@ export function createUnavailablePopupState(
 }
 
 /**
- * Site-list entry inferred from its runtime validation schema.
- */
-export type SiteListEntry = v.InferOutput<typeof siteListEntrySchema>;
-
-/**
- * Site preferences view inferred from its runtime validation schema.
+ * Site scope view inferred from its runtime validation schema.
  */
 export type SitesState = v.InferOutput<typeof sitesStateSchema>;
 

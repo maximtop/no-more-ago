@@ -69,6 +69,22 @@ export const setSiteEnabledResponseSchema = v.union([
 ]);
 
 /**
+ * Result of changing the active site scope mode.
+ */
+export const setSiteScopeModeResponseSchema = v.union([
+    v.strictObject({
+        ok: v.literal(true),
+        acceptedRevision: nonNegativeSafeIntegerSchema,
+        state: sitesStateSchema,
+    }),
+    v.strictObject({
+        ok: v.literal(false),
+        error: persistenceErrorSchema,
+        state: sitesStateSchema,
+    }),
+]);
+
+/**
  * Result of changing display settings and refreshing matching tabs.
  */
 export const setDisplaySettingsResponseSchema = v.union([
@@ -127,6 +143,11 @@ export type SetGlobalEnabledResponse = v.InferOutput<typeof setGlobalEnabledResp
  * Site activation response inferred from its runtime validation schema.
  */
 export type SetSiteEnabledResponse = v.InferOutput<typeof setSiteEnabledResponseSchema>;
+
+/**
+ * Scope-mode response inferred from its runtime validation schema.
+ */
+export type SetSiteScopeModeResponse = v.InferOutput<typeof setSiteScopeModeResponseSchema>;
 
 /**
  * Display settings response inferred from its runtime validation schema.

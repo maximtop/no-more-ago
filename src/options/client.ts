@@ -14,7 +14,9 @@ import {
     RESET_ALL_SETTINGS_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
+    SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
+    SET_SITE_SCOPE_MODE_MESSAGE,
     clearDiagnosticsResponseSchema,
     getDiagnosticsSnapshotResponseSchema,
 } from "../shared/messaging/contracts";
@@ -27,7 +29,9 @@ import {
     resetAllSettingsResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
+    setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
+    setSiteScopeModeResponseSchema,
 } from "../shared/messaging/response-schemas";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
 import type {
@@ -40,8 +44,10 @@ import type {
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
 } from "../shared/messaging/response-schemas";
-import type { DisplaySettings } from "../shared/settings/snapshot";
+import type { Appearance, DisplaySettings } from "../shared/settings/snapshot";
+import type { SiteScopeMode } from "../shared/settings/site-scope";
 import type {
     DiagnosticsClearError,
     DiagnosticsSnapshot,
@@ -108,6 +114,33 @@ export type SitesSetResult =
                 readonly surface: typeof SITE_SETTINGS_SURFACE.SITES;
             }
         >;
+    }
+    | {
+        /**
+         * Indicates that command completion could not be determined directly.
+         */
+        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
+
+        /**
+         * Sites state reread after the ambiguous command, when available.
+         */
+        readonly state?: SitesState;
+    };
+
+/**
+ * Result of changing the active scope mode.
+ */
+export type SitesScopeSetResult =
+    | {
+        /**
+         * Indicates that the background returned a validated command response.
+         */
+        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+
+        /**
+         * Validated result of the scope-mode command.
+         */
+        readonly response: SetSiteScopeModeResponse;
     }
     | {
         /**
@@ -298,6 +331,47 @@ export class SitesClient {
     }
 
     /**
+     * Changes the active scope mode once and rereads state if the response is lost.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - The confirmed response, or a reread after an ambiguous response.
+     */
+    public async setSiteScopeMode(mode: SiteScopeMode): Promise<SitesScopeSetResult> {
+        let response: unknown;
+        try {
+            response = await this.transport.sendMessage({
+                type: SET_SITE_SCOPE_MODE_MESSAGE,
+                mode,
+            });
+        } catch {
+            return this.rereadScopeAfterAmbiguousResponse();
+        }
+        if (v.is(setSiteScopeModeResponseSchema, response)) {
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
+        }
+        return this.rereadScopeAfterAmbiguousResponse();
+    }
+
+    /**
+     * Changes global activation. The response carries a popup projection, so
+     * callers on this surface reread their own state afterwards.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Whether the background confirmed the change.
+     */
+    public async setGlobalEnabled(enabled: boolean): Promise<boolean> {
+        try {
+            const response = await this.transport.sendMessage({
+                type: SET_GLOBAL_ENABLED_MESSAGE,
+                enabled,
+            });
+            return v.is(setGlobalEnabledResponseSchema, response) && response.ok;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Retrieves the saved display-format settings.
      *
      * @returns The validated display state from the background service.
@@ -390,14 +464,19 @@ export class SitesClient {
      * Saves display-format settings and rereads state if the response is ambiguous.
      *
      * @param display Display settings to persist.
+     * @param appearance Appearance choice persisted beside the display settings.
      * @returns The confirmed response, or a state reread after an ambiguous response.
      */
-    public async setDisplaySettings(display: DisplaySettings): Promise<DisplaySetResult> {
+    public async setDisplaySettings(
+        display: DisplaySettings,
+        appearance: Appearance,
+    ): Promise<DisplaySetResult> {
         let response: unknown;
         try {
             response = await this.transport.sendMessage({
                 type: SET_DISPLAY_SETTINGS_MESSAGE,
                 display,
+                appearance,
             });
         } catch {
             return this.rereadDisplayAfterAmbiguousResponse();
@@ -415,6 +494,20 @@ export class SitesClient {
      * @returns An ambiguous result with current state when the reread succeeds.
      */
     private async rereadAfterAmbiguousResponse(): Promise<SitesSetResult> {
+        try {
+            const state = await this.getState();
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
+        } catch {
+            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
+        }
+    }
+
+    /**
+     * Reads sites state after a scope-mode response is lost or malformed.
+     *
+     * @returns - An ambiguous result with current state when the reread succeeds.
+     */
+    private async rereadScopeAfterAmbiguousResponse(): Promise<SitesScopeSetResult> {
         try {
             const state = await this.getState();
             return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };

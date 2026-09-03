@@ -21,7 +21,12 @@ import {
 } from "../../shared/messaging/view-state-schemas";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isFacebookHostname } from "../../shared/url/facebook";
-import { isSiteEnabled } from "../../shared/settings/snapshot";
+import {
+    SITE_SCOPE_MODE,
+    isSiteProcessingEnabled,
+    type SiteScopeMode,
+} from "../../shared/settings/site-scope";
+import type { SettingsSnapshotV6 } from "../../shared/settings/snapshot";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import type { ReconcileFailure } from "../runtime/document-activation";
 import {
@@ -68,6 +73,18 @@ function failureFor(
         }
     }
     return undefined;
+}
+
+/**
+ * Maps a disabled hostname to the status explaining which list excluded it.
+ *
+ * @param mode - Active scope mode.
+ * @returns - Ready popup status for a hostname the active mode does not cover.
+ */
+function coverageStatus(mode: SiteScopeMode): ReadyPopupStatus {
+    return mode === SITE_SCOPE_MODE.SELECTED_ONLY
+        ? POPUP_STATUS.SITE_NOT_SELECTED
+        : POPUP_STATUS.SITE_EXCLUDED;
 }
 
 /**
@@ -158,10 +175,12 @@ export class StateProjection {
                 revision: snapshot.revision,
                 globalEnabled: snapshot.globalEnabled,
                 siteEnabled: null,
+                scopeMode: snapshot.siteScope.mode,
+                appearance: snapshot.appearance,
             };
             return;
         }
-        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, cached.hostname);
+        const siteEnabled = isSiteProcessingEnabled(snapshot.siteScope, cached.hostname);
         const failure = this.popupTabId === undefined
             ? undefined
             : failureFor(this.activation.result?.failures ?? [], this.popupTabId, cached.hostname);
@@ -171,10 +190,11 @@ export class StateProjection {
         } else if (!snapshot.globalEnabled) {
             status = POPUP_STATUS.GLOBAL_DISABLED;
         } else if (!siteEnabled) {
-            status = POPUP_STATUS.SITE_DISABLED;
+            status = coverageStatus(snapshot.siteScope.mode);
         } else if (
             status === POPUP_STATUS.GLOBAL_DISABLED
-            || status === POPUP_STATUS.SITE_DISABLED
+            || status === POPUP_STATUS.SITE_EXCLUDED
+            || status === POPUP_STATUS.SITE_NOT_SELECTED
             || status === POPUP_STATUS.RUNTIME_FAILED
         ) {
             status = POPUP_STATUS.ACTIVE;
@@ -185,6 +205,8 @@ export class StateProjection {
             globalEnabled: snapshot.globalEnabled,
             hostname: cached.hostname,
             siteEnabled,
+            scopeMode: snapshot.siteScope.mode,
+            appearance: snapshot.appearance,
             status,
             ...(failure ? { failure } : {}),
         };
@@ -210,6 +232,8 @@ export class StateProjection {
                 globalEnabled: snapshot.globalEnabled,
                 hostname: null,
                 siteEnabled: null,
+                scopeMode: snapshot.siteScope.mode,
+                appearance: snapshot.appearance,
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
             };
@@ -222,37 +246,33 @@ export class StateProjection {
                 globalEnabled: snapshot.globalEnabled,
                 hostname: null,
                 siteEnabled: null,
+                scopeMode: snapshot.siteScope.mode,
+                appearance: snapshot.appearance,
                 status: POPUP_STATUS.INACCESSIBLE,
             };
         }
-        const siteEnabled = isSiteEnabled(snapshot.sitePreferences, url.hostname);
+        const siteEnabled = isSiteProcessingEnabled(snapshot.siteScope, url.hostname);
         const failure = current.tab === undefined
             ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY
             : failureFor(this.activation.result?.failures ?? [], current.tab.id, url.hostname);
         if (failure) {
-            return this.ready(
-                snapshot.revision,
-                snapshot.globalEnabled,
-                url.hostname,
-                siteEnabled,
-                {
-                    status: POPUP_STATUS.RUNTIME_FAILED,
-                    failure,
-                },
-            );
+            return this.ready(snapshot, url.hostname, siteEnabled, {
+                status: POPUP_STATUS.RUNTIME_FAILED,
+                failure,
+            });
         }
         if (!snapshot.globalEnabled) {
-            return this.ready(snapshot.revision, false, url.hostname, siteEnabled, {
+            return this.ready(snapshot, url.hostname, siteEnabled, {
                 status: POPUP_STATUS.GLOBAL_DISABLED,
             });
         }
         if (!siteEnabled) {
-            return this.ready(snapshot.revision, true, url.hostname, false, {
-                status: POPUP_STATUS.SITE_DISABLED,
+            return this.ready(snapshot, url.hostname, false, {
+                status: coverageStatus(snapshot.siteScope.mode),
             });
         }
         if (current.tab === undefined) {
-            return this.ready(snapshot.revision, true, url.hostname, true, {
+            return this.ready(snapshot, url.hostname, true, {
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: POPUP_RUNTIME_FAILURE.CURRENT_TAB_QUERY,
             });
@@ -271,22 +291,16 @@ export class StateProjection {
             || (status.value.phase !== DOCUMENT_PHASE.WAITING
                 && status.value.phase !== DOCUMENT_PHASE.ACTIVE)
         ) {
-            return this.ready(snapshot.revision, true, url.hostname, true, {
+            return this.ready(snapshot, url.hostname, true, {
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: POPUP_RUNTIME_FAILURE.DOCUMENT_STATUS,
             });
         }
-        return this.ready(
-            snapshot.revision,
-            true,
-            url.hostname,
-            true,
-            { status: POPUP_STATUS.ACTIVE },
-        );
+        return this.ready(snapshot, url.hostname, true, { status: POPUP_STATUS.ACTIVE });
     }
 
     /**
-     * Derives the explicit site-preference list.
+     * Derives the scope mode and both retained hostname lists.
      *
      * @param state - Current application state.
      * @returns - Derived sites state.
@@ -296,17 +310,13 @@ export class StateProjection {
         if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
             return this.unavailableSites(state);
         }
-        const sites = Object.keys(snapshot.sitePreferences).sort((left, right) =>
-            left < right ? -1 : left > right ? 1 : 0,
-        ).map((hostname) => ({
-            hostname,
-            enabled: isSiteEnabled(snapshot.sitePreferences, hostname),
-        }));
         return {
             availability: STATE_AVAILABILITY.READY,
             revision: snapshot.revision,
             globalEnabled: snapshot.globalEnabled,
-            sites,
+            scopeMode: snapshot.siteScope.mode,
+            excludedSites: [...snapshot.siteScope.excludedSites],
+            allowedSites: [...snapshot.siteScope.allowedSites],
         };
     }
 
@@ -351,7 +361,9 @@ export class StateProjection {
             availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             globalEnabled: null,
-            sites: [],
+            scopeMode: null,
+            excludedSites: [],
+            allowedSites: [],
             failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
     }
@@ -359,8 +371,7 @@ export class StateProjection {
     /**
      * Builds a ready popup projection.
      *
-     * @param revision - Settings revision.
-     * @param globalEnabled - Global activation state.
+     * @param snapshot - Authoritative settings snapshot.
      * @param hostname - Active tab hostname.
      * @param siteEnabled - Effective site activation state.
      * @param outcome - Popup status and optional failure.
@@ -369,18 +380,19 @@ export class StateProjection {
      * @returns - Ready popup state.
      */
     private ready(
-        revision: number,
-        globalEnabled: boolean,
+        snapshot: SettingsSnapshotV6,
         hostname: string,
         siteEnabled: boolean,
         outcome: { readonly status: ReadyPopupStatus; readonly failure?: PopupRuntimeFailure },
     ): PopupState {
         return {
             availability: STATE_AVAILABILITY.READY,
-            revision,
-            globalEnabled,
+            revision: snapshot.revision,
+            globalEnabled: snapshot.globalEnabled,
             hostname,
             siteEnabled,
+            scopeMode: snapshot.siteScope.mode,
+            appearance: snapshot.appearance,
             status: outcome.status,
             ...(outcome.failure ? { failure: outcome.failure } : {}),
         };

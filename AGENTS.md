@@ -39,8 +39,10 @@ anonymous public AppView lookups. Public `https://t.me/s/*` pages use the
 generic source. Timestamp extraction remains separate from current-label
 classification, semantic validation, presentation, and rendering.
 
-The extension provides a global switch, per-domain switches, date format and
-time-zone settings, and opt-in diagnostic logs. The UI is English-only.
+The extension provides a global switch, a run mode (`All supported sites` or
+`Selected sites only`) with independent Excluded sites and Allowed sites
+lists, date format and time-zone settings, an Appearance choice (`System`,
+`Light`, or `Dark`), and opt-in diagnostic logs. The UI is English-only.
 Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 
 ## Technical Context
@@ -55,7 +57,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   user-authored date settings; internal extension data uses TypeScript
   contracts.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
-- **Storage:** `chrome.storage.local` stores settings and opt-in diagnostics.
+- **Storage:** `chrome.storage.local` stores one versioned settings snapshot
+  (schema V6) with its previous-snapshot recovery copy, plus opt-in
+  diagnostics. A stored snapshot of any other schema version is discarded and
+  replaced by defaults rather than migrated, because nothing is published.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
 - **Relative labels:** A conservative shared classifier covers 40 confirmed
   locales using current page language and browser locale evidence. Unknown,
@@ -102,6 +107,8 @@ has an obvious, simpler standard-library replacement.
 │   ├── options/                # Settings page and feature sections
 │   ├── popup/                  # Toolbar popup
 │   └── shared/                 # Cross-context schemas and contracts
+│       ├── settings/           # Snapshot, hostname, and site-scope contracts
+│       └── ui/                 # Theme, brand mark, and cross-surface UI hooks
 ├── scripts/
 │   ├── build.ts                # Build command entry point
 │   └── build/                  # Build pipeline and artifacts
@@ -166,8 +173,18 @@ unpacked or temporary extension when manual browser verification is needed.
   and registered specialized rules may transform content.
 - Register one universal HTTP(S) document runtime at `document_start` with
   `allFrames` enabled. Global policy controls registration; the top-level
-  hostname controls processing for every reachable frame in its tab. Hydrate
-  reachable frames on startup and policy refresh without duplicating runtimes.
+  hostname's scope rule controls processing for every reachable frame in its
+  tab: in `All supported sites` a hostname runs unless it is in Excluded
+  sites, and in `Selected sites only` it runs only when it is in Allowed
+  sites. Hydrate reachable frames on startup and policy refresh without
+  duplicating runtimes.
+- Keep the scope decision in `isSiteProcessingEnabled`; no consumer may
+  inspect either hostname list directly. Both lists persist independently of
+  the active mode, and a mode change never moves an entry.
+- Announce every committed settings write to open extension pages through the
+  background broadcast, and treat a delivery failure as normal, because no
+  page has to be open. Surfaces refetch when the announced revision is newer
+  than the one they render.
 - Register the Facebook `MAIN`-world bridge at `document_start` in every
   matching Facebook frame, but keep it inert until the isolated runtime signals
   activity. For already-open tabs, inject it only into enumerated Facebook
@@ -242,8 +259,9 @@ unpacked or temporary extension when manual browser verification is needed.
 - Bound browser operations that gate background initialization or UI queries.
   A pending operation for one stale or discarded tab must become a contained
   runtime failure and must not block popup or settings availability.
-- Restore original page text immediately when global or per-domain processing
-  is disabled, and reprocess the current document when it is enabled.
+- Restore original page text immediately when global or per-hostname
+  processing is disabled, and reprocess the current document when it is
+  enabled.
 - Keep settings schema versions and forward migrations explicit. Before store
   publication, do not add backward compatibility unless a real persisted
   release requires it.
@@ -279,6 +297,7 @@ Apply these principles throughout the project:
 | Content script | Observe documents and apply transformations | Shared contracts and adapters |
 | Adapters | Apply generic fallback and site-specific sources | Content adapter contracts |
 | Shared | Own schemas, messages, values, settings, and date contracts | General-purpose libraries |
+| Shared UI | Provide the theme, brand mark, and subscription hook | Shared contracts and React |
 | Build | Assemble manifests, bundles, and archives | Source contracts and build tooling |
 
 The expected dependency flow is:
@@ -463,3 +482,7 @@ Known architectural exclusions to improve when their area changes:
   current watch markup as a best-effort source, not a compatibility promise.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.
+- Ship the `exact-point` mark as the icon set at 16, 32, 48, and 128 pixels
+  and as the inline brand mark on both surfaces. Both the popup and Settings
+  take their colors from the shared theme in `src/shared/ui`, in light and
+  dark, so neither surface may declare its own palette.

@@ -49,8 +49,17 @@ extension.
   Thai, Turkish, Ukrainian, Vietnamese, Simplified Chinese, and Traditional
   Chinese. Unknown wording fails closed and stays unchanged.
 - **Global switch:** enables or disables all timestamp processing.
-- **Site switch:** stores an independent preference for the current hostname.
+- **Run mode:** `All supported sites` runs everywhere except hostnames in
+  Excluded sites; `Selected sites only` runs only on hostnames in Allowed
+  sites.
+- **Excluded sites:** exact hostnames skipped while `All supported sites` is
+  active.
+- **Allowed sites:** exact hostnames processed while `Selected sites only` is
+  active. Both lists persist independently, so switching modes never moves,
+  merges, or deletes an entry.
 - **Display settings:** choose the date format and time zone used for output.
+- **Appearance:** `System`, `Light`, or `Dark`, chosen in the Settings header
+  and applied immediately to the popup and Settings.
 - **Debug logs:** optional local diagnostics that can be downloaded for a
   problem report.
 
@@ -58,7 +67,8 @@ extension.
 
 No More Ago is not published in browser stores yet. Installation currently
 requires a browser-specific release artifact. If you need to create an artifact
-from source, follow the [development guide](DEVELOPMENT.md).
+from source, follow the [development guide](DEVELOPMENT.md). Once installed,
+the toolbar icon is the Exact Point mark: a ring with a marker at the top.
 
 ### Chrome and Edge
 
@@ -84,7 +94,9 @@ Requires Firefox 128 or later.
 1. Install the artifact for your browser.
 2. Open an HTTP(S) page with a relative label backed by a trusted timestamp.
 3. Open the No More Ago toolbar popup.
-4. Leave **Global enabled** and **Enabled on _hostname_** switched on.
+4. Leave **Extension enabled** and **Enabled on this site** switched on. By
+   default the run mode is `All supported sites`, so every supported page is
+   processed unless its hostname is in Excluded sites.
 5. Eligible relative labels are replaced with exact dates.
 
 For example, `<time datetime="2026-08-27T19:32:28.000Z">9h</time>` may
@@ -279,17 +291,26 @@ support.
 
 ### Global and Site Controls
 
-The toolbar popup shows the current hostname and processing status.
+The toolbar popup shows the current hostname once, the processing status
+(`Active`, `Extension is off`, `Excluded on this site`, `Not selected for this
+site`, `Cannot run on this page`, or `Could not process this page`), and the
+active run mode.
 
-- **Global enabled** controls the extension everywhere.
-- **Enabled on _hostname_** controls the exact top-level hostname for the
-  whole tab, including reachable frames.
+- **Extension enabled** controls the extension everywhere.
+- **Enabled on this site** controls the exact top-level hostname for the whole
+  tab, including reachable frames. In `All supported sites` mode, turning it
+  off adds the hostname to Excluded sites; in `Selected sites only` mode,
+  turning it on adds the hostname to Allowed sites. While the extension is
+  off the switch stays visible but cannot be changed.
 - **Report this site** opens a prefilled GitHub issue for missing or broken
   support.
-- **Settings** opens the browser-managed full Options page.
+- **Settings** opens the browser-managed full Options page, where the Sites
+  section holds the run mode and the list the active mode owns.
 
 Disabling the extension globally or for a site restores the original page
 content immediately. Enabling it again immediately processes the current page.
+Every open popup and Settings page reflects a change made elsewhere without a
+reload.
 
 The current top-level hostname controls every processed frame in the tab. A
 frame's own HTTP(S) URL determines which timestamp sources apply there.
@@ -368,10 +389,12 @@ GitHub form for review and manual submission.
 
 1. Open the site.
 2. Open the toolbar popup.
-3. Switch off **Enabled on _hostname_**.
+3. Switch off **Enabled on this site**.
 
-The preference is stored for that exact hostname and the original page content
-is restored without reloading the page.
+In `All supported sites` mode the hostname is added to Excluded sites; in
+`Selected sites only` mode it is removed from Allowed sites. The original page
+content is restored without reloading the page. Settings lists the active
+mode's hostnames with one `Allow` or `Remove` action per row.
 
 ### Change the Date Presentation
 
@@ -435,7 +458,8 @@ The extension requests:
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
   can verify each frame's revision acknowledgement, and coalesces YouTube
   history-state updates into payload-free route signals for the exact frame.
-- **Storage:** keeps settings and optional diagnostic entries locally.
+- **Storage:** keeps one versioned settings snapshot (schema version 6) and
+  optional diagnostic entries locally.
 
 No More Ago uses the current visible label only to decide whether its
 presentation is recognized as relative. It never derives the timestamp value

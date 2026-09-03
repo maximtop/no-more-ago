@@ -3,11 +3,39 @@
  */
 
 import { validateCustomFormatPattern } from "./custom-format";
+import {
+    DEFAULT_SITE_SCOPE,
+    parseSiteScopePolicy,
+    type SiteScopePolicy,
+} from "./site-scope";
 
 /**
  * Current schema version written with extension settings.
  */
-export const SETTINGS_SCHEMA_VERSION = 5 as const;
+export const SETTINGS_SCHEMA_VERSION = 6 as const;
+
+/**
+ * Named appearance choices applied to the popup and the settings page.
+ */
+export const APPEARANCE = {
+    SYSTEM: "system",
+    LIGHT: "light",
+    DARK: "dark",
+} as const;
+
+/**
+ * Complete set of persisted appearance choices.
+ */
+export const APPEARANCES = [
+    APPEARANCE.SYSTEM,
+    APPEARANCE.LIGHT,
+    APPEARANCE.DARK,
+] as const;
+
+/**
+ * Appearance choice applied to both extension surfaces.
+ */
+export type Appearance = (typeof APPEARANCES)[number];
 
 /**
  * The presentation choices persisted alongside the extension policy.
@@ -70,9 +98,10 @@ export type DisplaySettings =
     };
 
 /**
- * V5 is intentionally an unpublished schema; older documents are rejected.
+ * V6 is intentionally an unpublished schema; documents of any other version
+ * are discarded rather than migrated.
  */
-export interface SettingsSnapshotV5 {
+export interface SettingsSnapshotV6 {
     /**
      * Exact schema revision required before a snapshot is accepted.
      */
@@ -89,9 +118,9 @@ export interface SettingsSnapshotV5 {
     readonly globalEnabled: boolean;
 
     /**
-     * Per-host overrides keyed by canonical URL.hostname values.
+     * Active scope mode and both retained hostname lists.
      */
-    readonly sitePreferences: Readonly<Record<string, boolean>>;
+    readonly siteScope: SiteScopePolicy;
 
     /**
      * Persisted presentation choices applied to rendered timestamps.
@@ -99,9 +128,49 @@ export interface SettingsSnapshotV5 {
     readonly display: DisplaySettings;
 
     /**
+     * Appearance applied to the popup and the settings page.
+     */
+    readonly appearance: Appearance;
+
+    /**
      * Whether bounded diagnostic events are retained locally.
      */
     readonly debugEnabled: boolean;
+}
+
+/**
+ * Caller-supplied fields accepted when constructing a snapshot.
+ */
+export interface SettingsSnapshotInput {
+    /**
+     * Non-negative storage revision.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether timestamp replacement is globally active.
+     */
+    readonly globalEnabled: boolean;
+
+    /**
+     * Scope mode and hostname lists; defaults to the initial policy.
+     */
+    readonly siteScope?: SiteScopePolicy;
+
+    /**
+     * Validated date presentation choices.
+     */
+    readonly display?: DisplaySettings;
+
+    /**
+     * Appearance choice; defaults to following the browser.
+     */
+    readonly appearance?: Appearance;
+
+    /**
+     * Whether diagnostic journaling is enabled.
+     */
+    readonly debugEnabled?: boolean;
 }
 
 /**
@@ -114,10 +183,6 @@ export const SETTINGS_STORAGE_KEY = "settings" as const;
  */
 export const SETTINGS_PREVIOUS_STORAGE_KEY = "settings.previous" as const;
 
-const EMPTY_SITE_PREFERENCES: Readonly<Record<string, boolean>> = Object.freeze(
-    Object.create(null) as Record<string, boolean>,
-);
-
 /**
  * Immutable system-format fallback used when no valid saved display choice exists.
  */
@@ -129,12 +194,13 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = Object.freeze({
 /**
  * Known-good initial snapshot used for first run and failed-closed recovery.
  */
-export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV5 = Object.freeze({
+export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV6 = Object.freeze({
     schemaVersion: SETTINGS_SCHEMA_VERSION,
     revision: 0,
     globalEnabled: true,
-    sitePreferences: EMPTY_SITE_PREFERENCES,
+    siteScope: DEFAULT_SITE_SCOPE,
     display: DEFAULT_DISPLAY_SETTINGS,
+    appearance: APPEARANCE.SYSTEM,
     debugEnabled: false,
 });
 
@@ -151,7 +217,7 @@ export type SettingsLoadResult =
         /**
          * Validated settings snapshot selected by the load operation.
          */
-        readonly snapshot: SettingsSnapshotV5;
+        readonly snapshot: SettingsSnapshotV6;
 
         /**
          * Storage path from which the authoritative snapshot was obtained.
@@ -169,56 +235,6 @@ export type SettingsLoadResult =
          */
         readonly error: "load-failed" | "invalid-settings";
     };
-
-/**
- * A site key is the canonical URL.hostname, never a URL or URL.host.
- *
- * @param hostname - Candidate hostname to use as a site-preference key.
- * @returns - Whether the string is an exact canonical hostname.
- */
-export function isCanonicalHostname(hostname: string): boolean {
-    if (hostname.length === 0 || hostname.trim() !== hostname) {
-        return false;
-    }
-    if (hostname.endsWith("..") || hostname.includes("*")) {
-        return false;
-    }
-    try {
-        const parsed = new URL(`https://${hostname}`);
-        return (
-            parsed.protocol === "https:" &&
-            parsed.hostname === hostname &&
-            parsed.username === "" &&
-            parsed.password === "" &&
-            parsed.port === "" &&
-            parsed.pathname === "/" &&
-            parsed.search === "" &&
-            parsed.hash === ""
-        );
-    } catch {
-        return false;
-    }
-}
-
-/**
- * Rejects noncanonical host overrides and freezes a copied preference map so callers cannot
- * mutate a settings snapshot through its input object.
- *
- * @param value - Typed site-preferences value.
- * @returns - Frozen validated preference map, or null when invalid.
- */
-function copySitePreferences(
-    value: Readonly<Record<string, boolean>>,
-): Readonly<Record<string, boolean>> | null {
-    const entries: [string, boolean][] = [];
-    for (const [hostname, enabled] of Object.entries(value)) {
-        if (!isCanonicalHostname(hostname)) {
-            return null;
-        }
-        entries.push([hostname, enabled]);
-    }
-    return Object.freeze(Object.fromEntries(entries));
-}
 
 const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
 
@@ -311,53 +327,50 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
 }
 
 /**
- * Validates caller-supplied settings and freezes the canonical V5 storage shape.
+ * Validates caller-supplied settings and freezes the canonical V6 storage shape.
  *
- * @param revision - Non-negative storage revision.
- * @param globalEnabled - Whether timestamp replacement is globally active.
- * @param sitePreferences - Canonical-host activation overrides.
- * @param display - Validated date presentation choices.
- * @param debugEnabled - Whether diagnostic journaling is enabled.
- * @returns - Frozen canonical V5 settings snapshot.
+ * @param input - Validated settings fields.
+ * @returns - Frozen canonical V6 settings snapshot.
  */
-export function createSettingsSnapshot(
-    revision: number,
-    globalEnabled: boolean,
-    sitePreferences: Readonly<Record<string, boolean>> = EMPTY_SITE_PREFERENCES,
-    display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
-    debugEnabled = false,
-): SettingsSnapshotV5 {
-    if (!Number.isSafeInteger(revision) || revision < 0) {
-        throw new TypeError("Invalid V5 settings snapshot");
+export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSnapshotV6 {
+    if (!Number.isSafeInteger(input.revision) || input.revision < 0) {
+        throw new TypeError("Invalid V6 settings snapshot");
     }
-    const copied = copySitePreferences(sitePreferences);
-    const parsedDisplay = parseDisplaySettings(display);
-    if (copied === null) {
-        throw new TypeError("Invalid V5 site preferences");
+    const siteScope = parseSiteScopePolicy(input.siteScope ?? DEFAULT_SITE_SCOPE);
+    const display = parseDisplaySettings(input.display ?? DEFAULT_DISPLAY_SETTINGS);
+    const appearance = input.appearance ?? APPEARANCE.SYSTEM;
+    if (siteScope === null) {
+        throw new TypeError("Invalid V6 site scope");
     }
-    if (parsedDisplay === null) {
-        throw new TypeError("Invalid V5 display settings");
+    if (display === null) {
+        throw new TypeError("Invalid V6 display settings");
+    }
+    if (!APPEARANCES.includes(appearance)) {
+        throw new TypeError("Invalid V6 appearance");
     }
     return Object.freeze({
         schemaVersion: SETTINGS_SCHEMA_VERSION,
-        revision,
-        globalEnabled,
-        sitePreferences: copied,
-        display: parsedDisplay,
-        debugEnabled,
+        revision: input.revision,
+        globalEnabled: input.globalEnabled,
+        siteScope,
+        display,
+        appearance,
+        debugEnabled: input.debugEnabled ?? false,
     });
 }
 
 /**
- * Treats an absent per-site override as enabled and only disables explicit false entries.
+ * Recognizes a stored value written by this schema version. A document from any
+ * other version is discarded, because no released build persisted one.
  *
- * @param sitePreferences - Canonical-host activation overrides.
- * @param hostname - Canonical hostname whose effective state is requested.
- * @returns - Whether processing is enabled for the hostname.
+ * @param value - Value read from durable storage.
+ * @returns - Whether the value is a snapshot of the current schema version.
  */
-export function isSiteEnabled(
-    sitePreferences: Readonly<Record<string, boolean>>,
-    hostname: string,
-): boolean {
-    return !Object.hasOwn(sitePreferences, hostname) || sitePreferences[hostname] !== false;
+export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshotV6 {
+    return (
+        typeof value === "object"
+        && value !== null
+        && (value as { readonly schemaVersion?: unknown }).schemaVersion
+            === SETTINGS_SCHEMA_VERSION
+    );
 }

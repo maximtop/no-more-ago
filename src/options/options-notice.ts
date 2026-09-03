@@ -16,6 +16,19 @@ export type OptionsNotice =
     | undefined;
 
 /**
+ * Distinguishes Debug logs outcomes, which the Diagnostics section renders, from site
+ * outcomes, which the Sites section renders.
+ *
+ * @param notice Outcome reported after a settings mutation.
+ * @returns Whether the notice belongs to the Debug logs setting.
+ */
+export function isDebugNotice(notice: OptionsNotice): boolean {
+    return notice === "debug-save-failed"
+        || notice === "debug-interrupted"
+        || notice === "debug-unknown";
+}
+
+/**
  * Maps a site or Debug logs outcome to its user-visible error message.
  *
  * @param notice Outcome reported after a settings mutation.

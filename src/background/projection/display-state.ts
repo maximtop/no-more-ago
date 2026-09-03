@@ -9,6 +9,7 @@ import {
 } from "../../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-errors";
 import type { DisplayState } from "../../shared/messaging/view-state-schemas";
+import { APPEARANCE } from "../../shared/settings/snapshot";
 import { APPLICATION_PHASE } from "../application/contracts";
 
 /**
@@ -39,6 +40,7 @@ export function deriveDisplayState(state: ApplicationStateView): DisplayState {
             availability: STATE_AVAILABILITY.UNAVAILABLE,
             revision: null,
             display: null,
+            appearance: APPEARANCE.SYSTEM,
             failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
                 ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
                 : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
@@ -51,6 +53,7 @@ export function deriveDisplayState(state: ApplicationStateView): DisplayState {
         availability: STATE_AVAILABILITY.READY,
         revision: snapshot.revision,
         display,
+        appearance: snapshot.appearance,
         debugEnabled: snapshot.debugEnabled,
         ...(unavailable ? { error: UNAVAILABLE_TIME_ZONE_ERROR } : {}),
     };

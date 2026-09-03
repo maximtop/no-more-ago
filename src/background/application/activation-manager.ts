@@ -11,6 +11,7 @@ import {
     REGISTRATION_OUTCOME,
 } from "../runtime/document-activation";
 import type { ActivationCoordinator } from "./contracts";
+import type { SiteScopePolicy } from "../../shared/settings/site-scope";
 
 /**
  * Merges a host-scoped reconciliation into the cached complete result.
@@ -68,14 +69,14 @@ export class ActivationManager {
      *
      * @param policy - Global activation policy.
      * @param revision - Settings revision associated with the operation.
-     * @param sitePreferences - Effective per-host activation preferences.
+     * @param siteScope - Effective scope mode and hostname lists.
      * @param affectedHostnames - Optional subset of hosts to reconcile.
      * @returns - The completed reconciliation result.
      */
     public async reconcile(
         policy: ActivationPolicy,
         revision: number | null,
-        sitePreferences: Readonly<Record<string, boolean>>,
+        siteScope: SiteScopePolicy,
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         let result: ActivationReconcileResult;
@@ -83,7 +84,7 @@ export class ActivationManager {
             result = await this.coordinator.reconcile({
                 revision,
                 policy,
-                sitePreferences,
+                siteScope,
                 ...(affectedHostnames === undefined ? {} : { affectedHostnames }),
             });
         } catch {

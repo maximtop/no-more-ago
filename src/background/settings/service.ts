@@ -3,16 +3,24 @@
  */
 
 import {
+    APPEARANCES,
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     createSettingsSnapshot,
-    isCanonicalHostname,
+    isCurrentSettingsSnapshot,
     parseDisplaySettings,
+    type Appearance,
     type DisplaySettings,
     type SettingsLoadResult,
-    type SettingsSnapshotV5,
+    type SettingsSnapshotV6,
 } from "../../shared/settings/snapshot";
+import { isCanonicalHostname } from "../../shared/settings/hostname";
+import {
+    isSiteProcessingEnabled,
+    withSiteProcessing,
+    type SiteScopeMode,
+} from "../../shared/settings/site-scope";
 import { validateCustomFormatPattern } from "../../shared/settings/custom-format";
 
 /**
@@ -24,12 +32,12 @@ export interface SettingsStorage {
      */
     get(
         keys?: string | readonly string[] | Record<string, unknown>,
-    ): Promise<Readonly<Record<string, SettingsSnapshotV5 | undefined>>>;
+    ): Promise<Readonly<Record<string, unknown>>>;
 
     /**
      * Persists a complete record of key-value updates.
      */
-    set(items: Readonly<Record<string, SettingsSnapshotV5>>): Promise<void>;
+    set(items: Readonly<Record<string, SettingsSnapshotV6>>): Promise<void>;
 }
 
 /**
@@ -50,7 +58,7 @@ export type SettingsWriteResult =
         /**
          * Authoritative settings snapshot after the mutation.
          */
-        readonly snapshot: SettingsSnapshotV5;
+        readonly snapshot: SettingsSnapshotV6;
     }
     | {
         /**
@@ -71,7 +79,7 @@ export type SettingsWriteResult =
         /**
          * Last authoritative settings snapshot retained after the failure.
          */
-        readonly snapshot: SettingsSnapshotV5;
+        readonly snapshot: SettingsSnapshotV6;
     };
 
 /**
@@ -101,7 +109,7 @@ function defaultTimeZoneAvailability(identifier: string): boolean {
  * @param b - Second display-settings value.
  * @returns - Whether both values contain the same presentation choices.
  */
-function sameDisplay(a: DisplaySettings, b: DisplaySettings): boolean {
+export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boolean {
     if (a.formatMode !== b.formatMode) {
         return false;
     }
@@ -126,7 +134,7 @@ export class SettingsService {
     /**
      * Last loaded snapshot, used to project settings while storage remains available.
      */
-    private current: SettingsSnapshotV5 | undefined;
+    private current: SettingsSnapshotV6 | undefined;
 
     /**
      * Most recent load failure retained so clients can present the unavailable state accurately.
@@ -157,7 +165,7 @@ export class SettingsService {
      * @returns - Loaded settings snapshot or a contained load failure.
      */
     public async load(): Promise<SettingsLoadResult> {
-        let values: Readonly<Record<string, SettingsSnapshotV5 | undefined>>;
+        let values: Readonly<Record<string, unknown>>;
         try {
             values = await this.storage.get([this.key, SETTINGS_PREVIOUS_STORAGE_KEY]);
         } catch {
@@ -165,8 +173,12 @@ export class SettingsService {
             return { ok: false, error: "load-failed" };
         }
 
-        const current = values[this.key];
-        const storedPrevious = values[SETTINGS_PREVIOUS_STORAGE_KEY];
+        const stored = values[this.key];
+        const storedPreviousValue = values[SETTINGS_PREVIOUS_STORAGE_KEY];
+        const current = isCurrentSettingsSnapshot(stored) ? stored : undefined;
+        const storedPrevious = isCurrentSettingsSnapshot(storedPreviousValue)
+            ? storedPreviousValue
+            : undefined;
         if (current !== undefined) {
             this.loadError = undefined;
             this.current = current;
@@ -195,7 +207,7 @@ export class SettingsService {
      *
      * @returns - Most recently loaded valid snapshot, if available.
      */
-    public get loadedSnapshot(): SettingsSnapshotV5 | undefined {
+    public get loadedSnapshot(): SettingsSnapshotV6 | undefined {
         return this.current;
     }
 
@@ -213,7 +225,7 @@ export class SettingsService {
      *
      * @returns - Current snapshot or immutable default snapshot.
      */
-    private fallbackSnapshot(): SettingsSnapshotV5 {
+    private fallbackSnapshot(): SettingsSnapshotV6 {
         return this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
     }
 
@@ -225,9 +237,9 @@ export class SettingsService {
      * @returns - Atomic storage payload containing both snapshots.
      */
     private pair(
-        current: SettingsSnapshotV5,
-        previous: SettingsSnapshotV5,
-    ): Readonly<Record<string, SettingsSnapshotV5>> {
+        current: SettingsSnapshotV6,
+        previous: SettingsSnapshotV6,
+    ): Readonly<Record<string, SettingsSnapshotV6>> {
         return { [this.key]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
     }
 
@@ -238,7 +250,7 @@ export class SettingsService {
      * @returns - Persisted write result with the effective snapshot.
      */
     private async mutate(
-        mutator: (current: SettingsSnapshotV5) => SettingsSnapshotV5 | null,
+        mutator: (current: SettingsSnapshotV6) => SettingsSnapshotV6 | null,
     ): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
@@ -289,58 +301,74 @@ export class SettingsService {
         return this.mutate((current) =>
             current.globalEnabled === enabled
                 ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    enabled,
-                    current.sitePreferences,
-                    current.display,
-                    current.debugEnabled,
-                ),
+                : createSettingsSnapshot({
+                    revision: current.revision + 1,
+                    globalEnabled: enabled,
+                    siteScope: current.siteScope,
+                    display: current.display,
+                    appearance: current.appearance,
+                    debugEnabled: current.debugEnabled,
+                }),
         );
     }
 
     /**
-     * Persists one canonical-host override without changing other site preferences.
+     * Applies one hostname decision to the list the active scope mode owns.
      *
-     * @param hostname - Canonical hostname to override.
-     * @param enabled - Requested activation state for the hostname.
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
         if (!isCanonicalHostname(hostname)) {
             return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
         }
-        return this.mutate((current) => {
-            if (
-                Object.hasOwn(current.sitePreferences, hostname) &&
-                current.sitePreferences[hostname] === enabled
-            ) {
-                return null;
-            }
-            const entries = Object.entries(current.sitePreferences);
-            const index = entries.findIndex(([key]) => key === hostname);
-            if (index >= 0) {
-                entries[index] = [hostname, enabled];
-            } else {
-                entries.push([hostname, enabled]);
-            }
-            return createSettingsSnapshot(
-                current.revision + 1,
-                current.globalEnabled,
-                Object.fromEntries(entries),
-                current.display,
-                current.debugEnabled,
-            );
-        });
+        return this.mutate((current) =>
+            isSiteProcessingEnabled(current.siteScope, hostname) === enabled
+                ? null
+                : createSettingsSnapshot({
+                    revision: current.revision + 1,
+                    globalEnabled: current.globalEnabled,
+                    siteScope: withSiteProcessing(current.siteScope, hostname, enabled),
+                    display: current.display,
+                    appearance: current.appearance,
+                    debugEnabled: current.debugEnabled,
+                }),
+        );
     }
 
     /**
-     * Persists validated presentation choices and refreshes the derived display projection.
+     * Persists the active scope mode without changing either hostname list.
      *
-     * @param display - Typed display settings to validate and persist.
+     * @param mode - Requested scope mode.
      * @returns - Persisted write result with the effective snapshot.
      */
-    public async setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult> {
+    public async setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult> {
+        return this.mutate((current) =>
+            current.siteScope.mode === mode
+                ? null
+                : createSettingsSnapshot({
+                    revision: current.revision + 1,
+                    globalEnabled: current.globalEnabled,
+                    siteScope: { ...current.siteScope, mode },
+                    display: current.display,
+                    appearance: current.appearance,
+                    debugEnabled: current.debugEnabled,
+                }),
+        );
+    }
+
+    /**
+     * Persists validated presentation choices together with the appearance choice.
+     *
+     * @param display - Typed display settings to validate and persist.
+     * @param appearance - Requested appearance for both extension surfaces.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    public async setDisplaySettings(
+        display: DisplaySettings,
+        appearance: Appearance,
+    ): Promise<SettingsWriteResult> {
         const parsed = parseDisplaySettings(display);
         if (parsed === null) {
             if (
@@ -355,6 +383,13 @@ export class SettingsService {
                 snapshot: this.fallbackSnapshot(),
             };
         }
+        if (!APPEARANCES.includes(appearance)) {
+            return {
+                ok: false,
+                error: "invalid-display-settings",
+                snapshot: this.fallbackSnapshot(),
+            };
+        }
         if (
             parsed.timeZone.mode === "iana" &&
             !this.isTimeZoneAvailable(parsed.timeZone.identifier)
@@ -362,15 +397,16 @@ export class SettingsService {
             return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
         }
         return this.mutate((current) =>
-            sameDisplay(current.display, parsed)
+            sameDisplaySettings(current.display, parsed) && current.appearance === appearance
                 ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    current.globalEnabled,
-                    current.sitePreferences,
-                    parsed,
-                    current.debugEnabled,
-                ),
+                : createSettingsSnapshot({
+                    revision: current.revision + 1,
+                    globalEnabled: current.globalEnabled,
+                    siteScope: current.siteScope,
+                    display: parsed,
+                    appearance,
+                    debugEnabled: current.debugEnabled,
+                }),
         );
     }
 
@@ -384,13 +420,14 @@ export class SettingsService {
         return this.mutate((current) =>
             current.debugEnabled === enabled
                 ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    current.globalEnabled,
-                    current.sitePreferences,
-                    current.display,
-                    enabled,
-                ),
+                : createSettingsSnapshot({
+                    revision: current.revision + 1,
+                    globalEnabled: current.globalEnabled,
+                    siteScope: current.siteScope,
+                    display: current.display,
+                    appearance: current.appearance,
+                    debugEnabled: enabled,
+                }),
         );
     }
 
@@ -406,13 +443,10 @@ export class SettingsService {
             const previous = loaded.ok
                 ? loaded.snapshot
                 : this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
-            const defaults = createSettingsSnapshot(
-                previous.revision + 1,
-                DEFAULT_SETTINGS_SNAPSHOT.globalEnabled,
-                DEFAULT_SETTINGS_SNAPSHOT.sitePreferences,
-                DEFAULT_SETTINGS_SNAPSHOT.display,
-                DEFAULT_SETTINGS_SNAPSHOT.debugEnabled,
-            );
+            const defaults = createSettingsSnapshot({
+                revision: previous.revision + 1,
+                globalEnabled: DEFAULT_SETTINGS_SNAPSHOT.globalEnabled,
+            });
             try {
                 await this.storage.set(this.pair(defaults, defaults));
             } catch {

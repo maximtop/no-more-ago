@@ -2,11 +2,10 @@
  * @file Serialized settings mutations and their runtime side effects.
  */
 
-import type { SettingsService } from "./service";
-import {
-    isCanonicalHostname,
-    type DisplaySettings,
-} from "../../shared/settings/snapshot";
+import { sameDisplaySettings, type SettingsService } from "./service";
+import type { Appearance, DisplaySettings } from "../../shared/settings/snapshot";
+import { isCanonicalHostname } from "../../shared/settings/hostname";
+import type { SiteScopeMode } from "../../shared/settings/site-scope";
 import type { ApplicationLifecycle } from "../application/lifecycle";
 import type { DiagnosticsService } from "../diagnostics/service";
 import { deriveDisplayState } from "../projection/display-state";
@@ -16,6 +15,7 @@ import { ACTIVATION_POLICY } from "../runtime/document-activation";
 import {
     APPLICATION_PHASE,
     LIFECYCLE_REASON,
+    type SettingsBroadcast,
 } from "../application/contracts";
 import {
     SITE_SETTINGS_SURFACE,
@@ -34,6 +34,7 @@ import type {
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
 } from "../../shared/messaging/response-schemas";
 import {
     DIAGNOSTIC_CATEGORY,
@@ -70,6 +71,11 @@ export class SettingsCommands {
     private readonly documentRefresh: DocumentRefresh;
 
     /**
+     * Optional announcer for committed settings revisions.
+     */
+    private readonly broadcast: SettingsBroadcast | undefined;
+
+    /**
      * Creates the settings command handler.
      *
      * @param settings - Settings persistence boundary.
@@ -77,6 +83,7 @@ export class SettingsCommands {
      * @param projection - Popup and sites-state projections.
      * @param diagnostics - Diagnostic journal service.
      * @param documentRefresh - Active-document settings broadcaster.
+     * @param broadcast - Optional announcer for committed settings revisions.
      */
     public constructor(
         settings: SettingsService,
@@ -84,12 +91,30 @@ export class SettingsCommands {
         projection: StateProjection,
         diagnostics: DiagnosticsService,
         documentRefresh: DocumentRefresh,
+        broadcast?: SettingsBroadcast,
     ) {
         this.settings = settings;
         this.lifecycle = lifecycle;
         this.projection = projection;
         this.diagnostics = diagnostics;
         this.documentRefresh = documentRefresh;
+        this.broadcast = broadcast;
+    }
+
+    /**
+     * Announces a committed revision without letting delivery failure surface.
+     *
+     * @param revision - Committed settings revision, when a write succeeded.
+     */
+    private announce(revision: number | undefined): void {
+        if (revision === undefined || !this.broadcast) {
+            return;
+        }
+        try {
+            this.broadcast.settingsChanged(revision);
+        } catch {
+            /* no page is required to be listening */
+        }
     }
 
     /**
@@ -147,6 +172,7 @@ export class SettingsCommands {
         const state = await this.lifecycle.enqueue(() =>
             Promise.resolve(this.diagnostics.debugState(this.lifecycle.state)),
         );
+        this.announce(acceptedRevision);
         if (error !== undefined) {
             return { ok: false, error, state };
         }
@@ -165,9 +191,13 @@ export class SettingsCommands {
      * Validates and persists display settings, then refreshes enabled-site tabs.
      *
      * @param display - Typed display settings payload.
+     * @param appearance - Requested appearance for both extension surfaces.
      * @returns - Persisted display state and document refresh failures.
      */
-    public async setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
+    public async setDisplaySettings(
+        display: DisplaySettings,
+        appearance: Appearance,
+    ): Promise<SetDisplaySettingsResponse> {
         await this.prepare();
         let acceptedRevision: number | undefined;
         let refreshFailures: readonly DisplayRefreshFailure[] = [];
@@ -184,7 +214,8 @@ export class SettingsCommands {
                 error = "settings-unavailable";
                 return;
             }
-            const write = await this.settings.setDisplaySettings(display);
+            const previousDisplay = snapshot.display;
+            const write = await this.settings.setDisplaySettings(display, appearance);
             if (!write.ok) {
                 error =
                     write.error === "invalid-format"
@@ -202,12 +233,14 @@ export class SettingsCommands {
             this.lifecycle.adoptSnapshot(write.snapshot);
             acceptedRevision = write.snapshot.revision;
             this.lifecycle.advanceReconcileRevision(acceptedRevision);
-            if (write.changed) {
+            if (write.changed && !sameDisplaySettings(previousDisplay, write.snapshot.display)) {
                 refreshFailures = await this.documentRefresh.refreshDisplay(
                     write.snapshot,
                     write.snapshot.display,
                     acceptedRevision,
                 );
+            }
+            if (write.changed) {
                 this.diagnostics.log(
                     {
                         category: DIAGNOSTIC_CATEGORY.SETTINGS,
@@ -222,6 +255,7 @@ export class SettingsCommands {
         const state = await this.lifecycle.enqueue(() =>
             Promise.resolve(deriveDisplayState(this.lifecycle.state)),
         );
+        this.announce(acceptedRevision);
         if (error !== undefined) {
             return { ok: false, error, state };
         }
@@ -264,7 +298,7 @@ export class SettingsCommands {
                 await this.lifecycle.reconcile(
                     ACTIVATION_POLICY.DISABLED,
                     write.snapshot.revision,
-                    previous.sitePreferences,
+                    previous.siteScope,
                 );
             }
             await this.diagnostics.reset();
@@ -273,7 +307,7 @@ export class SettingsCommands {
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 write.snapshot.revision,
-                write.snapshot.sitePreferences,
+                write.snapshot.siteScope,
             );
             this.lifecycle.clearLifecycleReasons();
             this.projection.clear();
@@ -282,6 +316,7 @@ export class SettingsCommands {
         const state = await this.lifecycle.enqueue(() =>
             Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
         );
+        this.announce(acceptedRevision);
         if (acceptedRevision !== undefined && state.availability === STATE_AVAILABILITY.READY) {
             return { ok: true, acceptedRevision, state };
         }
@@ -325,7 +360,7 @@ export class SettingsCommands {
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 write.snapshot.revision,
-                write.snapshot.sitePreferences,
+                write.snapshot.siteScope,
             );
             if (write.changed) {
                 this.diagnostics.log(
@@ -341,6 +376,64 @@ export class SettingsCommands {
         const state = await this.lifecycle.enqueue(() =>
             this.projection.deriveAndCachePopup(this.lifecycle.state),
         );
+        this.announce(acceptedRevision);
+        if (error === undefined && acceptedRevision !== undefined) {
+            return { ok: true, acceptedRevision, state };
+        }
+        return { ok: false, error: error ?? "settings-unavailable", state };
+    }
+
+    /**
+     * Persists the active scope mode and reconciles every matching document.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - Persisted sites state for the settings page.
+     */
+    public async setSiteScopeMode(mode: SiteScopeMode): Promise<SetSiteScopeModeResponse> {
+        await this.prepare();
+        let acceptedRevision: number | undefined;
+        let error: "save-failed" | "settings-unavailable" | undefined;
+        await this.lifecycle.enqueue(async () => {
+            const snapshot = this.lifecycle.snapshot;
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
+                error = "settings-unavailable";
+                return;
+            }
+            const write = await this.settings.setSiteScopeMode(mode);
+            if (!write.ok) {
+                error = this.settings.lastLoadError ? "settings-unavailable" : "save-failed";
+                if (this.settings.lastLoadError) {
+                    await this.lifecycle.enterFailedClosed();
+                }
+                return;
+            }
+            this.lifecycle.adoptSnapshot(write.snapshot);
+            acceptedRevision = write.snapshot.revision;
+            if (write.snapshot.globalEnabled && write.changed) {
+                await this.lifecycle.reconcile(
+                    ACTIVATION_POLICY.ENABLED,
+                    write.snapshot.revision,
+                    write.snapshot.siteScope,
+                );
+            } else {
+                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
+            }
+            this.projection.refreshCachedPopup(this.lifecycle.state);
+            if (write.changed) {
+                this.diagnostics.log(
+                    {
+                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
+                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
+                        count: 1,
+                    },
+                    this.lifecycle.state,
+                );
+            }
+        });
+        const state = await this.lifecycle.enqueue(() =>
+            Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
+        );
+        this.announce(acceptedRevision);
         if (error === undefined && acceptedRevision !== undefined) {
             return { ok: true, acceptedRevision, state };
         }
@@ -395,7 +488,7 @@ export class SettingsCommands {
                 await this.lifecycle.reconcile(
                     ACTIVATION_POLICY.ENABLED,
                     write.snapshot.revision,
-                    write.snapshot.sitePreferences,
+                    write.snapshot.siteScope,
                     [hostname],
                 );
             } else {
@@ -427,6 +520,7 @@ export class SettingsCommands {
                 ? this.projection.deriveAndCachePopup(this.lifecycle.state)
                 : this.projection.deriveSites(this.lifecycle.state),
         );
+        this.announce(acceptedRevision);
         if (error === undefined && acceptedRevision !== undefined) {
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? { ok: true, acceptedRevision, surface, state: state as PopupState }

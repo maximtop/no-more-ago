@@ -8,8 +8,11 @@ import { promisify } from "node:util";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { BROWSERS } from "../../../scripts/build/contracts";
-import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
-    "../../../src/shared/extension-files";
+import {
+    EXTENSION_ICON_BASENAME,
+    EXTENSION_ICON_SIZES,
+    FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
+} from "../../../src/shared/extension-files";
 import { createBuildWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
@@ -76,6 +79,18 @@ describe("build commands", () => {
                     expect(manifest.minimum_chrome_version).toBe("102");
                 }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
+                expect(manifest.icons).toEqual(Object.fromEntries(
+                    EXTENSION_ICON_SIZES.map((size) => [
+                        String(size),
+                        `icons/${EXTENSION_ICON_BASENAME}-${String(size)}.png`,
+                    ]),
+                ));
+                for (const size of EXTENSION_ICON_SIZES) {
+                    expect(existsSync(
+                        `${directory}/icons/${EXTENSION_ICON_BASENAME}-${String(size)}.png`,
+                    )).toBe(true);
+                }
+                expect(readdirSync(`${directory}/icons`)).toHaveLength(EXTENSION_ICON_SIZES.length);
                 expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))
                     .toBe(true);
                 expect(existsSync(

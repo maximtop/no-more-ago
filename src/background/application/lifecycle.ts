@@ -10,7 +10,8 @@ import {
     ACTIVATION_POLICY,
 } from "../runtime/document-activation";
 import type { SettingsService } from "../settings/service";
-import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
+import type { SettingsSnapshotV6 } from "../../shared/settings/snapshot";
+import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { ActivationManager } from "./activation-manager";
 import {
     APPLICATION_PHASE,
@@ -60,7 +61,7 @@ export class ApplicationLifecycle {
     /**
      * Last successfully loaded authoritative settings.
      */
-    private snapshotValue: SettingsSnapshotV5 | undefined;
+    private snapshotValue: SettingsSnapshotV6 | undefined;
 
     /**
      * Failure retained while the application is unavailable.
@@ -121,7 +122,7 @@ export class ApplicationLifecycle {
      *
      * @returns - Loaded settings, when available.
      */
-    public get snapshot(): SettingsSnapshotV5 | undefined {
+    public get snapshot(): SettingsSnapshotV6 | undefined {
         return this.snapshotValue;
     }
 
@@ -167,7 +168,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly persisted snapshot.
      */
-    public adoptSnapshot(snapshot: SettingsSnapshotV5): void {
+    public adoptSnapshot(snapshot: SettingsSnapshotV6): void {
         this.snapshotValue = snapshot;
     }
 
@@ -176,7 +177,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly authoritative snapshot.
      */
-    public markReady(snapshot: SettingsSnapshotV5): void {
+    public markReady(snapshot: SettingsSnapshotV6): void {
         this.snapshotValue = snapshot;
         this.failureValue = undefined;
         this.phaseValue = APPLICATION_PHASE.READY;
@@ -194,7 +195,7 @@ export class ApplicationLifecycle {
         const cleanup = await this.reconcile(
             ACTIVATION_POLICY.UNKNOWN,
             null,
-            {},
+            DEFAULT_SITE_SCOPE,
         );
         if (inspectCleanup && cleanup.failures.length > 0) {
             this.failureValue = SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP;
@@ -230,21 +231,20 @@ export class ApplicationLifecycle {
      *
      * @param policy - Effective global policy.
      * @param revision - Associated settings revision.
-     * @param sitePreferences - Canonical-host activation overrides.
+     * @param siteScope - Active scope mode and hostname lists.
      * @param affectedHostnames - Optional hostnames limiting reconciliation.
      * @returns - Reconciliation result.
      */
     public async reconcile(
         policy: ActivationPolicy,
         revision: number | null,
-        sitePreferences: Readonly<Record<string, boolean>> =
-            this.snapshotValue?.sitePreferences ?? {},
+        siteScope: SiteScopePolicy = this.snapshotValue?.siteScope ?? DEFAULT_SITE_SCOPE,
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         const result = await this.activation.reconcile(
             policy,
             revision,
-            sitePreferences,
+            siteScope,
             affectedHostnames,
         );
         this.projection.refreshCachedPopup(this.state);
@@ -305,7 +305,7 @@ export class ApplicationLifecycle {
                         ? ACTIVATION_POLICY.ENABLED
                         : ACTIVATION_POLICY.DISABLED,
                     snapshot.revision,
-                    snapshot.sitePreferences,
+                    snapshot.siteScope,
                 );
                 this.lifecycleReasons.clear();
                 this.diagnostics.log({
@@ -353,7 +353,7 @@ export class ApplicationLifecycle {
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
-                loaded.snapshot.sitePreferences,
+                loaded.snapshot.siteScope,
             );
             this.lifecycleReasons.clear();
             this.phaseValue = APPLICATION_PHASE.READY;
@@ -369,7 +369,7 @@ export class ApplicationLifecycle {
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
-                loaded.snapshot.sitePreferences,
+                loaded.snapshot.siteScope,
             );
             this.lifecycleReasons.clear();
             this.phaseValue = APPLICATION_PHASE.READY;
@@ -399,9 +399,11 @@ export class ApplicationLifecycle {
             await this.diagnostics.setEnabled(true);
         }
         await this.reconcile(
-            loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+            loaded.snapshot.globalEnabled
+                ? ACTIVATION_POLICY.ENABLED
+                : ACTIVATION_POLICY.DISABLED,
             loaded.snapshot.revision,
-            loaded.snapshot.sitePreferences,
+            loaded.snapshot.siteScope,
         );
         this.phaseValue = APPLICATION_PHASE.READY;
         await this.projection.seed(this.state);

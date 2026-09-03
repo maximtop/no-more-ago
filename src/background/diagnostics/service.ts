@@ -18,7 +18,7 @@ import {
 } from "../../shared/diagnostics/contracts";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
 import type { DiagnosticJournal } from "../diagnostics/journal";
-import { isSiteEnabled } from "../../shared/settings/snapshot";
+import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import { parseHttpUrl } from "../../shared/url/http";
 import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
@@ -207,7 +207,7 @@ export class DiagnosticsService {
             return false;
         }
         const topLevelUrl = parseHttpUrl(sender.tab?.url);
-        if (!topLevelUrl || !isSiteEnabled(snapshot.sitePreferences, topLevelUrl.hostname)) {
+        if (!topLevelUrl || !isSiteProcessingEnabled(snapshot.siteScope, topLevelUrl.hostname)) {
             return false;
         }
         const event = createDiagnosticEvent(input, sender);

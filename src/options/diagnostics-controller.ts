@@ -2,7 +2,7 @@
  * @file Owns debug logging, diagnostic archives, and site-report actions for options.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
     DebugState,
 } from "../shared/messaging/view-state-schemas";
@@ -20,7 +20,7 @@ import {
     createDiagnosticsZip,
     downloadDiagnosticsZip,
     type DownloadRuntime,
-} from "./diagnostics/archive";
+} from "../shared/diagnostics/archive";
 import type { SiteReportReporter } from "../shared/reporting/site-report";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";
@@ -29,6 +29,11 @@ import type { OptionsNotice } from "./options-notice";
  * Message used after diagnostic entries are removed successfully.
  */
 export const DIAGNOSTICS_CLEARED_NOTICE = "Diagnostic logs cleared.";
+
+/**
+ * Message used after a diagnostics archive is handed to the browser.
+ */
+export const DIAGNOSTICS_DOWNLOADED_NOTICE = "Diagnostic logs downloaded.";
 
 /**
  * Dependencies and optional initial state for diagnostics controls.
@@ -139,6 +144,13 @@ export interface DiagnosticsController {
      * @returns A promise that settles after the fresh projection has been applied.
      */
     reloadAfterReset(): Promise<void>;
+
+    /**
+     * Rereads the Debug logs setting after another surface changed settings.
+     *
+     * @returns A promise that settles after the fresh projection has been applied.
+     */
+    reload(): Promise<void>;
 }
 
 const UNAVAILABLE_DEBUG_STATE: DebugState = {
@@ -278,12 +290,7 @@ export function useDiagnosticsController(
     };
 
     const downloadDiagnostics = async (): Promise<void> => {
-        if (
-            !state ||
-            state.availability !== STATE_AVAILABILITY.READY ||
-            !state.enabled ||
-            diagnosticsInFlight.current
-        ) {
+        if (diagnosticsInFlight.current) {
             return;
         }
         diagnosticsInFlight.current = true;
@@ -298,6 +305,7 @@ export function useDiagnosticsController(
             try {
                 const bytes = createDiagnosticsZip(result.snapshot);
                 downloadDiagnosticsZip(bytes, archiveRuntime);
+                setDiagnosticsNotice(DIAGNOSTICS_DOWNLOADED_NOTICE);
             } catch (error) {
                 setDiagnosticsNotice(
                     error instanceof DiagnosticArchiveError
@@ -367,6 +375,14 @@ export function useDiagnosticsController(
         }
     };
 
+    const reload = useCallback(async (): Promise<void> => {
+        try {
+            setState(await client.getDebugState());
+        } catch {
+            setState(UNAVAILABLE_DEBUG_STATE);
+        }
+    }, [client]);
+
     return {
         state,
         loading,
@@ -385,5 +401,6 @@ export function useDiagnosticsController(
             setLoading(true);
         },
         reloadAfterReset,
+        reload,
     };
 }

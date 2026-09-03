@@ -20,8 +20,10 @@ import {
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
+    SET_SITE_SCOPE_MODE_MESSAGE,
     backgroundMessageSchema,
 } from "../shared/messaging/contracts";
+import { SETTINGS_CHANGED_MESSAGE } from "../shared/messaging/settings-notifications";
 import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
 import { createUnavailablePopupState } from "../shared/messaging/view-state-schemas";
 import {
@@ -35,18 +37,33 @@ import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
 import { DocumentActivationCoordinator } from "./runtime/document-activation";
 import type { ScriptingRuntime } from "./runtime/scripting";
 import type { TabsRuntime } from "./runtime/tabs";
-import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
-import { LIFECYCLE_REASON } from "./application/contracts";
+import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from "../shared/extension-files";
+import { LIFECYCLE_REASON, type SettingsBroadcast } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 import { parseHttpUrl } from "../shared/url/http";
-import type {
-    DisplaySettings,
-    SettingsSnapshotV5,
-} from "../shared/settings/snapshot";
+import { APPEARANCE, type DisplaySettings } from "../shared/settings/snapshot";
 import {
     installDocumentRouteUpdates,
     type HistoryStateUpdateSource,
 } from "./runtime/document-route-updates";
+
+/**
+ * Announces committed settings revisions to open extension pages.
+ *
+ * Delivery rejects when no popup or options page is open, which is normal, so
+ * the rejection is contained here rather than failing a settings command.
+ */
+const settingsBroadcast: SettingsBroadcast = {
+    settingsChanged: (revision) => {
+        try {
+            void Promise.resolve(
+                chrome.runtime.sendMessage({ type: SETTINGS_CHANGED_MESSAGE, revision }),
+            ).catch(() => undefined);
+        } catch {
+            /* the runtime is unavailable in incomplete browser shims */
+        }
+    },
+};
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -94,7 +111,7 @@ function installApplication(): BackgroundApplication | undefined {
 
     const storage: SettingsStorage & DiagnosticStorage = {
         get: (keys) => candidate.storage?.local?.get(keys) as Promise<
-            Readonly<Record<string, SettingsSnapshotV5 | undefined>>
+            Readonly<Record<string, unknown>>
         >,
         set: (items: Record<string, unknown>) =>
             candidate.storage?.local?.set(items) as Promise<void>,
@@ -178,22 +195,24 @@ function installApplication(): BackgroundApplication | undefined {
         tabs,
         journal: new DiagnosticJournal(storage),
         diagnosticEnvironment,
+        broadcast: settingsBroadcast,
     });
 }
 
 const application = installApplication();
 
 /**
- * Accepts only messages sent from this extension's options page.
+ * Accepts only messages sent from this extension's own options page or popup.
  *
  * @param sender - Runtime message sender metadata.
- * @returns - Whether the sender is this extension's options page.
+ * @returns - Whether the sender is one of this extension's settings surfaces.
  */
-function isTrustedOptionsSender(sender: chrome.runtime.MessageSender): boolean {
+function isTrustedSurfaceSender(sender: chrome.runtime.MessageSender): boolean {
     try {
         return (
-            sender.url === chrome.runtime.getURL(OPTIONS_PAGE_FILE)
-            && sender.id === chrome.runtime.id
+            sender.id === chrome.runtime.id
+            && (sender.url === chrome.runtime.getURL(OPTIONS_PAGE_FILE)
+                || sender.url === chrome.runtime.getURL(POPUP_PAGE_FILE))
         );
     } catch {
         return false;
@@ -223,7 +242,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         const request = parsed.output;
         if (request.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
-            if (!isTrustedOptionsSender(sender)) {
+            if (!isTrustedSurfaceSender(sender)) {
                 return false;
             }
             void application
@@ -232,7 +251,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             return true;
         }
         if (request.type === CLEAR_DIAGNOSTICS_MESSAGE) {
-            if (!isTrustedOptionsSender(sender)) {
+            if (!isTrustedSurfaceSender(sender)) {
                 return false;
             }
             void application
@@ -267,6 +286,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         display: null,
+                        appearance: APPEARANCE.SYSTEM,
                         failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
@@ -304,7 +324,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(request.display as DisplaySettings)
+                .setDisplaySettings(request.display as DisplaySettings, request.appearance)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,
@@ -313,6 +333,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             display: null,
+                            appearance: APPEARANCE.SYSTEM,
                             failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
@@ -339,7 +360,9 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                         availability: STATE_AVAILABILITY.UNAVAILABLE,
                         revision: null,
                         globalEnabled: null,
-                        sites: [],
+                        scopeMode: null,
+                        excludedSites: [],
+                        allowedSites: [],
                         failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                     }),
                 );
@@ -356,7 +379,29 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                             availability: STATE_AVAILABILITY.UNAVAILABLE,
                             revision: null,
                             globalEnabled: null,
-                            sites: [],
+                            scopeMode: null,
+                            excludedSites: [],
+                            allowedSites: [],
+                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+                        },
+                    }),
+                );
+            return true;
+        }
+        if (request.type === SET_SITE_SCOPE_MODE_MESSAGE) {
+            void application
+                .setSiteScopeMode(request.mode)
+                .then(sendOnce, () =>
+                    sendOnce({
+                        ok: false,
+                        error: "settings-unavailable",
+                        state: {
+                            availability: STATE_AVAILABILITY.UNAVAILABLE,
+                            revision: null,
+                            globalEnabled: null,
+                            scopeMode: null,
+                            excludedSites: [],
+                            allowedSites: [],
                             failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                         },
                     }),
@@ -378,7 +423,9 @@ if (application && chrome.runtime?.onMessage?.addListener) {
                                     availability: STATE_AVAILABILITY.UNAVAILABLE,
                                     revision: null,
                                     globalEnabled: null,
-                                    sites: [],
+                                    scopeMode: null,
+                                    excludedSites: [],
+                                    allowedSites: [],
                                     failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
                                 },
                     }),

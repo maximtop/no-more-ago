@@ -8,8 +8,11 @@ import {
     resetAllSettingsResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
+    setSiteScopeModeResponseSchema,
 } from "../../../../src/shared/messaging/response-schemas";
 import { STATE_AVAILABILITY } from "../../../../src/shared/messaging/view-state-values";
+import { APPEARANCE } from "../../../../src/shared/settings/snapshot";
+import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 
 describe("settings response schemas", () => {
     it("validates reset responses with their projected state", () => {
@@ -17,7 +20,9 @@ describe("settings response schemas", () => {
             availability: STATE_AVAILABILITY.READY,
             revision: 3,
             globalEnabled: true,
-            sites: [{ hostname: "github.com", enabled: true }],
+            scopeMode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+            excludedSites: ["github.com"],
+            allowedSites: [],
         } as const;
         expect(v.is(resetAllSettingsResponseSchema, {
             ok: true,
@@ -32,11 +37,39 @@ describe("settings response schemas", () => {
         })).toBe(false);
     });
 
+    it("validates scope-mode responses with their projected state", () => {
+        const sites = {
+            availability: STATE_AVAILABILITY.READY,
+            revision: 3,
+            globalEnabled: true,
+            scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
+            excludedSites: [],
+            allowedSites: ["github.com"],
+        } as const;
+        expect(v.is(setSiteScopeModeResponseSchema, {
+            ok: true,
+            acceptedRevision: 3,
+            state: sites,
+        })).toBe(true);
+        expect(v.is(setSiteScopeModeResponseSchema, {
+            ok: false,
+            error: "save-failed",
+            state: sites,
+        })).toBe(true);
+        expect(v.is(setSiteScopeModeResponseSchema, {
+            ok: true,
+            acceptedRevision: 3,
+            state: sites,
+            extra: true,
+        })).toBe(false);
+    });
+
     it("validates display and debug-setting responses", () => {
         const displayState = {
             availability: STATE_AVAILABILITY.READY,
             revision: 3,
             display: { formatMode: "system", timeZone: { mode: "system" } },
+            appearance: APPEARANCE.SYSTEM,
             debugEnabled: false,
         } as const;
         expect(v.is(setDisplaySettingsResponseSchema, {
