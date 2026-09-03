@@ -105,11 +105,12 @@ export const SETTINGS_STATE_FAILURES = [
 export const SETTINGS_PERSISTENCE_ERRORS = ["save-failed", "settings-unavailable"] as const;
 
 /**
- * Additional semantic error accepted by per-site settings commands.
+ * Additional semantic errors accepted by per-site settings commands.
  */
 export const SITE_SETTINGS_ERRORS = [
     ...SETTINGS_PERSISTENCE_ERRORS,
     "invalid-hostname",
+    "list-full",
 ] as const;
 
 /**

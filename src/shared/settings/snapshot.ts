@@ -12,7 +12,7 @@ import {
 /**
  * Current schema version written with extension settings.
  */
-export const SETTINGS_SCHEMA_VERSION = 6 as const;
+export const SETTINGS_SCHEMA_VERSION = 1 as const;
 
 /**
  * Named appearance choices applied to the popup and the settings page.
@@ -98,10 +98,10 @@ export type DisplaySettings =
     };
 
 /**
- * V6 is intentionally an unpublished schema; documents of any other version
- * are discarded rather than migrated.
+ * Persisted settings document. The schema is unpublished, so a stored document
+ * of any other version is discarded rather than migrated.
  */
-export interface SettingsSnapshotV6 {
+export interface SettingsSnapshot {
     /**
      * Exact schema revision required before a snapshot is accepted.
      */
@@ -194,7 +194,7 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = Object.freeze({
 /**
  * Known-good initial snapshot used for first run and failed-closed recovery.
  */
-export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshotV6 = Object.freeze({
+export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshot = Object.freeze({
     schemaVersion: SETTINGS_SCHEMA_VERSION,
     revision: 0,
     globalEnabled: true,
@@ -217,12 +217,14 @@ export type SettingsLoadResult =
         /**
          * Validated settings snapshot selected by the load operation.
          */
-        readonly snapshot: SettingsSnapshotV6;
+        readonly snapshot: SettingsSnapshot;
 
         /**
          * Storage path from which the authoritative snapshot was obtained.
+         * `discarded` means a document of another schema version was found
+         * and replaced by persisted defaults.
          */
-        readonly source: "default" | "stored" | "recovered";
+        readonly source: "default" | "stored" | "recovered" | "discarded";
     }
     | {
         /**
@@ -327,26 +329,50 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
 }
 
 /**
- * Validates caller-supplied settings and freezes the canonical V6 storage shape.
+ * Compares display choices without relying on object identity.
+ *
+ * @param a - First display-settings value.
+ * @param b - Second display-settings value.
+ * @returns - Whether both values contain the same presentation choices.
+ */
+export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boolean {
+    if (a.formatMode !== b.formatMode) {
+        return false;
+    }
+    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) {
+        return false;
+    }
+    if (a.timeZone.mode !== b.timeZone.mode) {
+        return false;
+    }
+    return (
+        a.timeZone.mode !== "iana"
+        || b.timeZone.mode !== "iana"
+        || a.timeZone.identifier === b.timeZone.identifier
+    );
+}
+
+/**
+ * Validates caller-supplied settings and freezes the canonical storage shape.
  *
  * @param input - Validated settings fields.
- * @returns - Frozen canonical V6 settings snapshot.
+ * @returns - Frozen canonical settings snapshot.
  */
-export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSnapshotV6 {
+export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSnapshot {
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) {
-        throw new TypeError("Invalid V6 settings snapshot");
+        throw new TypeError("Invalid settings snapshot revision");
     }
     const siteScope = parseSiteScopePolicy(input.siteScope ?? DEFAULT_SITE_SCOPE);
     const display = parseDisplaySettings(input.display ?? DEFAULT_DISPLAY_SETTINGS);
     const appearance = input.appearance ?? APPEARANCE.SYSTEM;
     if (siteScope === null) {
-        throw new TypeError("Invalid V6 site scope");
+        throw new TypeError("Invalid site scope");
     }
     if (display === null) {
-        throw new TypeError("Invalid V6 display settings");
+        throw new TypeError("Invalid display settings");
     }
     if (!APPEARANCES.includes(appearance)) {
-        throw new TypeError("Invalid V6 appearance");
+        throw new TypeError("Invalid appearance");
     }
     return Object.freeze({
         schemaVersion: SETTINGS_SCHEMA_VERSION,
@@ -366,7 +392,7 @@ export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSn
  * @param value - Value read from durable storage.
  * @returns - Whether the value is a snapshot of the current schema version.
  */
-export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshotV6 {
+export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshot {
     return (
         typeof value === "object"
         && value !== null

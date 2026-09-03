@@ -9,13 +9,15 @@ import {
     APPEARANCE,
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
+    SETTINGS_SCHEMA_VERSION,
     SETTINGS_STORAGE_KEY,
     createSettingsSnapshot,
     type DisplaySettings,
-    type SettingsSnapshotV6,
+    type SettingsSnapshot,
 } from "../../../../src/shared/settings/snapshot";
 import {
     DEFAULT_SITE_SCOPE,
+    MAX_SITE_LIST_ENTRIES,
     SITE_SCOPE_MODE,
     type SiteScopePolicy,
 } from "../../../../src/shared/settings/site-scope";
@@ -26,7 +28,7 @@ const v6 = (
     siteScope: SiteScopePolicy = DEFAULT_SITE_SCOPE,
     display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } },
     debugEnabled = false,
-): SettingsSnapshotV6 =>
+): SettingsSnapshot =>
     createSettingsSnapshot({ revision, globalEnabled, siteScope, display, debugEnabled });
 
 const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
@@ -52,21 +54,21 @@ function storage(initial?: object, previous?: object) {
                 ? {}
                 : { [SETTINGS_PREVIOUS_STORAGE_KEY]: previousValue }),
         })),
-        set: vi.fn(async (items: Readonly<Record<string, SettingsSnapshotV6>>) => {
+        set: vi.fn(async (items: Readonly<Record<string, SettingsSnapshot>>) => {
             value = items[SETTINGS_STORAGE_KEY];
             previousValue = items[SETTINGS_PREVIOUS_STORAGE_KEY];
         }),
         remove: vi.fn(async () => undefined),
         pair: () => ({ current: value, previous: previousValue }),
-        replace: (current: SettingsSnapshotV6, backup: SettingsSnapshotV6) => {
+        replace: (current: SettingsSnapshot, backup: SettingsSnapshot) => {
             value = current;
             previousValue = backup;
         },
     };
 }
 
-describe("SettingsService V6", () => {
-    it("uses the default-on V6 snapshot only when storage is missing", async () => {
+describe("SettingsService", () => {
+    it("uses the default-on snapshot only when storage is missing", async () => {
         await expect(new SettingsService(storage()).load()).resolves.toEqual({
             ok: true,
             snapshot: DEFAULT_SETTINGS_SNAPSHOT,
@@ -74,15 +76,32 @@ describe("SettingsService V6", () => {
         });
     });
 
-    it("discards a snapshot written by another schema version", async () => {
+    it("discards a snapshot written by another schema version and persists defaults", async () => {
         const legacy = { ...DEFAULT_SETTINGS_SNAPSHOT, schemaVersion: 5, revision: 9 };
         const backend = storage(legacy);
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
         await expect(new SettingsService(backend).load()).resolves.toEqual({
             ok: true,
             snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-            source: "default",
+            source: "discarded",
         });
+        expect(backend.set).toHaveBeenCalledWith({
+            [SETTINGS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
+            [SETTINGS_PREVIOUS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
+        });
+        expect(warn).toHaveBeenCalledOnce();
+    });
+
+    it("fails closed when the discarded snapshot cannot be replaced", async () => {
+        const legacy = { ...DEFAULT_SETTINGS_SNAPSHOT, schemaVersion: 5, revision: 9 };
+        const backend = storage(legacy);
+        backend.set.mockRejectedValueOnce(new Error("quota"));
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const service = new SettingsService(backend);
+
+        await expect(service.load()).resolves.toEqual({ ok: false, error: "invalid-settings" });
+        expect(service.lastLoadError).toBe("invalid-settings");
     });
 
     it("writes one hostname into the list the active mode owns", async () => {
@@ -106,6 +125,27 @@ describe("SettingsService V6", () => {
         });
     });
 
+    it("refuses to grow a full list and keeps the snapshot unchanged", async () => {
+        const excludedSites = Array.from({ length: MAX_SITE_LIST_ENTRIES }, (_, index) =>
+            `host-${String(index)}.test`);
+        const backend = storage(v6(3, true, {
+            mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+            excludedSites,
+            allowedSites: [],
+        }));
+        const service = new SettingsService(backend);
+        await service.load();
+
+        await expect(service.setSiteEnabled("one-more.test", false)).resolves.toMatchObject({
+            ok: false,
+            error: "list-full",
+            snapshot: { revision: 3 },
+        });
+        expect(backend.set).not.toHaveBeenCalled();
+        await expect(service.setSiteEnabled("host-0.test", true))
+            .resolves.toMatchObject({ ok: true, changed: true });
+    });
+
     it("changes the scope mode while retaining both lists", async () => {
         const backend = storage(v6(1, true, {
             mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
@@ -126,23 +166,20 @@ describe("SettingsService V6", () => {
             .resolves.toMatchObject({ ok: true, changed: false });
     });
 
-    it("persists appearance beside display settings in one write", async () => {
-        const backend = storage(v6(1));
+    it("persists the appearance on its own without touching display settings", async () => {
+        const utc: DisplaySettings = { formatMode: "system", timeZone: { mode: "utc" } };
+        const backend = storage(v6(1, true, undefined, utc));
         const service = new SettingsService(backend);
         await service.load();
 
-        const write = await service.setDisplaySettings(
-            { formatMode: "system", timeZone: { mode: "utc" } },
-            APPEARANCE.DARK,
-        );
+        const write = await service.setAppearance(APPEARANCE.DARK);
 
         expect(write.ok).toBe(true);
         expect(write.snapshot.appearance).toBe(APPEARANCE.DARK);
-        expect(write.snapshot.display.timeZone).toEqual({ mode: "utc" });
-        await expect(service.setDisplaySettings(
-            { formatMode: "system", timeZone: { mode: "utc" } },
-            APPEARANCE.DARK,
-        )).resolves.toMatchObject({ ok: true, changed: false });
+        expect(write.snapshot.display).toEqual(utc);
+        expect(write.snapshot.revision).toBe(2);
+        await expect(service.setAppearance(APPEARANCE.DARK))
+            .resolves.toMatchObject({ ok: true, changed: false });
     });
 
     it("stores a complete current/previous pair and serializes debug updates", async () => {
@@ -154,7 +191,7 @@ describe("SettingsService V6", () => {
             ok: true,
             changed: true,
             snapshot: {
-                schemaVersion: 6,
+                schemaVersion: SETTINGS_SCHEMA_VERSION,
                 revision: 3,
                 debugEnabled: true,
                 globalEnabled: false,
@@ -182,9 +219,10 @@ describe("SettingsService V6", () => {
             formatMode: "custom",
             pattern: "yyyy-MM-dd",
             timeZone: { mode: "utc" },
-        }, APPEARANCE.LIGHT);
+        });
+        await service.setAppearance(APPEARANCE.LIGHT);
         expect(backend.pair().current).toMatchObject({
-            schemaVersion: 6,
+            schemaVersion: SETTINGS_SCHEMA_VERSION,
             debugEnabled: true,
             globalEnabled: false,
             siteScope: { mode: SITE_SCOPE_MODE.SELECTED_ONLY, excludedSites: ["github.com"] },
@@ -503,7 +541,7 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
             const service = new SettingsService(backend, SETTINGS_STORAGE_KEY, available);
             const display: DisplaySettings = { formatMode: "system", timeZone };
 
-            await expect(service.setDisplaySettings(display, APPEARANCE.SYSTEM)).resolves.toEqual({
+            await expect(service.setDisplaySettings(display)).resolves.toEqual({
                 ok: true,
                 changed: true,
                 snapshot: v6(5, false, excluding("github.com"), display, true),
@@ -536,10 +574,8 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         const backend = storage(initial, v6(7));
 
         await expect(
-            new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true).setDisplaySettings(
-                custom,
-                APPEARANCE.SYSTEM,
-            ),
+            new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true)
+                .setDisplaySettings(custom),
         ).resolves.toEqual({
             ok: true,
             changed: true,
@@ -572,7 +608,7 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
                     formatMode: "custom",
                     pattern,
                     timeZone: { mode: "utc" },
-                }, APPEARANCE.SYSTEM),
+                }),
             ).resolves.toMatchObject({ ok: false, error: "invalid-format" });
             expect(backend.get).not.toHaveBeenCalled();
             expect(backend.set).not.toHaveBeenCalled();
@@ -599,7 +635,7 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
                 new SettingsService(backend, SETTINGS_STORAGE_KEY, available).setDisplaySettings({
                     formatMode: "system",
                     timeZone: { mode: "iana", identifier },
-                }, APPEARANCE.SYSTEM),
+                }),
             ).resolves.toMatchObject({ ok: false, error: "invalid-display-settings" });
             expect(available).not.toHaveBeenCalled();
             expect(backend.get).not.toHaveBeenCalled();
@@ -615,7 +651,7 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
             new SettingsService(backend, SETTINGS_STORAGE_KEY, available).setDisplaySettings({
                 formatMode: "system",
                 timeZone: { mode: "iana", identifier: "Mars/Olympus" },
-            }, APPEARANCE.SYSTEM),
+            }),
         ).resolves.toMatchObject({ ok: false, error: "invalid-time-zone" });
         expect(available).toHaveBeenCalledOnce();
         expect(backend.get).not.toHaveBeenCalled();
@@ -639,10 +675,8 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         const backend = storage(current, previous);
 
         await expect(
-            new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true).setDisplaySettings(
-                structuredClone(display),
-                APPEARANCE.SYSTEM,
-            ),
+            new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true)
+                .setDisplaySettings(structuredClone(display)),
         ).resolves.toEqual({
             ok: true,
             changed: false,
@@ -712,10 +746,7 @@ const mutations = [
     [
         "display",
         (service: SettingsService) =>
-            service.setDisplaySettings(
-                { formatMode: "system", timeZone: { mode: "utc" } },
-                APPEARANCE.SYSTEM,
-            ),
+            service.setDisplaySettings({ formatMode: "system", timeZone: { mode: "utc" } }),
     ],
     ["debug", (service: SettingsService) => service.setDebugEnabled(true)],
 ] as const;
@@ -794,7 +825,7 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
         const results = await Promise.all([
             service.setGlobalEnabled(false),
             service.setSiteEnabled("github.com", false),
-            service.setDisplaySettings(custom, APPEARANCE.DARK),
+            service.setDisplaySettings(custom),
             service.setDebugEnabled(true),
         ]);
 
@@ -802,14 +833,8 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
         expect(results.every((result) => result.ok && result.changed)).toBe(true);
         expect(backend.set).toHaveBeenCalledTimes(4);
         expect(backend.pair()).toEqual({
-            current: {
-                ...v6(9, false, excluding("github.com"), custom, true),
-                appearance: APPEARANCE.DARK,
-            },
-            previous: {
-                ...v6(8, false, excluding("github.com"), custom, false),
-                appearance: APPEARANCE.DARK,
-            },
+            current: v6(9, false, excluding("github.com"), custom, true),
+            previous: v6(8, false, excluding("github.com"), custom, false),
         });
         for (const [index, [items]] of backend.set.mock.calls.entries()) {
             expect(Object.keys(items).sort()).toEqual(

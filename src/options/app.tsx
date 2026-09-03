@@ -11,11 +11,12 @@ import type {
     SitesState,
 } from "../shared/messaging/view-state-schemas";
 import {
-    createDefaultSettingsChangedSubscriber,
+    INERT_SETTINGS_CHANGED_SUBSCRIBER,
     type SubscribeSettingsChanged,
 } from "../shared/messaging/settings-notifications";
 import { APPEARANCE } from "../shared/settings/snapshot";
 import { BrandMark } from "../shared/ui/brand-mark";
+import { updatedInAnotherWindow } from "../shared/ui/copy";
 import { NO_MORE_AGO_THEME, forcedColorScheme } from "../shared/ui/theme";
 import { useSettingsChanged } from "../shared/ui/use-settings-changed";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
@@ -29,8 +30,7 @@ import { useDiagnosticsController } from "./diagnostics-controller";
 import { DiagnosticsSection } from "./diagnostics-section";
 import { useDisplayController } from "./display-controller";
 import { DisplaySection } from "./display-section";
-import type { OptionsNotice } from "./options-notice";
-import { ResetControl } from "./reset-control";
+import { ResetControl, resetNoticeText } from "./reset-control";
 import { useResetController } from "./reset-controller";
 import { SETTINGS_SECTION, SettingsNavigation } from "./settings-navigation";
 import { useSitesController } from "./sites-controller";
@@ -38,24 +38,9 @@ import { SitesSection } from "./sites-section";
 import { OptionsUnavailablePanel } from "./unavailable-panel";
 
 /**
- * Reads the installed extension version once, outside the extension it is empty.
- *
- * @returns - Manifest version, or an empty string when no runtime is available.
- */
-function readExtensionVersion(): string {
-    try {
-        return typeof chrome === "undefined" ? "" : chrome.runtime.getManifest().version;
-    } catch {
-        return "";
-    }
-}
-
-const EXTENSION_VERSION_LABEL = readExtensionVersion();
-
-/**
  * Optional dependencies and preloaded state for the options UI.
  */
-export interface SitesAppProps {
+export interface OptionsAppProps {
     /**
      * Client used to load and change persisted settings.
      */
@@ -77,7 +62,7 @@ export interface SitesAppProps {
     readonly initialDebugState?: DebugState;
 
     /**
-     * Runtime used to create and download a diagnostics archive.
+     * Runtime used to hand a diagnostics archive to the browser.
      */
     readonly archiveRuntime?: DownloadRuntime;
 
@@ -90,7 +75,17 @@ export interface SitesAppProps {
      * Subscriber used to observe committed settings changes.
      */
     readonly subscribe?: SubscribeSettingsChanged;
+
+    /**
+     * Installed extension version shown in the header, when known.
+     */
+    readonly version?: string;
 }
+
+/**
+ * One of the projections this page renders, when loaded.
+ */
+type Projection = SitesState | DisplayState | DebugState | undefined;
 
 /**
  * Finds the newest settings revision among the projections this page renders.
@@ -98,9 +93,7 @@ export interface SitesAppProps {
  * @param states - Sites, display, and debug projections, when loaded.
  * @returns - Highest ready revision, or null while none is ready.
  */
-function highestKnownRevision(
-    ...states: readonly (SitesState | DisplayState | DebugState | undefined)[]
-): number | null {
+function highestKnownRevision(...states: readonly Projection[]): number | null {
     let highest: number | null = null;
     for (const state of states) {
         if (state?.availability === STATE_AVAILABILITY.READY) {
@@ -111,19 +104,14 @@ function highestKnownRevision(
 }
 
 /**
- * Explains a reset failure on the recovery view.
+ * Reports whether a projection lags behind the newest revision the page knows.
  *
- * @param notice - Outcome of the latest reset attempt.
- * @returns - Guidance text, or undefined when the last reset did not fail.
+ * @param state - Projection to check.
+ * @param highest - Newest ready revision on the page.
+ * @returns - Whether the projection must be reread.
  */
-function recoveryResetText(notice: "save-failed" | "ambiguous" | undefined): string | undefined {
-    if (notice === "save-failed") {
-        return "Could not reset settings. Processing remains disabled. Try again.";
-    }
-    if (notice === "ambiguous") {
-        return "The reset response could not be confirmed. Processing remains disabled. Try again.";
-    }
-    return undefined;
+function isBehind(state: Projection, highest: number): boolean {
+    return state?.availability === STATE_AVAILABILITY.READY && state.revision < highest;
 }
 
 /**
@@ -137,6 +125,7 @@ function recoveryResetText(notice: "save-failed" | "ambiguous" | undefined): str
  * @param props.archiveRuntime - Diagnostics archive download runtime.
  * @param props.reporter - Site-report service override.
  * @param props.subscribe - Settings change subscriber override.
+ * @param props.version - Installed extension version.
  * @returns - The options React view.
  */
 export function OptionsApp({
@@ -146,19 +135,15 @@ export function OptionsApp({
     initialDebugState,
     archiveRuntime,
     reporter: suppliedReporter,
-    subscribe: suppliedSubscribe,
-}: SitesAppProps): ReactElement {
+    subscribe = INERT_SETTINGS_CHANGED_SUBSCRIBER,
+    version,
+}: OptionsAppProps): ReactElement {
     const client = useMemo(() => suppliedClient ?? createSitesClient(), [suppliedClient]);
     const reporter = useMemo(
         () => suppliedReporter ?? createDefaultSiteReportReporter(),
         [suppliedReporter],
     );
-    const subscribe = useMemo(
-        () => suppliedSubscribe ?? createDefaultSettingsChangedSubscriber(),
-        [suppliedSubscribe],
-    );
-    const [notice, setNotice] = useState<OptionsNotice>();
-    const sites = useSitesController({ client, initialState, onNoticeChange: setNotice });
+    const sites = useSitesController({ client, initialState });
     const display = useDisplayController({
         client,
         initialState: initialDisplayState,
@@ -169,47 +154,77 @@ export function OptionsApp({
         reporter,
         initialState: initialDebugState,
         archiveRuntime,
-        onNoticeChange: setNotice,
     });
     const reset = useResetController({ client, sites, display, diagnostics });
     const [externalChange, setExternalChange] = useState(false);
-    const [pendingRevision, setPendingRevision] = useState<number>();
-    const controllers = useRef({ sites, display, diagnostics });
-    controllers.current = { sites, display, diagnostics };
-    const knownRevision = highestKnownRevision(sites.state, display.state, diagnostics.state);
     const ownWriteInFlight = sites.busy !== undefined
         || display.saving
         || display.appearanceSaving
         || diagnostics.saving
         || reset.resetting;
-    const onNewerRevision = useCallback((revision: number) => {
-        setPendingRevision((current) => current === undefined
-            ? revision
-            : Math.max(current, revision));
-    }, []);
-    useSettingsChanged(subscribe, knownRevision, onNewerRevision);
-    // The background announces every committed write to every page, including
-    // the page that issued it, and the announcement can arrive before the
-    // command response. The decision therefore waits until no write of this
-    // page is in flight: an announced revision the page already renders by
-    // then was its own, anything newer came from another surface.
-    useEffect(() => {
-        if (pendingRevision === undefined || ownWriteInFlight) {
-            return;
-        }
-        setPendingRevision(undefined);
-        if (knownRevision !== null && knownRevision >= pendingRevision) {
-            return;
-        }
+    const reloadSites = sites.reload;
+    const reloadDisplay = display.reload;
+    const reloadDiagnostics = diagnostics.reload;
+    const onExternalChange = useCallback(() => {
         setExternalChange(true);
-        const current = controllers.current;
-        void current.sites.reload();
-        void current.display.reload();
-        void current.diagnostics.reload();
-    }, [pendingRevision, ownWriteInFlight, knownRevision]);
+        void reloadSites();
+        void reloadDisplay();
+        void reloadDiagnostics();
+    }, [reloadSites, reloadDisplay, reloadDiagnostics]);
+    const highest = highestKnownRevision(sites.state, display.state, diagnostics.state);
+    useSettingsChanged({
+        subscribe,
+        revision: highest,
+        inFlight: ownWriteInFlight,
+        onExternalChange,
+    });
+    // An own write refreshes one projection only. When the committed revision
+    // jumped past the next expected one, another surface wrote in between, so
+    // the siblings that are still behind are reread silently. The revision is
+    // captured once, when the write starts.
+    const beforeWrite = useRef<{ readonly revision: number | null } | undefined>(undefined);
+    useEffect(() => {
+        if (ownWriteInFlight) {
+            beforeWrite.current ??= { revision: highest };
+            return;
+        }
+        const before = beforeWrite.current;
+        beforeWrite.current = undefined;
+        if (
+            before?.revision === null
+            || before === undefined
+            || highest === null
+            || highest <= before.revision + 1
+        ) {
+            return;
+        }
+        if (isBehind(sites.state, highest)) {
+            void reloadSites();
+        }
+        if (isBehind(display.state, highest)) {
+            void reloadDisplay();
+        }
+        if (isBehind(diagnostics.state, highest)) {
+            void reloadDiagnostics();
+        }
+    }, [
+        ownWriteInFlight,
+        highest,
+        sites.state,
+        display.state,
+        diagnostics.state,
+        reloadSites,
+        reloadDisplay,
+        reloadDiagnostics,
+    ]);
+    // The banner is a signal about the last change, so this page's own next
+    // write retires it.
+    useEffect(() => {
+        if (ownWriteInFlight) {
+            setExternalChange(false);
+        }
+    }, [ownWriteInFlight]);
     const appearance = display.state?.appearance ?? APPEARANCE.SYSTEM;
-    const unavailable = !sites.loading
-        && sites.state?.availability === STATE_AVAILABILITY.UNAVAILABLE;
     return (
         <MantineProvider
             theme={NO_MORE_AGO_THEME}
@@ -222,40 +237,34 @@ export function OptionsApp({
                     <span className="options-brand">No More Ago</span>
                     <span className="options-header-spacer" />
                     <AppearanceControl controller={display} />
-                    {EXTENSION_VERSION_LABEL ? (
-                        <span className="nma-eyebrow options-version">
-                            v{EXTENSION_VERSION_LABEL}
-                        </span>
-                    ) : null}
+                    {version ? <span className="nma-eyebrow">v{version}</span> : null}
                 </header>
                 <main aria-label="No More Ago Settings">
                     {sites.loading || !sites.state ? (
-                        <Text role="status" className="settings-content">
+                        <Text role="status" className="options-content">
                             Loading settings…
                         </Text>
-                    ) : unavailable ? (
+                    ) : sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                         <OptionsUnavailablePanel
-                            message="Settings could not be read, so processing is disabled."
+                            failure={sites.state.failure}
                             diagnostics={diagnostics}
                             reset={reset}
-                            resetNotice={recoveryResetText(reset.notice)}
+                            resetNotice={resetNoticeText(reset.notice, reset.origin)}
                         />
                     ) : (
                         <SettingsNavigation
                             banner={externalChange ? (
                                 <Alert role="status" color="gray" mb="md">
-                                    Settings were updated in another window.
+                                    {updatedInAnotherWindow("Settings")}
                                 </Alert>
                             ) : null}
                             panels={{
-                                [SETTINGS_SECTION.SITES]: (
-                                    <SitesSection controller={sites} notice={notice} />
-                                ),
+                                [SETTINGS_SECTION.SITES]: <SitesSection controller={sites} />,
                                 [SETTINGS_SECTION.DISPLAY]: (
                                     <DisplaySection controller={display} />
                                 ),
                                 [SETTINGS_SECTION.DIAGNOSTICS]: (
-                                    <DiagnosticsSection controller={diagnostics} notice={notice} />
+                                    <DiagnosticsSection controller={diagnostics} />
                                 ),
                                 [SETTINGS_SECTION.RESET]: <ResetControl controller={reset} />,
                             }}

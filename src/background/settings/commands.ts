@@ -2,7 +2,12 @@
  * @file Serialized settings mutations and their runtime side effects.
  */
 
-import { sameDisplaySettings, type SettingsService } from "./service";
+import type {
+    SettingsService,
+    SettingsWriteFailure,
+    SettingsWriteResult,
+    SettingsWriteSuccess,
+} from "./service";
 import type { Appearance, DisplaySettings } from "../../shared/settings/snapshot";
 import { isCanonicalHostname } from "../../shared/settings/hostname";
 import type { SiteScopeMode } from "../../shared/settings/site-scope";
@@ -20,16 +25,17 @@ import {
 import {
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
+    type SettingsPersistenceError,
     type SiteSettingsSurface,
 } from "../../shared/messaging/view-state-values";
 import type {
-    RefreshFailure as DebugRefreshFailure,
-    RefreshFailure as DisplayRefreshFailure,
+    RefreshFailure,
     PopupState,
     SitesState,
 } from "../../shared/messaging/view-state-schemas";
 import type {
     ResetAllSettingsResponse,
+    SetAppearanceResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
@@ -40,6 +46,21 @@ import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from "../../shared/diagnostics/contracts";
+
+/**
+ * Outcome of one serialized write: the committed revision or the error to report.
+ */
+interface WriteOutcome<TError extends string> {
+    /**
+     * Revision committed by the write, when it succeeded.
+     */
+    readonly acceptedRevision: number | undefined;
+
+    /**
+     * Error to report, when the write did not succeed.
+     */
+    readonly error: TError | SettingsPersistenceError | undefined;
+}
 
 /**
  * Applies persisted settings changes and coordinates their runtime effects.
@@ -102,86 +123,42 @@ export class SettingsCommands {
     }
 
     /**
-     * Announces a committed revision without letting delivery failure surface.
-     *
-     * @param revision - Committed settings revision, when a write succeeded.
-     */
-    private announce(revision: number | undefined): void {
-        if (revision === undefined || !this.broadcast) {
-            return;
-        }
-        try {
-            this.broadcast.settingsChanged(revision);
-        } catch {
-            /* no page is required to be listening */
-        }
-    }
-
-    /**
      * Persists diagnostic logging and refreshes matching enabled-site tabs.
      *
      * @param enabled - Requested diagnostic logging state.
      * @returns - Persisted state and document refresh failures.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
-        await this.prepare();
-        let acceptedRevision: number | undefined;
-        let refreshFailures: readonly DebugRefreshFailure[] = [];
-        let error: "save-failed" | "settings-unavailable" | undefined;
-        await this.lifecycle.enqueue(async () => {
-            const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
-                error = "settings-unavailable";
-                return;
-            }
-            const write = await this.settings.setDebugEnabled(enabled);
-            if (!write.ok) {
-                error = this.settings.lastLoadError ? "settings-unavailable" : "save-failed";
-                if (this.settings.lastLoadError) {
-                    await this.lifecycle.enterFailedClosed();
+        let refreshFailures: readonly RefreshFailure[] = [];
+        const outcome = await this.runWrite<never>(
+            () => this.settings.setDebugEnabled(enabled),
+            () => undefined,
+            async (write) => {
+                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
+                if (!write.changed) {
+                    return;
                 }
-                return;
-            }
-            this.lifecycle.adoptSnapshot(write.snapshot);
-            acceptedRevision = write.snapshot.revision;
-            this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
-            if (!write.changed) {
-                return;
-            }
-            if (enabled) {
-                await this.diagnostics.setEnabled(true);
-                this.diagnostics.log(
-                    {
-                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
-                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
-                        count: 1,
-                    },
-                    this.lifecycle.state,
+                if (enabled) {
+                    await this.diagnostics.setEnabled(true);
+                }
+                refreshFailures = await this.documentRefresh.refreshDebugPolicy(
+                    write.snapshot,
+                    enabled,
+                    write.snapshot.revision,
                 );
-            }
-            refreshFailures = await this.documentRefresh.refreshDebugPolicy(
-                write.snapshot,
-                enabled,
-                write.snapshot.revision,
-            );
-            if (!enabled) {
-                await this.diagnostics.setEnabled(false);
-            }
-            this.projection.refreshCachedPopup(this.lifecycle.state);
-        });
-        const state = await this.lifecycle.enqueue(() =>
-            Promise.resolve(this.diagnostics.debugState(this.lifecycle.state)),
+                if (!enabled) {
+                    await this.diagnostics.setEnabled(false);
+                }
+            },
         );
-        this.announce(acceptedRevision);
-        if (error !== undefined) {
-            return { ok: false, error, state };
-        }
-        if (acceptedRevision === undefined) {
-            return { ok: false, error: "settings-unavailable", state };
+        const state = await this.finish(outcome, () =>
+            this.diagnostics.debugState(this.lifecycle.state));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
         }
         return {
             ok: true,
-            acceptedRevision,
+            acceptedRevision: outcome.acceptedRevision,
             state,
             ...(refreshFailures.length === 0 ? {} : { refreshFailures }),
         };
@@ -191,78 +168,58 @@ export class SettingsCommands {
      * Validates and persists display settings, then refreshes enabled-site tabs.
      *
      * @param display - Typed display settings payload.
-     * @param appearance - Requested appearance for both extension surfaces.
      * @returns - Persisted display state and document refresh failures.
      */
     public async setDisplaySettings(
         display: DisplaySettings,
-        appearance: Appearance,
     ): Promise<SetDisplaySettingsResponse> {
-        await this.prepare();
-        let acceptedRevision: number | undefined;
-        let refreshFailures: readonly DisplayRefreshFailure[] = [];
-        let error:
-            | "invalid-format"
-            | "invalid-time-zone"
-            | "invalid-display-settings"
-            | "save-failed"
-            | "settings-unavailable"
-            | undefined;
-        await this.lifecycle.enqueue(async () => {
-            const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
-                error = "settings-unavailable";
-                return;
-            }
-            const previousDisplay = snapshot.display;
-            const write = await this.settings.setDisplaySettings(display, appearance);
-            if (!write.ok) {
-                error =
-                    write.error === "invalid-format"
-                    || write.error === "invalid-time-zone"
-                    || write.error === "invalid-display-settings"
-                        ? write.error
-                        : this.settings.lastLoadError
-                            ? "settings-unavailable"
-                            : "save-failed";
-                if (this.settings.lastLoadError) {
-                    await this.lifecycle.enterFailedClosed();
+        let refreshFailures: readonly RefreshFailure[] = [];
+        const outcome = await this.runWrite(
+            () => this.settings.setDisplaySettings(display),
+            (write) =>
+                write.error === "invalid-format"
+                || write.error === "invalid-time-zone"
+                || write.error === "invalid-display-settings"
+                    ? write.error
+                    : undefined,
+            async (write) => {
+                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
+                if (write.changed) {
+                    refreshFailures = await this.documentRefresh.refreshDisplay(
+                        write.snapshot,
+                        write.snapshot.display,
+                        write.snapshot.revision,
+                    );
                 }
-                return;
-            }
-            this.lifecycle.adoptSnapshot(write.snapshot);
-            acceptedRevision = write.snapshot.revision;
-            this.lifecycle.advanceReconcileRevision(acceptedRevision);
-            if (write.changed && !sameDisplaySettings(previousDisplay, write.snapshot.display)) {
-                refreshFailures = await this.documentRefresh.refreshDisplay(
-                    write.snapshot,
-                    write.snapshot.display,
-                    acceptedRevision,
-                );
-            }
-            if (write.changed) {
-                this.diagnostics.log(
-                    {
-                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
-                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
-                        count: 1,
-                    },
-                    this.lifecycle.state,
-                );
-            }
-            this.projection.refreshCachedPopup(this.lifecycle.state);
-        });
-        const state = await this.lifecycle.enqueue(() =>
-            Promise.resolve(deriveDisplayState(this.lifecycle.state)),
+            },
         );
-        this.announce(acceptedRevision);
-        if (error !== undefined) {
-            return { ok: false, error, state };
+        const state = await this.finish(outcome, () => deriveDisplayState(this.lifecycle.state));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
         }
-        if (acceptedRevision === undefined) {
-            return { ok: false, error: "settings-unavailable", state };
+        return { ok: true, acceptedRevision: outcome.acceptedRevision, state, refreshFailures };
+    }
+
+    /**
+     * Persists the appearance applied to both extension surfaces.
+     *
+     * @param appearance - Requested appearance.
+     * @returns - Persisted display state carrying the appearance.
+     */
+    public async setAppearance(appearance: Appearance): Promise<SetAppearanceResponse> {
+        const outcome = await this.runWrite<never>(
+            () => this.settings.setAppearance(appearance),
+            () => undefined,
+            (write) => {
+                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
+                return Promise.resolve();
+            },
+        );
+        const state = await this.finish(outcome, () => deriveDisplayState(this.lifecycle.state));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
         }
-        return { ok: true, acceptedRevision, state, refreshFailures };
+        return { ok: true, acceptedRevision: outcome.acceptedRevision, state };
     }
 
     /**
@@ -331,56 +288,37 @@ export class SettingsCommands {
      * Persists global activation and reconciles the universal document runtime.
      *
      * @param enabled - Requested global activation state.
-     * @returns - Persisted global state and popup projection.
+     * @param surface - Response projection requested by the caller.
+     * @returns - Persisted global state and the popup or sites projection.
      */
-    public async setGlobalEnabled(enabled: boolean): Promise<SetGlobalEnabledResponse> {
-        await this.prepare();
-        let acceptedRevision: number | undefined;
-        let error: "save-failed" | "settings-unavailable" | undefined;
-        await this.lifecycle.enqueue(async () => {
-            const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
-                error = "settings-unavailable";
-                return;
-            }
-            const write = await this.settings.setGlobalEnabled(enabled);
-            if (!write.ok) {
-                if (this.settings.lastLoadError) {
-                    error = "settings-unavailable";
-                    await this.lifecycle.enterFailedClosed();
-                } else {
-                    error = "save-failed";
-                }
-                return;
-            }
-            this.lifecycle.adoptSnapshot(write.snapshot);
-            acceptedRevision = write.snapshot.revision;
-            await this.lifecycle.reconcile(
-                write.snapshot.globalEnabled
-                    ? ACTIVATION_POLICY.ENABLED
-                    : ACTIVATION_POLICY.DISABLED,
-                write.snapshot.revision,
-                write.snapshot.siteScope,
-            );
-            if (write.changed) {
-                this.diagnostics.log(
-                    {
-                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
-                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
-                        count: 1,
-                    },
-                    this.lifecycle.state,
+    public async setGlobalEnabled(
+        enabled: boolean,
+        surface: SiteSettingsSurface,
+    ): Promise<SetGlobalEnabledResponse> {
+        const outcome = await this.runWrite<never>(
+            () => this.settings.setGlobalEnabled(enabled),
+            () => undefined,
+            async (write) => {
+                await this.lifecycle.reconcile(
+                    write.snapshot.globalEnabled
+                        ? ACTIVATION_POLICY.ENABLED
+                        : ACTIVATION_POLICY.DISABLED,
+                    write.snapshot.revision,
+                    write.snapshot.siteScope,
                 );
-            }
-        });
-        const state = await this.lifecycle.enqueue(() =>
-            this.projection.deriveAndCachePopup(this.lifecycle.state),
+            },
         );
-        this.announce(acceptedRevision);
-        if (error === undefined && acceptedRevision !== undefined) {
-            return { ok: true, acceptedRevision, state };
+        const state = await this.finish(outcome, () => this.deriveSurface(surface));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            const error = outcome.error ?? "settings-unavailable";
+            return surface === SITE_SETTINGS_SURFACE.POPUP
+                ? { ok: false, error, surface, state: state as PopupState }
+                : { ok: false, error, surface, state: state as SitesState };
         }
-        return { ok: false, error: error ?? "settings-unavailable", state };
+        const acceptedRevision = outcome.acceptedRevision;
+        return surface === SITE_SETTINGS_SURFACE.POPUP
+            ? { ok: true, acceptedRevision, surface, state: state as PopupState }
+            : { ok: true, acceptedRevision, surface, state: state as SitesState };
     }
 
     /**
@@ -390,61 +328,25 @@ export class SettingsCommands {
      * @returns - Persisted sites state for the settings page.
      */
     public async setSiteScopeMode(mode: SiteScopeMode): Promise<SetSiteScopeModeResponse> {
-        await this.prepare();
-        let acceptedRevision: number | undefined;
-        let error: "save-failed" | "settings-unavailable" | undefined;
-        await this.lifecycle.enqueue(async () => {
-            const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
-                error = "settings-unavailable";
-                return;
-            }
-            const write = await this.settings.setSiteScopeMode(mode);
-            if (!write.ok) {
-                error = this.settings.lastLoadError ? "settings-unavailable" : "save-failed";
-                if (this.settings.lastLoadError) {
-                    await this.lifecycle.enterFailedClosed();
-                }
-                return;
-            }
-            this.lifecycle.adoptSnapshot(write.snapshot);
-            acceptedRevision = write.snapshot.revision;
-            if (write.snapshot.globalEnabled && write.changed) {
-                await this.lifecycle.reconcile(
-                    ACTIVATION_POLICY.ENABLED,
-                    write.snapshot.revision,
-                    write.snapshot.siteScope,
-                );
-            } else {
-                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
-            }
-            this.projection.refreshCachedPopup(this.lifecycle.state);
-            if (write.changed) {
-                this.diagnostics.log(
-                    {
-                        category: DIAGNOSTIC_CATEGORY.SETTINGS,
-                        reason: DIAGNOSTIC_REASON.SETTINGS_UPDATED,
-                        count: 1,
-                    },
-                    this.lifecycle.state,
-                );
-            }
-        });
-        const state = await this.lifecycle.enqueue(() =>
-            Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
+        const outcome = await this.runWrite<never>(
+            () => this.settings.setSiteScopeMode(mode),
+            () => undefined,
+            (write) => this.reconcileSites(write),
         );
-        this.announce(acceptedRevision);
-        if (error === undefined && acceptedRevision !== undefined) {
-            return { ok: true, acceptedRevision, state };
+        const state = await this.finish(outcome, () =>
+            this.projection.deriveSites(this.lifecycle.state));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
         }
-        return { ok: false, error: error ?? "settings-unavailable", state };
+        return { ok: true, acceptedRevision: outcome.acceptedRevision, state };
     }
 
     /**
-     * Persists one hostname preference and reconciles affected documents.
+     * Applies one hostname decision to the list the active scope mode owns and
+     * reconciles affected documents.
      *
-     * @param hostname - Canonical hostname whose override is changing.
-     * @param enabled - Requested site activation state.
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
      * @param surface - Response projection requested by the caller.
      * @returns - Persisted update and popup or sites state.
      */
@@ -453,49 +355,79 @@ export class SettingsCommands {
         enabled: boolean,
         surface: SiteSettingsSurface,
     ): Promise<SetSiteEnabledResponse> {
+        if (!isCanonicalHostname(hostname)) {
+            await this.prepare();
+            const state = surface === SITE_SETTINGS_SURFACE.POPUP
+                ? (this.projection.cachedPopup
+                    ?? this.projection.unavailablePopup(this.lifecycle.state))
+                : this.projection.deriveSites(this.lifecycle.state);
+            return surface === SITE_SETTINGS_SURFACE.POPUP
+                ? { ok: false, error: "invalid-hostname", surface, state: state as PopupState }
+                : { ok: false, error: "invalid-hostname", surface, state: state as SitesState };
+        }
+        const outcome = await this.runWrite(
+            () => this.settings.setSiteEnabled(hostname, enabled),
+            (write) =>
+                write.error === "invalid-hostname" || write.error === "list-full"
+                    ? write.error
+                    : undefined,
+            (write) => this.reconcileSites(write, [hostname]),
+        );
+        const state = await this.finish(outcome, () => this.deriveSurface(surface));
+        if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
+            const error = outcome.error ?? "settings-unavailable";
+            return surface === SITE_SETTINGS_SURFACE.POPUP
+                ? { ok: false, error, surface, state: state as PopupState }
+                : { ok: false, error, surface, state: state as SitesState };
+        }
+        const acceptedRevision = outcome.acceptedRevision;
+        return surface === SITE_SETTINGS_SURFACE.POPUP
+            ? { ok: true, acceptedRevision, surface, state: state as PopupState }
+            : { ok: true, acceptedRevision, surface, state: state as SitesState };
+    }
+
+    /**
+     * Runs one serialized settings write behind the READY guard, maps its
+     * failure, adopts the committed snapshot, runs the command's own follow-up,
+     * and records the change.
+     *
+     * @param write - Persistence call to run once the application is ready.
+     * @param domainError - Maps a rejected write to a command-specific error, or
+     * undefined when the rejection is a persistence failure.
+     * @param onCommitted - Command-specific runtime effect for a committed write.
+     * @returns - Committed revision or the error to report.
+     */
+    private async runWrite<TError extends string>(
+        write: () => Promise<SettingsWriteResult>,
+        domainError: (write: SettingsWriteFailure) => TError | undefined,
+        onCommitted: (write: SettingsWriteSuccess) => Promise<void>,
+    ): Promise<WriteOutcome<TError>> {
         await this.prepare();
         let acceptedRevision: number | undefined;
-        let error:
-            | "save-failed"
-            | "invalid-hostname"
-            | "settings-unavailable"
-            | undefined;
+        let error: TError | SettingsPersistenceError | undefined;
         await this.lifecycle.enqueue(async () => {
-            const snapshot = this.lifecycle.snapshot;
-            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !snapshot) {
+            if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !this.lifecycle.snapshot) {
                 error = "settings-unavailable";
                 return;
             }
-            if (!isCanonicalHostname(hostname)) {
-                error = "invalid-hostname";
-                return;
-            }
-            const write = await this.settings.setSiteEnabled(hostname, enabled);
-            if (!write.ok) {
-                error = write.error === "invalid-hostname"
-                    ? "invalid-hostname"
-                    : this.settings.lastLoadError
-                        ? "settings-unavailable"
-                        : "save-failed";
-                if (this.settings.lastLoadError) {
+            const result = await write();
+            if (!result.ok) {
+                const mapped = domainError(result);
+                if (mapped !== undefined) {
+                    error = mapped;
+                } else if (this.settings.lastLoadError) {
+                    error = "settings-unavailable";
                     await this.lifecycle.enterFailedClosed();
+                } else {
+                    error = "save-failed";
                 }
                 return;
             }
-            this.lifecycle.adoptSnapshot(write.snapshot);
-            acceptedRevision = write.snapshot.revision;
-            if (write.snapshot.globalEnabled && write.changed) {
-                await this.lifecycle.reconcile(
-                    ACTIVATION_POLICY.ENABLED,
-                    write.snapshot.revision,
-                    write.snapshot.siteScope,
-                    [hostname],
-                );
-            } else {
-                this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
-            }
+            this.lifecycle.adoptSnapshot(result.snapshot);
+            acceptedRevision = result.snapshot.revision;
+            await onCommitted(result);
             this.projection.refreshCachedPopup(this.lifecycle.state);
-            if (write.changed) {
+            if (result.changed) {
                 this.diagnostics.log(
                     {
                         category: DIAGNOSTIC_CATEGORY.SETTINGS,
@@ -506,30 +438,69 @@ export class SettingsCommands {
                 );
             }
         });
-        if (error === "invalid-hostname") {
-            const state = surface === SITE_SETTINGS_SURFACE.POPUP
-                ? (this.projection.cachedPopup
-                    ?? this.projection.unavailablePopup(this.lifecycle.state))
-                : this.projection.deriveSites(this.lifecycle.state);
-            return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: false, error, surface, state: state as PopupState }
-                : { ok: false, error, surface, state: state as SitesState };
+        return { acceptedRevision, error };
+    }
+
+    /**
+     * Derives the response projection after a write and announces its revision.
+     *
+     * @param outcome - Outcome of the serialized write.
+     * @param derive - Projection derived under the lifecycle queue.
+     * @returns - Derived projection.
+     */
+    private async finish<TState>(
+        outcome: WriteOutcome<string>,
+        derive: () => TState | Promise<TState>,
+    ): Promise<TState> {
+        const state = await this.lifecycle.enqueue(() => Promise.resolve(derive()));
+        this.announce(outcome.acceptedRevision);
+        return state;
+    }
+
+    /**
+     * Reconciles documents after a site-scope change when processing is on.
+     *
+     * @param write - Committed site-scope write.
+     * @param hostnames - Hostnames whose documents must be revisited, when limited.
+     * @returns - Promise settled after reconciliation or revision advance.
+     */
+    private async reconcileSites(
+        write: SettingsWriteSuccess,
+        hostnames?: readonly string[],
+    ): Promise<void> {
+        if (write.snapshot.globalEnabled && write.changed) {
+            await this.lifecycle.reconcile(
+                ACTIVATION_POLICY.ENABLED,
+                write.snapshot.revision,
+                write.snapshot.siteScope,
+                hostnames,
+            );
+            return;
         }
-        const state = await this.lifecycle.enqueue(async () =>
-            surface === SITE_SETTINGS_SURFACE.POPUP
-                ? this.projection.deriveAndCachePopup(this.lifecycle.state)
-                : this.projection.deriveSites(this.lifecycle.state),
-        );
-        this.announce(acceptedRevision);
-        if (error === undefined && acceptedRevision !== undefined) {
-            return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: true, acceptedRevision, surface, state: state as PopupState }
-                : { ok: true, acceptedRevision, surface, state: state as SitesState };
-        }
-        const responseError = error ?? "settings-unavailable";
+        this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
+    }
+
+    /**
+     * Derives the popup or sites projection requested by a caller.
+     *
+     * @param surface - Requested response surface.
+     * @returns - Popup or sites projection.
+     */
+    private deriveSurface(surface: SiteSettingsSurface): Promise<PopupState | SitesState> {
         return surface === SITE_SETTINGS_SURFACE.POPUP
-            ? { ok: false, error: responseError, surface, state: state as PopupState }
-            : { ok: false, error: responseError, surface, state: state as SitesState };
+            ? this.projection.deriveAndCachePopup(this.lifecycle.state)
+            : Promise.resolve(this.projection.deriveSites(this.lifecycle.state));
+    }
+
+    /**
+     * Announces a committed revision. The broadcaster contains delivery failure itself.
+     *
+     * @param revision - Committed settings revision, when a write succeeded.
+     */
+    private announce(revision: number | undefined): void {
+        if (revision !== undefined) {
+            this.broadcast?.settingsChanged(revision);
+        }
     }
 
     /**

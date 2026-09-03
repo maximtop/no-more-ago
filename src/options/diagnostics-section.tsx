@@ -5,12 +5,8 @@
 import { Alert, Box, Button, Group, Stack, Switch, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
-import {
-    DIAGNOSTICS_CLEARED_NOTICE,
-    DIAGNOSTICS_DOWNLOADED_NOTICE,
-    type DiagnosticsController,
-} from "./diagnostics-controller";
-import { isDebugNotice, optionsNoticeText, type OptionsNotice } from "./options-notice";
+import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
+import { debugNoticeText, type DiagnosticsController } from "./diagnostics-controller";
 
 /**
  * Properties for the diagnostics section.
@@ -20,11 +16,6 @@ export interface DiagnosticsSectionProps {
      * State and commands owned by the diagnostics controller.
      */
     readonly controller: DiagnosticsController;
-
-    /**
-     * Shared mutation notice; only Debug logs outcomes are rendered here.
-     */
-    readonly notice: OptionsNotice;
 }
 
 /**
@@ -32,16 +23,13 @@ export interface DiagnosticsSectionProps {
  *
  * @param props - Component properties.
  * @param props.controller - State and commands for diagnostics and reporting.
- * @param props.notice - Shared mutation notice.
  * @returns - The diagnostics section.
  */
-export function DiagnosticsSection({ controller, notice }: DiagnosticsSectionProps): ReactElement {
-    const { state } = controller;
-    const debugNotice = isDebugNotice(notice) ? optionsNoticeText(notice) : undefined;
+export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): ReactElement {
+    const { state, diagnosticsNotice } = controller;
+    const debugNotice = debugNoticeText(controller.notice);
     const ready = !controller.loading && state?.availability === STATE_AVAILABILITY.READY;
     const enabled = ready && state.enabled;
-    const success = controller.diagnosticsNotice === DIAGNOSTICS_CLEARED_NOTICE
-        || controller.diagnosticsNotice === DIAGNOSTICS_DOWNLOADED_NOTICE;
     return (
         <Stack gap="lg" component="section" aria-labelledby="diagnostics-heading">
             <Box>
@@ -60,7 +48,7 @@ export function DiagnosticsSection({ controller, notice }: DiagnosticsSectionPro
                 </Text>
             ) : null}
             {ready ? (
-                <Group justify="space-between" wrap="nowrap" className="settings-row">
+                <Group justify="space-between" wrap="nowrap" className="nma-row">
                     <Box>
                         <Text size="sm" fw={600}>
                             Debug logs
@@ -119,9 +107,12 @@ export function DiagnosticsSection({ controller, notice }: DiagnosticsSectionPro
                     {debugNotice}
                 </Alert>
             ) : null}
-            {controller.diagnosticsNotice ? (
-                <Alert role="status" color={success ? "signal" : "red"}>
-                    {controller.diagnosticsNotice}
+            {diagnosticsNotice ? (
+                <Alert
+                    role="status"
+                    color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? "signal" : "red"}
+                >
+                    {diagnosticsNotice}
                 </Alert>
             ) : null}
             {controller.reportNotice ? (

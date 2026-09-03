@@ -58,9 +58,11 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   contracts.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
 - **Storage:** `chrome.storage.local` stores one versioned settings snapshot
-  (schema V6) with its previous-snapshot recovery copy, plus opt-in
-  diagnostics. A stored snapshot of any other schema version is discarded and
-  replaced by defaults rather than migrated, because nothing is published.
+  (`SettingsSnapshot`, schema version 1) with its previous-snapshot recovery
+  copy, plus opt-in diagnostics. A stored snapshot of any other schema version
+  is discarded rather than migrated, because nothing is published: defaults
+  are written back to both the active and recovery keys, the load reports
+  source `discarded`, and a `console.warn` is emitted.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
 - **Relative labels:** A conservative shared classifier covers 40 confirmed
   locales using current page language and browser locale evidence. Unknown,
@@ -92,7 +94,7 @@ has an obvious, simpler standard-library replacement.
 ~~~text
 .
 ├── src/
-│   ├── assets/                 # Extension icons
+│   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
 │   │   ├── application/        # Lifecycle and coordination
 │   │   ├── diagnostics/        # Opt-in bounded diagnostic journal
@@ -107,11 +109,13 @@ has an obvious, simpler standard-library replacement.
 │   ├── options/                # Settings page and feature sections
 │   ├── popup/                  # Toolbar popup
 │   └── shared/                 # Cross-context schemas and contracts
+│       ├── diagnostics/        # Diagnostic contracts, events, archive, and download helper
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
-│       └── ui/                 # Theme, brand mark, and cross-surface UI hooks
+│       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
 │   ├── build.ts                # Build command entry point
-│   └── build/                  # Build pipeline and artifacts
+│   ├── build/                  # Build pipeline and artifacts
+│   └── icons.ts                # Icon PNG export from the SVG master
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
@@ -180,7 +184,9 @@ unpacked or temporary extension when manual browser verification is needed.
   duplicating runtimes.
 - Keep the scope decision in `isSiteProcessingEnabled`; no consumer may
   inspect either hostname list directly. Both lists persist independently of
-  the active mode, and a mode change never moves an entry.
+  the active mode, and a mode change never moves an entry. Each list is capped
+  at `MAX_SITE_LIST_ENTRIES` (1000) hostnames; adding beyond the cap fails
+  with a list-is-full notice.
 - Announce every committed settings write to open extension pages through the
   background broadcast, and treat a delivery failure as normal, because no
   page has to be open. Surfaces refetch when the announced revision is newer
@@ -297,7 +303,7 @@ Apply these principles throughout the project:
 | Content script | Observe documents and apply transformations | Shared contracts and adapters |
 | Adapters | Apply generic fallback and site-specific sources | Content adapter contracts |
 | Shared | Own schemas, messages, values, settings, and date contracts | General-purpose libraries |
-| Shared UI | Provide the theme, brand mark, and subscription hook | Shared contracts and React |
+| Shared UI | Provide the theme, brand mark, and subscription hook | Shared contracts, React, Mantine, and browser DOM |
 | Build | Assemble manifests, bundles, and archives | Source contracts and build tooling |
 
 The expected dependency flow is:
@@ -482,7 +488,10 @@ Known architectural exclusions to improve when their area changes:
   current watch markup as a best-effort source, not a compatibility promise.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.
-- Ship the `exact-point` mark as the icon set at 16, 32, 48, and 128 pixels
-  and as the inline brand mark on both surfaces. Both the popup and Settings
-  take their colors from the shared theme in `src/shared/ui`, in light and
-  dark, so neither surface may declare its own palette.
+- Ship the mark as `src/assets/icons/icon.svg` with `icon-16.png`,
+  `icon-32.png`, `icon-48.png`, and `icon-128.png` exported from it by
+  `pnpm icons` (`scripts/icons.ts`), and as the inline brand mark on both
+  surfaces. The build test asserts each emitted PNG's pixel dimensions. Both
+  the popup and Settings take their colors from the shared theme in
+  `src/shared/ui`, in light and dark, so neither surface may declare its own
+  palette.

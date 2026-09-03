@@ -24,7 +24,7 @@ import {
 import {
     createSettingsSnapshot,
     SETTINGS_STORAGE_KEY,
-    type SettingsSnapshotV6,
+    type SettingsSnapshot,
 } from "../../../src/shared/settings/snapshot";
 import {
     DEFAULT_SITE_SCOPE,
@@ -54,7 +54,7 @@ const reconciled: ActivationReconcileResult = {
  * @returns - Configured application facade.
  */
 function application(
-    initial: Record<string, SettingsSnapshotV6 | undefined> = {},
+    initial: Record<string, SettingsSnapshot | undefined> = {},
 ): BackgroundApplication {
     const storage = {
         get: vi.fn(async () => initial),
@@ -136,10 +136,10 @@ describe("BackgroundApplication document state", () => {
     );
 
     it("routes a site disable through affected-host document reconciliation", async () => {
-        let stored: Record<string, SettingsSnapshotV6 | undefined> = {};
+        let stored: Record<string, SettingsSnapshot | undefined> = {};
         const storage = {
             get: vi.fn(() => Promise.resolve(stored)),
-            set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV6>>) => {
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshot>>) => {
                 stored = { ...stored, ...items };
                 return Promise.resolve();
             }),
@@ -181,7 +181,7 @@ describe("BackgroundApplication document state", () => {
     });
 
     it("reconciles reset defaults at a revision newer than the active documents", async () => {
-        let stored: Record<string, SettingsSnapshotV6 | undefined> = {
+        let stored: Record<string, SettingsSnapshot | undefined> = {
             [SETTINGS_STORAGE_KEY]: createSettingsSnapshot({
                 revision: 7,
                 globalEnabled: true,
@@ -192,7 +192,7 @@ describe("BackgroundApplication document state", () => {
         };
         const storage = {
             get: vi.fn(() => Promise.resolve(stored)),
-            set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV6>>) => {
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshot>>) => {
                 stored = { ...stored, ...items };
                 return Promise.resolve();
             }),
@@ -251,7 +251,7 @@ describe("BackgroundApplication settings notifications", () => {
         let stored: Record<string, unknown> = {};
         const storage = {
             get: vi.fn(() => Promise.resolve(stored)),
-            set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV6>>) => {
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshot>>) => {
                 stored = { ...stored, ...items };
                 return Promise.resolve();
             }),
@@ -280,37 +280,11 @@ describe("BackgroundApplication settings notifications", () => {
     it("announces the committed revision after each accepted mutation", async () => {
         const { app, announced } = notifying();
 
-        await app.setGlobalEnabled(false);
+        await app.setGlobalEnabled(false, SITE_SETTINGS_SURFACE.SITES);
         await app.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
         await app.setSiteEnabled("github.com", true, SITE_SETTINGS_SURFACE.SITES);
 
         expect(announced).toEqual([1, 2, 3]);
-    });
-
-    it("keeps a command successful when the broadcast throws", async () => {
-        let stored: Record<string, unknown> = {};
-        const app = new BackgroundApplication({
-            settings: new SettingsService({
-                get: vi.fn(() => Promise.resolve(stored)),
-                set: vi.fn((items: Readonly<Record<string, SettingsSnapshotV6>>) => {
-                    stored = { ...stored, ...items };
-                    return Promise.resolve();
-                }),
-            }),
-            coordinator: { reconcile: vi.fn(async () => reconciled) },
-            tabs: {
-                query: vi.fn(async () => []),
-                getAllFrames: vi.fn(async () => []),
-                sendMessage: vi.fn(async () => undefined),
-            },
-            broadcast: {
-                settingsChanged: () => {
-                    throw new Error("No receiving end");
-                },
-            },
-        });
-
-        await expect(app.setGlobalEnabled(false)).resolves.toMatchObject({ ok: true });
     });
 
     it("switches the scope mode and reports both retained lists", async () => {

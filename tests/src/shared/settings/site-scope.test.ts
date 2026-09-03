@@ -9,7 +9,9 @@ import {
 } from "../../../../src/shared/settings/hostname";
 import {
     DEFAULT_SITE_SCOPE,
+    MAX_SITE_LIST_ENTRIES,
     SITE_SCOPE_MODE,
+    isSiteListFull,
     isSiteProcessingEnabled,
     parseSiteScopePolicy,
     withSiteProcessing,
@@ -84,6 +86,27 @@ describe("site scope validation", () => {
         )).toBeNull();
         expect(parseSiteScopePolicy(
             scope(SITE_SCOPE_MODE.SELECTED_ONLY, [], ["https://example.com"]),
+        )).toBeNull();
+    });
+});
+
+describe("site scope list bound", () => {
+    const hosts = Array.from({ length: MAX_SITE_LIST_ENTRIES }, (_, index) =>
+        `host-${String(index)}.test`);
+
+    it("reports a full list only for a hostname that is not already in it", () => {
+        const full = scope(SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, hosts);
+        expect(isSiteListFull(full, "new.test")).toBe(true);
+        expect(isSiteListFull(full, "host-0.test")).toBe(false);
+        expect(isSiteListFull(scope(SITE_SCOPE_MODE.SELECTED_ONLY, hosts), "new.test"))
+            .toBe(false);
+    });
+
+    it("rejects a list beyond the bound at the snapshot boundary", () => {
+        expect(parseSiteScopePolicy(scope(SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, hosts)))
+            .not.toBeNull();
+        expect(parseSiteScopePolicy(
+            scope(SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, [...hosts, "one-more.test"]),
         )).toBeNull();
     });
 });

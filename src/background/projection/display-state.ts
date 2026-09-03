@@ -3,13 +3,12 @@
  */
 
 import type { ApplicationStateView } from "../application/state";
-import {
-    SETTINGS_STATE_FAILURE,
-    STATE_AVAILABILITY,
-} from "../../shared/messaging/view-state-values";
+import { STATE_AVAILABILITY } from "../../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-errors";
-import type { DisplayState } from "../../shared/messaging/view-state-schemas";
-import { APPEARANCE } from "../../shared/settings/snapshot";
+import {
+    createUnavailableDisplayState,
+    type DisplayState,
+} from "../../shared/messaging/view-state-schemas";
 import { APPLICATION_PHASE } from "../application/contracts";
 
 /**
@@ -36,15 +35,7 @@ function isZoneAvailable(identifier: string): boolean {
 export function deriveDisplayState(state: ApplicationStateView): DisplayState {
     const snapshot = state.snapshot;
     if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
-        return {
-            availability: STATE_AVAILABILITY.UNAVAILABLE,
-            revision: null,
-            display: null,
-            appearance: APPEARANCE.SYSTEM,
-            failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-                ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-                : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-        };
+        return createUnavailableDisplayState(state.failure);
     }
     const display = snapshot.display;
     const unavailable = display.timeZone.mode === "iana"

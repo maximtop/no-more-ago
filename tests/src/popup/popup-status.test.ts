@@ -11,11 +11,7 @@ import {
     STATE_AVAILABILITY,
 } from "../../../src/shared/messaging/view-state-values";
 import type { PopupState } from "../../../src/shared/messaging/view-state-schemas";
-import {
-    popupStatusModel,
-    runModeLabel,
-    siteControlDescription,
-} from "../../../src/popup/popup-status";
+import { popupStatusModel, siteControlDescription } from "../../../src/popup/popup-status";
 
 const ready = (overrides: Partial<PopupState> = {}): PopupState => ({
     availability: STATE_AVAILABILITY.READY,
@@ -53,11 +49,6 @@ describe("popup status", () => {
             status: POPUP_STATUS.RUNTIME_FAILED,
             failure: SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP,
         })).toEqual({ text: "Current processing state is unknown", tone: "warning" });
-    });
-
-    it("names the active run mode", () => {
-        expect(runModeLabel(SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED)).toBe("All supported sites");
-        expect(runModeLabel(SITE_SCOPE_MODE.SELECTED_ONLY)).toBe("Selected sites only");
     });
 
     it.each([

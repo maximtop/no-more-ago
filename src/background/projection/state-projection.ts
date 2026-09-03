@@ -9,13 +9,13 @@ import {
 import {
     POPUP_RUNTIME_FAILURE,
     POPUP_STATUS,
-    SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
     type PopupRuntimeFailure,
     type ReadyPopupStatus,
 } from "../../shared/messaging/view-state-values";
 import {
     createUnavailablePopupState,
+    createUnavailableSitesState,
     type PopupState,
     type SitesState,
 } from "../../shared/messaging/view-state-schemas";
@@ -26,7 +26,7 @@ import {
     isSiteProcessingEnabled,
     type SiteScopeMode,
 } from "../../shared/settings/site-scope";
-import type { SettingsSnapshotV6 } from "../../shared/settings/snapshot";
+import type { SettingsSnapshot } from "../../shared/settings/snapshot";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import type { ReconcileFailure } from "../runtime/document-activation";
 import {
@@ -327,9 +327,7 @@ export class StateProjection {
      * @returns - Unavailable popup state.
      */
     public unavailablePopup(state: ApplicationStateView): PopupState {
-        return createUnavailablePopupState(
-            state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-        );
+        return createUnavailablePopupState(state.failure);
     }
 
     /**
@@ -357,15 +355,7 @@ export class StateProjection {
      * @returns - Unavailable sites state.
      */
     private unavailableSites(state: ApplicationStateView): SitesState {
-        return {
-            availability: STATE_AVAILABILITY.UNAVAILABLE,
-            revision: null,
-            globalEnabled: null,
-            scopeMode: null,
-            excludedSites: [],
-            allowedSites: [],
-            failure: state.failure ?? SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-        };
+        return createUnavailableSitesState(state.failure);
     }
 
     /**
@@ -380,7 +370,7 @@ export class StateProjection {
      * @returns - Ready popup state.
      */
     private ready(
-        snapshot: SettingsSnapshotV6,
+        snapshot: SettingsSnapshot,
         hostname: string,
         siteEnabled: boolean,
         outcome: { readonly status: ReadyPopupStatus; readonly failure?: PopupRuntimeFailure },

@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "node --experimental-strip-types scripts/build.ts dev",
     "release": "node --experimental-strip-types scripts/build.ts release",
+    "icons": "node --experimental-strip-types scripts/icons.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@resvg/resvg-js": "2.6.2",
     "@rspack/core": "2.1.10",
     "@stylistic/eslint-plugin": "5.10.0",
     "@types/chrome": "0.2.7",

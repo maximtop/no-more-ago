@@ -94,3 +94,38 @@ describe("DiagnosticsService frame authorization", () => {
             .not.toMatch(/private|query|fragment/u);
     });
 });
+
+describe("DiagnosticsService recovery reads", () => {
+    it("reads retained entries while settings are unavailable", async () => {
+        const entries = [{
+            category: "lifecycle",
+            timestamp: 1,
+            hostname: "github.com",
+            pageCategory: "repository",
+            incognito: false,
+        }];
+        const readSnapshot = vi.fn(async () => ({ ok: false, error: "disabled" } as const));
+        const readStored = vi.fn(async () => ({ ok: true, entries } as const));
+        const journal = { readSnapshot, readStored } as unknown as DiagnosticJournal;
+        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+
+        await expect(service.readSnapshot({
+            phase: "failed-closed" as const,
+            snapshot: undefined,
+            failure: "settings-load",
+        })).resolves.toMatchObject({ ok: true, snapshot: { entries } });
+        expect(readSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("still reports disabled logging while settings are available", async () => {
+        const readStored = vi.fn();
+        const journal = { readSnapshot: vi.fn(), readStored } as unknown as DiagnosticJournal;
+        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+        const snapshot = createSettingsSnapshot({ revision: 1, globalEnabled: true });
+
+        await expect(
+            service.readSnapshot({ phase: "ready" as const, snapshot, failure: undefined }),
+        ).resolves.toEqual({ ok: false, error: "disabled" });
+        expect(readStored).not.toHaveBeenCalled();
+    });
+});

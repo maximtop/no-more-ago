@@ -7,7 +7,7 @@ import type { ActivationReconcileResult } from "../runtime/document-activation";
 import type {
     Appearance,
     DisplaySettings,
-    SettingsSnapshotV6,
+    SettingsSnapshot,
 } from "../../shared/settings/snapshot";
 import type { SiteScopeMode } from "../../shared/settings/site-scope";
 import { ActivationManager } from "./activation-manager";
@@ -33,6 +33,7 @@ import type {
 } from "../../shared/messaging/view-state-schemas";
 import type {
     ResetAllSettingsResponse,
+    SetAppearanceResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
@@ -121,7 +122,7 @@ export class BackgroundApplication {
      *
      * @returns - Current snapshot, when settings are available.
      */
-    public get currentSnapshot(): SettingsSnapshotV6 | undefined {
+    public get currentSnapshot(): SettingsSnapshot | undefined {
         return this.lifecycle.snapshot;
     }
 
@@ -169,7 +170,7 @@ export class BackgroundApplication {
     }
 
     /**
-     * Returns site preferences after lifecycle reconciliation.
+     * Returns the scope mode and both hostname lists after lifecycle reconciliation.
      *
      * @returns - Current sites state.
      */
@@ -262,17 +263,23 @@ export class BackgroundApplication {
     }
 
     /**
-     * Validates and persists display settings together with the appearance choice.
+     * Validates and persists display settings.
      *
      * @param display - Typed display settings payload.
-     * @param appearance - Requested appearance for both extension surfaces.
      * @returns - Persisted display state and refresh failures.
      */
-    public setDisplaySettings(
-        display: DisplaySettings,
-        appearance: Appearance,
-    ): Promise<SetDisplaySettingsResponse> {
-        return this.commands.setDisplaySettings(display, appearance);
+    public setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
+        return this.commands.setDisplaySettings(display);
+    }
+
+    /**
+     * Persists the appearance applied to both extension surfaces.
+     *
+     * @param appearance - Requested appearance.
+     * @returns - Persisted display state carrying the appearance.
+     */
+    public setAppearance(appearance: Appearance): Promise<SetAppearanceResponse> {
+        return this.commands.setAppearance(appearance);
     }
 
     /**
@@ -298,17 +305,22 @@ export class BackgroundApplication {
      * Persists global activation and reconciles the document runtime.
      *
      * @param enabled - Requested global activation state.
-     * @returns - Persisted global state and popup projection.
+     * @param surface - Response projection requested by the caller.
+     * @returns - Persisted global state and the popup or sites projection.
      */
-    public setGlobalEnabled(enabled: boolean): Promise<SetGlobalEnabledResponse> {
-        return this.commands.setGlobalEnabled(enabled);
+    public setGlobalEnabled(
+        enabled: boolean,
+        surface: SiteSettingsSurface,
+    ): Promise<SetGlobalEnabledResponse> {
+        return this.commands.setGlobalEnabled(enabled, surface);
     }
 
     /**
-     * Persists one hostname preference and reconciles affected documents.
+     * Applies one hostname decision to the list the active scope mode owns and
+     * reconciles affected documents.
      *
-     * @param hostname - Canonical hostname whose preference is changing.
-     * @param enabled - Requested site activation state.
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
      * @param surface - Response projection requested by the caller.
      * @returns - Persisted update and popup or sites projection.
      */

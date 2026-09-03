@@ -13,6 +13,7 @@ import {
     GET_DISPLAY_STATE_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
+    SET_APPEARANCE_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
@@ -37,6 +38,7 @@ import { OptionsApp } from "../../../src/options/app";
 import { SitesClient, type SitesTransport } from "../../../src/options/client";
 import type { DownloadRuntime } from "../../../src/shared/diagnostics/archive";
 import type { SiteReportReporter } from "../../../src/shared/reporting/site-report";
+import { findButton, installMatchMedia, messageType } from "../../support/dom";
 
 const ready: SitesState = {
     availability: "ready",
@@ -77,55 +79,63 @@ beforeAll(() => {
     (
         globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    Object.defineProperty(window, "matchMedia", {
-        configurable: true,
-        value: () => ({
-            matches: false,
-            media: "",
-            onchange: null,
-            addListener: () => undefined,
-            removeListener: () => undefined,
-            addEventListener: () => undefined,
-            removeEventListener: () => undefined,
-            dispatchEvent: () => false,
-        }),
-    });
+    installMatchMedia();
 });
 
 /**
- * Reads the request type of a background message.
- *
- * @param message - Message sent through the transport.
- * @returns - Request type, or undefined when the message has none.
+ * Injectable dependencies and preloaded projections for one options render.
  */
-function messageType(message: unknown): string | undefined {
-    return message && typeof message === "object" && "type" in message
-        && typeof message.type === "string"
-        ? message.type
-        : undefined;
+interface RenderOptions {
+    /**
+     * Background message transport used by the client.
+     */
+    readonly transport?: SitesTransport;
+
+    /**
+     * Initial display settings state.
+     */
+    readonly initialDisplayState?: DisplayState;
+
+    /**
+     * Initial diagnostic logging state.
+     */
+    readonly initialDebugState?: DebugState;
+
+    /**
+     * Diagnostics archive download runtime.
+     */
+    readonly archiveRuntime?: DownloadRuntime;
+
+    /**
+     * Site-report service.
+     */
+    readonly reporter?: SiteReportReporter;
+
+    /**
+     * Settings change subscriber.
+     */
+    readonly subscribe?: SubscribeSettingsChanged;
 }
 
 /**
  * Renders the options application with injectable background and browser dependencies.
  *
  * @param state - Initial sites settings state.
- * @param transport - Background message transport used by the client.
- * @param initialDisplayState - Initial display settings state.
- * @param initialDebugState - Initial diagnostic logging state.
- * @param archiveRuntime - Optional diagnostics archive download runtime.
- * @param reporter - Optional site-report service.
- * @param subscribe - Optional settings change subscriber.
+ * @param options - Transport, preloaded projections, and browser dependencies.
  * @returns - Mounted container and asynchronous cleanup action.
  */
 async function renderOptions(
     state: SitesState,
-    transport: SitesTransport = { sendMessage: () => Promise.resolve(state) },
-    initialDisplayState: DisplayState | undefined = displayReady,
-    initialDebugState: DebugState | undefined = debugReady,
-    archiveRuntime?: DownloadRuntime,
-    reporter?: SiteReportReporter,
-    subscribe?: SubscribeSettingsChanged,
+    options: RenderOptions = {},
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
+    const {
+        transport = { sendMessage: () => Promise.resolve(state) },
+        initialDisplayState = displayReady,
+        initialDebugState = debugReady,
+        archiveRuntime,
+        reporter,
+        subscribe,
+    } = options;
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
@@ -173,17 +183,16 @@ async function openSection(container: HTMLElement, label: string): Promise<void>
     });
 }
 
+const PREVIEW_SELECTOR = '[role="status"][aria-label="Preview"]';
+
 /**
- * Finds a button by its exact visible label.
+ * Reads the rendered preview text.
  *
  * @param container - Mounted options container.
- * @param label - Visible button text.
- * @returns - Matching button, when present.
+ * @returns - Preview text, or undefined when the preview is not rendered.
  */
-function findButton(container: HTMLElement, label: string): HTMLButtonElement | undefined {
-    return [...container.querySelectorAll("button")].find(
-        (button) => button.textContent === label,
-    );
+function previewText(container: HTMLElement): string | undefined {
+    return container.querySelector(PREVIEW_SELECTOR)?.textContent;
 }
 
 /**
@@ -254,13 +263,15 @@ describe("Options Sites contract", () => {
             scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
         };
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve({
-                    ok: true,
-                    acceptedRevision: 5,
-                    state: selected,
-                });
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve({
+                        ok: true,
+                        acceptedRevision: 5,
+                        state: selected,
+                    });
+                },
             },
         });
         try {
@@ -305,18 +316,20 @@ describe("Options Sites contract", () => {
     it("adds a normalized hostname to the active list", async () => {
         const sent: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve({
-                    ok: true,
-                    acceptedRevision: 5,
-                    surface: SITE_SETTINGS_SURFACE.SITES,
-                    state: {
-                        ...ready,
-                        revision: 5,
-                        excludedSites: ["github.com", "example.test"],
-                    },
-                });
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve({
+                        ok: true,
+                        acceptedRevision: 5,
+                        surface: SITE_SETTINGS_SURFACE.SITES,
+                        state: {
+                            ...ready,
+                            revision: 5,
+                            excludedSites: ["github.com", "example.test"],
+                        },
+                    });
+                },
             },
         });
         try {
@@ -344,12 +357,75 @@ describe("Options Sites contract", () => {
         }
     });
 
+    it("keeps the typed hostname and shows no confirmation when the add fails", async () => {
+        const rendered = await renderOptions(ready, {
+            transport: {
+                sendMessage: () => Promise.resolve({
+                    ok: false,
+                    error: "save-failed",
+                    surface: SITE_SETTINGS_SURFACE.SITES,
+                    state: ready,
+                }),
+            },
+        });
+        try {
+            const field = rendered.container.querySelector<HTMLInputElement>(
+                'input[aria-label="Exclude hostname"]',
+            );
+            const submit = findButton(rendered.container, "Exclude site");
+            if (!field || !submit) {
+                throw new Error("Add-hostname form is missing");
+            }
+            await act(async () => {
+                setControlValue(field, "example.test");
+                submit.click();
+            });
+            expect(field.value).toBe("example.test");
+            expect(rendered.container.textContent).not.toContain("was added to");
+            expect(rendered.container.textContent).toContain("Could not save this change.");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("reports a full list without clearing the field", async () => {
+        const rendered = await renderOptions(ready, {
+            transport: {
+                sendMessage: () => Promise.resolve({
+                    ok: false,
+                    error: "list-full",
+                    surface: SITE_SETTINGS_SURFACE.SITES,
+                    state: ready,
+                }),
+            },
+        });
+        try {
+            const field = rendered.container.querySelector<HTMLInputElement>(
+                'input[aria-label="Exclude hostname"]',
+            );
+            const submit = findButton(rendered.container, "Exclude site");
+            if (!field || !submit) {
+                throw new Error("Add-hostname form is missing");
+            }
+            await act(async () => {
+                setControlValue(field, "example.test");
+                submit.click();
+            });
+            expect(field.value).toBe("example.test");
+            expect(rendered.container.textContent).toContain("This list is full.");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
     it("refuses an invalid hostname without sending a message", async () => {
         const sent: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -375,9 +451,11 @@ describe("Options Sites contract", () => {
     it("rejects a duplicate of an entry already in the active list", async () => {
         const sent: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -424,17 +502,19 @@ describe("Options Sites contract", () => {
     it("removes a row through its single action", async () => {
         let write: unknown;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
-                    write = message;
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 5,
-                        surface: SITE_SETTINGS_SURFACE.SITES,
-                        state: { ...ready, revision: 5, excludedSites: [] },
-                    });
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                        write = message;
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 5,
+                            surface: SITE_SETTINGS_SURFACE.SITES,
+                            state: { ...ready, revision: 5, excludedSites: [] },
+                        });
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -462,34 +542,36 @@ describe("Options Sites contract", () => {
         const sent: string[] = [];
         let globalEnabled = true;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                const type = messageType(message);
-                if (type) {
-                    sent.push(type);
-                }
-                if (type === SET_GLOBAL_ENABLED_MESSAGE) {
-                    globalEnabled = false;
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 5,
-                        state: {
-                            availability: "ready",
-                            revision: 5,
-                            globalEnabled: false,
-                            hostname: null,
-                            siteEnabled: null,
-                            scopeMode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-                            appearance: APPEARANCE.SYSTEM,
-                            status: "inaccessible",
-                        },
-                    });
-                }
-                return Promise.resolve({ ...ready, revision: 5, globalEnabled });
+            transport: {
+                sendMessage: (message) => {
+                    const type = messageType(message);
+                    if (type) {
+                        sent.push(type);
+                    }
+                    if (type === SET_GLOBAL_ENABLED_MESSAGE) {
+                        globalEnabled = false;
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 5,
+                            state: {
+                                availability: "ready",
+                                revision: 5,
+                                globalEnabled: false,
+                                hostname: null,
+                                siteEnabled: null,
+                                scopeMode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                                appearance: APPEARANCE.SYSTEM,
+                                status: "inaccessible",
+                            },
+                        });
+                    }
+                    return Promise.resolve({ ...ready, revision: 5, globalEnabled });
+                },
             },
         });
         try {
             const toggle = rendered.container.querySelector<HTMLInputElement>(
-                'input[aria-label="Enable extension globally"]',
+                'input[aria-label="Extension enabled"]',
             );
             if (!toggle) {
                 throw new Error("Global switch is missing");
@@ -508,17 +590,19 @@ describe("Options Sites contract", () => {
     it("shows typed invalid-hostname without an ambiguous reread", async () => {
         let rereads = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
-                    return Promise.resolve({
-                        ok: false,
-                        error: "invalid-hostname",
-                        surface: SITE_SETTINGS_SURFACE.SITES,
-                        state: ready,
-                    });
-                }
-                rereads += 1;
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                        return Promise.resolve({
+                            ok: false,
+                            error: "invalid-hostname",
+                            surface: SITE_SETTINGS_SURFACE.SITES,
+                            state: ready,
+                        });
+                    }
+                    rereads += 1;
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -540,15 +624,17 @@ describe("Options Sites contract", () => {
         let getCalls = 0;
         const committed: SitesState = { ...ready, revision: 5, globalEnabled: false };
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
-                    return Promise.reject(new Error("response lost"));
-                }
-                if (messageType(message) === GET_SITES_STATE_MESSAGE) {
-                    getCalls += 1;
-                    return Promise.resolve(committed);
-                }
-                return Promise.reject(new Error("unexpected"));
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                        return Promise.reject(new Error("response lost"));
+                    }
+                    if (messageType(message) === GET_SITES_STATE_MESSAGE) {
+                        getCalls += 1;
+                        return Promise.resolve(committed);
+                    }
+                    return Promise.reject(new Error("unexpected"));
+                },
             },
         });
         try {
@@ -570,17 +656,19 @@ describe("Options Sites contract", () => {
     it("preserves the authoritative row after a typed save failure", async () => {
         let rereads = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
-                    return Promise.resolve({
-                        ok: false,
-                        error: "save-failed",
-                        surface: SITE_SETTINGS_SURFACE.SITES,
-                        state: ready,
-                    });
-                }
-                rereads += 1;
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                        return Promise.resolve({
+                            ok: false,
+                            error: "save-failed",
+                            surface: SITE_SETTINGS_SURFACE.SITES,
+                            state: ready,
+                        });
+                    }
+                    rereads += 1;
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -603,12 +691,14 @@ describe("Options Sites contract", () => {
 
     it("replaces the controls and reports unknown state when command and reread fail", async () => {
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                const type = messageType(message);
-                if (type === SET_SITE_ENABLED_MESSAGE || type === GET_SITES_STATE_MESSAGE) {
-                    return Promise.reject(new Error("transport lost"));
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    const type = messageType(message);
+                    if (type === SET_SITE_ENABLED_MESSAGE || type === GET_SITES_STATE_MESSAGE) {
+                        return Promise.reject(new Error("transport lost"));
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -630,15 +720,17 @@ describe("Options Sites contract", () => {
     it("ignores an actual stale lower-revision Sites response", async () => {
         const stale: SitesState = { ...ready, revision: 3, excludedSites: [] };
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) =>
-                messageType(message) === SET_SITE_ENABLED_MESSAGE
-                    ? Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 3,
-                        surface: SITE_SETTINGS_SURFACE.SITES,
-                        state: stale,
-                    })
-                    : Promise.resolve(ready),
+            transport: {
+                sendMessage: (message) =>
+                    messageType(message) === SET_SITE_ENABLED_MESSAGE
+                        ? Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 3,
+                            surface: SITE_SETTINGS_SURFACE.SITES,
+                            state: stale,
+                        })
+                        : Promise.resolve(ready),
+            },
         });
         try {
             const allow = findButton(rendered.container, "Allow");
@@ -658,11 +750,10 @@ describe("Options Sites contract", () => {
 
 describe("Options reset contract", () => {
     it("shows one reset action for ready and unavailable Sites projections", async () => {
-        const rendered = await renderOptions(
-            unavailableSites,
-            { sendMessage: () => Promise.resolve(unavailableSites) },
-            unavailableDisplay,
-        );
+        const rendered = await renderOptions(unavailableSites, {
+            transport: { sendMessage: () => Promise.resolve(unavailableSites) },
+            initialDisplayState: unavailableDisplay,
+        });
         try {
             expect(
                 [...rendered.container.querySelectorAll("button")].filter((button) =>
@@ -707,9 +798,8 @@ describe("Options reset contract", () => {
         };
         const resetDisplay: DisplayState = { ...displayReady, revision: 0 };
         const resetDebug: DebugState = { availability: "ready", revision: 0, enabled: false };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     const type = messageType(message);
                     if (type) {
@@ -731,9 +821,9 @@ describe("Options reset contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            custom,
-            debugOn,
-        );
+            initialDisplayState: custom,
+            initialDebugState: debugOn,
+        });
         try {
             await openSection(rendered.container, "Reset");
             await confirmReset(rendered.container);
@@ -775,11 +865,13 @@ describe("Options reset contract", () => {
     it("asks for confirmation and keeps settings when the reset is cancelled", async () => {
         let resetCalls = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
-                    resetCalls += 1;
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                        resetCalls += 1;
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -816,9 +908,8 @@ describe("Options reset contract", () => {
         };
         const debugOn: DebugState = { ...debugReady, enabled: true };
         let resetCalls = 0;
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
@@ -827,9 +918,9 @@ describe("Options reset contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            custom,
-            debugOn,
-        );
+            initialDisplayState: custom,
+            initialDebugState: debugOn,
+        });
         try {
             await openSection(rendered.container, "Reset");
             await confirmReset(rendered.container);
@@ -854,12 +945,14 @@ describe("Options reset contract", () => {
     it("keeps a healthy projection after an interrupted reset without retrying", async () => {
         let resetCalls = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
-                    resetCalls += 1;
-                    return Promise.reject(new Error("response interrupted"));
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                        resetCalls += 1;
+                        return Promise.reject(new Error("response interrupted"));
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -886,9 +979,8 @@ describe("Options reset contract", () => {
             failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         };
         const messages: string[] = [];
-        const rendered = await renderOptions(
-            unavailableSites,
-            {
+        const rendered = await renderOptions(unavailableSites, {
+            transport: {
                 sendMessage: (message) => {
                     const type = messageType(message);
                     if (type) {
@@ -921,9 +1013,9 @@ describe("Options reset contract", () => {
                     return Promise.reject(new Error("unexpected message"));
                 },
             },
-            unavailableDisplay,
-            unavailableDebug,
-        );
+            initialDisplayState: unavailableDisplay,
+            initialDebugState: unavailableDebug,
+        });
         try {
             await confirmReset(rendered.container);
             expect(messages.filter((type) => type === RESET_ALL_SETTINGS_MESSAGE))
@@ -949,9 +1041,8 @@ describe("Options reset contract", () => {
     });
 
     it("keeps recovery unavailable after a typed persistence failure", async () => {
-        const rendered = await renderOptions(
-            unavailableSites,
-            {
+        const rendered = await renderOptions(unavailableSites, {
+            transport: {
                 sendMessage: (message) =>
                     messageType(message) === RESET_ALL_SETTINGS_MESSAGE
                         ? Promise.resolve({
@@ -961,8 +1052,8 @@ describe("Options reset contract", () => {
                         })
                         : Promise.resolve(unavailableSites),
             },
-            unavailableDisplay,
-        );
+            initialDisplayState: unavailableDisplay,
+        });
         try {
             await confirmReset(rendered.container);
             expect(rendered.container.textContent).toContain("Could not reset settings");
@@ -977,9 +1068,8 @@ describe("Options reset contract", () => {
     it("does not retry an interrupted or malformed reset response", async () => {
         let resetCalls = 0;
         let reads = 0;
-        const rendered = await renderOptions(
-            unavailableSites,
-            {
+        const rendered = await renderOptions(unavailableSites, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
@@ -989,8 +1079,8 @@ describe("Options reset contract", () => {
                     return Promise.resolve(unavailableSites);
                 },
             },
-            unavailableDisplay,
-        );
+            initialDisplayState: unavailableDisplay,
+        });
         try {
             await confirmReset(rendered.container);
             expect(resetCalls).toBe(1);
@@ -1007,9 +1097,8 @@ describe("Options reset contract", () => {
             release = resolve;
         });
         let resetCalls = 0;
-        const rendered = await renderOptions(
-            unavailableSites,
-            {
+        const rendered = await renderOptions(unavailableSites, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
@@ -1018,8 +1107,8 @@ describe("Options reset contract", () => {
                     return Promise.resolve(unavailableSites);
                 },
             },
-            unavailableDisplay,
-        );
+            initialDisplayState: unavailableDisplay,
+        });
         try {
             const trigger = findButton(rendered.container, "Reset all settings");
             if (!trigger) {
@@ -1079,13 +1168,15 @@ describe("Options Display contract", () => {
     });
 
     it("previews the fixed fixture for the system format and follows the time zone", async () => {
-        const rendered = await renderOptions(ready, undefined, {
-            ...displayReady,
-            display: { formatMode: "system", timeZone: { mode: "utc" } },
+        const rendered = await renderOptions(ready, {
+            initialDisplayState: {
+                ...displayReady,
+                display: { formatMode: "system", timeZone: { mode: "utc" } },
+            },
         });
         try {
             await openSection(rendered.container, "Display");
-            const preview = rendered.container.querySelector(".display-preview-value");
+            const preview = rendered.container.querySelector(PREVIEW_SELECTOR);
             expect(preview?.textContent.replace(/\s/gu, " ")).toBe("Aug 27, 2026, 7:32 PM");
             expect(rendered.container.textContent).toContain("2026-08-27T19:32:28Z");
         } finally {
@@ -1094,9 +1185,11 @@ describe("Options Display contract", () => {
     });
 
     it("reports that an invalid pattern must be fixed before previewing", async () => {
-        const rendered = await renderOptions(ready, undefined, {
-            ...displayReady,
-            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+        const rendered = await renderOptions(ready, {
+            initialDisplayState: {
+                ...displayReady,
+                display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+            },
         });
         try {
             await openSection(rendered.container, "Display");
@@ -1106,12 +1199,12 @@ describe("Options Display contract", () => {
             if (!pattern) {
                 throw new Error("Pattern field is missing");
             }
-            expect(rendered.container.querySelector(".display-preview-value")?.textContent)
+            expect(previewText(rendered.container))
                 .toBe("2026");
             await act(async () => {
                 setControlValue(pattern, "YYYY-MM-dd");
             });
-            expect(rendered.container.querySelector(".display-preview-value")?.textContent)
+            expect(previewText(rendered.container))
                 .toBe("Fix the pattern to preview");
         } finally {
             await rendered.unmount();
@@ -1131,7 +1224,7 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(zone, "iana");
             });
-            expect(rendered.container.querySelector(".display-preview-value")?.textContent)
+            expect(previewText(rendered.container))
                 .toBe("Fix the time zone to preview");
         } finally {
             await rendered.unmount();
@@ -1141,20 +1234,21 @@ describe("Options Display contract", () => {
     it("saves the appearance from the header immediately without touching the draft", async () => {
         const sent: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve({
-                    ok: true,
-                    acceptedRevision: 5,
-                    refreshFailures: [],
-                    state: {
-                        availability: "ready",
-                        revision: 5,
-                        display: { formatMode: "system", timeZone: { mode: "system" } },
-                        appearance: APPEARANCE.DARK,
-                        debugEnabled: false,
-                    },
-                });
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve({
+                        ok: true,
+                        acceptedRevision: 5,
+                        state: {
+                            availability: "ready",
+                            revision: 5,
+                            display: { formatMode: "system", timeZone: { mode: "system" } },
+                            appearance: APPEARANCE.DARK,
+                            debugEnabled: false,
+                        },
+                    });
+                },
             },
         });
         try {
@@ -1174,11 +1268,7 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(appearance, APPEARANCE.DARK);
             });
-            expect(sent).toEqual([{
-                type: SET_DISPLAY_SETTINGS_MESSAGE,
-                display: { formatMode: "system", timeZone: { mode: "system" } },
-                appearance: APPEARANCE.DARK,
-            }]);
+            expect(sent).toEqual([{ type: SET_APPEARANCE_MESSAGE, appearance: APPEARANCE.DARK }]);
             expect(document.documentElement.dataset.mantineColorScheme).toBe("dark");
             expect(zone.value).toBe("utc");
             expect(rendered.container.querySelector('main select[aria-label="Appearance"]'))
@@ -1191,23 +1281,25 @@ describe("Options Display contract", () => {
     it("keeps a draft until Save and sends supported IANA values", async () => {
         const writes: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes.push(message);
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: displayReady.revision + writes.length,
-                        state: {
-                            ...displayReady,
-                            revision: displayReady.revision + writes.length,
-                            display: (
-                                message as { display: typeof displayReady.display }
-                            ).display,
-                        },
-                        refreshFailures: [],
-                    });
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes.push(message);
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: displayReady.revision + writes.length,
+                            state: {
+                                ...displayReady,
+                                revision: displayReady.revision + writes.length,
+                                display: (
+                                    message as { display: typeof displayReady.display }
+                                ).display,
+                            },
+                            refreshFailures: [],
+                        });
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1239,7 +1331,6 @@ describe("Options Display contract", () => {
             expect(writes[0]).toMatchObject({
                 type: SET_DISPLAY_SETTINGS_MESSAGE,
                 display: { timeZone: { mode: "iana", identifier: "CET" } },
-                appearance: APPEARANCE.SYSTEM,
             });
             await act(async () => {
                 setControlValue(identifier, "America/New_York");
@@ -1259,11 +1350,13 @@ describe("Options Display contract", () => {
     it("blocks malformed and unsupported identifiers without sending a message", async () => {
         let writes = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes += 1;
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes += 1;
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1306,29 +1399,31 @@ describe("Options Display contract", () => {
     it("preserves committed state on typed failure and warns after a partial refresh", async () => {
         let mode: "failure" | "partial" = "failure";
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    if (mode === "failure") {
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        if (mode === "failure") {
+                            return Promise.resolve({
+                                ok: false,
+                                error: "save-failed",
+                                state: displayReady,
+                            });
+                        }
                         return Promise.resolve({
-                            ok: false,
-                            error: "save-failed",
-                            state: displayReady,
+                            ok: true,
+                            acceptedRevision: 5,
+                            state: {
+                                ...displayReady,
+                                revision: 5,
+                                display: { formatMode: "system", timeZone: { mode: "utc" } },
+                            },
+                            refreshFailures: [
+                                { hostname: "github.com", tabId: 1, reason: "tab-update" },
+                            ],
                         });
                     }
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 5,
-                        state: {
-                            ...displayReady,
-                            revision: 5,
-                            display: { formatMode: "system", timeZone: { mode: "utc" } },
-                        },
-                        refreshFailures: [
-                            { hostname: "github.com", tabId: 1, reason: "tab-update" },
-                        ],
-                    });
-                }
-                return Promise.resolve(ready);
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1366,7 +1461,7 @@ describe("Options Display contract", () => {
             },
             error: "unavailable-time-zone",
         };
-        const rendered = await renderOptions(ready, undefined, unavailable);
+        const rendered = await renderOptions(ready, { initialDisplayState: unavailable });
         try {
             await openSection(rendered.container, "Display");
             expect(rendered.container.querySelector<HTMLInputElement>(
@@ -1387,15 +1482,17 @@ describe("Options Display contract", () => {
             display: { formatMode: "system", timeZone: { mode: "utc" } },
         };
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    return Promise.resolve({ unexpected: true });
-                }
-                if (messageType(message) === GET_DISPLAY_STATE_MESSAGE) {
-                    reads += 1;
-                    return Promise.resolve(reread);
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        return Promise.resolve({ unexpected: true });
+                    }
+                    if (messageType(message) === GET_DISPLAY_STATE_MESSAGE) {
+                        reads += 1;
+                        return Promise.resolve(reread);
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1426,15 +1523,17 @@ describe("Options Display contract", () => {
             display: { formatMode: "system", timeZone: { mode: "iana", identifier: "CET" } },
         };
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) =>
-                messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
-                    ? Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 3,
-                        state: stale,
-                        refreshFailures: [],
-                    })
-                    : Promise.resolve(ready),
+            transport: {
+                sendMessage: (message) =>
+                    messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
+                        ? Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 3,
+                            state: stale,
+                            refreshFailures: [],
+                        })
+                        : Promise.resolve(ready),
+            },
         });
         try {
             await openSection(rendered.container, "Display");
@@ -1471,18 +1570,20 @@ describe("Options Display contract", () => {
     it("keeps custom edits local, shows a live preview, and saves one complete value", async () => {
         const writes: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes.push(message);
-                    const display = (message as { display: DisplaySettings }).display;
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: 5,
-                        state: { ...displayReady, revision: 5, display },
-                        refreshFailures: [],
-                    });
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes.push(message);
+                        const display = (message as { display: DisplaySettings }).display;
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 5,
+                            state: { ...displayReady, revision: 5, display },
+                            refreshFailures: [],
+                        });
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1494,7 +1595,7 @@ describe("Options Display contract", () => {
             if (!format || !save) {
                 throw new Error("Custom format controls are missing");
             }
-            const before = rendered.container.querySelector(".display-preview-value")?.textContent;
+            const before = previewText(rendered.container);
             await act(async () => {
                 setControlValue(format, "custom");
             });
@@ -1508,7 +1609,7 @@ describe("Options Display contract", () => {
                 setControlValue(pattern, "yyyy-MM-dd HH:mm");
             });
             expect(writes).toHaveLength(0);
-            const after = rendered.container.querySelector(".display-preview-value")?.textContent;
+            const after = previewText(rendered.container);
             expect(after).toMatch(/^2026-08-27 \d{2}:\d{2}$/u);
             expect(after).not.toBe(before);
             await act(async () => {
@@ -1531,11 +1632,13 @@ describe("Options Display contract", () => {
     it("blocks invalid custom patterns with an adjacent actionable error and no save", async () => {
         let writes = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes += 1;
-                }
-                return Promise.resolve(ready);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes += 1;
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1580,9 +1683,8 @@ describe("Options Display contract", () => {
             ...displayReady,
             display: { formatMode: "custom", pattern: "yyyy-MM-dd", timeZone: { mode: "utc" } },
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
@@ -1601,8 +1703,8 @@ describe("Options Display contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            custom,
-        );
+            initialDisplayState: custom,
+        });
         try {
             await openSection(rendered.container, "Display");
             const format = rendered.container.querySelector<HTMLSelectElement>(
@@ -1629,15 +1731,15 @@ describe("Options Display contract", () => {
     it("updates the preview without sending background intents", async () => {
         const writes: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes.push(message);
-                }
-                return Promise.resolve(displayReady);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes.push(message);
+                    }
+                    return Promise.resolve(displayReady);
+                },
             },
         });
-        const previewText = (): string | undefined =>
-            rendered.container.querySelector(".display-preview-value")?.textContent;
         try {
             await openSection(rendered.container, "Display");
             const format = rendered.container.querySelector<HTMLSelectElement>(
@@ -1661,19 +1763,19 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(pattern, "yyyy-MM-dd HH:mm XXX");
             });
-            const firstPreview = previewText();
+            const firstPreview = previewText(rendered.container);
             expect(firstPreview).toBeDefined();
             await act(async () => {
                 setControlValue(pattern, "EEEE, d MMMM yyyy");
             });
-            const secondPreview = previewText();
+            const secondPreview = previewText(rendered.container);
             expect(secondPreview).toBeDefined();
             expect(secondPreview).not.toBe(firstPreview);
             await act(async () => {
                 setControlValue(pattern, "yyyy-MM-dd HH:mm XXX");
                 setControlValue(zone, "utc");
             });
-            expect(previewText()).toBe("2026-08-27 19:32 Z");
+            expect(previewText(rendered.container)).toBe("2026-08-27 19:32 Z");
             await act(async () => {
                 setControlValue(zone, "iana");
             });
@@ -1686,7 +1788,7 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(identifier, "America/New_York");
             });
-            expect(previewText()).toBe("2026-08-27 15:32 -04:00");
+            expect(previewText(rendered.container)).toBe("2026-08-27 15:32 -04:00");
             expect(writes).toHaveLength(0);
         } finally {
             await rendered.unmount();
@@ -1704,11 +1806,13 @@ describe("Options Display contract", () => {
     ])("blocks %s custom patterns without a save", async (_name, invalidPattern) => {
         let writes = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
-                    writes += 1;
-                }
-                return Promise.resolve(displayReady);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes += 1;
+                    }
+                    return Promise.resolve(displayReady);
+                },
             },
         });
         try {
@@ -1738,7 +1842,7 @@ describe("Options Display contract", () => {
             expect(writes).toBe(0);
             expect(pattern.getAttribute("aria-invalid")).toBe("true");
             expect(rendered.container.textContent).toMatch(/pattern|token|quote|character|date/i);
-            expect(rendered.container.querySelector(".display-preview-value")?.textContent)
+            expect(previewText(rendered.container))
                 .toBe("Fix the pattern to preview");
         } finally {
             await rendered.unmount();
@@ -1753,9 +1857,8 @@ describe("Options Display contract", () => {
             display: { formatMode: "custom", pattern: "yyyy-MM-dd", timeZone: { mode: "utc" } },
         };
         const writes: unknown[] = [];
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
@@ -1774,8 +1877,8 @@ describe("Options Display contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            custom,
-        );
+            initialDisplayState: custom,
+        });
         try {
             await openSection(rendered.container, "Display");
             const pattern = rendered.container.querySelector<HTMLInputElement>(
@@ -1788,7 +1891,7 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(pattern, "EEEE, d MMMM yyyy");
             });
-            expect(rendered.container.querySelector(".display-preview-value")?.textContent)
+            expect(previewText(rendered.container))
                 .toContain("Donnerstag");
             await act(async () => {
                 save.click();
@@ -1813,10 +1916,16 @@ describe("Options Display contract", () => {
 
     it("shows a typed invalid-format response next to the custom pattern", async () => {
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) =>
-                messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
-                    ? Promise.resolve({ ok: false, error: "invalid-format", state: displayReady })
-                    : Promise.resolve(ready),
+            transport: {
+                sendMessage: (message) =>
+                    messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
+                        ? Promise.resolve({
+                            ok: false,
+                            error: "invalid-format",
+                            state: displayReady,
+                        })
+                        : Promise.resolve(ready),
+            },
         });
         try {
             await openSection(rendered.container, "Display");
@@ -1853,9 +1962,8 @@ describe("Options Display contract", () => {
             revision: 9,
             display: { formatMode: "system", timeZone: { mode: "utc" } },
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     const type = messageType(message);
                     if (type === GET_DISPLAY_STATE_MESSAGE) {
@@ -1867,15 +1975,11 @@ describe("Options Display contract", () => {
                     return Promise.resolve({ ...ready, revision: 9 });
                 },
             },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            (listener) => {
+            subscribe: (listener) => {
                 announce = listener;
                 return { unsubscribe: () => undefined };
             },
-        );
+        });
         try {
             await openSection(rendered.container, "Display");
             const format = rendered.container.querySelector<HTMLSelectElement>(
@@ -1892,7 +1996,7 @@ describe("Options Display contract", () => {
             });
             expect(format.value).toBe("custom");
             expect(rendered.container.textContent)
-                .toContain("Display settings were changed in another window.");
+                .toContain("Display settings were updated in another window.");
         } finally {
             await rendered.unmount();
         }
@@ -1919,23 +2023,25 @@ describe("Options Debug logs contract", () => {
     it("dispatches one request per transition", async () => {
         const messages: unknown[] = [];
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                messages.push(message);
-                if (
-                    messageType(message) === SET_DEBUG_ENABLED_MESSAGE
+            transport: {
+                sendMessage: (message) => {
+                    messages.push(message);
+                    if (
+                        messageType(message) === SET_DEBUG_ENABLED_MESSAGE
                     && message && typeof message === "object" && "enabled" in message
-                ) {
-                    const revision = message.enabled ? 5 : 6;
-                    return Promise.resolve({
-                        ok: true,
-                        acceptedRevision: revision,
-                        state: { availability: "ready", revision, enabled: message.enabled },
-                    });
-                }
-                if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
-                    return Promise.resolve(debugReady);
-                }
-                return Promise.resolve(ready);
+                    ) {
+                        const revision = message.enabled ? 5 : 6;
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: revision,
+                            state: { availability: "ready", revision, enabled: message.enabled },
+                        });
+                    }
+                    if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
+                        return Promise.resolve(debugReady);
+                    }
+                    return Promise.resolve(ready);
+                },
             },
         });
         try {
@@ -1969,12 +2075,18 @@ describe("Options Debug logs contract", () => {
     it("shows an actionable typed failure without replaying the mutation", async () => {
         let writes = 0;
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
-                    writes += 1;
-                    return Promise.resolve({ ok: false, error: "save-failed", state: debugReady });
-                }
-                return Promise.resolve(debugReady);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                        writes += 1;
+                        return Promise.resolve({
+                            ok: false,
+                            error: "save-failed",
+                            state: debugReady,
+                        });
+                    }
+                    return Promise.resolve(debugReady);
+                },
             },
         });
         try {
@@ -2004,22 +2116,24 @@ describe("Options Debug logs contract", () => {
             let writes = 0;
             let reads = 0;
             const rendered = await renderOptions(ready, {
-                sendMessage: (message) => {
-                    if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
-                        writes += 1;
-                        return failure === "interrupted"
-                            ? Promise.reject(new Error("worker restarted"))
-                            : Promise.resolve({ unexpected: true });
-                    }
-                    if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
-                        reads += 1;
-                        return Promise.resolve({
-                            availability: "ready",
-                            revision: 5,
-                            enabled: true,
-                        });
-                    }
-                    return Promise.resolve(ready);
+                transport: {
+                    sendMessage: (message) => {
+                        if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                            writes += 1;
+                            return failure === "interrupted"
+                                ? Promise.reject(new Error("worker restarted"))
+                                : Promise.resolve({ unexpected: true });
+                        }
+                        if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
+                            reads += 1;
+                            return Promise.resolve({
+                                availability: "ready",
+                                revision: 5,
+                                enabled: true,
+                            });
+                        }
+                        return Promise.resolve(ready);
+                    },
                 },
             });
             try {
@@ -2050,12 +2164,14 @@ describe("Options Debug logs contract", () => {
             release = resolve;
         });
         const rendered = await renderOptions(ready, {
-            sendMessage: (message) => {
-                if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
-                    writes += 1;
-                    return pending;
-                }
-                return Promise.resolve(debugReady);
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                        writes += 1;
+                        return pending;
+                    }
+                    return Promise.resolve(debugReady);
+                },
             },
         });
         try {
@@ -2111,9 +2227,8 @@ describe("Options Debug logs contract", () => {
                 scheduled.push(callback);
             },
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     messages.push(message);
                     if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
@@ -2136,10 +2251,10 @@ describe("Options Debug logs contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            displayReady,
-            { ...debugReady, enabled: true },
-            runtime,
-        );
+            initialDisplayState: displayReady,
+            initialDebugState: { ...debugReady, enabled: true },
+            archiveRuntime: runtime,
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const download = findButton(rendered.container, "Download logs");
@@ -2163,9 +2278,8 @@ describe("Options Debug logs contract", () => {
 
     it("clears logs once without changing the enabled Debug logs setting", async () => {
         const messages: unknown[] = [];
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     messages.push(message);
                     if (messageType(message) === CLEAR_DIAGNOSTICS_MESSAGE) {
@@ -2174,9 +2288,9 @@ describe("Options Debug logs contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            displayReady,
-            { ...debugReady, enabled: true },
-        );
+            initialDisplayState: displayReady,
+            initialDebugState: { ...debugReady, enabled: true },
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const clear = findButton(rendered.container, "Clear logs");
@@ -2200,17 +2314,16 @@ describe("Options Debug logs contract", () => {
     });
 
     it("explains an empty journal when a download is requested", async () => {
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) =>
                     messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({ ok: false, error: "empty" })
                         : Promise.resolve(ready),
             },
-            displayReady,
-            { ...debugReady, enabled: true },
-        );
+            initialDisplayState: displayReady,
+            initialDebugState: { ...debugReady, enabled: true },
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const download = findButton(rendered.container, "Download logs");
@@ -2246,9 +2359,8 @@ describe("Options Debug logs contract", () => {
                     /* no callback */
                 },
             };
-            const rendered = await renderOptions(
-                ready,
-                {
+            const rendered = await renderOptions(ready, {
+                transport: {
                     sendMessage: (message) => {
                         if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                             requests += 1;
@@ -2260,10 +2372,10 @@ describe("Options Debug logs contract", () => {
                         return Promise.resolve(ready);
                     },
                 },
-                displayReady,
-                { ...debugReady, enabled: true },
-                runtime,
-            );
+                initialDisplayState: displayReady,
+                initialDebugState: { ...debugReady, enabled: true },
+                archiveRuntime: runtime,
+            });
             try {
                 await openSection(rendered.container, "Diagnostics");
                 const download = findButton(rendered.container, "Download logs");
@@ -2307,9 +2419,8 @@ describe("Options Debug logs contract", () => {
                 throw new Error("must not schedule after click failure");
             },
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) =>
                     messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({
@@ -2329,10 +2440,10 @@ describe("Options Debug logs contract", () => {
                         })
                         : Promise.resolve(ready),
             },
-            displayReady,
-            { ...debugReady, enabled: true },
-            runtime,
-        );
+            initialDisplayState: displayReady,
+            initialDebugState: { ...debugReady, enabled: true },
+            archiveRuntime: runtime,
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const download = findButton(rendered.container, "Download logs");
@@ -2365,9 +2476,8 @@ describe("Options Debug logs contract", () => {
                 /* no callback */
             },
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                         requests += 1;
@@ -2376,10 +2486,10 @@ describe("Options Debug logs contract", () => {
                     return Promise.resolve(ready);
                 },
             },
-            displayReady,
-            { ...debugReady, enabled: true },
-            runtime,
-        );
+            initialDisplayState: displayReady,
+            initialDebugState: { ...debugReady, enabled: true },
+            archiveRuntime: runtime,
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const download = findButton(rendered.container, "Download logs");
@@ -2406,9 +2516,8 @@ describe("Options Debug logs contract", () => {
         "dispatches Clear logs once and keeps Debug logs enabled after %s",
         async (failure) => {
             let requests = 0;
-            const rendered = await renderOptions(
-                ready,
-                {
+            const rendered = await renderOptions(ready, {
+                transport: {
                     sendMessage: (message) => {
                         if (messageType(message) === CLEAR_DIAGNOSTICS_MESSAGE) {
                             requests += 1;
@@ -2423,9 +2532,9 @@ describe("Options Debug logs contract", () => {
                         return Promise.resolve(ready);
                     },
                 },
-                displayReady,
-                { ...debugReady, enabled: true },
-            );
+                initialDisplayState: displayReady,
+                initialDebugState: { ...debugReady, enabled: true },
+            });
             try {
                 await openSection(rendered.container, "Diagnostics");
                 const clear = findButton(rendered.container, "Clear logs");
@@ -2467,19 +2576,17 @@ describe("Options site reporting", () => {
                     };
                 },
             };
-            const rendered = await renderOptions(
-                ready,
-                {
+            const rendered = await renderOptions(ready, {
+                transport: {
                     sendMessage: (message) => {
                         messages.push(message);
                         return Promise.resolve(ready);
                     },
                 },
-                displayReady,
-                { ...debugReady, enabled },
-                undefined,
-                reporter,
-            );
+                initialDisplayState: displayReady,
+                initialDebugState: { ...debugReady, enabled },
+                reporter: reporter,
+            });
             try {
                 await openSection(rendered.container, "Diagnostics");
                 const button = findButton(rendered.container, "Open GitHub issue");
@@ -2517,14 +2624,11 @@ describe("Options site reporting", () => {
                 return pending;
             },
         };
-        const rendered = await renderOptions(
-            ready,
-            undefined,
-            displayReady,
-            debugReady,
-            undefined,
-            reporter,
-        );
+        const rendered = await renderOptions(ready, {
+            initialDisplayState: displayReady,
+            initialDebugState: debugReady,
+            reporter: reporter,
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const button = findButton(rendered.container, "Open GitHub issue");
@@ -2560,14 +2664,11 @@ describe("Options site reporting", () => {
                 throw new Error("browser bridge failed");
             },
         };
-        const rendered = await renderOptions(
-            ready,
-            undefined,
-            displayReady,
-            debugReady,
-            undefined,
-            reporter,
-        );
+        const rendered = await renderOptions(ready, {
+            initialDisplayState: displayReady,
+            initialDebugState: debugReady,
+            reporter: reporter,
+        });
         try {
             await openSection(rendered.container, "Diagnostics");
             const button = findButton(rendered.container, "Open GitHub issue");
@@ -2726,9 +2827,8 @@ describe("Options shell", () => {
             revision: 9,
             excludedSites: ["github.com", "from-other-window.test"],
         };
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     const type = messageType(message);
                     if (type === GET_DISPLAY_STATE_MESSAGE) {
@@ -2740,15 +2840,11 @@ describe("Options shell", () => {
                     return Promise.resolve(updated);
                 },
             },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            (listener) => {
+            subscribe: (listener) => {
                 announce = listener;
                 return { unsubscribe: () => undefined };
             },
-        );
+        });
         try {
             await act(async () => {
                 announce?.(9);
@@ -2763,9 +2859,8 @@ describe("Options shell", () => {
 
     it("does not report its own committed write as an external change", async () => {
         let announce: ((revision: number) => void) | undefined;
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: (message) => {
                     if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
                         // The background announces before the command response arrives.
@@ -2780,15 +2875,11 @@ describe("Options shell", () => {
                     return Promise.resolve(ready);
                 },
             },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            (listener) => {
+            subscribe: (listener) => {
                 announce = listener;
                 return { unsubscribe: () => undefined };
             },
-        );
+        });
         try {
             const allow = findButton(rendered.container, "Allow");
             if (!allow) {
@@ -2808,23 +2899,18 @@ describe("Options shell", () => {
     it("ignores an announcement that is not newer than the rendered revision", async () => {
         let announce: ((revision: number) => void) | undefined;
         let reads = 0;
-        const rendered = await renderOptions(
-            ready,
-            {
+        const rendered = await renderOptions(ready, {
+            transport: {
                 sendMessage: () => {
                     reads += 1;
                     return Promise.resolve(ready);
                 },
             },
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            (listener) => {
+            subscribe: (listener) => {
                 announce = listener;
                 return { unsubscribe: () => undefined };
             },
-        );
+        });
         try {
             await act(async () => {
                 announce?.(4);
@@ -2837,12 +2923,49 @@ describe("Options shell", () => {
         }
     });
 
+    it("keeps the last ready projection when a live reread fails", async () => {
+        let announce: ((revision: number) => void) | undefined;
+        const rendered = await renderOptions(ready, {
+            transport: { sendMessage: () => Promise.reject(new Error("worker restarting")) },
+            subscribe: (listener) => {
+                announce = listener;
+                return { unsubscribe: () => undefined };
+            },
+        });
+        try {
+            await act(async () => {
+                announce?.(9);
+            });
+            expect(rendered.container.textContent).toContain("github.com");
+            expect(rendered.container.textContent).not.toContain("Settings are unavailable");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("explains the fail-closed cleanup state on the recovery view", async () => {
+        const cleanup: SitesState = {
+            ...unavailableSites,
+            failure: SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP,
+        };
+        const rendered = await renderOptions(cleanup, {
+            transport: { sendMessage: () => Promise.resolve(cleanup) },
+            initialDisplayState: unavailableDisplay,
+        });
+        try {
+            expect(rendered.container.textContent)
+                .toContain("Current processing state is unknown.");
+            expect(rendered.container.textContent).not.toContain("No page is being changed.");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
     it("replaces every control with recovery actions when settings are unavailable", async () => {
-        const rendered = await renderOptions(
-            unavailableSites,
-            { sendMessage: () => Promise.resolve(unavailableSites) },
-            unavailableDisplay,
-        );
+        const rendered = await renderOptions(unavailableSites, {
+            transport: { sendMessage: () => Promise.resolve(unavailableSites) },
+            initialDisplayState: unavailableDisplay,
+        });
         try {
             const labels = [...rendered.container.querySelectorAll("button")]
                 .map((button) => button.textContent);
@@ -2857,22 +2980,21 @@ describe("Options shell", () => {
     });
 
     it("attempts a log download from the recovery view and reports the outcome", async () => {
-        const rendered = await renderOptions(
-            unavailableSites,
-            {
+        const rendered = await renderOptions(unavailableSites, {
+            transport: {
                 sendMessage: (message) =>
                     messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({ ok: false, error: "disabled" })
                         : Promise.resolve(unavailableSites),
             },
-            unavailableDisplay,
-            {
+            initialDisplayState: unavailableDisplay,
+            initialDebugState: {
                 availability: "unavailable",
                 revision: null,
                 enabled: null,
                 failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
-        );
+        });
         try {
             const download = findButton(rendered.container, "Download logs");
             if (!download) {

@@ -3,20 +3,22 @@
  */
 
 import {
-    APPEARANCES,
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     createSettingsSnapshot,
     isCurrentSettingsSnapshot,
     parseDisplaySettings,
+    sameDisplaySettings,
     type Appearance,
     type DisplaySettings,
     type SettingsLoadResult,
-    type SettingsSnapshotV6,
+    type SettingsSnapshot,
+    type SettingsSnapshotInput,
 } from "../../shared/settings/snapshot";
 import { isCanonicalHostname } from "../../shared/settings/hostname";
 import {
+    isSiteListFull,
     isSiteProcessingEnabled,
     withSiteProcessing,
     type SiteScopeMode,
@@ -37,50 +39,59 @@ export interface SettingsStorage {
     /**
      * Persists a complete record of key-value updates.
      */
-    set(items: Readonly<Record<string, SettingsSnapshotV6>>): Promise<void>;
+    set(items: Readonly<Record<string, SettingsSnapshot>>): Promise<void>;
 }
 
 /**
- * Persisted mutation outcome, including the revision that callers may safely project.
+ * Successful persisted mutation, including the revision that callers may safely project.
  */
-export type SettingsWriteResult =
-    | {
-        /**
-         * Indicates that the requested mutation completed successfully.
-         */
-        readonly ok: true;
+export interface SettingsWriteSuccess {
+    /**
+     * Indicates that the requested mutation completed successfully.
+     */
+    readonly ok: true;
 
-        /**
-         * Whether the persisted settings differ from the previous snapshot.
-         */
-        readonly changed: boolean;
+    /**
+     * Whether the persisted settings differ from the previous snapshot.
+     */
+    readonly changed: boolean;
 
-        /**
-         * Authoritative settings snapshot after the mutation.
-         */
-        readonly snapshot: SettingsSnapshotV6;
-    }
-    | {
-        /**
-         * Indicates that the requested mutation was rejected or could not be persisted.
-         */
-        readonly ok: false;
+    /**
+     * Authoritative settings snapshot after the mutation.
+     */
+    readonly snapshot: SettingsSnapshot;
+}
 
-        /**
-         * Stable reason the settings mutation failed.
-         */
-        readonly error:
-              | "persistence-failed"
-              | "invalid-hostname"
-              | "invalid-time-zone"
-              | "invalid-format"
-              | "invalid-display-settings";
+/**
+ * Rejected or unpersisted mutation and the snapshot that remains authoritative.
+ */
+export interface SettingsWriteFailure {
+    /**
+     * Indicates that the requested mutation was rejected or could not be persisted.
+     */
+    readonly ok: false;
 
-        /**
-         * Last authoritative settings snapshot retained after the failure.
-         */
-        readonly snapshot: SettingsSnapshotV6;
-    };
+    /**
+     * Stable reason the settings mutation failed.
+     */
+    readonly error:
+          | "persistence-failed"
+          | "invalid-hostname"
+          | "list-full"
+          | "invalid-time-zone"
+          | "invalid-format"
+          | "invalid-display-settings";
+
+    /**
+     * Last authoritative settings snapshot retained after the failure.
+     */
+    readonly snapshot: SettingsSnapshot;
+}
+
+/**
+ * Persisted mutation outcome.
+ */
+export type SettingsWriteResult = SettingsWriteSuccess | SettingsWriteFailure;
 
 /**
  * Injected capability check that separates structural zone validation from runtime Intl support.
@@ -103,38 +114,27 @@ function defaultTimeZoneAvailability(identifier: string): boolean {
 }
 
 /**
- * Compares display choices without relying on object identity.
+ * Builds the successor of a snapshot, carrying every field forward except the patch.
  *
- * @param a - First display-settings value.
- * @param b - Second display-settings value.
- * @returns - Whether both values contain the same presentation choices.
+ * @param current - Snapshot being replaced.
+ * @param patch - Fields that change in the successor.
+ * @returns - Frozen successor with the next revision.
  */
-export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boolean {
-    if (a.formatMode !== b.formatMode) {
-        return false;
-    }
-    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) {
-        return false;
-    }
-    if (a.timeZone.mode !== b.timeZone.mode) {
-        return false;
-    }
-    return (
-        a.timeZone.mode !== "iana" ||
-        b.timeZone.mode !== "iana" ||
-        a.timeZone.identifier === b.timeZone.identifier
-    );
+function next(
+    current: SettingsSnapshot,
+    patch: Partial<Omit<SettingsSnapshotInput, "revision">>,
+): SettingsSnapshot {
+    return createSettingsSnapshot({ ...current, ...patch, revision: current.revision + 1 });
 }
 
 /**
  * Serializes settings reads and writes, preserving a recoverable previous snapshot across failures.
- *
  */
 export class SettingsService {
     /**
      * Last loaded snapshot, used to project settings while storage remains available.
      */
-    private current: SettingsSnapshotV6 | undefined;
+    private current: SettingsSnapshot | undefined;
 
     /**
      * Most recent load failure retained so clients can present the unavailable state accurately.
@@ -186,9 +186,26 @@ export class SettingsService {
         }
 
         if (storedPrevious === undefined) {
+            if (stored === undefined && storedPreviousValue === undefined) {
+                this.loadError = undefined;
+                this.current = DEFAULT_SETTINGS_SNAPSHOT;
+                return { ok: true, snapshot: this.current, source: "default" };
+            }
+            // A document of another schema version is discarded, not migrated.
+            // The defaults are persisted so the stale document stops being
+            // re-read on every worker start and recovery can trust storage.
+            try {
+                await this.storage.set(
+                    this.pair(DEFAULT_SETTINGS_SNAPSHOT, DEFAULT_SETTINGS_SNAPSHOT),
+                );
+            } catch {
+                this.loadError = "invalid-settings";
+                return { ok: false, error: "invalid-settings" };
+            }
+            console.warn("Discarded stored settings of another schema version");
             this.loadError = undefined;
             this.current = DEFAULT_SETTINGS_SNAPSHOT;
-            return { ok: true, snapshot: this.current, source: "default" };
+            return { ok: true, snapshot: this.current, source: "discarded" };
         }
 
         try {
@@ -207,7 +224,7 @@ export class SettingsService {
      *
      * @returns - Most recently loaded valid snapshot, if available.
      */
-    public get loadedSnapshot(): SettingsSnapshotV6 | undefined {
+    public get loadedSnapshot(): SettingsSnapshot | undefined {
         return this.current;
     }
 
@@ -225,7 +242,7 @@ export class SettingsService {
      *
      * @returns - Current snapshot or immutable default snapshot.
      */
-    private fallbackSnapshot(): SettingsSnapshotV6 {
+    private fallbackSnapshot(): SettingsSnapshot {
         return this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
     }
 
@@ -237,9 +254,9 @@ export class SettingsService {
      * @returns - Atomic storage payload containing both snapshots.
      */
     private pair(
-        current: SettingsSnapshotV6,
-        previous: SettingsSnapshotV6,
-    ): Readonly<Record<string, SettingsSnapshotV6>> {
+        current: SettingsSnapshot,
+        previous: SettingsSnapshot,
+    ): Readonly<Record<string, SettingsSnapshot>> {
         return { [this.key]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
     }
 
@@ -250,7 +267,7 @@ export class SettingsService {
      * @returns - Persisted write result with the effective snapshot.
      */
     private async mutate(
-        mutator: (current: SettingsSnapshotV6) => SettingsSnapshotV6 | null,
+        mutator: (current: SettingsSnapshot) => SettingsSnapshot | null,
     ): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
@@ -299,16 +316,7 @@ export class SettingsService {
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
-            current.globalEnabled === enabled
-                ? null
-                : createSettingsSnapshot({
-                    revision: current.revision + 1,
-                    globalEnabled: enabled,
-                    siteScope: current.siteScope,
-                    display: current.display,
-                    appearance: current.appearance,
-                    debugEnabled: current.debugEnabled,
-                }),
+            current.globalEnabled === enabled ? null : next(current, { globalEnabled: enabled }),
         );
     }
 
@@ -323,18 +331,22 @@ export class SettingsService {
         if (!isCanonicalHostname(hostname)) {
             return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
         }
-        return this.mutate((current) =>
-            isSiteProcessingEnabled(current.siteScope, hostname) === enabled
-                ? null
-                : createSettingsSnapshot({
-                    revision: current.revision + 1,
-                    globalEnabled: current.globalEnabled,
-                    siteScope: withSiteProcessing(current.siteScope, hostname, enabled),
-                    display: current.display,
-                    appearance: current.appearance,
-                    debugEnabled: current.debugEnabled,
-                }),
-        );
+        const bound = { full: false };
+        const result = await this.mutate((current) => {
+            if (isSiteProcessingEnabled(current.siteScope, hostname) === enabled) {
+                return null;
+            }
+            if (isSiteListFull(current.siteScope, hostname)) {
+                bound.full = true;
+                return null;
+            }
+            return next(current, {
+                siteScope: withSiteProcessing(current.siteScope, hostname, enabled),
+            });
+        });
+        return bound.full
+            ? { ok: false, error: "list-full", snapshot: result.snapshot }
+            : result;
     }
 
     /**
@@ -347,28 +359,29 @@ export class SettingsService {
         return this.mutate((current) =>
             current.siteScope.mode === mode
                 ? null
-                : createSettingsSnapshot({
-                    revision: current.revision + 1,
-                    globalEnabled: current.globalEnabled,
-                    siteScope: { ...current.siteScope, mode },
-                    display: current.display,
-                    appearance: current.appearance,
-                    debugEnabled: current.debugEnabled,
-                }),
+                : next(current, { siteScope: { ...current.siteScope, mode } }),
         );
     }
 
     /**
-     * Persists validated presentation choices together with the appearance choice.
+     * Persists the appearance applied to both extension surfaces.
      *
-     * @param display - Typed display settings to validate and persist.
-     * @param appearance - Requested appearance for both extension surfaces.
+     * @param appearance - Requested appearance.
      * @returns - Persisted write result with the effective snapshot.
      */
-    public async setDisplaySettings(
-        display: DisplaySettings,
-        appearance: Appearance,
-    ): Promise<SettingsWriteResult> {
+    public async setAppearance(appearance: Appearance): Promise<SettingsWriteResult> {
+        return this.mutate((current) =>
+            current.appearance === appearance ? null : next(current, { appearance }),
+        );
+    }
+
+    /**
+     * Persists validated presentation choices.
+     *
+     * @param display - Typed display settings to validate and persist.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    public async setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult> {
         const parsed = parseDisplaySettings(display);
         if (parsed === null) {
             if (
@@ -383,13 +396,6 @@ export class SettingsService {
                 snapshot: this.fallbackSnapshot(),
             };
         }
-        if (!APPEARANCES.includes(appearance)) {
-            return {
-                ok: false,
-                error: "invalid-display-settings",
-                snapshot: this.fallbackSnapshot(),
-            };
-        }
         if (
             parsed.timeZone.mode === "iana" &&
             !this.isTimeZoneAvailable(parsed.timeZone.identifier)
@@ -397,16 +403,9 @@ export class SettingsService {
             return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
         }
         return this.mutate((current) =>
-            sameDisplaySettings(current.display, parsed) && current.appearance === appearance
+            sameDisplaySettings(current.display, parsed)
                 ? null
-                : createSettingsSnapshot({
-                    revision: current.revision + 1,
-                    globalEnabled: current.globalEnabled,
-                    siteScope: current.siteScope,
-                    display: parsed,
-                    appearance,
-                    debugEnabled: current.debugEnabled,
-                }),
+                : next(current, { display: parsed }),
         );
     }
 
@@ -418,16 +417,7 @@ export class SettingsService {
      */
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
-            current.debugEnabled === enabled
-                ? null
-                : createSettingsSnapshot({
-                    revision: current.revision + 1,
-                    globalEnabled: current.globalEnabled,
-                    siteScope: current.siteScope,
-                    display: current.display,
-                    appearance: current.appearance,
-                    debugEnabled: enabled,
-                }),
+            current.debugEnabled === enabled ? null : next(current, { debugEnabled: enabled }),
         );
     }
 

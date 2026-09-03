@@ -4,15 +4,17 @@
 
 import { Alert, Button, Stack, Text } from "@mantine/core";
 import type { ReactElement } from "react";
+import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
+import type { UnavailableSettingsCopy } from "../shared/ui/copy";
 
 /**
  * Recovery actions offered while settings are unavailable.
  */
 export interface PopupUnavailablePanelProps {
     /**
-     * Explanation of why no control can be shown.
+     * Status and consequence of the failure.
      */
-    readonly message: string;
+    readonly copy: UnavailableSettingsCopy;
 
     /**
      * Whether a recovery action is in flight.
@@ -45,7 +47,7 @@ export interface PopupUnavailablePanelProps {
     readonly downloadNotice: string | undefined;
 
     /**
-     * Opens the settings page, where diagnostics can be downloaded.
+     * Opens the settings page and its full recovery view.
      */
     readonly onOpenSettings: () => void;
 }
@@ -54,7 +56,7 @@ export interface PopupUnavailablePanelProps {
  * Renders the failure explanation and its recovery actions.
  *
  * @param props - Component properties.
- * @param props.message - Explanation of the failure.
+ * @param props.copy - Status and consequence of the failure.
  * @param props.busy - Whether a recovery action is in flight.
  * @param props.onReport - Opens a prefilled GitHub report.
  * @param props.onReset - Restores every setting to its default.
@@ -65,7 +67,7 @@ export interface PopupUnavailablePanelProps {
  * @returns - The popup recovery view.
  */
 export function PopupUnavailablePanel({
-    message,
+    copy,
     busy,
     onReport,
     onReset,
@@ -77,10 +79,10 @@ export function PopupUnavailablePanel({
     return (
         <Stack gap="sm" className="popup-section">
             <Text role="status" size="sm">
-                {message}
+                {copy.status}
             </Text>
             <Text size="xs" c="dimmed">
-                No page is being changed. Report the problem, download any retained logs, or
+                {copy.consequence} Report the problem, download any retained logs, or
                 restore the default settings and reopen the popup.
             </Text>
             <Button type="button" variant="default" onClick={onReport} disabled={busy}>
@@ -96,7 +98,10 @@ export function PopupUnavailablePanel({
                 Download logs
             </Button>
             {downloadNotice ? (
-                <Alert role="status" color="gray">
+                <Alert
+                    role="status"
+                    color={isDiagnosticsSuccessNotice(downloadNotice) ? "signal" : "red"}
+                >
                     {downloadNotice}
                 </Alert>
             ) : null}

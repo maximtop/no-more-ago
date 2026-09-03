@@ -11,9 +11,7 @@
   --nma-fg-soft: color-mix(in oklch, var(--nma-fg) 5%, var(--nma-surface));
   --nma-accent-soft: color-mix(in oklch, var(--nma-accent) 12%, var(--nma-surface));
   --nma-danger-soft: color-mix(in oklch, var(--nma-danger) 10%, var(--nma-surface));
-  --nma-warning-soft: color-mix(in oklch, var(--nma-warning) 12%, var(--nma-surface));
   --nma-radius: 10px;
-  --nma-radius-lg: 16px;
   --nma-font-display: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
   --nma-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --nma-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -31,7 +29,6 @@
   --nma-fg-soft: color-mix(in oklch, var(--nma-fg) 8%, var(--nma-surface));
   --nma-accent-soft: color-mix(in oklch, var(--nma-accent) 18%, var(--nma-surface));
   --nma-danger-soft: color-mix(in oklch, var(--nma-danger) 16%, var(--nma-surface));
-  --nma-warning-soft: color-mix(in oklch, var(--nma-warning) 16%, var(--nma-surface));
 }
 
 html {
@@ -47,8 +44,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Switch and radio controls keep their compact look but accept a 44px target:
-   the track and the radio input are label-bound, so a padded hit area toggles. */
+/* Every interactive control offers a 44px target. Buttons grow to it; switch
+   and radio controls keep their compact look but accept a padded hit area,
+   because the track and the radio input are label-bound. */
+.mantine-Button-root {
+  min-height: 44px;
+}
+
 .mantine-Switch-track {
   position: relative;
 }
@@ -64,6 +66,13 @@ body {
   align-items: center;
   min-height: 44px;
   padding-block: 0;
+}
+
+/* One label, description, and control row shared by the popup and Settings. */
+.nma-row {
+  min-height: 66px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--nma-border);
 }
 
 .nma-mono {

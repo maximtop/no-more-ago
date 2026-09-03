@@ -56,7 +56,8 @@ extension.
   active.
 - **Allowed sites:** exact hostnames processed while `Selected sites only` is
   active. Both lists persist independently, so switching modes never moves,
-  merges, or deletes an entry.
+  merges, or deletes an entry. Each list holds up to 1000 hostnames; adding
+  another entry reports that the list is full.
 - **Display settings:** choose the date format and time zone used for output.
 - **Appearance:** `System`, `Light`, or `Dark`, chosen in the Settings header
   and applied immediately to the popup and Settings.
@@ -72,7 +73,7 @@ the toolbar icon is the Exact Point mark: a ring with a marker at the top.
 
 ### Chrome and Edge
 
-Requires Chrome or Edge 102 or later.
+Requires Chrome or Edge 111 or later.
 
 1. Obtain and extract the `chrome.zip` or `edge.zip` release artifact.
 2. Open the browser's extension management page.
@@ -398,11 +399,15 @@ mode's hostnames with one `Allow` or `Remove` action per row.
 
 ### Change the Date Presentation
 
-1. Open the extension's options page.
-2. In **Display**, choose **System** or **Custom format**.
+1. Open Settings and choose **Display**.
+2. Choose **System** or **Custom format**.
 3. Choose **System**, **UTC**, or **IANA** for the time zone.
-4. Review the preview when using a custom format.
-5. Choose **Save**.
+4. Check the always-visible preview.
+5. Choose **Save display settings**.
+
+Appearance is not part of this form. Change it from the **Appearance** select
+in the Settings header; it is saved immediately by its own background command,
+independent of the display settings form.
 
 ### Report a Site
 
@@ -415,12 +420,16 @@ are not working correctly on a supported site.
 
 ### Reset All Settings
 
-Choose **Reset all settings** on the options page to restore:
+Choose **Reset all settings** in the **Reset** section of Settings, or from
+the recovery view when settings cannot be read, then confirm with **Reset
+everything**. It restores:
 
 - global processing enabled;
-- default-enabled site behavior with saved overrides removed;
+- the `All supported sites` run mode with both Excluded sites and Allowed
+  sites emptied;
 - the system date and time format;
 - the system time zone;
+- appearance set to System;
 - Debug logs disabled with retained entries removed.
 
 ## Inputs and Outputs
@@ -451,14 +460,14 @@ unchanged, and the extension makes no fallback request for publication data.
 The extension requests:
 
 - **Access to all HTTP and HTTPS sites:** allows standard timestamps on
-  accessible pages, keeps per-host preferences available, and supports future
-  specialized sources.
+  accessible pages, lets the run mode and its Excluded and Allowed site lists
+  apply on any site, and supports future specialized sources.
 - **Scripting:** registers, updates, and removes the universal isolated content
   runtime plus the Facebook-only main-world payload bridge.
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
   can verify each frame's revision acknowledgement, and coalesces YouTube
   history-state updates into payload-free route signals for the exact frame.
-- **Storage:** keeps one versioned settings snapshot (schema version 6) and
+- **Storage:** keeps one versioned settings snapshot (schema version 1) and
   optional diagnostic entries locally.
 
 No More Ago uses the current visible label only to decide whether its

@@ -71,12 +71,6 @@ body {
   padding: 14px 20px 0;
 }
 
-.popup-row {
-  min-height: 66px;
-  padding-block: 8px;
-  border-bottom: 1px solid var(--nma-border);
-}
-
 .popup-row-summary {
   min-height: 48px;
 }

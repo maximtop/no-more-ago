@@ -18,6 +18,16 @@ import { createBuildWorkspace } from "./build-workspace";
 const execFileAsync = promisify(execFile);
 const PNPM_COMMAND = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
+/**
+ * Reads the pixel size recorded in a PNG header, so a stale icon export fails the build test.
+ *
+ * @param bytes - PNG file contents.
+ * @returns - Width and height from the IHDR chunk.
+ */
+function pngDimensions(bytes: Buffer): { readonly width: number; readonly height: number } {
+    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
+
 describe("build commands", () => {
     it("shows Commander help without creating artifacts", async () => {
         const workspace = createBuildWorkspace();
@@ -76,7 +86,7 @@ describe("build commands", () => {
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
                 } else {
-                    expect(manifest.minimum_chrome_version).toBe("102");
+                    expect(manifest.minimum_chrome_version).toBe("111");
                 }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
                 expect(manifest.icons).toEqual(Object.fromEntries(
@@ -86,9 +96,11 @@ describe("build commands", () => {
                     ]),
                 ));
                 for (const size of EXTENSION_ICON_SIZES) {
-                    expect(existsSync(
-                        `${directory}/icons/${EXTENSION_ICON_BASENAME}-${String(size)}.png`,
-                    )).toBe(true);
+                    const icon = `${directory}/icons/${EXTENSION_ICON_BASENAME}-`
+                        + `${String(size)}.png`;
+                    expect(existsSync(icon)).toBe(true);
+                    expect(pngDimensions(readFileSync(icon)))
+                        .toEqual({ width: size, height: size });
                 }
                 expect(readdirSync(`${directory}/icons`)).toHaveLength(EXTENSION_ICON_SIZES.length);
                 expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))

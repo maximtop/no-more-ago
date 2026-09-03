@@ -2,7 +2,7 @@
  * @file Header control that applies the appearance choice immediately.
  */
 
-import { Text } from "@mantine/core";
+import { NativeSelect, Text } from "@mantine/core";
 import type { ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import { APPEARANCE, APPEARANCES } from "../shared/settings/snapshot";
@@ -13,7 +13,7 @@ import type { DisplayController } from "./display-controller";
  */
 export interface AppearanceControlProps {
     /**
-     * Controller that persists the appearance beside the display settings.
+     * Controller that persists the appearance.
      */
     readonly controller: DisplayController;
 }
@@ -32,15 +32,20 @@ export function AppearanceControl({ controller }: AppearanceControlProps): React
     }
     return (
         <div className="options-appearance">
-            <label className="nma-eyebrow" htmlFor="appearance-select">
-                Appearance
-            </label>
-            <select
+            <NativeSelect
                 id="appearance-select"
-                className="options-appearance-select"
+                label="Appearance"
                 aria-label="Appearance"
                 aria-busy={controller.appearanceSaving}
+                className="options-select options-appearance-select"
+                classNames={{ label: "nma-eyebrow" }}
+                size="xs"
                 value={state.appearance}
+                data={[
+                    { value: APPEARANCE.SYSTEM, label: "System" },
+                    { value: APPEARANCE.LIGHT, label: "Light" },
+                    { value: APPEARANCE.DARK, label: "Dark" },
+                ]}
                 onChange={(event) => {
                     const value = event.currentTarget.value;
                     const appearance = APPEARANCES.find((option) => option === value);
@@ -48,11 +53,7 @@ export function AppearanceControl({ controller }: AppearanceControlProps): React
                         void controller.changeAppearance(appearance);
                     }
                 }}
-            >
-                <option value={APPEARANCE.SYSTEM}>System</option>
-                <option value={APPEARANCE.LIGHT}>Light</option>
-                <option value={APPEARANCE.DARK}>Dark</option>
-            </select>
+            />
             {controller.appearanceFailed ? (
                 <Text role="alert" size="xs" c="red">
                     Could not save the appearance. Try again.

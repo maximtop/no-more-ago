@@ -6,7 +6,11 @@ import {
     isCanonicalHostname,
     normalizeHostnameInput,
 } from "../shared/settings/hostname";
-import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
+import {
+    SITE_SCOPE_LIST_LABEL,
+    SITE_SCOPE_MODE,
+    type SiteScopeMode,
+} from "../shared/settings/site-scope";
 
 /**
  * Outcome of validating one hostname entered in the Sites form.
@@ -111,7 +115,7 @@ export function validateHostnameEntry(
 export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
     if (mode === SITE_SCOPE_MODE.SELECTED_ONLY) {
         return {
-            title: "Allowed sites",
+            title: SITE_SCOPE_LIST_LABEL[mode],
             description: "The extension runs only on these exact hostnames.",
             fieldLabel: "Allow hostname",
             submitLabel: "Allow site",
@@ -122,7 +126,7 @@ export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
         };
     }
     return {
-        title: "Excluded sites",
+        title: SITE_SCOPE_LIST_LABEL[mode],
         description: "The extension stays off on these exact hostnames.",
         fieldLabel: "Exclude hostname",
         submitLabel: "Exclude site",

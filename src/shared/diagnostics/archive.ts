@@ -16,7 +16,7 @@ export const DIAGNOSTICS_ARCHIVE_MEMBER = "diagnostics.json" as const;
 export const DIAGNOSTICS_ARCHIVE_FILE = "no-more-ago-diagnostics.zip" as const;
 
 /**
- * Stable archive failures shown by the options page.
+ * Stable archive failures shown by both surfaces.
  */
 export type DiagnosticArchiveErrorCode =
     | "empty"
@@ -131,46 +131,12 @@ export function createDiagnosticsZip(
 }
 
 /**
- * Creates a browser-backed download runtime.
- *
- * @returns - Download runtime for the options page.
- */
-function defaultDownloadRuntime(): DownloadRuntime {
-    if (
-        typeof Blob === "undefined"
-        || typeof URL === "undefined"
-        || typeof document === "undefined"
-    ) {
-        throw new DiagnosticArchiveError(
-            "download-failed",
-            "Local downloads are unavailable in this context.",
-        );
-    }
-    return {
-        Blob,
-        createObjectURL: (blob) => URL.createObjectURL(blob),
-        revokeObjectURL: (url) => {
-            URL.revokeObjectURL(url);
-        },
-        createAnchor: () => {
-            const anchor = document.createElement("a");
-            document.body.append(anchor);
-            return anchor;
-        },
-        scheduleRevoke: (callback) => {
-            setTimeout(callback, 0);
-        },
-    };
-}
-
-/**
  * Downloads prepared diagnostic ZIP bytes.
  *
  * @param bytes - ZIP archive bytes.
- * @param runtime - Optional browser download primitives.
+ * @param browser - Browser download primitives.
  */
-export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRuntime): void {
-    const browser = runtime ?? defaultDownloadRuntime();
+export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRuntime): void {
     let objectUrl: string | undefined;
     let anchor: ReturnType<DownloadRuntime["createAnchor"]> | undefined;
     try {

@@ -46,6 +46,24 @@ export type SubscribeSettingsChanged = (
 ) => SettingsChangedSubscription;
 
 /**
+ * Sender metadata the runtime attaches to a message; only the tab is inspected.
+ */
+export interface SettingsChangedSender {
+    /**
+     * Tab that sent the message; absent for messages from the background.
+     */
+    readonly tab?: unknown;
+}
+
+/**
+ * Extension message listener receiving the message and its sender.
+ */
+export type SettingsChangedRuntimeListener = (
+    message: unknown,
+    sender?: SettingsChangedSender,
+) => void;
+
+/**
  * Narrow runtime boundary used to observe extension messages.
  */
 export interface SettingsChangedRuntime {
@@ -56,12 +74,12 @@ export interface SettingsChangedRuntime {
         /**
          * Registers one extension message listener.
          */
-        addListener(listener: (message: unknown) => void): void;
+        addListener(listener: SettingsChangedRuntimeListener): void;
 
         /**
          * Removes one previously registered listener.
          */
-        removeListener(listener: (message: unknown) => void): void;
+        removeListener(listener: SettingsChangedRuntimeListener): void;
     };
 }
 
@@ -76,6 +94,15 @@ export function isSettingsChangedMessage(value: unknown): value is SettingsChang
 }
 
 /**
+ * Subscriber that never delivers, for surfaces rendered without a runtime.
+ *
+ * @returns - Subscription with nothing to cancel.
+ */
+export const INERT_SETTINGS_CHANGED_SUBSCRIBER: SubscribeSettingsChanged = () => ({
+    unsubscribe: () => undefined,
+});
+
+/**
  * Creates a subscriber over an extension message runtime.
  *
  * @param runtime - Message runtime, or undefined outside an extension page.
@@ -88,8 +115,10 @@ export function createSettingsChangedSubscriber(
         if (!runtime) {
             return { unsubscribe: () => undefined };
         }
-        const receive = (message: unknown): void => {
-            if (isSettingsChangedMessage(message)) {
+        const receive: SettingsChangedRuntimeListener = (message, sender) => {
+            // Only the background announces revisions; a message carrying a
+            // sender tab came from a content script and is ignored.
+            if (sender?.tab === undefined && isSettingsChangedMessage(message)) {
                 listener(message.revision);
             }
         };
@@ -105,15 +134,4 @@ export function createSettingsChangedSubscriber(
             },
         };
     };
-}
-
-/**
- * Creates a subscriber bound to the extension runtime when one is available.
- *
- * @returns - Subscriber over `chrome.runtime`, or an inert subscriber.
- */
-export function createDefaultSettingsChangedSubscriber(): SubscribeSettingsChanged {
-    return createSettingsChangedSubscriber(
-        typeof chrome === "undefined" ? undefined : chrome.runtime,
-    );
 }

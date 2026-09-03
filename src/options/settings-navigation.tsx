@@ -49,20 +49,20 @@ export function SettingsNavigation({ panels, banner }: SettingsNavigationProps):
         <Tabs
             defaultValue={SETTINGS_SECTION.SITES}
             orientation="vertical"
-            className="settings-layout"
+            className="options-layout"
             keepMounted={false}
             unstyled
         >
-            <div className="settings-nav">
-                <p className="nma-eyebrow settings-nav-title">Settings</p>
-                <Tabs.List className="settings-nav-list" aria-label="Settings sections">
+            <div className="options-nav">
+                <p className="nma-eyebrow options-nav-title">Settings</p>
+                <Tabs.List className="options-nav-list" aria-label="Settings sections">
                     <Tabs.Tab value={SETTINGS_SECTION.SITES}>Sites</Tabs.Tab>
                     <Tabs.Tab value={SETTINGS_SECTION.DISPLAY}>Display</Tabs.Tab>
                     <Tabs.Tab value={SETTINGS_SECTION.DIAGNOSTICS}>Diagnostics</Tabs.Tab>
                     <Tabs.Tab value={SETTINGS_SECTION.RESET}>Reset</Tabs.Tab>
                 </Tabs.List>
             </div>
-            <div className="settings-content">
+            <div className="options-content">
                 {banner}
                 <Tabs.Panel value={SETTINGS_SECTION.SITES}>
                     {panels[SETTINGS_SECTION.SITES]}

@@ -38,6 +38,6 @@ export const MANIFEST_FILE = "manifest.json" as const;
 export const EXTENSION_ICON_SIZES = [16, 32, 48, 128] as const;
 
 /**
- * Base filename of the Exact Point mark emitted at every icon size.
+ * Base filename of the toolbar icon emitted at every icon size.
  */
-export const EXTENSION_ICON_BASENAME = "exact-point" as const;
+export const EXTENSION_ICON_BASENAME = "icon" as const;

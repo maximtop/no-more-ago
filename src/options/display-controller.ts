@@ -2,14 +2,14 @@
  * @file Owns editable display settings and their persistence lifecycle.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
-    SETTINGS_STATE_FAILURE,
-    STATE_AVAILABILITY,
-} from "../shared/messaging/view-state-values";
-import type { DisplayState } from "../shared/messaging/view-state-schemas";
+    createUnavailableDisplayState,
+    type DisplayState,
+} from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import { APPEARANCE, type Appearance } from "../shared/settings/snapshot";
+import { sameDisplaySettings, type Appearance } from "../shared/settings/snapshot";
 import type { SitesClient } from "./client";
 import {
     customPatternError,
@@ -139,20 +139,26 @@ export interface DisplayController {
      *
      * @returns - A promise that settles after the fresh projection has been applied.
      */
-    reload(): Promise<void>;
+    readonly reload: () => Promise<void>;
 }
 
-const UNAVAILABLE_DISPLAY_STATE: DisplayState = {
-    availability: STATE_AVAILABILITY.UNAVAILABLE,
-    revision: null,
-    display: null,
-    appearance: APPEARANCE.SYSTEM,
-    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-};
 const DEFAULT_DISPLAY_DRAFT = draftFromDisplay({
     formatMode: "system",
     timeZone: { mode: "system" },
 });
+
+/**
+ * Reports whether the draft differs from the committed display settings.
+ *
+ * @param draft - Current form draft.
+ * @param state - Current display projection.
+ * @returns - Whether the user has unsaved edits.
+ */
+function isDirty(draft: DisplayDraft | undefined, state: DisplayState | undefined): boolean {
+    return draft !== undefined
+        && state?.availability === STATE_AVAILABILITY.READY
+        && !sameDisplaySettings(displayFromDraft(draft), state.display);
+}
 
 /**
  * Creates the display-settings controller for the options page.
@@ -173,7 +179,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
     const [saving, setSaving] = useState(false);
     const [appearanceSaving, setAppearanceSaving] = useState(false);
     const [appearanceFailed, setAppearanceFailed] = useState(false);
-    const dirty = useRef(false);
+    const dirty = isDirty(draft, state);
 
     useEffect(() => {
         if (initialState || !loadWhenMissing) {
@@ -197,7 +203,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
                 if (!mounted) {
                     return;
                 }
-                setState(UNAVAILABLE_DISPLAY_STATE);
+                setState(createUnavailableDisplayState());
                 setLoading(false);
             });
         return () => {
@@ -206,16 +212,25 @@ export function useDisplayController(options: DisplayControllerOptions): Display
     }, [client, initialState, loadWhenMissing]);
 
     const updateDraft = (update: Partial<DisplayDraft>): void => {
-        dirty.current = true;
         setDraft((current) => (current ? { ...current, ...update } : current));
         setNotice(undefined);
     };
+
+    /**
+     * Reports whether a state returned by a command may replace the rendered one.
+     *
+     * @param next - State returned by the command or reread.
+     * @returns - Whether the state is at least as new as the rendered one.
+     */
+    const accepts = (next: DisplayState): boolean =>
+        next.availability !== STATE_AVAILABILITY.READY
+        || state?.availability !== STATE_AVAILABILITY.READY
+        || next.revision >= state.revision;
 
     const adopt = (next: DisplayState): void => {
         setState(next);
         if (next.availability === STATE_AVAILABILITY.READY) {
             setDraft(draftFromDisplay(next.display));
-            dirty.current = false;
         }
     };
 
@@ -233,16 +248,13 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         }
         setSaving(true);
         setNotice(undefined);
-        const result = await client.setDisplaySettings(displayFromDraft(draft), state.appearance);
+        const result = await client.setDisplaySettings(displayFromDraft(draft));
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             const responseState = result.response.state;
-            if (
-                responseState.availability !== STATE_AVAILABILITY.READY ||
-                responseState.revision >= state.revision
-            ) {
+            if (accepts(responseState)) {
                 if (
-                    responseState.availability === STATE_AVAILABILITY.READY &&
-                    (result.response.ok || result.response.error !== "invalid-format")
+                    responseState.availability === STATE_AVAILABILITY.READY
+                    && (result.response.ok || result.response.error !== "invalid-format")
                 ) {
                     adopt(responseState);
                 } else {
@@ -251,8 +263,8 @@ export function useDisplayController(options: DisplayControllerOptions): Display
             }
             if (!result.response.ok) {
                 setNotice(
-                    result.response.error === "invalid-time-zone" ||
-                        result.response.error === "invalid-display-settings"
+                    result.response.error === "invalid-time-zone"
+                    || result.response.error === "invalid-display-settings"
                         ? "invalid-time-zone"
                         : result.response.error === "invalid-format"
                             ? "invalid-format"
@@ -266,15 +278,12 @@ export function useDisplayController(options: DisplayControllerOptions): Display
                 setNotice("saved");
             }
         } else if (result.state) {
-            if (
-                result.state.availability !== STATE_AVAILABILITY.READY
-                || result.state.revision >= state.revision
-            ) {
+            if (accepts(result.state)) {
                 adopt(result.state);
             }
             setNotice("interrupted");
         } else {
-            setState(UNAVAILABLE_DISPLAY_STATE);
+            setState(createUnavailableDisplayState());
             setNotice("unknown");
         }
         setSaving(false);
@@ -284,29 +293,36 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         try {
             adopt(await client.getDisplayState());
         } catch {
-            setState(UNAVAILABLE_DISPLAY_STATE);
+            setState(createUnavailableDisplayState());
             setNotice("unknown");
         } finally {
             setLoading(false);
         }
     };
 
-    const reload = useCallback(async (): Promise<void> => {
+    // A failed live reread keeps the last READY projection: one lost message
+    // does not mean processing stopped, and the next announcement retries. A
+    // reread older than the rendered projection is dropped for the same reason.
+    const reload = async (): Promise<void> => {
+        let next: DisplayState;
         try {
-            const next = await client.getDisplayState();
-            setState(next);
-            if (next.availability !== STATE_AVAILABILITY.READY) {
-                return;
-            }
-            if (dirty.current) {
-                setNotice("external-change");
-            } else {
-                setDraft(draftFromDisplay(next.display));
-            }
+            next = await client.getDisplayState();
         } catch {
-            setState(UNAVAILABLE_DISPLAY_STATE);
+            return;
         }
-    }, [client]);
+        if (!accepts(next)) {
+            return;
+        }
+        setState(next);
+        if (next.availability !== STATE_AVAILABILITY.READY) {
+            return;
+        }
+        if (dirty) {
+            setNotice("external-change");
+        } else {
+            setDraft(draftFromDisplay(next.display));
+        }
+    };
 
     const changeAppearance = async (appearance: Appearance): Promise<void> => {
         if (!state || state.availability !== STATE_AVAILABILITY.READY || appearanceSaving) {
@@ -314,18 +330,16 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         }
         setAppearanceSaving(true);
         setAppearanceFailed(false);
-        const result = await client.setDisplaySettings(state.display, appearance);
+        const result = await client.setAppearance(appearance);
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            const responseState = result.response.state;
-            if (
-                responseState.availability !== STATE_AVAILABILITY.READY
-                || responseState.revision >= state.revision
-            ) {
-                setState(responseState);
+            if (accepts(result.response.state)) {
+                setState(result.response.state);
             }
             setAppearanceFailed(!result.response.ok);
         } else if (result.state) {
-            setState(result.state);
+            if (accepts(result.state)) {
+                setState(result.state);
+            }
         } else {
             setAppearanceFailed(true);
         }
@@ -357,7 +371,6 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         beginReset: () => {
             setNotice(undefined);
             setDraft(DEFAULT_DISPLAY_DRAFT);
-            dirty.current = false;
             setLoading(true);
         },
         reloadAfterReset,

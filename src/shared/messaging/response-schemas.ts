@@ -23,18 +23,32 @@ const persistenceErrorSchema = v.picklist(SETTINGS_PERSISTENCE_ERRORS);
 const sitePersistenceErrorSchema = v.picklist(SITE_SETTINGS_ERRORS);
 
 /**
- * Result of changing global activation.
+ * Result of changing global activation on either supported UI surface.
  */
 export const setGlobalEnabledResponseSchema = v.union([
     v.strictObject({
         ok: v.literal(true),
         acceptedRevision: nonNegativeSafeIntegerSchema,
+        surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
+        state: popupStateSchema,
+    }),
+    v.strictObject({
+        ok: v.literal(true),
+        acceptedRevision: nonNegativeSafeIntegerSchema,
+        surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
+        state: sitesStateSchema,
+    }),
+    v.strictObject({
+        ok: v.literal(false),
+        error: persistenceErrorSchema,
+        surface: v.literal(SITE_SETTINGS_SURFACE.POPUP),
         state: popupStateSchema,
     }),
     v.strictObject({
         ok: v.literal(false),
         error: persistenceErrorSchema,
-        state: popupStateSchema,
+        surface: v.literal(SITE_SETTINGS_SURFACE.SITES),
+        state: sitesStateSchema,
     }),
 ]);
 
@@ -102,6 +116,22 @@ export const setDisplaySettingsResponseSchema = v.union([
 ]);
 
 /**
+ * Result of changing the appearance applied to both surfaces.
+ */
+export const setAppearanceResponseSchema = v.union([
+    v.strictObject({
+        ok: v.literal(true),
+        acceptedRevision: nonNegativeSafeIntegerSchema,
+        state: displayStateSchema,
+    }),
+    v.strictObject({
+        ok: v.literal(false),
+        error: persistenceErrorSchema,
+        state: displayStateSchema,
+    }),
+]);
+
+/**
  * Result of restoring all settings to their defaults.
  */
 export const resetAllSettingsResponseSchema = v.union([
@@ -153,6 +183,11 @@ export type SetSiteScopeModeResponse = v.InferOutput<typeof setSiteScopeModeResp
  * Display settings response inferred from its runtime validation schema.
  */
 export type SetDisplaySettingsResponse = v.InferOutput<typeof setDisplaySettingsResponseSchema>;
+
+/**
+ * Appearance response inferred from its runtime validation schema.
+ */
+export type SetAppearanceResponse = v.InferOutput<typeof setAppearanceResponseSchema>;
 
 /**
  * Reset response inferred from its runtime validation schema.

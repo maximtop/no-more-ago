@@ -3,27 +3,19 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import {
-    SETTINGS_STATE_FAILURE,
-    STATE_AVAILABILITY,
-} from "../shared/messaging/view-state-values";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     createUnavailablePopupState,
     type PopupState,
 } from "../shared/messaging/view-state-schemas";
 import {
-    createDefaultSettingsChangedSubscriber,
+    INERT_SETTINGS_CHANGED_SUBSCRIBER,
     type SubscribeSettingsChanged,
 } from "../shared/messaging/settings-notifications";
 import { useSettingsChanged } from "../shared/ui/use-settings-changed";
-import {
-    DiagnosticArchiveError,
-    createDiagnosticsZip,
-    downloadDiagnosticsZip,
-    type DownloadRuntime,
-} from "../shared/diagnostics/archive";
-import type { DiagnosticsSnapshotError } from "../shared/messaging/contracts";
+import { settleMutation, type MutationNotice } from "../shared/ui/persistence-notice";
+import type { DownloadRuntime } from "../shared/diagnostics/archive";
+import { downloadDiagnosticsSnapshot } from "../shared/diagnostics/download";
 import { createPopupClient, type PopupClient } from "./client";
 
 /**
@@ -32,15 +24,9 @@ import { createPopupClient, type PopupClient } from "./client";
 export const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
 
 /**
- * User-visible outcome of a popup settings mutation.
+ * User-visible outcome of a popup settings mutation or an external change.
  */
-export type PopupNotice =
-    | "save-failed"
-    | "invalid-hostname"
-    | "interrupted"
-    | "unknown"
-    | "external-change"
-    | undefined;
+export type PopupNotice = MutationNotice | "external-change";
 
 /**
  * Dependencies and preloaded state for the popup controller.
@@ -66,33 +52,6 @@ export interface PopupControllerOptions {
      */
     readonly archiveRuntime?: DownloadRuntime;
 }
-
-/**
- * Maps a diagnostics service failure to user guidance.
- *
- * @param error - Stable service failure returned by the background page.
- * @returns - The message displayed to the user.
- */
-function diagnosticsErrorText(error: DiagnosticsSnapshotError): string {
-    if (error === "disabled") {
-        return "Debug logs are off, so there are no logs to download.";
-    }
-    if (error === "empty") {
-        return "There are no diagnostic logs to download yet.";
-    }
-    if (error === "invalid-journal") {
-        return "Saved diagnostic logs are invalid and cannot be downloaded.";
-    }
-    if (error === "storage-failed") {
-        return "Saved diagnostic logs could not be read. Try again later.";
-    }
-    return "Diagnostic logs are unavailable. Try again later.";
-}
-
-/**
- * Message used after a diagnostics archive is handed to the browser.
- */
-export const POPUP_DIAGNOSTICS_DOWNLOADED_NOTICE = "Diagnostic logs downloaded.";
 
 /**
  * Popup state and the commands its view issues.
@@ -167,10 +126,7 @@ export interface PopupController {
  */
 export function usePopupController(options: PopupControllerOptions = {}): PopupController {
     const client = useMemo(() => options.client ?? createPopupClient(), [options.client]);
-    const subscribe = useMemo(
-        () => options.subscribe ?? createDefaultSettingsChangedSubscriber(),
-        [options.subscribe],
-    );
+    const subscribe = options.subscribe ?? INERT_SETTINGS_CHANGED_SUBSCRIBER;
     const [state, setState] = useState<PopupState | undefined>(options.initialState);
     const [loading, setLoading] = useState(options.initialState === undefined);
     const [saving, setSaving] = useState(false);
@@ -216,9 +172,6 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
     }, [client, options.initialState]);
 
     const refresh = useCallback(() => {
-        if (inFlight.current) {
-            return;
-        }
         void client.getState().then(
             (next) => {
                 setState(next);
@@ -228,22 +181,24 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         );
     }, [client]);
 
-    useSettingsChanged(subscribe, state?.revision ?? null, refresh);
+    useSettingsChanged({
+        subscribe,
+        revision: state?.revision ?? null,
+        inFlight: saving,
+        onExternalChange: refresh,
+    });
 
     const apply = (next: PopupState | undefined, outcome: PopupNotice): void => {
-        if (next && (next.availability !== STATE_AVAILABILITY.READY
+        if (next === undefined) {
+            setState(createUnavailablePopupState(undefined, state?.hostname ?? null));
+        } else if (
+            next.availability !== STATE_AVAILABILITY.READY
             || state?.availability !== STATE_AVAILABILITY.READY
-            || next.revision >= state.revision)) {
+            || next.revision >= state.revision
+        ) {
             setState(next);
         }
         setNotice(outcome);
-    };
-
-    const unavailable = (hostname: string | null): PopupState => {
-        const base = createUnavailablePopupState(SETTINGS_STATE_FAILURE.SETTINGS_LOAD);
-        return base.availability === STATE_AVAILABILITY.UNAVAILABLE
-            ? { ...base, hostname }
-            : base;
     };
 
     const changeGlobal = async (enabled: boolean): Promise<void> => {
@@ -253,20 +208,8 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         inFlight.current = true;
         setSaving(true);
         setNotice(undefined);
-        const result = await client.setGlobalEnabled(enabled);
-        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            apply(
-                result.response.state,
-                result.response.ok
-                    ? undefined
-                    : result.response.error === "save-failed" ? "save-failed" : "unknown",
-            );
-        } else if (result.state) {
-            apply(result.state, "interrupted");
-        } else {
-            setState(unavailable(state.hostname));
-            setNotice("unknown");
-        }
+        const settled = settleMutation(await client.setGlobalEnabled(enabled));
+        apply(settled.state, settled.notice);
         inFlight.current = false;
         setSaving(false);
     };
@@ -283,24 +226,8 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         inFlight.current = true;
         setSaving(true);
         setNotice(undefined);
-        const result = await client.setSiteEnabled(state.hostname, enabled);
-        if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            apply(
-                result.response.state,
-                result.response.ok
-                    ? undefined
-                    : result.response.error === "save-failed"
-                        ? "save-failed"
-                        : result.response.error === "invalid-hostname"
-                            ? "invalid-hostname"
-                            : "unknown",
-            );
-        } else if (result.state) {
-            apply(result.state, "interrupted");
-        } else {
-            setState(unavailable(state.hostname));
-            setNotice("unknown");
-        }
+        const settled = settleMutation(await client.setSiteEnabled(state.hostname, enabled));
+        apply(settled.state, settled.notice);
         inFlight.current = false;
         setSaving(false);
     };
@@ -336,22 +263,10 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         setDownloading(true);
         setDownloadNotice(undefined);
         try {
-            const result = await client.getDiagnosticsSnapshot();
-            if (result.kind === CLIENT_RESULT_KIND.ERROR) {
-                setDownloadNotice(diagnosticsErrorText(result.error));
-                return;
-            }
-            try {
-                const bytes = createDiagnosticsZip(result.snapshot);
-                downloadDiagnosticsZip(bytes, options.archiveRuntime);
-                setDownloadNotice(POPUP_DIAGNOSTICS_DOWNLOADED_NOTICE);
-            } catch (error) {
-                setDownloadNotice(
-                    error instanceof DiagnosticArchiveError
-                        ? error.message
-                        : "The diagnostic archive could not be downloaded. Try again later.",
-                );
-            }
+            setDownloadNotice(downloadDiagnosticsSnapshot(
+                await client.getDiagnosticsSnapshot(),
+                options.archiveRuntime,
+            ));
         } finally {
             downloadInFlight.current = false;
             setDownloading(false);

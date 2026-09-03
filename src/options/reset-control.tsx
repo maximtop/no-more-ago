@@ -24,7 +24,7 @@ export interface ResetControlProps {
  * @param origin - Availability state before the reset was requested.
  * @returns - An error message, or undefined when there is no notice to show.
  */
-function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
+export function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
     if (origin === "ready" && notice === "save-failed") {
         return "Could not reset settings. Your current settings remain active. Try again.";
     }

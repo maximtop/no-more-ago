@@ -2,8 +2,8 @@
  * @file Renders date-format and time-zone controls with a live preview.
  */
 
-import { Alert, Box, Button, Stack, Text, TextInput, Title } from "@mantine/core";
-import type { ReactElement } from "react";
+import { Alert, Box, Button, NativeSelect, Stack, Text, TextInput, Title } from "@mantine/core";
+import { useMemo, type ReactElement } from "react";
 import type { DisplayState } from "../shared/messaging/view-state-schemas";
 import {
     SETTINGS_STATE_FAILURE,
@@ -16,6 +16,7 @@ import {
     customPatternError,
     displayNoticeText,
     previewDisplayDraft,
+    type DisplayDraft,
     type DisplayNotice,
 } from "./display-form";
 
@@ -65,6 +66,27 @@ function noticePresentation(notice: DisplayNotice): {
 }
 
 /**
+ * Validates the draft once per change and renders its preview.
+ *
+ * @param draft - Current display form fields, when loaded.
+ * @returns - Pattern error and preview, or undefined without a draft.
+ */
+function useDraftAnalysis(draft: DisplayDraft | undefined): {
+    readonly patternError: string | undefined;
+    readonly preview: ReturnType<typeof previewDisplayDraft>;
+} | undefined {
+    return useMemo(() => {
+        if (!draft) {
+            return undefined;
+        }
+        const patternError = draft.formatMode === "custom"
+            ? customPatternError(draft.pattern)
+            : undefined;
+        return { patternError, preview: previewDisplayDraft(draft, patternError) };
+    }, [draft]);
+}
+
+/**
  * Renders the editable date presentation settings and their preview.
  *
  * @param props - Component properties.
@@ -73,10 +95,7 @@ function noticePresentation(notice: DisplayNotice): {
  */
 export function DisplaySection({ controller }: DisplaySectionProps): ReactElement {
     const { state, draft, loading, saving, notice } = controller;
-    const patternError = draft?.formatMode === "custom"
-        ? customPatternError(draft.pattern)
-        : undefined;
-    const preview = draft ? previewDisplayDraft(draft) : undefined;
+    const analysis = useDraftAnalysis(draft);
     const inlineNotice = notice === "invalid-time-zone" || notice === "invalid-format";
     return (
         <Stack gap="lg" component="section" aria-labelledby="display-heading">
@@ -92,26 +111,26 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
             {!loading && state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                 <Text role="status">{unavailableDisplayText(state)}</Text>
             ) : null}
-            {!loading && state?.availability === STATE_AVAILABILITY.READY && draft && preview ? (
+            {!loading && state?.availability === STATE_AVAILABILITY.READY && draft && analysis ? (
                 <Stack gap="md">
-                    <label className="options-field-label" htmlFor="date-format-select">
-                        Date format
-                        <select
-                            id="date-format-select"
-                            aria-label="Date format"
-                            value={draft.formatMode}
-                            onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                if (value === "system" || value === "custom") {
-                                    controller.setFormatMode(value);
-                                }
-                            }}
-                            disabled={saving}
-                        >
-                            <option value="system">System</option>
-                            <option value="custom">Custom format</option>
-                        </select>
-                    </label>
+                    <NativeSelect
+                        id="date-format-select"
+                        label="Date format"
+                        aria-label="Date format"
+                        className="options-select"
+                        value={draft.formatMode}
+                        data={[
+                            { value: "system", label: "System" },
+                            { value: "custom", label: "Custom format" },
+                        ]}
+                        onChange={(event) => {
+                            const value = event.currentTarget.value;
+                            if (value === "system" || value === "custom") {
+                                controller.setFormatMode(value);
+                            }
+                        }}
+                        disabled={saving}
+                    />
                     {draft.formatMode === "custom" ? (
                         <TextInput
                             label="Format pattern"
@@ -123,33 +142,33 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                                 controller.setPattern(event.currentTarget.value);
                             }}
                             error={
-                                patternError ??
-                                (notice === "invalid-format"
+                                analysis.patternError
+                                ?? (notice === "invalid-format"
                                     ? displayNoticeText("invalid-format")
                                     : undefined)
                             }
                             disabled={saving}
                         />
                     ) : null}
-                    <label className="options-field-label" htmlFor="time-zone-select">
-                        Time zone
-                        <select
-                            id="time-zone-select"
-                            aria-label="Time zone"
-                            value={draft.timeZoneMode}
-                            onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                if (value === "system" || value === "utc" || value === "iana") {
-                                    controller.setTimeZoneMode(value);
-                                }
-                            }}
-                            disabled={saving}
-                        >
-                            <option value="system">System</option>
-                            <option value="utc">UTC</option>
-                            <option value="iana">IANA</option>
-                        </select>
-                    </label>
+                    <NativeSelect
+                        id="time-zone-select"
+                        label="Time zone"
+                        aria-label="Time zone"
+                        className="options-select"
+                        value={draft.timeZoneMode}
+                        data={[
+                            { value: "system", label: "System" },
+                            { value: "utc", label: "UTC" },
+                            { value: "iana", label: "IANA" },
+                        ]}
+                        onChange={(event) => {
+                            const value = event.currentTarget.value;
+                            if (value === "system" || value === "utc" || value === "iana") {
+                                controller.setTimeZoneMode(value);
+                            }
+                        }}
+                        disabled={saving}
+                    />
                     {draft.timeZoneMode === "iana" ? (
                         <TextInput
                             label="IANA time zone identifier"
@@ -168,14 +187,18 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             disabled={saving}
                         />
                     ) : null}
-                    <div className="display-preview" data-ok={preview.ok}>
+                    <div className="options-preview" data-ok={analysis.preview.ok}>
                         <div>
                             <div className="nma-eyebrow">Preview</div>
-                            <div className="display-preview-value nma-mono" role="status">
-                                {preview.text}
+                            <div
+                                className="options-preview-value nma-mono"
+                                role="status"
+                                aria-label="Preview"
+                            >
+                                {analysis.preview.text}
                             </div>
                         </div>
-                        <span className="display-preview-source nma-mono">
+                        <span className="options-preview-source nma-mono">
                             {DISPLAY_PREVIEW_SOURCE}
                         </span>
                     </div>

@@ -26,6 +26,27 @@ export const SITE_SCOPE_MODES = [
 export type SiteScopeMode = (typeof SITE_SCOPE_MODES)[number];
 
 /**
+ * User-facing name of each scope mode, shared by the popup and the settings page.
+ */
+export const SITE_SCOPE_MODE_LABEL: Readonly<Record<SiteScopeMode, string>> = Object.freeze({
+    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: "All supported sites",
+    [SITE_SCOPE_MODE.SELECTED_ONLY]: "Selected sites only",
+});
+
+/**
+ * User-facing name of the hostname list each scope mode owns.
+ */
+export const SITE_SCOPE_LIST_LABEL: Readonly<Record<SiteScopeMode, string>> = Object.freeze({
+    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: "Excluded sites",
+    [SITE_SCOPE_MODE.SELECTED_ONLY]: "Allowed sites",
+});
+
+/**
+ * Largest number of hostnames either list may hold.
+ */
+export const MAX_SITE_LIST_ENTRIES = 1000;
+
+/**
  * Active scope mode together with both independently retained hostname lists.
  */
 export interface SiteScopePolicy {
@@ -78,29 +99,25 @@ export function isSiteProcessingEnabled(scope: SiteScopePolicy, hostname: string
 }
 
 /**
- * Copies a hostname list, rejecting a non-canonical entry and dropping duplicates.
+ * Copies a hostname list, rejecting a non-canonical entry or an oversized list
+ * and dropping duplicates.
  *
  * @param values - Candidate hostname list.
- * @returns - Frozen deduplicated list, or null when an entry is not canonical.
+ * @returns - Frozen deduplicated list, or null when the list is not acceptable.
  */
 function copyHostnames(values: readonly string[]): readonly string[] | null {
-    const unique: string[] = [];
-    for (const value of values) {
-        if (!isCanonicalHostname(value)) {
-            return null;
-        }
-        if (!unique.includes(value)) {
-            unique.push(value);
-        }
+    if (values.some((value) => !isCanonicalHostname(value))) {
+        return null;
     }
-    return Object.freeze(unique);
+    const unique = Object.freeze([...new Set(values)]);
+    return unique.length > MAX_SITE_LIST_ENTRIES ? null : unique;
 }
 
 /**
  * Validates a typed scope policy and returns an immutable copy.
  *
  * @param value - Typed scope policy.
- * @returns - Immutable validated policy, or null when an entry is invalid.
+ * @returns - Immutable validated policy, or null when an entry or a list size is invalid.
  */
 export function parseSiteScopePolicy(value: SiteScopePolicy): SiteScopePolicy | null {
     if (!SITE_SCOPE_MODES.includes(value.mode)) {
@@ -134,6 +151,20 @@ function withHostname(hosts: readonly string[], hostname: string): readonly stri
  */
 function withoutHostname(hosts: readonly string[], hostname: string): readonly string[] {
     return hosts.filter((value) => value !== hostname);
+}
+
+/**
+ * Reports whether the list the active mode owns can accept one more hostname.
+ *
+ * @param scope - Current scope policy.
+ * @param hostname - Canonical hostname about to be added.
+ * @returns - Whether adding the hostname would exceed the list bound.
+ */
+export function isSiteListFull(scope: SiteScopePolicy, hostname: string): boolean {
+    const list = scope.mode === SITE_SCOPE_MODE.SELECTED_ONLY
+        ? scope.allowedSites
+        : scope.excludedSites;
+    return !list.includes(hostname) && list.length >= MAX_SITE_LIST_ENTRIES;
 }
 
 /**

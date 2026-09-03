@@ -17,7 +17,7 @@ import type {
     RefreshFailure as DisplayRefreshFailure,
 } from "../../shared/messaging/view-state-schemas";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
-import type { DisplaySettings, SettingsSnapshotV6 } from "../../shared/settings/snapshot";
+import type { DisplaySettings, SettingsSnapshot } from "../../shared/settings/snapshot";
 import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import { settleBrowserOperation } from "../runtime/settle";
@@ -64,7 +64,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     public refreshDebugPolicy(
-        snapshot: SettingsSnapshotV6,
+        snapshot: SettingsSnapshot,
         enabled: boolean,
         revision: number,
     ): Promise<readonly DebugRefreshFailure[]> {
@@ -84,7 +84,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     public refreshDisplay(
-        snapshot: SettingsSnapshotV6,
+        snapshot: SettingsSnapshot,
         display: DisplaySettings,
         revision: number,
     ): Promise<readonly DisplayRefreshFailure[]> {
@@ -103,7 +103,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     private async broadcast(
-        snapshot: SettingsSnapshotV6,
+        snapshot: SettingsSnapshot,
         message: RefreshMessage,
     ): Promise<readonly DisplayRefreshFailure[]> {
         if (!snapshot.globalEnabled) {

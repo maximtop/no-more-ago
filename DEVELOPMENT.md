@@ -12,6 +12,7 @@
   - [Development Workflow](#development-workflow)
     - [Branches and Pull Requests](#branches-and-pull-requests)
     - [Development Builds](#development-builds)
+    - [Regenerate the Icons](#regenerate-the-icons)
     - [Quality Checks](#quality-checks)
     - [Runtime Architecture](#runtime-architecture)
     - [Release Builds](#release-builds)
@@ -33,7 +34,7 @@ Install these tools before working on the project:
 - pnpm 10.34.5, installed directly. Do not use Corepack.
 - Git with access to the private
   `git@github.com:maximtop/no-more-ago.git` repository.
-- Chrome or Edge 102+, or Firefox 128+, for manual extension testing.
+- Chrome or Edge 111+, or Firefox 128+, for manual extension testing.
 - GNU Make only if you want to use the optional Makefile aliases.
 
 Confirm the active versions:
@@ -143,6 +144,19 @@ The development build includes source maps.
 Unpacked builds are written to `dist/dev/<browser>`. Matching ZIP files are
 written to `dist/dev/<browser>.zip`.
 
+### Regenerate the Icons
+
+The toolbar icons are exported from `src/assets/icons/icon.svg`. After editing
+the SVG, run:
+
+~~~sh
+pnpm icons
+~~~
+
+`scripts/icons.ts` renders `icon-16.png`, `icon-32.png`, `icon-48.png`, and
+`icon-128.png` beside the master with `@resvg/resvg-js`. Commit the PNGs
+together with the SVG; watch mode does not re-export them.
+
 ### Quality Checks
 
 | Command | Result |
@@ -170,7 +184,7 @@ covers all reachable frames in that tab. Each frame uses its own URL to select
 applicable content rules.
 
 Settings changes travel one way. A popup or Settings page sends a typed command
-to the background, which serializes it, commits the new schema V6 snapshot, and
+to the background, which serializes it, commits the new settings snapshot, and
 then announces the committed revision with a `no-more-ago:settings-changed`
 message. Every open popup and Settings page, in every tab and window, compares
 that revision with the one it renders and refetches its own projections when
@@ -186,9 +200,10 @@ frames whose own URL is a Facebook URL. Registration comparison tolerates
 browser APIs omitting optional returned fields but corrects every explicit
 mismatch. The universal runtime and Facebook bridge registrations reconcile
 independently, so a bridge-specific browser rejection does not prevent the core
-runtime from registering. Chrome and Edge builds require version 102 or later,
-and Firefox builds require version 128 or later, for registered `MAIN`-world
-content scripts.
+runtime from registering. Registered `MAIN`-world content scripts need only
+Chrome or Edge 102 or later; the Chrome and Edge builds set their floor at 111
+because the shared theme uses `oklch()` and `color-mix()`. Firefox builds
+require version 128 or later.
 
 The Facebook bridge installs bounded page-transport wrappers in an inert state.
 The isolated runtime uses the shared controller's activity lifecycle to send
@@ -402,11 +417,12 @@ the popup rows in Firefox with `dist/dev/firefox`.
 | Popup site switch on | Hostname appears in Allowed sites; status returns to `Active` |
 | Switch modes twice | Both lists return unchanged |
 | Global switch off | Run mode and both lists stay visible and editable in Settings |
-| Two Settings tabs | A change in one appears in the other without a reload |
+| Two Settings tabs | A change in one appears in the other without a reload, behind `Settings were updated in another window.` |
 | Popup open while Settings changes the mode | Popup summary and status update |
 | Display, custom pattern | Preview follows every keystroke; an invalid pattern says it must be fixed |
 | Display, IANA zone | Invalid identifier blocks the save with an inline error |
-| Appearance Dark | Popup and Settings both switch immediately and after reopening |
+| Display edited while another window saves | The form says `Display settings were updated in another window. Saving here replaces them.` |
+| Appearance Dark | Popup and Settings both switch immediately, without saving the display form, and after reopening |
 | Appearance System | Both surfaces follow the browser color scheme |
 | Diagnostics | Download and Clear are unavailable until Debug logs is on |
 | Reset | Run mode, both lists, display, appearance, and diagnostics return to defaults |

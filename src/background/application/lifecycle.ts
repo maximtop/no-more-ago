@@ -10,7 +10,7 @@ import {
     ACTIVATION_POLICY,
 } from "../runtime/document-activation";
 import type { SettingsService } from "../settings/service";
-import type { SettingsSnapshotV6 } from "../../shared/settings/snapshot";
+import type { SettingsSnapshot } from "../../shared/settings/snapshot";
 import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { ActivationManager } from "./activation-manager";
 import {
@@ -61,7 +61,7 @@ export class ApplicationLifecycle {
     /**
      * Last successfully loaded authoritative settings.
      */
-    private snapshotValue: SettingsSnapshotV6 | undefined;
+    private snapshotValue: SettingsSnapshot | undefined;
 
     /**
      * Failure retained while the application is unavailable.
@@ -122,7 +122,7 @@ export class ApplicationLifecycle {
      *
      * @returns - Loaded settings, when available.
      */
-    public get snapshot(): SettingsSnapshotV6 | undefined {
+    public get snapshot(): SettingsSnapshot | undefined {
         return this.snapshotValue;
     }
 
@@ -168,7 +168,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly persisted snapshot.
      */
-    public adoptSnapshot(snapshot: SettingsSnapshotV6): void {
+    public adoptSnapshot(snapshot: SettingsSnapshot): void {
         this.snapshotValue = snapshot;
     }
 
@@ -177,7 +177,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly authoritative snapshot.
      */
-    public markReady(snapshot: SettingsSnapshotV6): void {
+    public markReady(snapshot: SettingsSnapshot): void {
         this.snapshotValue = snapshot;
         this.failureValue = undefined;
         this.phaseValue = APPLICATION_PHASE.READY;
@@ -389,6 +389,9 @@ export class ApplicationLifecycle {
      */
     private async recover(): Promise<void> {
         const loaded = await this.settings.load();
+        // An empty store during recovery means storage was wiped underneath a
+        // failure, so it stays failed closed; discarded documents were replaced
+        // by persisted defaults and are trustworthy.
         if (!loaded.ok || loaded.source === "default") {
             await this.enterFailedClosed(true);
             return;

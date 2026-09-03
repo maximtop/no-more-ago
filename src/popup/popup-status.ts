@@ -8,7 +8,11 @@ import {
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
 import type { PopupState } from "../shared/messaging/view-state-schemas";
-import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
+import {
+    SITE_SCOPE_LIST_LABEL,
+    SITE_SCOPE_MODE,
+    type SiteScopeMode,
+} from "../shared/settings/site-scope";
 
 /**
  * Semantic tone paired with every status so state is never color alone.
@@ -59,18 +63,6 @@ export function popupStatusModel(state: PopupState): PopupStatusModel {
 }
 
 /**
- * Names the active run mode for the popup summary row.
- *
- * @param mode - Active scope mode.
- * @returns - Run-mode label shared with the settings page.
- */
-export function runModeLabel(mode: SiteScopeMode): string {
-    return mode === SITE_SCOPE_MODE.SELECTED_ONLY
-        ? "Selected sites only"
-        : "All supported sites";
-}
-
-/**
  * Explains what toggling the site switch will change under the active mode.
  *
  * @param mode - Active scope mode.
@@ -78,12 +70,13 @@ export function runModeLabel(mode: SiteScopeMode): string {
  * @returns - Sentence describing the effect of toggling the switch.
  */
 export function siteControlDescription(mode: SiteScopeMode, enabled: boolean): string {
+    const list = SITE_SCOPE_LIST_LABEL[mode];
     if (mode === SITE_SCOPE_MODE.SELECTED_ONLY) {
         return enabled
-            ? "Turning this off removes this hostname from Allowed sites."
-            : "Turning this on adds this hostname to Allowed sites.";
+            ? `Turning this off removes this hostname from ${list}.`
+            : `Turning this on adds this hostname to ${list}.`;
     }
     return enabled
-        ? "Turning this off adds this hostname to Excluded sites."
-        : "Turning this on removes this hostname from Excluded sites.";
+        ? `Turning this off adds this hostname to ${list}.`
+        : `Turning this on removes this hostname from ${list}.`;
 }

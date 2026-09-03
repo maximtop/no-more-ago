@@ -113,7 +113,7 @@ export const popupStateSchema = v.union([
 ]);
 
 /**
- * Complete ready or unavailable site-preferences projection.
+ * Complete ready or unavailable site-scope projection.
  */
 export const sitesStateSchema = v.union([
     readySitesStateSchema,
@@ -159,19 +159,61 @@ export const refreshFailuresSchema = v.pipe(
 export type PopupState = v.InferOutput<typeof popupStateSchema>;
 
 /**
+ * Popup view while settings are available.
+ */
+export type ReadyPopupState = v.InferOutput<typeof readyPopupStateSchema>;
+
+/**
+ * Popup view while settings are unavailable.
+ */
+export type UnavailablePopupState = v.InferOutput<typeof unavailablePopupStateSchema>;
+
+/**
+ * Site scope view inferred from its runtime validation schema.
+ */
+export type SitesState = v.InferOutput<typeof sitesStateSchema>;
+
+/**
+ * Site scope view while settings are unavailable.
+ */
+export type UnavailableSitesState = v.InferOutput<typeof unavailableSitesStateSchema>;
+
+/**
+ * Display settings view inferred from its runtime validation schema.
+ */
+export type DisplayState = v.InferOutput<typeof displayStateSchema>;
+
+/**
+ * Display settings view while settings are unavailable.
+ */
+export type UnavailableDisplayState = v.InferOutput<typeof unavailableDisplayStateSchema>;
+
+/**
+ * Diagnostic logging view inferred from its runtime validation schema.
+ */
+export type DebugState = v.InferOutput<typeof debugStateSchema>;
+
+/**
+ * Diagnostic logging view while settings are unavailable.
+ */
+export type UnavailableDebugState = v.InferOutput<typeof unavailableDebugStateSchema>;
+
+/**
  * Builds the shared fail-closed popup projection used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the projection unavailable.
+ * @param hostname - Active tab hostname, when it is still known.
  * @returns - Complete unavailable popup state.
  */
 export function createUnavailablePopupState(
     failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-): PopupState {
+    hostname: string | null = null,
+): UnavailablePopupState {
     return {
         availability: STATE_AVAILABILITY.UNAVAILABLE,
         revision: null,
         globalEnabled: null,
-        hostname: null,
+        hostname,
         siteEnabled: null,
         scopeMode: null,
         appearance: APPEARANCE.SYSTEM,
@@ -183,19 +225,59 @@ export function createUnavailablePopupState(
 }
 
 /**
- * Site scope view inferred from its runtime validation schema.
+ * Builds the fail-closed sites projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable sites state.
  */
-export type SitesState = v.InferOutput<typeof sitesStateSchema>;
+export function createUnavailableSitesState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableSitesState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        globalEnabled: null,
+        scopeMode: null,
+        excludedSites: [],
+        allowedSites: [],
+        failure,
+    };
+}
 
 /**
- * Display settings view inferred from its runtime validation schema.
+ * Builds the fail-closed display projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable display state.
  */
-export type DisplayState = v.InferOutput<typeof displayStateSchema>;
+export function createUnavailableDisplayState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableDisplayState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        display: null,
+        appearance: APPEARANCE.SYSTEM,
+        failure,
+    };
+}
 
 /**
- * Diagnostic logging view inferred from its runtime validation schema.
+ * Builds the fail-closed debug projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable debug state.
  */
-export type DebugState = v.InferOutput<typeof debugStateSchema>;
+export function createUnavailableDebugState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableDebugState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        enabled: null,
+        failure,
+    };
+}
 
 /**
  * Per-tab refresh failure inferred from its runtime validation schema.

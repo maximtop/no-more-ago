@@ -17,6 +17,7 @@ import {
     GET_POPUP_STATE_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
+    SET_APPEARANCE_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
@@ -35,7 +36,11 @@ describe("background message contracts", () => {
         const messages = [
             { type: GET_POPUP_STATE_MESSAGE },
             { type: GET_DOCUMENT_STATE_MESSAGE },
-            { type: SET_GLOBAL_ENABLED_MESSAGE, enabled: false },
+            {
+                type: SET_GLOBAL_ENABLED_MESSAGE,
+                enabled: false,
+                surface: SITE_SETTINGS_SURFACE.SITES,
+            },
             { type: GET_SITES_STATE_MESSAGE },
             {
                 type: SET_SITE_ENABLED_MESSAGE,
@@ -48,8 +53,8 @@ describe("background message contracts", () => {
             {
                 type: SET_DISPLAY_SETTINGS_MESSAGE,
                 display: { formatMode: "system", timeZone: { mode: "system" } },
-                appearance: APPEARANCE.SYSTEM,
             },
+            { type: SET_APPEARANCE_MESSAGE, appearance: APPEARANCE.SYSTEM },
             { type: RESET_ALL_SETTINGS_MESSAGE },
             { type: GET_DEBUG_STATE_MESSAGE },
             { type: SET_DEBUG_ENABLED_MESSAGE, enabled: true },
@@ -61,7 +66,7 @@ describe("background message contracts", () => {
         }
     });
 
-    it("accepts the scope-mode request and the display request with appearance", () => {
+    it("keeps the scope-mode, appearance, and global requests to one field each", () => {
         expect(v.is(backgroundMessageSchema, {
             type: SET_SITE_SCOPE_MODE_MESSAGE,
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
@@ -71,13 +76,26 @@ describe("background message contracts", () => {
             mode: "everything",
         })).toBe(false);
         expect(v.is(backgroundMessageSchema, {
-            type: SET_DISPLAY_SETTINGS_MESSAGE,
-            display: { formatMode: "system", timeZone: { mode: "system" } },
+            type: SET_APPEARANCE_MESSAGE,
             appearance: APPEARANCE.DARK,
         })).toBe(true);
         expect(v.is(backgroundMessageSchema, {
+            type: SET_APPEARANCE_MESSAGE,
+            appearance: "sepia",
+        })).toBe(false);
+        expect(v.is(backgroundMessageSchema, {
             type: SET_DISPLAY_SETTINGS_MESSAGE,
             display: { formatMode: "system", timeZone: { mode: "system" } },
+            appearance: APPEARANCE.DARK,
+        })).toBe(false);
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_GLOBAL_ENABLED_MESSAGE,
+            enabled: true,
+            surface: SITE_SETTINGS_SURFACE.POPUP,
+        })).toBe(true);
+        expect(v.is(backgroundMessageSchema, {
+            type: SET_GLOBAL_ENABLED_MESSAGE,
+            enabled: true,
         })).toBe(false);
     });
 

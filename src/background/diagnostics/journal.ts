@@ -219,7 +219,7 @@ export class DiagnosticJournal {
     }
 
     /**
-     * Reads and validates the current stored envelope once.
+     * Reads and validates the current stored envelope once while logging is enabled.
      *
      * @returns - Canonical events or a contained storage error.
      */
@@ -228,27 +228,42 @@ export class DiagnosticJournal {
             return Promise.resolve({ ok: false, error: "disabled" });
         }
         const generation = this.generation;
-        return this.serialize(async () => {
-            if (!this.isCurrent(generation)) {
-                return { ok: false, error: "disabled" } as const;
-            }
-            let values: Record<string, unknown>;
-            try {
-                values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
-            } catch {
-                return { ok: false, error: "storage-failed" } as const;
-            }
-            if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
-                return { ok: false, error: "empty" } as const;
-            }
-            const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
-            if (!entries) {
-                return { ok: false, error: "invalid-journal" } as const;
-            }
-            return entries.length === 0
-                ? { ok: false, error: "empty" } as const
-                : { ok: true, entries } as const;
-        });
+        return this.serialize(async () =>
+            this.isCurrent(generation)
+                ? this.readEnvelope()
+                : { ok: false, error: "disabled" } as const);
+    }
+
+    /**
+     * Reads retained entries regardless of the logging policy, for recovery
+     * views that offer logs while settings cannot be read.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    public readStored(): Promise<DiagnosticJournalSnapshotResult> {
+        return this.serialize(() => this.readEnvelope());
+    }
+
+    /**
+     * Reads and validates the stored envelope.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    private async readEnvelope(): Promise<DiagnosticJournalSnapshotResult> {
+        let values: Record<string, unknown>;
+        try {
+            values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
+        } catch {
+            return { ok: false, error: "storage-failed" };
+        }
+        if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
+            return { ok: false, error: "empty" };
+        }
+        const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
+        if (!entries) {
+            return { ok: false, error: "invalid-journal" };
+        }
+        return entries.length === 0 ? { ok: false, error: "empty" } : { ok: true, entries };
     }
 
     /**

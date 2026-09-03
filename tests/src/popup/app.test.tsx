@@ -14,6 +14,7 @@ import type {
 } from "../../../src/shared/messaging/settings-notifications";
 import {
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
+    GET_POPUP_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
 } from "../../../src/shared/messaging/contracts";
@@ -23,6 +24,7 @@ import {
 } from "../../../src/shared/messaging/view-state-values";
 import { APPEARANCE } from "../../../src/shared/settings/snapshot";
 import { SITE_SCOPE_MODE } from "../../../src/shared/settings/site-scope";
+import { findButton, findSwitch, installMatchMedia, messageType } from "../../support/dom";
 
 const active: PopupState = {
     availability: "ready",
@@ -39,36 +41,45 @@ beforeAll(() => {
     (
         globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    Object.defineProperty(window, "matchMedia", {
-        configurable: true,
-        value: () => ({
-            matches: false,
-            media: "",
-            onchange: null,
-            addListener: () => undefined,
-            removeListener: () => undefined,
-            addEventListener: () => undefined,
-            removeEventListener: () => undefined,
-            dispatchEvent: () => false,
-        }),
-    });
+    installMatchMedia();
 });
+
+/**
+ * Injectable dependencies for one popup render.
+ */
+interface RenderOptions {
+    /**
+     * Background message transport.
+     */
+    readonly transport?: PopupTransport;
+
+    /**
+     * Browser boundary used to open the Options page.
+     */
+    readonly openOptionsPage?: () => Promise<void>;
+
+    /**
+     * Settings change subscriber.
+     */
+    readonly subscribe?: SubscribeSettingsChanged;
+}
 
 /**
  * Renders the popup with a preloaded state.
  *
  * @param state - Popup state to render.
- * @param transport - Background message transport.
- * @param openOptionsPage - Browser boundary used to open the Options page.
- * @param subscribe - Settings change subscriber.
+ * @param options - Transport, Options-page boundary, and subscriber.
  * @returns - Mounted container and cleanup function.
  */
 async function renderPopup(
     state: PopupState,
-    transport: PopupTransport = { sendMessage: () => Promise.resolve(state) },
-    openOptionsPage = () => Promise.resolve(),
-    subscribe?: SubscribeSettingsChanged,
+    options: RenderOptions = {},
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
+    const {
+        transport = { sendMessage: () => Promise.resolve(state) },
+        openOptionsPage = () => Promise.resolve(),
+        subscribe,
+    } = options;
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
@@ -142,22 +153,27 @@ describe("PopupApp contract", () => {
     it("explains and sends an exclusion for the current hostname", async () => {
         const sent: unknown[] = [];
         const rendered = await renderPopup(active, {
-            sendMessage: (message) => {
-                sent.push(message);
-                return Promise.resolve({
-                    ok: true,
-                    acceptedRevision: 3,
-                    surface: SITE_SETTINGS_SURFACE.POPUP,
-                    state: { ...active, revision: 3, siteEnabled: false, status: "site-excluded" },
-                });
+            transport: {
+                sendMessage: (message) => {
+                    sent.push(message);
+                    return Promise.resolve({
+                        ok: true,
+                        acceptedRevision: 3,
+                        surface: SITE_SETTINGS_SURFACE.POPUP,
+                        state: {
+                            ...active,
+                            revision: 3,
+                            siteEnabled: false,
+                            status: "site-excluded",
+                        },
+                    });
+                },
             },
         });
         try {
             expect(rendered.container.textContent)
                 .toContain("Turning this off adds this hostname to Excluded sites.");
-            const site = rendered.container.querySelectorAll<HTMLInputElement>(
-                "input[type=checkbox]",
-            )[1];
+            const site = findSwitch(rendered.container, "Enabled on example.test");
             if (!site) {
                 throw new Error("Site switch is missing");
             }
@@ -200,12 +216,10 @@ describe("PopupApp contract", () => {
             status: "global-disabled",
         });
         try {
-            const switches = rendered.container.querySelectorAll<HTMLInputElement>(
-                "input[type=checkbox]",
-            );
             expect(rendered.container.textContent).toContain("Extension is off");
-            expect(switches[0]?.disabled).toBe(false);
-            expect(switches[1]?.disabled).toBe(true);
+            expect(findSwitch(rendered.container, "Extension enabled")?.disabled).toBe(false);
+            expect(findSwitch(rendered.container, "Enabled on example.test")?.disabled)
+                .toBe(true);
         } finally {
             await rendered.unmount();
         }
@@ -214,12 +228,10 @@ describe("PopupApp contract", () => {
     it("keeps both switches usable after a per-tab processing failure", async () => {
         const rendered = await renderPopup({ ...active, status: "runtime-failed" });
         try {
-            const switches = rendered.container.querySelectorAll<HTMLInputElement>(
-                "input[type=checkbox]",
-            );
             expect(rendered.container.textContent).toContain("Could not process this page");
-            expect(switches[0]?.disabled).toBe(false);
-            expect(switches[1]?.disabled).toBe(false);
+            expect(findSwitch(rendered.container, "Extension enabled")?.disabled).toBe(false);
+            expect(findSwitch(rendered.container, "Enabled on example.test")?.disabled)
+                .toBe(false);
         } finally {
             await rendered.unmount();
         }
@@ -257,23 +269,24 @@ describe("PopupApp contract", () => {
                 failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
             {
-                sendMessage: (message) => {
-                    if (
-                        message && typeof message === "object" && "type" in message
-                        && message.type === RESET_ALL_SETTINGS_MESSAGE
-                    ) {
-                        resets += 1;
-                        return Promise.resolve({ ok: false, error: "save-failed", state: {
-                            availability: "unavailable",
-                            revision: null,
-                            globalEnabled: null,
-                            scopeMode: null,
-                            excludedSites: [],
-                            allowedSites: [],
-                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                        } });
-                    }
-                    return Promise.resolve(undefined);
+                transport: {
+                    sendMessage: (message) => {
+                        if (
+                            messageType(message) === RESET_ALL_SETTINGS_MESSAGE
+                        ) {
+                            resets += 1;
+                            return Promise.resolve({ ok: false, error: "save-failed", state: {
+                                availability: "unavailable",
+                                revision: null,
+                                globalEnabled: null,
+                                scopeMode: null,
+                                excludedSites: [],
+                                allowedSites: [],
+                                failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+                            } });
+                        }
+                        return Promise.resolve(undefined);
+                    },
                 },
             },
         );
@@ -312,21 +325,21 @@ describe("PopupApp contract", () => {
                 failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
             },
             {
-                sendMessage: (message) => {
-                    if (
-                        message && typeof message === "object" && "type" in message
-                        && message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
-                    ) {
-                        requests += 1;
-                        return Promise.resolve({ ok: false, error: "empty" });
-                    }
-                    return Promise.resolve(undefined);
+                transport: {
+                    sendMessage: (message) => {
+                        if (
+                            messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
+                        ) {
+                            requests += 1;
+                            return Promise.resolve({ ok: false, error: "empty" });
+                        }
+                        return Promise.resolve(undefined);
+                    },
                 },
             },
         );
         try {
-            const download = [...rendered.container.querySelectorAll("button")]
-                .find((button) => button.textContent === "Download logs");
+            const download = findButton(rendered.container, "Download logs");
             if (!download) {
                 throw new Error("Download action is missing");
             }
@@ -348,9 +361,8 @@ describe("PopupApp contract", () => {
             announce = listener;
             return { unsubscribe: () => undefined };
         };
-        const rendered = await renderPopup(
-            active,
-            {
+        const rendered = await renderPopup(active, {
+            transport: {
                 sendMessage: () => Promise.resolve({
                     ...active,
                     revision: 5,
@@ -358,15 +370,68 @@ describe("PopupApp contract", () => {
                     status: "global-disabled",
                 }),
             },
-            () => Promise.resolve(),
-            subscribe,
-        );
+            openOptionsPage: () => Promise.resolve(),
+            subscribe: subscribe,
+        });
         try {
             await act(async () => {
                 announce?.(5);
             });
             expect(rendered.container.textContent).toContain("Extension is off");
-            expect(rendered.container.textContent).toContain("Updated from another");
+            expect(rendered.container.textContent)
+                .toContain("Settings were updated in another window.");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("applies a foreign announcement that arrives during its own write", async () => {
+        let announce: ((revision: number) => void) | undefined;
+        const reads: string[] = [];
+        const rendered = await renderPopup(active, {
+            transport: {
+                sendMessage: (message) => {
+                    const type = messageType(message);
+                    if (type === SET_SITE_ENABLED_MESSAGE) {
+                        // Own write commits 3, then Settings commits 4 before the
+                        // response is produced; both announcements arrive in flight.
+                        announce?.(3);
+                        announce?.(4);
+                        return Promise.resolve({
+                            ok: true,
+                            acceptedRevision: 3,
+                            surface: SITE_SETTINGS_SURFACE.POPUP,
+                            state: { ...active, revision: 3, siteEnabled: false },
+                        });
+                    }
+                    if (type) {
+                        reads.push(type);
+                    }
+                    return Promise.resolve({
+                        ...active,
+                        revision: 4,
+                        siteEnabled: false,
+                        scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                    });
+                },
+            },
+            subscribe: (listener) => {
+                announce = listener;
+                return { unsubscribe: () => undefined };
+            },
+        });
+        try {
+            const site = findSwitch(rendered.container, "Enabled on example.test");
+            if (!site) {
+                throw new Error("Site switch is missing");
+            }
+            await act(async () => {
+                site.click();
+            });
+            expect(reads).toEqual([GET_POPUP_STATE_MESSAGE]);
+            expect(rendered.container.textContent).toContain("Selected sites only");
+            expect(rendered.container.textContent)
+                .toContain("Settings were updated in another window.");
         } finally {
             await rendered.unmount();
         }
@@ -375,20 +440,19 @@ describe("PopupApp contract", () => {
     it("ignores an announcement that is not newer than the rendered revision", async () => {
         let announce: ((revision: number) => void) | undefined;
         let reads = 0;
-        const rendered = await renderPopup(
-            active,
-            {
+        const rendered = await renderPopup(active, {
+            transport: {
                 sendMessage: () => {
                     reads += 1;
                     return Promise.resolve(active);
                 },
             },
-            () => Promise.resolve(),
-            (listener) => {
+            openOptionsPage: () => Promise.resolve(),
+            subscribe: (listener) => {
                 announce = listener;
                 return { unsubscribe: () => undefined };
             },
-        );
+        });
         try {
             await act(async () => {
                 announce?.(2);
@@ -401,17 +465,14 @@ describe("PopupApp contract", () => {
 
     it("opens Settings once through the browser Options-page boundary", async () => {
         let openCalls = 0;
-        const rendered = await renderPopup(
-            active,
-            { sendMessage: () => Promise.resolve(active) },
-            async () => {
+        const rendered = await renderPopup(active, {
+            transport: { sendMessage: () => Promise.resolve(active) },
+            openOptionsPage: async () => {
                 openCalls += 1;
             },
-        );
+        });
         try {
-            const settings = [...rendered.container.querySelectorAll("button")].find(
-                (candidate) => candidate.textContent === "Settings",
-            );
+            const settings = findButton(rendered.container, "Settings");
             if (!settings) {
                 throw new Error("Settings action is missing");
             }
@@ -425,15 +486,12 @@ describe("PopupApp contract", () => {
     });
 
     it("contains Settings-opening failures", async () => {
-        const rendered = await renderPopup(
-            active,
-            { sendMessage: () => Promise.resolve(active) },
-            () => Promise.reject(new Error("Options page unavailable")),
-        );
+        const rendered = await renderPopup(active, {
+            transport: { sendMessage: () => Promise.resolve(active) },
+            openOptionsPage: () => Promise.reject(new Error("Options page unavailable")),
+        });
         try {
-            const settings = [...rendered.container.querySelectorAll("button")].find(
-                (candidate) => candidate.textContent === "Settings",
-            );
+            const settings = findButton(rendered.container, "Settings");
             if (!settings) {
                 throw new Error("Settings action is missing");
             }

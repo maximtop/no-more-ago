@@ -12,6 +12,7 @@ import {
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../shared/settings/custom-format";
+import { updatedInAnotherWindow } from "../shared/ui/copy";
 
 /**
  * User-visible outcome of saving display settings.
@@ -76,13 +77,14 @@ export const DISPLAY_PREVIEW_INSTANT = new Date("2026-08-27T19:32:28.000Z");
 /**
  * Label naming the previewed fixture beside the rendered value.
  */
-export const DISPLAY_PREVIEW_SOURCE = "Fixed fixture · 2026-08-27T19:32:28Z" as const;
+export const DISPLAY_PREVIEW_SOURCE =
+    `Fixed fixture · ${DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z")}`;
 
 /**
  * Converts saved display settings into fields for the editable form.
  *
- * @param display Persisted display settings.
- * @returns The corresponding form draft, with a default custom pattern when needed.
+ * @param display - Persisted display settings.
+ * @returns - The corresponding form draft, with a default custom pattern when needed.
  */
 export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     return {
@@ -96,8 +98,8 @@ export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
 /**
  * Converts the display form fields into settings for persistence.
  *
- * @param draft Current form draft.
- * @returns Display settings represented by the draft.
+ * @param draft - Current form draft.
+ * @returns - Display settings represented by the draft.
  */
 export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
     const timeZone =
@@ -112,8 +114,8 @@ export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
 /**
  * Validates an IANA time-zone identifier before settings are saved.
  *
- * @param identifier Candidate IANA time-zone identifier.
- * @returns A user-visible validation error, or undefined when the identifier is usable.
+ * @param identifier - Candidate IANA time-zone identifier.
+ * @returns - A user-visible validation error, or undefined when the identifier is usable.
  */
 export function validateIdentifier(identifier: string): string | undefined {
     if (identifier.length === 0 || identifier.trim() !== identifier) {
@@ -137,8 +139,8 @@ export function validateIdentifier(identifier: string): string | undefined {
 /**
  * Maps a display-settings outcome to its user-visible error message.
  *
- * @param notice Outcome reported after saving display settings.
- * @returns An error message, or undefined when there is no notice to show.
+ * @param notice - Outcome reported after saving display settings.
+ * @returns - An error message, or undefined when there is no notice to show.
  */
 export function displayNoticeText(notice: DisplayNotice): string | undefined {
     if (notice === "invalid-time-zone") {
@@ -167,7 +169,7 @@ export function displayNoticeText(notice: DisplayNotice): string | undefined {
         return "Display settings saved.";
     }
     if (notice === "external-change") {
-        return "Display settings were changed in another window. Saving here replaces them.";
+        return `${updatedInAnotherWindow("Display settings")} Saving here replaces them.`;
     }
     if (notice === "unknown") {
         return "Could not confirm whether the display settings were saved. Reopen Settings to "
@@ -179,8 +181,8 @@ export function displayNoticeText(notice: DisplayNotice): string | undefined {
 /**
  * Maps custom date-format validation failures to form errors.
  *
- * @param pattern Candidate custom date-format pattern.
- * @returns A validation error, or undefined when the pattern is valid.
+ * @param pattern - Candidate custom date-format pattern.
+ * @returns - A validation error, or undefined when the pattern is valid.
  */
 export function customPatternError(pattern: string): string | undefined {
     const result = validateCustomFormatPattern(pattern);
@@ -212,10 +214,16 @@ export function customPatternError(pattern: string): string | undefined {
  * Renders the fixture with the current draft, or explains what must be fixed.
  *
  * @param draft - Current display form fields.
+ * @param patternError - Custom-pattern error already computed for the draft, when any.
  * @returns - Preview text and whether it is a rendered value.
  */
-export function previewDisplayDraft(draft: DisplayDraft): DisplayPreview {
-    if (draft.formatMode === "custom" && customPatternError(draft.pattern)) {
+export function previewDisplayDraft(
+    draft: DisplayDraft,
+    patternError: string | undefined = draft.formatMode === "custom"
+        ? customPatternError(draft.pattern)
+        : undefined,
+): DisplayPreview {
+    if (patternError) {
         return { ok: false, text: "Fix the pattern to preview" };
     }
     if (draft.timeZoneMode === "iana" && validateIdentifier(draft.identifier)) {
@@ -234,7 +242,7 @@ export function previewDisplayDraft(draft: DisplayDraft): DisplayPreview {
 /**
  * Selects browser locales for the display-format preview.
  *
- * @returns Browser preference locales, or en-US when browser information is unavailable.
+ * @returns - Browser preference locales, or en-US when browser information is unavailable.
  */
 function previewLocales(): readonly string[] {
     if (typeof navigator === "undefined") {

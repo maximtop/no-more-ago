@@ -12,6 +12,7 @@ import {
     CLEAR_DIAGNOSTICS_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
+    SET_APPEARANCE_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
@@ -19,41 +20,37 @@ import {
     SET_SITE_SCOPE_MODE_MESSAGE,
     clearDiagnosticsResponseSchema,
     getDiagnosticsSnapshotResponseSchema,
+    type DiagnosticsClearError,
 } from "../shared/messaging/contracts";
 import {
     debugStateSchema,
     displayStateSchema,
     sitesStateSchema,
+    type DebugState,
+    type DisplayState,
+    type SitesState,
 } from "../shared/messaging/view-state-schemas";
 import {
     resetAllSettingsResponseSchema,
+    setAppearanceResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
     setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
     setSiteScopeModeResponseSchema,
+    type ResetAllSettingsResponse,
+    type SetAppearanceResponse,
+    type SetDebugEnabledResponse,
+    type SetDisplaySettingsResponse,
+    type SetGlobalEnabledResponse,
+    type SetSiteEnabledResponse,
+    type SetSiteScopeModeResponse,
 } from "../shared/messaging/response-schemas";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
-import type {
-    DebugState,
-    DisplayState,
-    SitesState,
-} from "../shared/messaging/view-state-schemas";
-import type {
-    ResetAllSettingsResponse,
-    SetDebugEnabledResponse,
-    SetDisplaySettingsResponse,
-    SetSiteEnabledResponse,
-    SetSiteScopeModeResponse,
-} from "../shared/messaging/response-schemas";
 import type { Appearance, DisplaySettings } from "../shared/settings/snapshot";
 import type { SiteScopeMode } from "../shared/settings/site-scope";
-import type {
-    DiagnosticsClearError,
-    DiagnosticsSnapshot,
-    DiagnosticsSnapshotError,
-} from "../shared/messaging/contracts";
-import { CLIENT_RESULT_KIND } from "../shared/client-result";
+import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from "../shared/client-result";
+import type { DiagnosticsSnapshotResult } from "../shared/diagnostics/download";
 
 /**
  * Sends an options-page request to the extension runtime.
@@ -66,93 +63,53 @@ export interface SitesTransport {
 }
 
 /**
- * Result of saving display settings, including any state reread after an ambiguous response.
+ * Response of a command projected for the options-page sites surface.
  */
-export type DisplaySetResult =
-    | {
+type SitesSurfaceResponse<TResponse> = Extract<
+    TResponse,
+    {
         /**
-         * Indicates that the background returned a validated command response.
+         * Selects responses projected for the options-page sites surface.
          */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
-
-        /**
-         * Validated result of the display-settings command.
-         */
-        readonly response: SetDisplaySettingsResponse;
+        readonly surface: typeof SITE_SETTINGS_SURFACE.SITES;
     }
-    | {
-        /**
-         * Indicates that command completion could not be determined directly.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
+>;
 
-        /**
-         * Display state reread after the ambiguous command, when available.
-         */
-        readonly state?: DisplayState;
-    };
+/**
+ * Result of saving display settings.
+ */
+export type DisplaySetResult = MutationResult<SetDisplaySettingsResponse, DisplayState>;
+
+/**
+ * Result of changing the appearance.
+ */
+export type AppearanceSetResult = MutationResult<SetAppearanceResponse, DisplayState>;
 
 /**
  * Result of changing a site's enabled setting.
  */
-export type SitesSetResult =
-    | {
-        /**
-         * Indicates that the background returned a validated command response.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type SitesSetResult = MutationResult<
+    SitesSurfaceResponse<SetSiteEnabledResponse>,
+    SitesState
+>;
 
-        /**
-         * Validated sites-surface result of the per-site command.
-         */
-        readonly response: Extract<
-            SetSiteEnabledResponse,
-            {
-                /**
-                 * Selects responses projected for the options-page sites surface.
-                 */
-                readonly surface: typeof SITE_SETTINGS_SURFACE.SITES;
-            }
-        >;
-    }
-    | {
-        /**
-         * Indicates that command completion could not be determined directly.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
-
-        /**
-         * Sites state reread after the ambiguous command, when available.
-         */
-        readonly state?: SitesState;
-    };
+/**
+ * Result of changing global activation from the sites surface.
+ */
+export type SitesGlobalSetResult = MutationResult<
+    SitesSurfaceResponse<SetGlobalEnabledResponse>,
+    SitesState
+>;
 
 /**
  * Result of changing the active scope mode.
  */
-export type SitesScopeSetResult =
-    | {
-        /**
-         * Indicates that the background returned a validated command response.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type SitesScopeSetResult = MutationResult<SetSiteScopeModeResponse, SitesState>;
 
-        /**
-         * Validated result of the scope-mode command.
-         */
-        readonly response: SetSiteScopeModeResponse;
-    }
-    | {
-        /**
-         * Indicates that command completion could not be determined directly.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
-
-        /**
-         * Sites state reread after the ambiguous command, when available.
-         */
-        readonly state?: SitesState;
-    };
+/**
+ * Result of changing whether diagnostic logging is enabled.
+ */
+export type DebugSetResult = MutationResult<SetDebugEnabledResponse, DebugState>;
 
 /**
  * Result of resetting all persisted settings.
@@ -174,60 +131,6 @@ export type SitesResetResult =
          * Indicates that reset completion could not be determined directly.
          */
         readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
-    };
-
-/**
- * Result of changing whether diagnostic logging is enabled.
- */
-export type DebugSetResult =
-    | {
-        /**
-         * Indicates that the background returned a validated command response.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
-
-        /**
-         * Validated result of changing diagnostic logging.
-         */
-        readonly response: SetDebugEnabledResponse;
-    }
-    | {
-        /**
-         * Indicates that command completion could not be determined directly.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.AMBIGUOUS;
-
-        /**
-         * Debug state reread after the ambiguous command, when available.
-         */
-        readonly state?: DebugState;
-    };
-
-/**
- * Diagnostics snapshot or the reason it could not be read.
- */
-export type DiagnosticsSnapshotResult =
-    | {
-        /**
-         * Indicates that a validated diagnostic snapshot was returned.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
-
-        /**
-         * Validated diagnostic snapshot ready for export.
-         */
-        readonly snapshot: DiagnosticsSnapshot;
-    }
-    | {
-        /**
-         * Indicates that no diagnostic snapshot could be returned.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.ERROR;
-
-        /**
-         * Stable reason the snapshot request failed.
-         */
-        readonly error: DiagnosticsSnapshotError;
     };
 
 /**
@@ -264,16 +167,16 @@ export class SitesClient {
     /**
      * Creates a client using the supplied extension-message transport.
      *
-     * @param transport Runtime transport used to send options-page requests.
+     * @param transport - Runtime transport used to send options-page requests.
      */
     public constructor(transport: SitesTransport) {
         this.transport = transport;
     }
 
     /**
-     * Retrieves the global and per-site settings state.
+     * Retrieves the scope mode, both hostname lists, and global activation.
      *
-     * @returns The validated sites state from the background service.
+     * @returns - The validated sites state from the background service.
      */
     public async getState(): Promise<SitesState> {
         const response = await this.transport.sendMessage({ type: GET_SITES_STATE_MESSAGE });
@@ -284,11 +187,38 @@ export class SitesClient {
     }
 
     /**
-     * Recovery is deliberately a single-dispatch operation.  A lost or
-     * malformed response may follow a committed storage write, so retrying the
-     * mutation here could apply it twice.
+     * Retrieves the saved display-format settings and appearance.
      *
-     * @returns A confirmed reset response, or an ambiguous outcome after a lost response.
+     * @returns - The validated display state from the background service.
+     */
+    public async getDisplayState(): Promise<DisplayState> {
+        const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
+        const parsed = v.safeParse(displayStateSchema, response);
+        if (!parsed.success) {
+            throw new Error("Invalid Display state response");
+        }
+        return parsed.output;
+    }
+
+    /**
+     * Retrieves whether diagnostic logging is enabled.
+     *
+     * @returns - The validated debug state from the background service.
+     */
+    public async getDebugState(): Promise<DebugState> {
+        const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
+        if (!v.is(debugStateSchema, response)) {
+            throw new Error("Invalid Debug state response");
+        }
+        return response;
+    }
+
+    /**
+     * Recovery is deliberately a single-dispatch operation. A lost or malformed
+     * response may follow a committed storage write, so retrying the mutation
+     * here could apply it twice.
+     *
+     * @returns - A confirmed reset response, or an ambiguous outcome after a lost response.
      */
     public async resetAllSettings(): Promise<SitesResetResult> {
         let response: unknown;
@@ -305,125 +235,105 @@ export class SitesClient {
     /**
      * Changes whether processing is enabled for one hostname.
      *
-     * @param hostname Exact hostname whose setting should change.
-     * @param enabled Whether processing should be enabled for the hostname.
-     * @returns The confirmed response, or a state reread after an ambiguous response.
+     * @param hostname - Exact hostname whose setting should change.
+     * @param enabled - Whether processing should be enabled for the hostname.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SitesSetResult> {
-        let response: unknown;
-        try {
-            response = await this.transport.sendMessage({
+    public setSiteEnabled(hostname: string, enabled: boolean): Promise<SitesSetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
                 surface: SITE_SETTINGS_SURFACE.SITES,
-            });
-        } catch {
-            return this.rereadAfterAmbiguousResponse();
-        }
-        if (
-            v.is(setSiteEnabledResponseSchema, response)
-            && response.surface === SITE_SETTINGS_SURFACE.SITES
-        ) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
-        }
-        return this.rereadAfterAmbiguousResponse();
+            }),
+            setSiteEnabledResponseSchema,
+            () => this.getState(),
+            (response): response is SitesSurfaceResponse<SetSiteEnabledResponse> =>
+                response.surface === SITE_SETTINGS_SURFACE.SITES,
+        );
     }
 
     /**
-     * Changes the active scope mode once and rereads state if the response is lost.
+     * Changes the active scope mode.
      *
      * @param mode - Requested scope mode.
-     * @returns - The confirmed response, or a reread after an ambiguous response.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async setSiteScopeMode(mode: SiteScopeMode): Promise<SitesScopeSetResult> {
-        let response: unknown;
-        try {
-            response = await this.transport.sendMessage({
-                type: SET_SITE_SCOPE_MODE_MESSAGE,
-                mode,
-            });
-        } catch {
-            return this.rereadScopeAfterAmbiguousResponse();
-        }
-        if (v.is(setSiteScopeModeResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
-        }
-        return this.rereadScopeAfterAmbiguousResponse();
+    public setSiteScopeMode(mode: SiteScopeMode): Promise<SitesScopeSetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({ type: SET_SITE_SCOPE_MODE_MESSAGE, mode }),
+            setSiteScopeModeResponseSchema,
+            () => this.getState(),
+        );
     }
 
     /**
-     * Changes global activation. The response carries a popup projection, so
-     * callers on this surface reread their own state afterwards.
+     * Changes global activation and receives this surface's projection back.
      *
      * @param enabled - Requested global activation state.
-     * @returns - Whether the background confirmed the change.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async setGlobalEnabled(enabled: boolean): Promise<boolean> {
-        try {
-            const response = await this.transport.sendMessage({
+    public setGlobalEnabled(enabled: boolean): Promise<SitesGlobalSetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({
                 type: SET_GLOBAL_ENABLED_MESSAGE,
                 enabled,
-            });
-            return v.is(setGlobalEnabledResponseSchema, response) && response.ok;
-        } catch {
-            return false;
-        }
+                surface: SITE_SETTINGS_SURFACE.SITES,
+            }),
+            setGlobalEnabledResponseSchema,
+            () => this.getState(),
+            (response): response is SitesSurfaceResponse<SetGlobalEnabledResponse> =>
+                response.surface === SITE_SETTINGS_SURFACE.SITES,
+        );
     }
 
     /**
-     * Retrieves the saved display-format settings.
+     * Changes whether diagnostic logging is enabled.
      *
-     * @returns The validated display state from the background service.
+     * @param enabled - Whether diagnostic logging should be enabled.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async getDisplayState(): Promise<DisplayState> {
-        const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
-        const parsed = v.safeParse(displayStateSchema, response);
-        if (!parsed.success) {
-            throw new Error("Invalid Display state response");
-        }
-        return parsed.output;
+    public setDebugEnabled(enabled: boolean): Promise<DebugSetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({ type: SET_DEBUG_ENABLED_MESSAGE, enabled }),
+            setDebugEnabledResponseSchema,
+            () => this.getDebugState(),
+        );
     }
 
     /**
-     * Retrieves whether diagnostic logging is enabled.
+     * Saves display-format settings.
      *
-     * @returns The validated debug state from the background service.
+     * @param display - Display settings to persist.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async getDebugState(): Promise<DebugState> {
-        const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
-        if (!v.is(debugStateSchema, response)) {
-            throw new Error("Invalid Debug state response");
-        }
-        return response;
+    public setDisplaySettings(display: DisplaySettings): Promise<DisplaySetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({ type: SET_DISPLAY_SETTINGS_MESSAGE, display }),
+            setDisplaySettingsResponseSchema,
+            () => this.getDisplayState(),
+        );
     }
 
     /**
-     * Toggle is dispatched once; a lost response is surfaced with an authoritative reread.
+     * Saves the appearance applied to both surfaces.
      *
-     * @param enabled Whether diagnostic logging should be enabled.
-     * @returns The confirmed response, or a state reread after an ambiguous response.
+     * @param appearance - Appearance to persist.
+     * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public async setDebugEnabled(enabled: boolean): Promise<DebugSetResult> {
-        let response: unknown;
-        try {
-            response = await this.transport.sendMessage({
-                type: SET_DEBUG_ENABLED_MESSAGE,
-                enabled,
-            });
-        } catch {
-            return this.rereadDebugAfterAmbiguousResponse();
-        }
-        if (v.is(setDebugEnabledResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
-        }
-        return this.rereadDebugAfterAmbiguousResponse();
+    public setAppearance(appearance: Appearance): Promise<AppearanceSetResult> {
+        return runMutation(
+            () => this.transport.sendMessage({ type: SET_APPEARANCE_MESSAGE, appearance }),
+            setAppearanceResponseSchema,
+            () => this.getDisplayState(),
+        );
     }
 
     /**
      * Retrieves diagnostics without throwing for expected service failures.
      *
-     * @returns A snapshot, or the service error that prevented it from being read.
+     * @returns - A snapshot, or the service error that prevented it from being read.
      */
     public async getDiagnosticsSnapshot(): Promise<DiagnosticsSnapshotResult> {
         let response: unknown;
@@ -443,7 +353,7 @@ export class SitesClient {
     /**
      * Clears stored diagnostics without throwing for expected service failures.
      *
-     * @returns A success marker, or the service error that prevented clearing.
+     * @returns - A success marker, or the service error that prevented clearing.
      */
     public async clearDiagnostics(): Promise<DiagnosticsClearResult> {
         let response: unknown;
@@ -459,99 +369,13 @@ export class SitesClient {
             ? { kind: CLIENT_RESULT_KIND.RESPONSE }
             : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
     }
-
-    /**
-     * Saves display-format settings and rereads state if the response is ambiguous.
-     *
-     * @param display Display settings to persist.
-     * @param appearance Appearance choice persisted beside the display settings.
-     * @returns The confirmed response, or a state reread after an ambiguous response.
-     */
-    public async setDisplaySettings(
-        display: DisplaySettings,
-        appearance: Appearance,
-    ): Promise<DisplaySetResult> {
-        let response: unknown;
-        try {
-            response = await this.transport.sendMessage({
-                type: SET_DISPLAY_SETTINGS_MESSAGE,
-                display,
-                appearance,
-            });
-        } catch {
-            return this.rereadDisplayAfterAmbiguousResponse();
-        }
-        const parsed = v.safeParse(setDisplaySettingsResponseSchema, response);
-        if (parsed.success) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: parsed.output };
-        }
-        return this.rereadDisplayAfterAmbiguousResponse();
-    }
-
-    /**
-     * Reads sites state after a mutation response is lost or malformed.
-     *
-     * @returns An ambiguous result with current state when the reread succeeds.
-     */
-    private async rereadAfterAmbiguousResponse(): Promise<SitesSetResult> {
-        try {
-            const state = await this.getState();
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
-        } catch {
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-        }
-    }
-
-    /**
-     * Reads sites state after a scope-mode response is lost or malformed.
-     *
-     * @returns - An ambiguous result with current state when the reread succeeds.
-     */
-    private async rereadScopeAfterAmbiguousResponse(): Promise<SitesScopeSetResult> {
-        try {
-            const state = await this.getState();
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
-        } catch {
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-        }
-    }
-
-    /**
-     * Reads display state after a save response is lost or malformed.
-     *
-     * @returns An ambiguous result with current state when the reread succeeds.
-     */
-    private async rereadDisplayAfterAmbiguousResponse(): Promise<DisplaySetResult> {
-        try {
-            const state = await this.getDisplayState();
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state };
-        } catch {
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-        }
-    }
-
-    /**
-     * Reads debug state after a save response is lost or malformed.
-     *
-     * @returns An ambiguous result with current state when the reread succeeds.
-     */
-    private async rereadDebugAfterAmbiguousResponse(): Promise<DebugSetResult> {
-        try {
-            return {
-                kind: CLIENT_RESULT_KIND.AMBIGUOUS,
-                state: await this.getDebugState(),
-            };
-        } catch {
-            return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-        }
-    }
 }
 
 /**
  * Creates an options client using an injected transport or the extension runtime.
  *
- * @param transport Optional transport for tests or embedded callers.
- * @returns A client whose default transport rejects when the extension runtime is unavailable.
+ * @param transport - Optional transport for tests or embedded callers.
+ * @returns - A client whose default transport rejects when the extension runtime is unavailable.
  */
 export function createSitesClient(transport?: SitesTransport): SitesClient {
     if (transport) {
