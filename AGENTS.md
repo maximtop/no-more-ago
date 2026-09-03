@@ -356,8 +356,13 @@ Known architectural exclusions to improve when their area changes:
 - Use strict TypeScript and preserve `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes` guarantees.
 - Parse genuinely external values once at their boundary with Valibot or a
-  focused parser. Do not revalidate extension-owned storage, internal messages,
-  or typed browser API results with generic record checks.
+  focused parser, then trust the parsed type downstream. Do not revalidate
+  extension-owned storage, internal messages, or typed browser API results.
+- Never write hand-rolled type guards such as `isRecord` or
+  `typeof value === "object" && value !== null && !Array.isArray(value)`
+  chains. A guard over data the extension produced itself hides a producer bug
+  instead of failing loudly, and a parameter typed `unknown` for such data is
+  the usual root cause: type it with the owning contract instead.
 - Use typed result objects for expected failures. Reserve exceptions for
   programmer errors and truly exceptional failures.
 - Do not inline magic values that form a shared contract, including runtime

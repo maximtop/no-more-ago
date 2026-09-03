@@ -13,6 +13,7 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     getDiagnosticsSnapshotResponseSchema,
     DIAGNOSTICS_ERROR,
+    type BackgroundMessage,
 } from "../shared/messaging/contracts";
 import { popupStateSchema, type PopupState } from "../shared/messaging/view-state-schemas";
 import {
@@ -34,7 +35,7 @@ export interface PopupTransport {
     /**
      * Sends one popup request and resolves with the background response.
      */
-    sendMessage(message: unknown): Promise<unknown>;
+    sendMessage(message: BackgroundMessage): Promise<unknown>;
 }
 
 /**

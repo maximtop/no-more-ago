@@ -19,6 +19,7 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_SITE_SCOPE_MODE_MESSAGE,
+    type BackgroundMessage,
 } from "../../../src/shared/messaging/contracts";
 import type {
     DebugState,
@@ -38,7 +39,7 @@ import { OptionsApp } from "../../../src/options/app";
 import { SitesClient, type SitesTransport } from "../../../src/options/client";
 import type { DownloadRuntime } from "../../../src/shared/diagnostics/archive";
 import type { SiteReportReporter } from "../../../src/shared/reporting/site-report";
-import { findButton, installMatchMedia, messageType } from "../../support/dom";
+import { findButton, installMatchMedia } from "../../support/dom";
 
 const ready: SitesState = {
     availability: "ready",
@@ -512,7 +513,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         write = message;
                         return Promise.resolve({
                             ok: true,
@@ -553,10 +554,8 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
-                    if (type) {
-                        sent.push(type);
-                    }
+                    const { type } = message;
+                    sent.push(type);
                     if (type === SET_GLOBAL_ENABLED_MESSAGE) {
                         globalEnabled = false;
                         return Promise.resolve({
@@ -606,7 +605,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         return Promise.resolve({
                             ok: false,
                             error: "invalid-hostname",
@@ -644,7 +643,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         return Promise.resolve({
                             ok: false,
                             error: "scope-changed",
@@ -652,7 +651,7 @@ describe("Options Sites contract", () => {
                             state: switched,
                         });
                     }
-                    if (messageType(message) === GET_SITES_STATE_MESSAGE) {
+                    if (message.type === GET_SITES_STATE_MESSAGE) {
                         rereads += 1;
                         return Promise.resolve(switched);
                     }
@@ -687,10 +686,8 @@ describe("Options Sites contract", () => {
             initialDisplayState: { ...displayReady, revision: 5 },
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
-                    if (type) {
-                        sent.push(type);
-                    }
+                    const { type } = message;
+                    sent.push(type);
                     if (type === GET_SITES_STATE_MESSAGE) {
                         return Promise.resolve(committed);
                     }
@@ -746,10 +743,10 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         return Promise.reject(new Error("response lost"));
                     }
-                    if (messageType(message) === GET_SITES_STATE_MESSAGE) {
+                    if (message.type === GET_SITES_STATE_MESSAGE) {
                         getCalls += 1;
                         return Promise.resolve(committed);
                     }
@@ -778,7 +775,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         return Promise.resolve({
                             ok: false,
                             error: "save-failed",
@@ -813,7 +810,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
+                    const type = message.type;
                     if (type === SET_SITE_ENABLED_MESSAGE || type === GET_SITES_STATE_MESSAGE) {
                         return Promise.reject(new Error("transport lost"));
                     }
@@ -842,7 +839,7 @@ describe("Options Sites contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === SET_SITE_ENABLED_MESSAGE
+                    message.type === SET_SITE_ENABLED_MESSAGE
                         ? Promise.resolve({
                             ok: true,
                             acceptedRevision: 3,
@@ -921,10 +918,8 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
-                    if (type) {
-                        messages.push(type);
-                    }
+                    const { type } = message;
+                    messages.push(type);
                     if (type === RESET_ALL_SETTINGS_MESSAGE) {
                         return Promise.resolve({
                             ok: true,
@@ -987,7 +982,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                    if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                     }
                     return Promise.resolve(ready);
@@ -1031,7 +1026,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                    if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                         return Promise.resolve({ ok: false, error: "save-failed", state: ready });
                     }
@@ -1067,7 +1062,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                    if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                         return Promise.reject(new Error("response interrupted"));
                     }
@@ -1102,10 +1097,8 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(unavailableSites, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
-                    if (type) {
-                        messages.push(type);
-                    }
+                    const { type } = message;
+                    messages.push(type);
                     if (type === RESET_ALL_SETTINGS_MESSAGE) {
                         return Promise.resolve({
                             ok: true,
@@ -1164,7 +1157,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(unavailableSites, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === RESET_ALL_SETTINGS_MESSAGE
+                    message.type === RESET_ALL_SETTINGS_MESSAGE
                         ? Promise.resolve({
                             ok: false,
                             error: "save-failed",
@@ -1191,7 +1184,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(unavailableSites, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                    if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                         return Promise.reject(new Error("response interrupted"));
                     }
@@ -1220,7 +1213,7 @@ describe("Options reset contract", () => {
         const rendered = await renderOptions(unavailableSites, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === RESET_ALL_SETTINGS_MESSAGE) {
+                    if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                         return pending;
                     }
@@ -1407,7 +1400,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
                         return Promise.resolve({
                             ok: true,
@@ -1476,7 +1469,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes += 1;
                     }
                     return Promise.resolve(ready);
@@ -1525,7 +1518,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         if (mode === "failure") {
                             return Promise.resolve({
                                 ok: false,
@@ -1608,10 +1601,10 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         return Promise.resolve({ unexpected: true });
                     }
-                    if (messageType(message) === GET_DISPLAY_STATE_MESSAGE) {
+                    if (message.type === GET_DISPLAY_STATE_MESSAGE) {
                         reads += 1;
                         return Promise.resolve(reread);
                     }
@@ -1649,7 +1642,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
+                    message.type === SET_DISPLAY_SETTINGS_MESSAGE
                         ? Promise.resolve({
                             ok: true,
                             acceptedRevision: 3,
@@ -1696,7 +1689,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
                         const display = (message as { display: DisplaySettings }).display;
                         return Promise.resolve({
@@ -1758,7 +1751,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes += 1;
                     }
                     return Promise.resolve(ready);
@@ -1810,7 +1803,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
                         return Promise.resolve({
                             ok: true,
@@ -1857,7 +1850,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
                     }
                     return Promise.resolve(displayReady);
@@ -1932,7 +1925,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes += 1;
                     }
                     return Promise.resolve(displayReady);
@@ -1984,7 +1977,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE) {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes.push(message);
                         return Promise.resolve({
                             ok: true,
@@ -2042,7 +2035,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === SET_DISPLAY_SETTINGS_MESSAGE
+                    message.type === SET_DISPLAY_SETTINGS_MESSAGE
                         ? Promise.resolve({
                             ok: false,
                             error: "invalid-format",
@@ -2089,7 +2082,7 @@ describe("Options Display contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
+                    const type = message.type;
                     if (type === GET_DISPLAY_STATE_MESSAGE) {
                         return Promise.resolve(external);
                     }
@@ -2145,15 +2138,12 @@ describe("Options Debug logs contract", () => {
     });
 
     it("dispatches one request per transition", async () => {
-        const messages: unknown[] = [];
+        const messages: BackgroundMessage[] = [];
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
                     messages.push(message);
-                    if (
-                        messageType(message) === SET_DEBUG_ENABLED_MESSAGE
-                    && message && typeof message === "object" && "enabled" in message
-                    ) {
+                    if (message.type === SET_DEBUG_ENABLED_MESSAGE) {
                         const revision = message.enabled ? 5 : 6;
                         return Promise.resolve({
                             ok: true,
@@ -2161,7 +2151,7 @@ describe("Options Debug logs contract", () => {
                             state: { availability: "ready", revision, enabled: message.enabled },
                         });
                     }
-                    if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
+                    if (message.type === GET_DEBUG_STATE_MESSAGE) {
                         return Promise.resolve(debugReady);
                     }
                     return Promise.resolve(ready);
@@ -2179,13 +2169,13 @@ describe("Options Debug logs contract", () => {
             await act(async () => {
                 toggle.click();
             });
-            expect(messages.filter((m) => messageType(m) === SET_DEBUG_ENABLED_MESSAGE))
+            expect(messages.filter((m) => m.type === SET_DEBUG_ENABLED_MESSAGE))
                 .toHaveLength(1);
             expect(toggle.checked).toBe(true);
             await act(async () => {
                 toggle.click();
             });
-            expect(messages.filter((m) => messageType(m) === SET_DEBUG_ENABLED_MESSAGE))
+            expect(messages.filter((m) => m.type === SET_DEBUG_ENABLED_MESSAGE))
                 .toEqual([
                     { type: SET_DEBUG_ENABLED_MESSAGE, enabled: true },
                     { type: SET_DEBUG_ENABLED_MESSAGE, enabled: false },
@@ -2201,7 +2191,7 @@ describe("Options Debug logs contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                    if (message.type === SET_DEBUG_ENABLED_MESSAGE) {
                         writes += 1;
                         return Promise.resolve({
                             ok: false,
@@ -2242,13 +2232,13 @@ describe("Options Debug logs contract", () => {
             const rendered = await renderOptions(ready, {
                 transport: {
                     sendMessage: (message) => {
-                        if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                        if (message.type === SET_DEBUG_ENABLED_MESSAGE) {
                             writes += 1;
                             return failure === "interrupted"
                                 ? Promise.reject(new Error("worker restarted"))
                                 : Promise.resolve({ unexpected: true });
                         }
-                        if (messageType(message) === GET_DEBUG_STATE_MESSAGE) {
+                        if (message.type === GET_DEBUG_STATE_MESSAGE) {
                             reads += 1;
                             return Promise.resolve({
                                 availability: "ready",
@@ -2290,7 +2280,7 @@ describe("Options Debug logs contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_DEBUG_ENABLED_MESSAGE) {
+                    if (message.type === SET_DEBUG_ENABLED_MESSAGE) {
                         writes += 1;
                         return pending;
                     }
@@ -2329,7 +2319,7 @@ describe("Options Debug logs contract", () => {
     });
 
     it("downloads logs with one request and one click while enabled", async () => {
-        const messages: unknown[] = [];
+        const messages: BackgroundMessage[] = [];
         const scheduled: Array<() => void> = [];
         const revoked: string[] = [];
         let clicks = 0;
@@ -2355,7 +2345,7 @@ describe("Options Debug logs contract", () => {
             transport: {
                 sendMessage: (message) => {
                     messages.push(message);
-                    if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
+                    if (message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                         return Promise.resolve({
                             ok: true,
                             snapshot: {
@@ -2388,7 +2378,7 @@ describe("Options Debug logs contract", () => {
             await act(async () => {
                 download.click();
             });
-            expect(messages.filter((m) => messageType(m) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE))
+            expect(messages.filter((m) => m.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE))
                 .toHaveLength(1);
             expect(clicks).toBe(1);
             expect(revoked).toEqual([]);
@@ -2401,12 +2391,12 @@ describe("Options Debug logs contract", () => {
     });
 
     it("clears logs once without changing the enabled Debug logs setting", async () => {
-        const messages: unknown[] = [];
+        const messages: BackgroundMessage[] = [];
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
                     messages.push(message);
-                    if (messageType(message) === CLEAR_DIAGNOSTICS_MESSAGE) {
+                    if (message.type === CLEAR_DIAGNOSTICS_MESSAGE) {
                         return Promise.resolve({ ok: true });
                     }
                     return Promise.resolve(ready);
@@ -2425,7 +2415,7 @@ describe("Options Debug logs contract", () => {
                 clear.click();
                 clear.click();
             });
-            expect(messages.filter((m) => messageType(m) === CLEAR_DIAGNOSTICS_MESSAGE))
+            expect(messages.filter((m) => m.type === CLEAR_DIAGNOSTICS_MESSAGE))
                 .toHaveLength(1);
             expect(rendered.container.querySelector<HTMLInputElement>(
                 'input[aria-label="Debug logs"]',
@@ -2441,7 +2431,7 @@ describe("Options Debug logs contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
+                    message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({ ok: false, error: "empty" })
                         : Promise.resolve(ready),
             },
@@ -2486,7 +2476,7 @@ describe("Options Debug logs contract", () => {
             const rendered = await renderOptions(ready, {
                 transport: {
                     sendMessage: (message) => {
-                        if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
+                        if (message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                             requests += 1;
                             if (failure === "malformed") {
                                 return Promise.resolve({ unexpected: true });
@@ -2546,7 +2536,7 @@ describe("Options Debug logs contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
+                    message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({
                             ok: true,
                             snapshot: {
@@ -2603,7 +2593,7 @@ describe("Options Debug logs contract", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
+                    if (message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                         requests += 1;
                         return pending;
                     }
@@ -2643,7 +2633,7 @@ describe("Options Debug logs contract", () => {
             const rendered = await renderOptions(ready, {
                 transport: {
                     sendMessage: (message) => {
-                        if (messageType(message) === CLEAR_DIAGNOSTICS_MESSAGE) {
+                        if (message.type === CLEAR_DIAGNOSTICS_MESSAGE) {
                             requests += 1;
                             if (failure === "transport") {
                                 return Promise.reject(new Error("worker unavailable"));
@@ -2688,7 +2678,7 @@ describe("Options site reporting", () => {
         "opens a generic GitHub issue when debug logs are %s without reading diagnostics",
         async (enabled) => {
             let calls = 0;
-            const messages: unknown[] = [];
+            const messages: BackgroundMessage[] = [];
             const reporter: SiteReportReporter = {
                 openPopupReport: async () => ({ ok: false, error: "invalid-context" }),
                 openOptionsReport: async () => {
@@ -2954,7 +2944,7 @@ describe("Options shell", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
+                    const type = message.type;
                     if (type === GET_DISPLAY_STATE_MESSAGE) {
                         return Promise.resolve({ ...displayReady, revision: 9 });
                     }
@@ -2986,7 +2976,7 @@ describe("Options shell", () => {
         const rendered = await renderOptions(ready, {
             transport: {
                 sendMessage: (message) => {
-                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                    if (message.type === SET_SITE_ENABLED_MESSAGE) {
                         // The background announces before the command response arrives.
                         announce?.(5);
                         return Promise.resolve({
@@ -3107,7 +3097,7 @@ describe("Options shell", () => {
         const rendered = await renderOptions(unavailableSites, {
             transport: {
                 sendMessage: (message) =>
-                    messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
+                    message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({ ok: false, error: "disabled" })
                         : Promise.resolve(unavailableSites),
             },

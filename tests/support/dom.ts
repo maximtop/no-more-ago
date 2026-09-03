@@ -3,19 +3,6 @@
  */
 
 /**
- * Reads the request type of a background message.
- *
- * @param message - Message sent through the transport.
- * @returns - Request type, or undefined when the message has none.
- */
-export function messageType(message: unknown): string | undefined {
-    return message && typeof message === "object" && "type" in message
-        && typeof message.type === "string"
-        ? message.type
-        : undefined;
-}
-
-/**
  * Finds a button by its exact visible label.
  *
  * @param container - Mounted container.

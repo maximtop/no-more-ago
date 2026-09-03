@@ -24,7 +24,7 @@ import {
 } from "../../../src/shared/messaging/view-state-values";
 import { APPEARANCE } from "../../../src/shared/settings/snapshot";
 import { SITE_SCOPE_MODE } from "../../../src/shared/settings/site-scope";
-import { findButton, findSwitch, installMatchMedia, messageType } from "../../support/dom";
+import { findButton, findSwitch, installMatchMedia } from "../../support/dom";
 
 const active: PopupState = {
     availability: "ready",
@@ -273,7 +273,7 @@ describe("PopupApp contract", () => {
                 transport: {
                     sendMessage: (message) => {
                         if (
-                            messageType(message) === RESET_ALL_SETTINGS_MESSAGE
+                            message.type === RESET_ALL_SETTINGS_MESSAGE
                         ) {
                             resets += 1;
                             return Promise.resolve({ ok: false, error: "save-failed", state: {
@@ -340,7 +340,7 @@ describe("PopupApp contract", () => {
                 transport: {
                     sendMessage: (message) => {
                         if (
-                            messageType(message) === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
+                            message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ) {
                             requests += 1;
                             return Promise.resolve({ ok: false, error: "empty" });
@@ -410,7 +410,7 @@ describe("PopupApp contract", () => {
         const rendered = await renderPopup(active, {
             transport: {
                 sendMessage: (message) => {
-                    const type = messageType(message);
+                    const type = message.type;
                     if (type === SET_SITE_ENABLED_MESSAGE) {
                         // Own write commits 3, then Settings commits 4 before the
                         // response is produced; both announcements arrive in flight.
@@ -423,9 +423,7 @@ describe("PopupApp contract", () => {
                             state: { ...active, revision: 3, siteEnabled: false },
                         });
                     }
-                    if (type) {
-                        reads.push(type);
-                    }
+                    reads.push(type);
                     return Promise.resolve({
                         ...active,
                         revision: 4,

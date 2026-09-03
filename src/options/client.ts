@@ -22,6 +22,7 @@ import {
     getDiagnosticsSnapshotResponseSchema,
     DIAGNOSTICS_ERROR,
     type DiagnosticsClearError,
+    type BackgroundMessage,
 } from "../shared/messaging/contracts";
 import {
     debugStateSchema,
@@ -60,7 +61,7 @@ export interface SitesTransport {
     /**
      * Sends one options-page request and resolves with the background response.
      */
-    sendMessage(message: unknown): Promise<unknown>;
+    sendMessage(message: BackgroundMessage): Promise<unknown>;
 }
 
 /**
