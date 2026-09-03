@@ -39,7 +39,7 @@ describe("active list copy", () => {
             description: "The extension stays off on these exact hostnames.",
             fieldLabel: "Exclude hostname",
             submitLabel: "Exclude site",
-            rowAction: "Allow",
+            removalEffect: "Removing a hostname lets the extension run on it again.",
             emptyState: "No sites are excluded.",
             addEnables: false,
         });
@@ -51,7 +51,7 @@ describe("active list copy", () => {
             description: "The extension runs only on these exact hostnames.",
             fieldLabel: "Allow hostname",
             submitLabel: "Allow site",
-            rowAction: "Remove",
+            removalEffect: "Removing a hostname turns the extension off on it again.",
             emptyState: "No sites are allowed yet. The extension will stay off on every site "
                 + "until one is added.",
             addEnables: true,

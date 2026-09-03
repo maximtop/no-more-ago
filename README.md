@@ -395,7 +395,8 @@ GitHub form for review and manual submission.
 In `All supported sites` mode the hostname is added to Excluded sites; in
 `Selected sites only` mode it is removed from Allowed sites. The original page
 content is restored without reloading the page. Settings lists the active
-mode's hostnames with one `Allow` or `Remove` action per row.
+mode's hostnames with one `Remove` action per row; removing a hostname
+reverses the rule for it.
 
 ### Change the Date Presentation
 

@@ -247,7 +247,7 @@ describe("Options Sites contract", () => {
             expect(text).toContain("github.com");
             expect(text).not.toContain("allowed.test");
             expect([...rendered.container.querySelectorAll("button")]
-                .filter((button) => button.textContent === "Allow")).toHaveLength(1);
+                .filter((button) => button.textContent === "Remove")).toHaveLength(1);
             expect(rendered.container.querySelectorAll(".site-row input[type=checkbox]"))
                 .toHaveLength(0);
         } finally {
@@ -487,7 +487,7 @@ describe("Options Sites contract", () => {
             const field = rendered.container.querySelector<HTMLInputElement>(
                 'input[aria-label="Exclude hostname"]',
             );
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             expect(radio?.disabled).toBe(false);
             expect(field?.disabled).toBe(false);
             expect(allow?.disabled).toBe(false);
@@ -518,7 +518,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -606,7 +606,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -638,7 +638,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -672,7 +672,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -702,7 +702,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -733,7 +733,7 @@ describe("Options Sites contract", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }
@@ -2881,7 +2881,7 @@ describe("Options shell", () => {
             },
         });
         try {
-            const allow = findButton(rendered.container, "Allow");
+            const allow = findButton(rendered.container, "Remove");
             if (!allow) {
                 throw new Error("Row action is missing");
             }

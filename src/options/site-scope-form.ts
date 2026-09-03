@@ -64,9 +64,9 @@ export interface ActiveListCopy {
     readonly submitLabel: string;
 
     /**
-     * Label of the single action each row carries.
+     * Sentence explaining what removing a hostname from this list does.
      */
-    readonly rowAction: string;
+    readonly removalEffect: string;
 
     /**
      * Sentence shown when the list has no entries.
@@ -119,7 +119,7 @@ export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
             description: "The extension runs only on these exact hostnames.",
             fieldLabel: "Allow hostname",
             submitLabel: "Allow site",
-            rowAction: "Remove",
+            removalEffect: "Removing a hostname turns the extension off on it again.",
             emptyState: "No sites are allowed yet. The extension will stay off on every site "
                 + "until one is added.",
             addEnables: true,
@@ -130,7 +130,7 @@ export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
         description: "The extension stays off on these exact hostnames.",
         fieldLabel: "Exclude hostname",
         submitLabel: "Exclude site",
-        rowAction: "Allow",
+        removalEffect: "Removing a hostname lets the extension run on it again.",
         emptyState: "No sites are excluded.",
         addEnables: false,
     };

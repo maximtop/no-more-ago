@@ -182,11 +182,9 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                         {copy.description}
                     </Text>
                 </Group>
-                {confirmation ? (
-                    <Text role="status" size="xs" c="dimmed" mt="xs">
-                        {confirmation}
-                    </Text>
-                ) : null}
+                <Text size="xs" c="dimmed" mt={4}>
+                    {copy.removalEffect}
+                </Text>
                 {hosts.length === 0 ? (
                     <Alert
                         role="status"
@@ -206,7 +204,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                                     type="button"
                                     variant="subtle"
                                     loading={busy?.kind === "site" && busy.hostname === hostname}
-                                    aria-label={`${copy.rowAction} ${hostname}`}
+                                    aria-label={`Remove ${hostname} from ${copy.title}`}
                                     onClick={() => {
                                         setConfirmation(undefined);
                                         void controller.changeSiteProcessing(
@@ -215,12 +213,17 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                                         );
                                     }}
                                 >
-                                    {copy.rowAction}
+                                    Remove
                                 </Button>
                             </li>
                         ))}
                     </ul>
                 )}
+                {confirmation ? (
+                    <Text role="status" size="xs" c="dimmed" mt="xs">
+                        {confirmation}
+                    </Text>
+                ) : null}
             </Box>
             {noticeMessage ? (
                 <Alert role="alert" color="red">
