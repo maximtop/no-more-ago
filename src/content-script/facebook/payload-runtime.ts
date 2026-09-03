@@ -8,7 +8,7 @@ import {
     FACEBOOK_TRACKED_LINK_SELECTOR,
     createFacebookPayloadBridgeControlMessage,
     isFacebookPayloadBridgeReadyMessage,
-    isFacebookPayloadMessage,
+    readFacebookPayloadMessage,
 } from "./contracts";
 import { isFacebookTimestampElement } from "../adapters/facebook";
 import {
@@ -248,10 +248,11 @@ export function installFacebookPayloadRuntime(input: {
             }
             return;
         }
-        if (!slot.enabled || !isFacebookPayloadMessage(event.data)) {
+        const update = slot.enabled ? readFacebookPayloadMessage(event.data) : null;
+        if (!update) {
             return;
         }
-        acceptChanges(storeFacebookTimestampUpdate(input.document, event.data));
+        acceptChanges(storeFacebookTimestampUpdate(input.document, update));
     };
 
     const observer = new MutationObserver((records) => {

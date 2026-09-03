@@ -11,9 +11,9 @@ import {
     createFacebookPayloadBridgeControlMessage,
     createFacebookPayloadBridgeReadyMessage,
     createFacebookPayloadMessage,
-    isFacebookPayloadBridgeControlMessage,
     isFacebookPayloadBridgeReadyMessage,
-    isFacebookPayloadMessage,
+    readFacebookBridgeControlEnabled,
+    readFacebookPayloadMessage,
 } from "../../../../src/content-script/facebook/contracts";
 
 const TRACKING_TOKEN = "AZ-facebook-story-tracking-token-1234567890";
@@ -29,7 +29,7 @@ describe("Facebook cross-world contracts", () => {
             invalidateAll: false,
         });
 
-        expect(isFacebookPayloadMessage(message)).toBe(true);
+        expect(readFacebookPayloadMessage(message)).not.toBeNull();
         expect(message).toEqual({
             source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
             type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
@@ -55,11 +55,11 @@ describe("Facebook cross-world contracts", () => {
             invalidateAll: false,
         });
 
-        expect(isFacebookPayloadMessage(message)).toBe(true);
-        expect(isFacebookPayloadMessage({
+        expect(readFacebookPayloadMessage(message)).not.toBeNull();
+        expect(readFacebookPayloadMessage({
             ...message,
             invalidatedTrackingTokens: [TRACKING_TOKEN],
-        })).toBe(false);
+        })).toBeNull();
     });
 
     it("accepts only an empty fail-closed invalidation message", () => {
@@ -69,11 +69,11 @@ describe("Facebook cross-world contracts", () => {
             invalidateAll: true,
         });
 
-        expect(isFacebookPayloadMessage(message)).toBe(true);
-        expect(isFacebookPayloadMessage({
+        expect(readFacebookPayloadMessage(message)).not.toBeNull();
+        expect(readFacebookPayloadMessage({
             ...message,
             records: [{ trackingToken: TRACKING_TOKEN, rawDatetime: "1787933301" }],
-        })).toBe(false);
+        })).toBeNull();
     });
 
     it.each([
@@ -93,25 +93,28 @@ describe("Facebook cross-world contracts", () => {
         { trackingToken: TRACKING_TOKEN, rawDatetime: "-1" },
         { trackingToken: TRACKING_TOKEN, rawDatetime: "tomorrow" },
     ])("rejects an out-of-contract record", (record) => {
-        expect(isFacebookPayloadMessage({
+        expect(readFacebookPayloadMessage({
             source: FACEBOOK_PAYLOAD_MESSAGE_SOURCE,
             type: FACEBOOK_PAYLOAD_RECORDS_MESSAGE,
             records: [record],
             invalidatedTrackingTokens: [],
             invalidateAll: false,
-        })).toBe(false);
+        })).toBeNull();
     });
 
     it("creates and recognizes bridge lifecycle messages", () => {
         expect(isFacebookPayloadBridgeReadyMessage(
             createFacebookPayloadBridgeReadyMessage(),
-        )).toBe(true);
-        expect(isFacebookPayloadBridgeControlMessage(
+        )).not.toBeNull();
+        expect(readFacebookBridgeControlEnabled(
             createFacebookPayloadBridgeControlMessage(true),
         )).toBe(true);
-        expect(isFacebookPayloadBridgeControlMessage({
+        expect(readFacebookBridgeControlEnabled(
+            createFacebookPayloadBridgeControlMessage(false),
+        )).toBe(false);
+        expect(readFacebookBridgeControlEnabled({
             ...createFacebookPayloadBridgeControlMessage(true),
             enabled: "yes",
-        })).toBe(false);
+        })).toBeNull();
     });
 });

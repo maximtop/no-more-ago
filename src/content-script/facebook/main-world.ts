@@ -9,7 +9,7 @@ import {
     FACEBOOK_PAYLOAD_LIMIT,
     createFacebookPayloadBridgeReadyMessage,
     createFacebookPayloadMessage,
-    isFacebookPayloadBridgeControlMessage,
+    readFacebookBridgeControlEnabled,
 } from "./contracts";
 import { extractFacebookTimestampUpdate } from "./payload-parser";
 
@@ -650,16 +650,15 @@ export function installFacebookPayloadBridge(target: Window): void {
         inspectTextResponse,
     );
     const messageListener = (event: MessageEvent): void => {
-        if (
-            event.source !== target
-            || event.origin !== target.location.origin
-            || !isFacebookPayloadBridgeControlMessage(event.data)
-            || enabled === event.data.enabled
-        ) {
+        const requested = event.source === target
+            && event.origin === target.location.origin
+            ? readFacebookBridgeControlEnabled(event.data)
+            : null;
+        if (requested === null || requested === enabled) {
             return;
         }
         generation += 1;
-        enabled = event.data.enabled;
+        enabled = requested;
         if (!enabled) {
             cancelActiveReaders();
         }
