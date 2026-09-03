@@ -104,7 +104,7 @@ has an obvious, simpler standard-library replacement.
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
 │   ├── popup/                  # Toolbar popup
-│   └── shared/                 # Cross-context schemas and contracts
+│   └── shared/                 # Cross-context contracts and boundary schemas
 ├── scripts/
 │   ├── build.ts                # Build command entry point
 │   └── build/                  # Build pipeline and artifacts
@@ -334,7 +334,14 @@ Known architectural exclusions to improve when their area changes:
   `exactOptionalPropertyTypes` guarantees.
 - Parse genuinely external values once at their boundary with Valibot or a
   focused parser. Do not revalidate extension-owned storage, internal messages,
-  or typed browser API results with generic record checks.
+  or typed browser API results with generic record checks. Keep schemas in the
+  modules that parse: page payloads, network responses, the Facebook
+  cross-world bridge, and document-supplied diagnostic fields. Everything the
+  extension sends itself is a plain type.
+- Messages between extension contexts are trusted. Dispatch by casting to the
+  message union and reading its `type`. A frame or worker may not answer at
+  all, so treat a reply as optional and require acknowledgements to carry the
+  exact revision that was sent.
 - Use typed result objects for expected failures. Reserve exceptions for
   programmer errors and truly exceptional failures.
 - Do not inline magic values that form a shared contract, including runtime
