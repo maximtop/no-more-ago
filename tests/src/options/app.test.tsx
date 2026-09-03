@@ -2475,7 +2475,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "invalid-journal", "unavailable", "lost"] as const)(
+    it.each(["storage-failed", "unavailable", "lost"] as const)(
         "shows an actionable snapshot error without downloading for %s",
         async (failure) => {
             let requests = 0;

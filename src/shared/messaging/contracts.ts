@@ -84,7 +84,6 @@ export const DIAGNOSTICS_ERROR = {
     DISABLED: "disabled",
     UNAVAILABLE: "unavailable",
     EMPTY: "empty",
-    INVALID_JOURNAL: "invalid-journal",
     STORAGE_FAILED: "storage-failed",
 } as const;
 
@@ -95,7 +94,6 @@ export const DIAGNOSTICS_SNAPSHOT_ERRORS = [
     DIAGNOSTICS_ERROR.DISABLED,
     DIAGNOSTICS_ERROR.UNAVAILABLE,
     DIAGNOSTICS_ERROR.EMPTY,
-    DIAGNOSTICS_ERROR.INVALID_JOURNAL,
     DIAGNOSTICS_ERROR.STORAGE_FAILED,
 ] as const;
 

@@ -29,12 +29,6 @@ export type {
     DiagnosticPageCategory,
 } from "./contracts";
 
-const contextSchema = v.strictObject({
-    hostname: v.pipe(v.string(), v.check(isCanonicalHostname)),
-    pageCategory: v.picklist(DIAGNOSTIC_PAGE_CATEGORIES),
-    incognito: v.boolean(),
-});
-
 /**
  * Canonical schema for diagnostic fields received from document runtimes.
  */
@@ -101,7 +95,22 @@ export const diagnosticEventSchema = v.pipe(
 /**
  * Trusted sender-derived diagnostic context.
  */
-export type DiagnosticContext = v.InferOutput<typeof contextSchema>;
+export interface DiagnosticContext {
+    /**
+     * Canonical hostname of the reporting page.
+     */
+    readonly hostname: string;
+
+    /**
+     * Coarse page category retained instead of the path.
+     */
+    readonly pageCategory: DiagnosticPageCategory;
+
+    /**
+     * Whether the reporting tab belongs to a private window.
+     */
+    readonly incognito: boolean;
+}
 
 /**
  * Caller-supplied event fields accepted before normalization.
@@ -264,8 +273,7 @@ export function sanitizeDiagnosticEvent(
     now = Date.now(),
 ): DiagnosticEvent | null {
     const parsedInput = v.safeParse(diagnosticEventInputSchema, input);
-    const parsedContext = v.safeParse(contextSchema, context);
-    if (!parsedInput.success || !parsedContext.success || !Number.isSafeInteger(now) || now < 0) {
+    if (!parsedInput.success) {
         return null;
     }
     const value = parsedInput.output;
@@ -285,7 +293,7 @@ export function sanitizeDiagnosticEvent(
     const event: DiagnosticEvent = {
         category: value.category,
         timestamp: now,
-        ...parsedContext.output,
+        ...context,
         ...(count === undefined ? {} : { count }),
         ...(durationMs === undefined ? {} : { durationMs }),
         ...(reason === undefined ? {} : { reason }),

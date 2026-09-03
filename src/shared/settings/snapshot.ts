@@ -452,10 +452,5 @@ export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSn
  * @returns - Whether the value is a snapshot of the current schema version.
  */
 export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshot {
-    return (
-        typeof value === "object"
-        && value !== null
-        && (value as { readonly schemaVersion?: unknown }).schemaVersion
-            === SETTINGS_SCHEMA_VERSION
-    );
+    return (value as SettingsSnapshot | undefined)?.schemaVersion === SETTINGS_SCHEMA_VERSION;
 }

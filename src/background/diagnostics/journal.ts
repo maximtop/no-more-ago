@@ -2,13 +2,12 @@
  * @file Persists a bounded serialized journal of canonical diagnostic events.
  */
 
-import * as v from "valibot";
 import {
     DIAGNOSTICS_ERROR,
     type DiagnosticsClearError,
     type DiagnosticsSnapshotError,
 } from "../../shared/messaging/contracts";
-import { diagnosticEventSchema, type DiagnosticEvent } from "../../shared/diagnostics/events";
+import type { DiagnosticEvent } from "../../shared/diagnostics/events";
 
 /**
  * Storage key containing diagnostic events.
@@ -91,7 +90,15 @@ export type DiagnosticJournalClearResult =
         readonly error: DiagnosticsClearError;
     };
 
-const envelopeSchema = v.strictObject({ entries: v.array(diagnosticEventSchema) });
+/**
+ * Extension-owned envelope persisted under the diagnostics storage key.
+ */
+interface DiagnosticJournalEnvelope {
+    /**
+     * Canonical events written by this extension, oldest first.
+     */
+    readonly entries: readonly DiagnosticEvent[];
+}
 
 /**
  * Measures a diagnostic envelope's serialized UTF-8 size.
@@ -101,21 +108,6 @@ const envelopeSchema = v.strictObject({ entries: v.array(diagnosticEventSchema) 
  */
 function byteLength(value: unknown): number {
     return new TextEncoder().encode(JSON.stringify(value)).byteLength;
-}
-
-/**
- * Parses one stored diagnostic envelope within its byte limit.
- *
- * @param value - Stored diagnostic value.
- * @param maxBytes - Maximum serialized size.
- * @returns - Canonical events, or null for invalid storage data.
- */
-function parseEnvelope(value: unknown, maxBytes: number): DiagnosticEvent[] | null {
-    const parsed = v.safeParse(envelopeSchema, value);
-    if (!parsed.success || byteLength(parsed.output) > maxBytes) {
-        return null;
-    }
-    return parsed.output.entries;
 }
 
 /**
@@ -243,10 +235,9 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
             } catch {
                 return;
             }
-            const stored = Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)
-                ? parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes) ?? []
-                : [];
-            const entries = [...stored, event];
+            const stored = values[DIAGNOSTICS_STORAGE_KEY] as
+                DiagnosticJournalEnvelope | undefined;
+            const entries = [...stored?.entries ?? [], event];
             while (entries.length > 0 && byteLength({ entries }) > this.maxBytes) {
                 entries.shift();
             }
@@ -313,10 +304,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
         if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
             return { ok: false, error: DIAGNOSTICS_ERROR.EMPTY };
         }
-        const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
-        if (!entries) {
-            return { ok: false, error: DIAGNOSTICS_ERROR.INVALID_JOURNAL };
-        }
+        const { entries } = values[DIAGNOSTICS_STORAGE_KEY] as DiagnosticJournalEnvelope;
         return entries.length === 0
             ? { ok: false, error: DIAGNOSTICS_ERROR.EMPTY }
             : { ok: true, entries };

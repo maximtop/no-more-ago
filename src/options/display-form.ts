@@ -266,8 +266,6 @@ function previewLocales(): readonly string[] {
     if (typeof navigator === "undefined") {
         return ["en-US"];
     }
-    const locales = Array.isArray(navigator.languages)
-        ? navigator.languages.filter((value): value is string => typeof value === "string")
-        : [];
+    const locales = navigator.languages;
     return locales.length > 0 ? locales : navigator.language ? [navigator.language] : ["en-US"];
 }
