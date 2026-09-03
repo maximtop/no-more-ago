@@ -13,6 +13,15 @@ import { settleMutation, type MutationNotice } from "../shared/ui/persistence-no
 import type { SitesClient } from "./client";
 
 /**
+ * Named mutations the Sites section can have in flight.
+ */
+export const SITES_BUSY_KIND = {
+    SITE: "site",
+    SCOPE: "scope",
+    GLOBAL: "global",
+} as const;
+
+/**
  * Mutation currently in flight on the Sites section.
  */
 export type SitesBusy =
@@ -20,7 +29,7 @@ export type SitesBusy =
         /**
          * One hostname's processing state is being saved.
          */
-        readonly kind: "site";
+        readonly kind: typeof SITES_BUSY_KIND.SITE;
 
         /**
          * Hostname being saved.
@@ -31,13 +40,13 @@ export type SitesBusy =
         /**
          * The scope mode is being saved.
          */
-        readonly kind: "scope";
+        readonly kind: typeof SITES_BUSY_KIND.SCOPE;
     }
     | {
         /**
          * Global activation is being saved.
          */
-        readonly kind: "global";
+        readonly kind: typeof SITES_BUSY_KIND.GLOBAL;
     }
     | undefined;
 
@@ -229,7 +238,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         if (!ready) {
             return false;
         }
-        setBusy({ kind: "site", hostname });
+        setBusy({ kind: SITES_BUSY_KIND.SITE, hostname });
         setNotice(undefined);
         const settled = settleMutation(await client.setSiteEnabled(hostname, enabled));
         apply(settled.state, settled.notice);
@@ -241,7 +250,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         if (!ready) {
             return;
         }
-        setBusy({ kind: "scope" });
+        setBusy({ kind: SITES_BUSY_KIND.SCOPE });
         setNotice(undefined);
         const settled = settleMutation(await client.setSiteScopeMode(mode));
         apply(settled.state, settled.notice);
@@ -252,7 +261,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         if (!ready) {
             return;
         }
-        setBusy({ kind: "global" });
+        setBusy({ kind: SITES_BUSY_KIND.GLOBAL });
         setNotice(undefined);
         const settled = settleMutation(await client.setGlobalEnabled(enabled));
         apply(settled.state, settled.notice);

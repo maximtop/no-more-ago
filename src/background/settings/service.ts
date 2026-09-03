@@ -4,18 +4,27 @@
 
 import {
     DEFAULT_SETTINGS_SNAPSHOT,
+    FORMAT_MODE,
+    SETTINGS_LOAD_ERROR,
+    SETTINGS_LOAD_SOURCE,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
+    TIME_ZONE_MODE,
     createSettingsSnapshot,
     isCurrentSettingsSnapshot,
     parseDisplaySettings,
     sameDisplaySettings,
     type Appearance,
     type DisplaySettings,
+    type SettingsLoadError,
     type SettingsLoadResult,
     type SettingsSnapshot,
     type SettingsSnapshotInput,
 } from "../../shared/settings/snapshot";
+import {
+    DISPLAY_SETTINGS_ERROR,
+    SITE_SETTINGS_ERROR,
+} from "../../shared/messaging/view-state-values";
 import { isCanonicalHostname } from "../../shared/settings/hostname";
 import {
     isSiteListFull,
@@ -63,6 +72,23 @@ export interface SettingsWriteSuccess {
 }
 
 /**
+ * Named reasons a settings mutation is rejected or cannot be persisted.
+ */
+export const SETTINGS_WRITE_ERROR = {
+    PERSISTENCE_FAILED: "persistence-failed",
+    INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
+    LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
+    INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
+    INVALID_DISPLAY_SETTINGS: DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS,
+} as const;
+
+/**
+ * Reason a settings mutation failed.
+ */
+export type SettingsWriteError = (typeof SETTINGS_WRITE_ERROR)[keyof typeof SETTINGS_WRITE_ERROR];
+
+/**
  * Rejected or unpersisted mutation and the snapshot that remains authoritative.
  */
 export interface SettingsWriteFailure {
@@ -74,13 +100,7 @@ export interface SettingsWriteFailure {
     /**
      * Stable reason the settings mutation failed.
      */
-    readonly error:
-          | "persistence-failed"
-          | "invalid-hostname"
-          | "list-full"
-          | "invalid-time-zone"
-          | "invalid-format"
-          | "invalid-display-settings";
+    readonly error: SettingsWriteError;
 
     /**
      * Last authoritative settings snapshot retained after the failure.
@@ -139,7 +159,7 @@ export class SettingsService {
     /**
      * Most recent load failure retained so clients can present the unavailable state accurately.
      */
-    private loadError: "load-failed" | "invalid-settings" | undefined;
+    private loadError: SettingsLoadError | undefined;
 
     /**
      * Promise tail that makes settings mutations durable in revision order.
@@ -169,8 +189,8 @@ export class SettingsService {
         try {
             values = await this.storage.get([this.key, SETTINGS_PREVIOUS_STORAGE_KEY]);
         } catch {
-            this.loadError = "load-failed";
-            return { ok: false, error: "load-failed" };
+            this.loadError = SETTINGS_LOAD_ERROR.LOAD_FAILED;
+            return { ok: false, error: SETTINGS_LOAD_ERROR.LOAD_FAILED };
         }
 
         const stored = values[this.key];
@@ -182,14 +202,14 @@ export class SettingsService {
         if (current !== undefined) {
             this.loadError = undefined;
             this.current = current;
-            return { ok: true, snapshot: current, source: "stored" };
+            return { ok: true, snapshot: current, source: SETTINGS_LOAD_SOURCE.STORED };
         }
 
         if (storedPrevious === undefined) {
             if (stored === undefined && storedPreviousValue === undefined) {
                 this.loadError = undefined;
                 this.current = DEFAULT_SETTINGS_SNAPSHOT;
-                return { ok: true, snapshot: this.current, source: "default" };
+                return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DEFAULT };
             }
             // A document of another schema version is discarded, not migrated.
             // The defaults are persisted so the stale document stops being
@@ -199,24 +219,24 @@ export class SettingsService {
                     this.pair(DEFAULT_SETTINGS_SNAPSHOT, DEFAULT_SETTINGS_SNAPSHOT),
                 );
             } catch {
-                this.loadError = "invalid-settings";
-                return { ok: false, error: "invalid-settings" };
+                this.loadError = SETTINGS_LOAD_ERROR.INVALID_SETTINGS;
+                return { ok: false, error: SETTINGS_LOAD_ERROR.INVALID_SETTINGS };
             }
             console.warn("Discarded stored settings of another schema version");
             this.loadError = undefined;
             this.current = DEFAULT_SETTINGS_SNAPSHOT;
-            return { ok: true, snapshot: this.current, source: "discarded" };
+            return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DISCARDED };
         }
 
         try {
             await this.storage.set(this.pair(storedPrevious, storedPrevious));
         } catch {
-            this.loadError = "invalid-settings";
-            return { ok: false, error: "invalid-settings" };
+            this.loadError = SETTINGS_LOAD_ERROR.INVALID_SETTINGS;
+            return { ok: false, error: SETTINGS_LOAD_ERROR.INVALID_SETTINGS };
         }
         this.loadError = undefined;
         this.current = storedPrevious;
-        return { ok: true, snapshot: storedPrevious, source: "recovered" };
+        return { ok: true, snapshot: storedPrevious, source: SETTINGS_LOAD_SOURCE.RECOVERED };
     }
 
     /**
@@ -233,7 +253,7 @@ export class SettingsService {
      *
      * @returns - Most recent settings initialization failure, if any.
      */
-    public get lastLoadError(): "load-failed" | "invalid-settings" | undefined {
+    public get lastLoadError(): SettingsLoadError | undefined {
         return this.loadError;
     }
 
@@ -275,7 +295,7 @@ export class SettingsService {
             if (!loaded.ok) {
                 result = {
                     ok: false,
-                    error: "persistence-failed",
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
                     snapshot: this.fallbackSnapshot(),
                 };
                 return;
@@ -288,7 +308,11 @@ export class SettingsService {
             try {
                 await this.storage.set(this.pair(candidate, loaded.snapshot));
             } catch {
-                result = { ok: false, error: "persistence-failed", snapshot: loaded.snapshot };
+                result = {
+                    ok: false,
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                    snapshot: loaded.snapshot,
+                };
                 return;
             }
             this.current = candidate;
@@ -301,10 +325,18 @@ export class SettingsService {
         try {
             await run;
         } catch {
-            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+            result = {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return (
-            result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }
+            result ?? {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            }
         );
     }
 
@@ -329,7 +361,11 @@ export class SettingsService {
      */
     public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
         if (!isCanonicalHostname(hostname)) {
-            return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
+            return {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.INVALID_HOSTNAME,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         const bound = { full: false };
         const result = await this.mutate((current) => {
@@ -345,7 +381,7 @@ export class SettingsService {
             });
         });
         return bound.full
-            ? { ok: false, error: "list-full", snapshot: result.snapshot }
+            ? { ok: false, error: SETTINGS_WRITE_ERROR.LIST_FULL, snapshot: result.snapshot }
             : result;
     }
 
@@ -385,22 +421,30 @@ export class SettingsService {
         const parsed = parseDisplaySettings(display);
         if (parsed === null) {
             if (
-                display.formatMode === "custom"
+                display.formatMode === FORMAT_MODE.CUSTOM
                 && !validateCustomFormatPattern(display.pattern).ok
             ) {
-                return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
+                return {
+                    ok: false,
+                    error: SETTINGS_WRITE_ERROR.INVALID_FORMAT,
+                    snapshot: this.fallbackSnapshot(),
+                };
             }
             return {
                 ok: false,
-                error: "invalid-display-settings",
+                error: SETTINGS_WRITE_ERROR.INVALID_DISPLAY_SETTINGS,
                 snapshot: this.fallbackSnapshot(),
             };
         }
         if (
-            parsed.timeZone.mode === "iana" &&
+            parsed.timeZone.mode === TIME_ZONE_MODE.IANA &&
             !this.isTimeZoneAvailable(parsed.timeZone.identifier)
         ) {
-            return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
+            return {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.INVALID_TIME_ZONE,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return this.mutate((current) =>
             sameDisplaySettings(current.display, parsed)
@@ -442,7 +486,7 @@ export class SettingsService {
             } catch {
                 result = {
                     ok: false,
-                    error: "persistence-failed",
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
                     snapshot: this.fallbackSnapshot(),
                 };
                 return;
@@ -458,10 +502,18 @@ export class SettingsService {
         try {
             await run;
         } catch {
-            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+            result = {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return (
-            result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }
+            result ?? {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            }
         );
     }
 

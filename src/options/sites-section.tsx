@@ -25,7 +25,7 @@ import {
 import { GLOBAL_SWITCH_LABEL } from "../shared/ui/copy";
 import { mutationNoticeText } from "../shared/ui/persistence-notice";
 import { activeListCopy, validateHostnameEntry } from "./site-scope-form";
-import type { SitesController } from "./sites-controller";
+import { SITES_BUSY_KIND, type SitesController } from "./sites-controller";
 
 /**
  * Properties for the site-settings section.
@@ -68,7 +68,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     }
     const copy = activeListCopy(state.scopeMode);
     const hosts = controller.activeHostnames;
-    const scopeBusy = busy?.kind === "scope";
+    const scopeBusy = busy?.kind === SITES_BUSY_KIND.SCOPE;
     const noticeMessage = mutationNoticeText(notice, RETRY_HINT);
     const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -111,7 +111,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                 </Box>
                 <Switch
                     checked={state.globalEnabled}
-                    aria-busy={busy?.kind === "global"}
+                    aria-busy={busy?.kind === SITES_BUSY_KIND.GLOBAL}
                     aria-label={GLOBAL_SWITCH_LABEL}
                     onChange={(event) => {
                         void controller.changeGlobal(event.currentTarget.checked);
@@ -203,7 +203,8 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                                 <Button
                                     type="button"
                                     variant="subtle"
-                                    loading={busy?.kind === "site" && busy.hostname === hostname}
+                                    loading={busy?.kind === SITES_BUSY_KIND.SITE
+                                        && busy.hostname === hostname}
                                     aria-label={`Remove ${hostname} from ${copy.title}`}
                                     onClick={() => {
                                         setConfirmation(undefined);

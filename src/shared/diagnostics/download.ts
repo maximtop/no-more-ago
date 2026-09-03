@@ -3,10 +3,11 @@
  */
 
 import { CLIENT_RESULT_KIND } from "../client-result";
-import type {
-    DiagnosticsClearError,
-    DiagnosticsSnapshot,
-    DiagnosticsSnapshotError,
+import {
+    DIAGNOSTICS_ERROR,
+    type DiagnosticsClearError,
+    type DiagnosticsSnapshot,
+    type DiagnosticsSnapshotError,
 } from "../messaging/contracts";
 import {
     DiagnosticArchiveError,
@@ -61,16 +62,16 @@ export type DiagnosticsSnapshotResult =
 export function diagnosticsErrorText(
     error: DiagnosticsSnapshotError | DiagnosticsClearError,
 ): string {
-    if (error === "disabled") {
+    if (error === DIAGNOSTICS_ERROR.DISABLED) {
         return "Debug logs are off. Turn them on to use saved diagnostics.";
     }
-    if (error === "empty") {
+    if (error === DIAGNOSTICS_ERROR.EMPTY) {
         return "There are no diagnostic logs to download yet.";
     }
-    if (error === "invalid-journal") {
+    if (error === DIAGNOSTICS_ERROR.INVALID_JOURNAL) {
         return "Saved diagnostic logs are invalid. Clear logs and try again.";
     }
-    if (error === "storage-failed") {
+    if (error === DIAGNOSTICS_ERROR.STORAGE_FAILED) {
         return "Saved diagnostic logs could not be read. Try again later.";
     }
     return "Diagnostic logs are unavailable. Try again later.";

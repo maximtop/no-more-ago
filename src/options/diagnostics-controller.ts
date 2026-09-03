@@ -7,7 +7,10 @@ import {
     createUnavailableDebugState,
     type DebugState,
 } from "../shared/messaging/view-state-schemas";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import {
+    SETTINGS_PERSISTENCE_ERROR,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import {
@@ -15,13 +18,26 @@ import {
     diagnosticsErrorText,
     downloadDiagnosticsSnapshot,
 } from "../shared/diagnostics/download";
-import type { SiteReportReporter } from "../shared/reporting/site-report";
+import {
+    SITE_REPORT_ERROR,
+    type SiteReportError,
+    type SiteReportReporter,
+} from "../shared/reporting/site-report";
 import type { SitesClient } from "./client";
 
 /**
- * User-visible outcome of a Debug logs mutation.
+ * Named outcomes of a Debug logs mutation.
  */
-export type DebugNotice = "save-failed" | "interrupted" | "unknown" | undefined;
+export const DEBUG_NOTICE = {
+    SAVE_FAILED: SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
+    INTERRUPTED: "interrupted",
+    UNKNOWN: "unknown",
+} as const;
+
+/**
+ * User-visible outcome of a Debug logs mutation, or undefined when there is none.
+ */
+export type DebugNotice = (typeof DEBUG_NOTICE)[keyof typeof DEBUG_NOTICE] | undefined;
 
 /**
  * Maps a Debug logs outcome to its user-visible error message.
@@ -30,13 +46,13 @@ export type DebugNotice = "save-failed" | "interrupted" | "unknown" | undefined;
  * @returns - An error message, or undefined when there is no notice to show.
  */
 export function debugNoticeText(notice: DebugNotice): string | undefined {
-    if (notice === "save-failed") {
+    if (notice === DEBUG_NOTICE.SAVE_FAILED) {
         return "Could not save the Debug logs setting. Try again.";
     }
-    if (notice === "interrupted") {
+    if (notice === DEBUG_NOTICE.INTERRUPTED) {
         return "The Debug logs response was interrupted. Current state was reloaded.";
     }
-    if (notice === "unknown") {
+    if (notice === DEBUG_NOTICE.UNKNOWN) {
         return "Could not confirm the Debug logs setting. Reopen Settings to try again.";
     }
     return undefined;
@@ -166,14 +182,14 @@ export interface DiagnosticsController {
  * @param error - Failure returned by the site-report service.
  * @returns - The error message displayed to the user.
  */
-function siteReportErrorText(error: string): string {
-    if (error === "busy") {
+function siteReportErrorText(error: SiteReportError): string {
+    if (error === SITE_REPORT_ERROR.BUSY) {
         return "A GitHub report is already being opened.";
     }
-    if (error === "open-failed") {
+    if (error === SITE_REPORT_ERROR.OPEN_FAILED) {
         return "Could not open the GitHub report. Try again.";
     }
-    if (error === "browser-unavailable") {
+    if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
         return "Could not open the GitHub report in this browser.";
     }
     return "Could not open the GitHub report. Check the browser context and try again.";
@@ -248,7 +264,7 @@ export function useDiagnosticsController(
                 setState(result.response.state);
             }
             if (!result.response.ok) {
-                setNotice("save-failed");
+                setNotice(DEBUG_NOTICE.SAVE_FAILED);
             }
         } else if (result.state) {
             if (
@@ -257,10 +273,10 @@ export function useDiagnosticsController(
             ) {
                 setState(result.state);
             }
-            setNotice("interrupted");
+            setNotice(DEBUG_NOTICE.INTERRUPTED);
         } else {
             setState(createUnavailableDebugState());
-            setNotice("unknown");
+            setNotice(DEBUG_NOTICE.UNKNOWN);
         }
         debugInFlight.current = false;
         setSaving(false);
@@ -334,7 +350,7 @@ export function useDiagnosticsController(
             setState(await client.getDebugState());
         } catch {
             setState(createUnavailableDebugState());
-            setNotice("unknown");
+            setNotice(DEBUG_NOTICE.UNKNOWN);
         } finally {
             setLoading(false);
         }

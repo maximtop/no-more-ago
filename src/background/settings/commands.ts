@@ -23,6 +23,9 @@ import {
     type SettingsBroadcast,
 } from "../application/contracts";
 import {
+    DISPLAY_SETTINGS_ERROR,
+    SETTINGS_PERSISTENCE_ERROR,
+    SITE_SETTINGS_ERROR,
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
     type SettingsPersistenceError,
@@ -154,7 +157,11 @@ export class SettingsCommands {
         const state = await this.finish(outcome, () =>
             this.diagnostics.debugState(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
+            return {
+                ok: false,
+                error: outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
+                state,
+            };
         }
         return {
             ok: true,
@@ -177,9 +184,9 @@ export class SettingsCommands {
         const outcome = await this.runWrite(
             () => this.settings.setDisplaySettings(display),
             (write) =>
-                write.error === "invalid-format"
-                || write.error === "invalid-time-zone"
-                || write.error === "invalid-display-settings"
+                write.error === DISPLAY_SETTINGS_ERROR.INVALID_FORMAT
+                || write.error === DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE
+                || write.error === DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS
                     ? write.error
                     : undefined,
             async (write) => {
@@ -195,7 +202,11 @@ export class SettingsCommands {
         );
         const state = await this.finish(outcome, () => deriveDisplayState(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
+            return {
+                ok: false,
+                error: outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
+                state,
+            };
         }
         return { ok: true, acceptedRevision: outcome.acceptedRevision, state, refreshFailures };
     }
@@ -217,7 +228,11 @@ export class SettingsCommands {
         );
         const state = await this.finish(outcome, () => deriveDisplayState(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
+            return {
+                ok: false,
+                error: outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
+                state,
+            };
         }
         return { ok: true, acceptedRevision: outcome.acceptedRevision, state };
     }
@@ -230,14 +245,14 @@ export class SettingsCommands {
     public async resetAllSettings(): Promise<ResetAllSettingsResponse> {
         await this.prepare();
         let acceptedRevision: number | undefined;
-        const outcome: { value: "accepted" | "save-failed" } = { value: "accepted" };
+        const outcome: { error: SettingsPersistenceError | undefined } = { error: undefined };
         await this.lifecycle.enqueue(async () => {
             const previous = this.lifecycle.phase === APPLICATION_PHASE.READY
                 ? this.lifecycle.snapshot
                 : undefined;
             const write = await this.settings.resetAll();
             if (!write.ok) {
-                outcome.value = "save-failed";
+                outcome.error = SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED;
                 if (
                     this.lifecycle.phase === APPLICATION_PHASE.READY
                     && this.lifecycle.snapshot
@@ -279,7 +294,7 @@ export class SettingsCommands {
         }
         return {
             ok: false,
-            error: outcome.value === "save-failed" ? "save-failed" : "settings-unavailable",
+            error: outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
             state,
         };
     }
@@ -310,7 +325,7 @@ export class SettingsCommands {
         );
         const state = await this.finish(outcome, () => this.deriveSurface(surface));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            const error = outcome.error ?? "settings-unavailable";
+            const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? { ok: false, error, surface, state: state as PopupState }
                 : { ok: false, error, surface, state: state as SitesState };
@@ -336,7 +351,11 @@ export class SettingsCommands {
         const state = await this.finish(outcome, () =>
             this.projection.deriveSites(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            return { ok: false, error: outcome.error ?? "settings-unavailable", state };
+            return {
+                ok: false,
+                error: outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
+                state,
+            };
         }
         return { ok: true, acceptedRevision: outcome.acceptedRevision, state };
     }
@@ -361,21 +380,23 @@ export class SettingsCommands {
                 ? (this.projection.cachedPopup
                     ?? this.projection.unavailablePopup(this.lifecycle.state))
                 : this.projection.deriveSites(this.lifecycle.state);
+            const error = SITE_SETTINGS_ERROR.INVALID_HOSTNAME;
             return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: false, error: "invalid-hostname", surface, state: state as PopupState }
-                : { ok: false, error: "invalid-hostname", surface, state: state as SitesState };
+                ? { ok: false, error, surface, state: state as PopupState }
+                : { ok: false, error, surface, state: state as SitesState };
         }
         const outcome = await this.runWrite(
             () => this.settings.setSiteEnabled(hostname, enabled),
             (write) =>
-                write.error === "invalid-hostname" || write.error === "list-full"
+                write.error === SITE_SETTINGS_ERROR.INVALID_HOSTNAME
+                || write.error === SITE_SETTINGS_ERROR.LIST_FULL
                     ? write.error
                     : undefined,
             (write) => this.reconcileSites(write, [hostname]),
         );
         const state = await this.finish(outcome, () => this.deriveSurface(surface));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
-            const error = outcome.error ?? "settings-unavailable";
+            const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? { ok: false, error, surface, state: state as PopupState }
                 : { ok: false, error, surface, state: state as SitesState };
@@ -407,7 +428,7 @@ export class SettingsCommands {
         let error: TError | SettingsPersistenceError | undefined;
         await this.lifecycle.enqueue(async () => {
             if (this.lifecycle.phase !== APPLICATION_PHASE.READY || !this.lifecycle.snapshot) {
-                error = "settings-unavailable";
+                error = SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
                 return;
             }
             const result = await write();
@@ -416,10 +437,10 @@ export class SettingsCommands {
                 if (mapped !== undefined) {
                     error = mapped;
                 } else if (this.settings.lastLoadError) {
-                    error = "settings-unavailable";
+                    error = SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
                     await this.lifecycle.enterFailedClosed();
                 } else {
-                    error = "save-failed";
+                    error = SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED;
                 }
                 return;
             }

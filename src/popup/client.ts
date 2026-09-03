@@ -12,6 +12,7 @@ import {
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     getDiagnosticsSnapshotResponseSchema,
+    DIAGNOSTICS_ERROR,
 } from "../shared/messaging/contracts";
 import { popupStateSchema, type PopupState } from "../shared/messaging/view-state-schemas";
 import {
@@ -166,10 +167,10 @@ export class PopupClient {
                 type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
             });
         } catch {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         return response.ok
             ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }

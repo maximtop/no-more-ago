@@ -2,6 +2,7 @@
  * @file Background initialization, serialization, and lifecycle reconciliation.
  */
 
+import { SETTINGS_LOAD_SOURCE } from "../../shared/settings/snapshot";
 import type {
     ActivationPolicy,
     ActivationReconcileResult,
@@ -392,7 +393,7 @@ export class ApplicationLifecycle {
         // An empty store during recovery means storage was wiped underneath a
         // failure, so it stays failed closed; discarded documents were replaced
         // by persisted defaults and are trustworthy.
-        if (!loaded.ok || loaded.source === "default") {
+        if (!loaded.ok || loaded.source === SETTINGS_LOAD_SOURCE.DEFAULT) {
             await this.enterFailedClosed(true);
             return;
         }

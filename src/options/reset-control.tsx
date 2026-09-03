@@ -4,8 +4,14 @@
 
 import { Alert, Box, Stack, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
+import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import { ResetConfirmation } from "./reset-confirmation";
-import type { ResetController, ResetNotice, ResetOrigin } from "./reset-controller";
+import {
+    RESET_NOTICE,
+    type ResetController,
+    type ResetNotice,
+    type ResetOrigin,
+} from "./reset-controller";
 
 /**
  * Properties for the full settings reset control.
@@ -25,17 +31,17 @@ export interface ResetControlProps {
  * @returns - An error message, or undefined when there is no notice to show.
  */
 export function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
-    if (origin === "ready" && notice === "save-failed") {
+    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.SAVE_FAILED) {
         return "Could not reset settings. Your current settings remain active. Try again.";
     }
-    if (origin === "ready" && notice === "ambiguous") {
+    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.AMBIGUOUS) {
         return "Could not confirm whether settings were reset. Reopen Settings to check their "
             + "current state.";
     }
-    if (notice === "save-failed") {
+    if (notice === RESET_NOTICE.SAVE_FAILED) {
         return "Could not reset settings. Processing remains disabled. Try again.";
     }
-    if (notice === "ambiguous") {
+    if (notice === RESET_NOTICE.AMBIGUOUS) {
         return "The reset response could not be confirmed. Processing remains disabled. Try again.";
     }
     return undefined;

@@ -31,17 +31,31 @@ export const SITE_REPORT_REASONS = [
 export const SITE_REPORT_BROWSERS = ["Chrome", "Edge", "Firefox", "Other"] as const;
 
 /**
+ * Named site-report failures shown by extension views.
+ */
+export const SITE_REPORT_ERROR = {
+    BUSY: "busy",
+    INVALID_CONTEXT: "invalid-context",
+    BROWSER_UNAVAILABLE: "browser-unavailable",
+    MISSING_TAB: "missing-tab",
+    RESTRICTED_PAGE: "restricted-page",
+    HOSTNAME_MISMATCH: "hostname-mismatch",
+    PRIVATE_WINDOW: "private-window",
+    OPEN_FAILED: "open-failed",
+} as const;
+
+/**
  * Stable site-report failures shown by extension views.
  */
 export const SITE_REPORT_ERRORS = [
-    "busy",
-    "invalid-context",
-    "browser-unavailable",
-    "missing-tab",
-    "restricted-page",
-    "hostname-mismatch",
-    "private-window",
-    "open-failed",
+    SITE_REPORT_ERROR.BUSY,
+    SITE_REPORT_ERROR.INVALID_CONTEXT,
+    SITE_REPORT_ERROR.BROWSER_UNAVAILABLE,
+    SITE_REPORT_ERROR.MISSING_TAB,
+    SITE_REPORT_ERROR.RESTRICTED_PAGE,
+    SITE_REPORT_ERROR.HOSTNAME_MISMATCH,
+    SITE_REPORT_ERROR.PRIVATE_WINDOW,
+    SITE_REPORT_ERROR.OPEN_FAILED,
 ] as const;
 
 const hostnameSchema = v.pipe(v.string(), v.check(isCanonicalHostname));
@@ -324,26 +338,26 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
     };
     const open = async (url: string, windowId?: number): Promise<SiteReportResult> => {
         if (!runtime.tabs) {
-            return { ok: false, error: "browser-unavailable" };
+            return { ok: false, error: SITE_REPORT_ERROR.BROWSER_UNAVAILABLE };
         }
         try {
             await runtime.tabs.create(windowId === undefined ? { url } : { url, windowId });
             return { ok: true, url };
         } catch {
-            return { ok: false, error: "open-failed" };
+            return { ok: false, error: SITE_REPORT_ERROR.OPEN_FAILED };
         }
     };
     return {
         async openPopupReport(state): Promise<SiteReportResult> {
             if (busy) {
-                return { ok: false, error: "busy" };
+                return { ok: false, error: SITE_REPORT_ERROR.BUSY };
             }
             const parsedState = v.safeParse(popupStateSchema, state);
             if (!parsedState.success) {
-                return { ok: false, error: "invalid-context" };
+                return { ok: false, error: SITE_REPORT_ERROR.INVALID_CONTEXT };
             }
             if (!runtime.tabs) {
-                return { ok: false, error: "browser-unavailable" };
+                return { ok: false, error: SITE_REPORT_ERROR.BROWSER_UNAVAILABLE };
             }
             busy = true;
             try {
@@ -351,30 +365,30 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 try {
                     tabs = await runtime.tabs.query({ active: true, currentWindow: true });
                 } catch {
-                    return { ok: false, error: "missing-tab" };
+                    return { ok: false, error: SITE_REPORT_ERROR.MISSING_TAB };
                 }
                 const tab = tabs.length === 1 ? tabs[0] : undefined;
                 if (!tab?.url) {
-                    return { ok: false, error: "missing-tab" };
+                    return { ok: false, error: SITE_REPORT_ERROR.MISSING_TAB };
                 }
                 let url: URL;
                 try {
                     url = new URL(tab.url);
                 } catch {
-                    return { ok: false, error: "restricted-page" };
+                    return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
                 if (url.protocol !== "http:" && url.protocol !== "https:") {
-                    return { ok: false, error: "restricted-page" };
+                    return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
                 if (url.username !== "" || url.password !== "") {
-                    return { ok: false, error: "restricted-page" };
+                    return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
                 if (url.hostname !== parsedState.output.hostname) {
-                    return { ok: false, error: "hostname-mismatch" };
+                    return { ok: false, error: SITE_REPORT_ERROR.HOSTNAME_MISMATCH };
                 }
                 const env = environment();
                 if (!env) {
-                    return { ok: false, error: "invalid-context" };
+                    return { ok: false, error: SITE_REPORT_ERROR.INVALID_CONTEXT };
                 }
                 const reportUrl = composeSiteReportUrl({
                     ...env,
@@ -383,7 +397,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                     currentUrl: tab.url,
                 });
                 if (!reportUrl) {
-                    return { ok: false, error: "invalid-context" };
+                    return { ok: false, error: SITE_REPORT_ERROR.INVALID_CONTEXT };
                 }
                 if (tab.incognito === true) {
                     if (
@@ -391,7 +405,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                         || !Number.isSafeInteger(tab.windowId)
                         || tab.windowId < 0
                     ) {
-                        return { ok: false, error: "private-window" };
+                        return { ok: false, error: SITE_REPORT_ERROR.PRIVATE_WINDOW };
                     }
                     return await open(reportUrl, tab.windowId);
                 }
@@ -402,18 +416,18 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
         },
         async openOptionsReport(): Promise<SiteReportResult> {
             if (busy) {
-                return { ok: false, error: "busy" };
+                return { ok: false, error: SITE_REPORT_ERROR.BUSY };
             }
             busy = true;
             try {
                 const env = environment();
                 if (!env) {
-                    return { ok: false, error: "invalid-context" };
+                    return { ok: false, error: SITE_REPORT_ERROR.INVALID_CONTEXT };
                 }
                 const url = composeSiteReportUrl(env);
                 return url
                     ? await open(url)
-                    : { ok: false, error: "invalid-context" };
+                    : { ok: false, error: SITE_REPORT_ERROR.INVALID_CONTEXT };
             } finally {
                 busy = false;
             }

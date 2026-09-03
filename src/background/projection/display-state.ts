@@ -10,6 +10,7 @@ import {
     type DisplayState,
 } from "../../shared/messaging/view-state-schemas";
 import { APPLICATION_PHASE } from "../application/contracts";
+import { TIME_ZONE_MODE } from "../../shared/settings/snapshot";
 
 /**
  * Checks whether the runtime supports an IANA time-zone identifier.
@@ -38,7 +39,7 @@ export function deriveDisplayState(state: ApplicationStateView): DisplayState {
         return createUnavailableDisplayState(state.failure);
     }
     const display = snapshot.display;
-    const unavailable = display.timeZone.mode === "iana"
+    const unavailable = display.timeZone.mode === TIME_ZONE_MODE.IANA
         && !isZoneAvailable(display.timeZone.identifier);
     return {
         availability: STATE_AVAILABILITY.READY,

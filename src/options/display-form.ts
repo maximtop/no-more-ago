@@ -5,7 +5,13 @@
 import type { DatePresentationResult } from "../shared/date/format-default-date";
 import { formatDateWithPresentation } from "../shared/date/format-default-date";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
-import type { DisplaySettings } from "../shared/settings/snapshot";
+import {
+    FORMAT_MODE,
+    TIME_ZONE_MODE,
+    type DisplaySettings,
+    type FormatMode,
+    type TimeZoneMode,
+} from "../shared/settings/snapshot";
 import {
     CUSTOM_FORMAT_MAX_LENGTH,
     CUSTOM_FORMAT_ERROR,
@@ -13,20 +19,28 @@ import {
     validateCustomFormatPattern,
 } from "../shared/settings/custom-format";
 import { updatedInAnotherWindow } from "../shared/ui/copy";
+import { DISPLAY_SETTINGS_ERROR } from "../shared/messaging/view-state-values";
 
 /**
- * User-visible outcome of saving display settings.
+ * Named outcomes of saving display settings.
+ */
+export const DISPLAY_NOTICE = {
+    INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
+    UNAVAILABLE_TIME_ZONE: UNAVAILABLE_TIME_ZONE_ERROR,
+    SAVE_FAILED: DISPLAY_SETTINGS_ERROR.SAVE_FAILED,
+    INTERRUPTED: "interrupted",
+    PARTIAL_REFRESH: "partial-refresh",
+    SAVED: "saved",
+    EXTERNAL_CHANGE: "external-change",
+    UNKNOWN: "unknown",
+} as const;
+
+/**
+ * User-visible outcome of saving display settings, or undefined when there is none.
  */
 export type DisplayNotice =
-    | "invalid-time-zone"
-    | "invalid-format"
-    | typeof UNAVAILABLE_TIME_ZONE_ERROR
-    | "save-failed"
-    | "interrupted"
-    | "partial-refresh"
-    | "saved"
-    | "external-change"
-    | "unknown"
+    | (typeof DISPLAY_NOTICE)[keyof typeof DISPLAY_NOTICE]
     | undefined;
 
 /**
@@ -36,7 +50,7 @@ export interface DisplayDraft {
     /**
      * Whether dates use the browser format or a custom pattern.
      */
-    readonly formatMode: "system" | "custom";
+    readonly formatMode: FormatMode;
 
     /**
      * Custom date format pattern, retained while system formatting is selected.
@@ -46,7 +60,7 @@ export interface DisplayDraft {
     /**
      * Whether dates use the system zone, UTC, or a named IANA zone.
      */
-    readonly timeZoneMode: "system" | "utc" | "iana";
+    readonly timeZoneMode: TimeZoneMode;
 
     /**
      * IANA zone identifier when the named-zone mode is selected.
@@ -89,9 +103,13 @@ export const DISPLAY_PREVIEW_SOURCE =
 export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     return {
         formatMode: display.formatMode,
-        pattern: display.formatMode === "custom" ? display.pattern : DEFAULT_CUSTOM_FORMAT_PATTERN,
+        pattern: display.formatMode === FORMAT_MODE.CUSTOM
+            ? display.pattern
+            : DEFAULT_CUSTOM_FORMAT_PATTERN,
         timeZoneMode: display.timeZone.mode,
-        identifier: display.timeZone.mode === "iana" ? display.timeZone.identifier : "",
+        identifier: display.timeZone.mode === TIME_ZONE_MODE.IANA
+            ? display.timeZone.identifier
+            : "",
     };
 }
 
@@ -103,12 +121,12 @@ export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
  */
 export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
     const timeZone =
-        draft.timeZoneMode === "iana"
-            ? { mode: "iana" as const, identifier: draft.identifier }
+        draft.timeZoneMode === TIME_ZONE_MODE.IANA
+            ? { mode: TIME_ZONE_MODE.IANA, identifier: draft.identifier }
             : { mode: draft.timeZoneMode };
-    return draft.formatMode === "custom"
-        ? { formatMode: "custom", pattern: draft.pattern, timeZone }
-        : { formatMode: "system", timeZone };
+    return draft.formatMode === FORMAT_MODE.CUSTOM
+        ? { formatMode: FORMAT_MODE.CUSTOM, pattern: draft.pattern, timeZone }
+        : { formatMode: FORMAT_MODE.SYSTEM, timeZone };
 }
 
 /**
@@ -143,35 +161,35 @@ export function validateIdentifier(identifier: string): string | undefined {
  * @returns - An error message, or undefined when there is no notice to show.
  */
 export function displayNoticeText(notice: DisplayNotice): string | undefined {
-    if (notice === "invalid-time-zone") {
+    if (notice === DISPLAY_NOTICE.INVALID_TIME_ZONE) {
         return "This time zone is invalid or unavailable. Enter a supported IANA identifier and "
             + "try again.";
     }
-    if (notice === "invalid-format") {
+    if (notice === DISPLAY_NOTICE.INVALID_FORMAT) {
         return "The date format is invalid. Correct the pattern and try again.";
     }
-    if (notice === UNAVAILABLE_TIME_ZONE_ERROR) {
+    if (notice === DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE) {
         return "The saved time zone is unavailable in this browser. Choose System or another "
             + "supported zone, then save.";
     }
-    if (notice === "save-failed") {
+    if (notice === DISPLAY_NOTICE.SAVE_FAILED) {
         return "Could not save the display settings. Your previous format remains active. "
             + "Try again.";
     }
-    if (notice === "interrupted") {
+    if (notice === DISPLAY_NOTICE.INTERRUPTED) {
         return "The response was interrupted. Display settings were reread.";
     }
-    if (notice === "partial-refresh") {
+    if (notice === DISPLAY_NOTICE.PARTIAL_REFRESH) {
         return "Display settings were saved, but one or more open pages could not be refreshed. "
             + "New dates will use the saved setting.";
     }
-    if (notice === "saved") {
+    if (notice === DISPLAY_NOTICE.SAVED) {
         return "Display settings saved.";
     }
-    if (notice === "external-change") {
+    if (notice === DISPLAY_NOTICE.EXTERNAL_CHANGE) {
         return `${updatedInAnotherWindow("Display settings")} Saving here replaces them.`;
     }
-    if (notice === "unknown") {
+    if (notice === DISPLAY_NOTICE.UNKNOWN) {
         return "Could not confirm whether the display settings were saved. Reopen Settings to "
             + "try again.";
     }
@@ -219,14 +237,14 @@ export function customPatternError(pattern: string): string | undefined {
  */
 export function previewDisplayDraft(
     draft: DisplayDraft,
-    patternError: string | undefined = draft.formatMode === "custom"
+    patternError: string | undefined = draft.formatMode === FORMAT_MODE.CUSTOM
         ? customPatternError(draft.pattern)
         : undefined,
 ): DisplayPreview {
     if (patternError) {
         return { ok: false, text: "Fix the pattern to preview" };
     }
-    if (draft.timeZoneMode === "iana" && validateIdentifier(draft.identifier)) {
+    if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
         return { ok: false, text: "Fix the time zone to preview" };
     }
     const result: DatePresentationResult = formatDateWithPresentation(

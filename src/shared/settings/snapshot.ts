@@ -38,6 +38,61 @@ export const APPEARANCES = [
 export type Appearance = (typeof APPEARANCES)[number];
 
 /**
+ * Named date-format modes persisted in display settings.
+ */
+export const FORMAT_MODE = {
+    SYSTEM: "system",
+    CUSTOM: "custom",
+} as const;
+
+/**
+ * Date-format mode persisted in display settings.
+ */
+export type FormatMode = (typeof FORMAT_MODE)[keyof typeof FORMAT_MODE];
+
+/**
+ * Named time-zone modes persisted in display settings.
+ */
+export const TIME_ZONE_MODE = {
+    SYSTEM: "system",
+    UTC: "utc",
+    IANA: "iana",
+} as const;
+
+/**
+ * Time-zone mode persisted in display settings.
+ */
+export type TimeZoneMode = (typeof TIME_ZONE_MODE)[keyof typeof TIME_ZONE_MODE];
+
+/**
+ * Named storage paths a settings load can report.
+ */
+export const SETTINGS_LOAD_SOURCE = {
+    DEFAULT: "default",
+    STORED: "stored",
+    RECOVERED: "recovered",
+    DISCARDED: "discarded",
+} as const;
+
+/**
+ * Storage path from which a settings load obtained its snapshot.
+ */
+export type SettingsLoadSource = (typeof SETTINGS_LOAD_SOURCE)[keyof typeof SETTINGS_LOAD_SOURCE];
+
+/**
+ * Named reasons a settings load fails closed.
+ */
+export const SETTINGS_LOAD_ERROR = {
+    LOAD_FAILED: "load-failed",
+    INVALID_SETTINGS: "invalid-settings",
+} as const;
+
+/**
+ * Reason a settings load failed closed.
+ */
+export type SettingsLoadError = (typeof SETTINGS_LOAD_ERROR)[keyof typeof SETTINGS_LOAD_ERROR];
+
+/**
  * The presentation choices persisted alongside the extension policy.
  */
 export type TimeZoneSelection =
@@ -45,19 +100,19 @@ export type TimeZoneSelection =
         /**
          * Uses the browser's current system time zone.
          */
-        readonly mode: "system";
+        readonly mode: typeof TIME_ZONE_MODE.SYSTEM;
     }
     | {
         /**
          * Uses Coordinated Universal Time.
          */
-        readonly mode: "utc";
+        readonly mode: typeof TIME_ZONE_MODE.UTC;
     }
     | {
         /**
          * Uses an explicitly selected IANA time zone.
          */
-        readonly mode: "iana";
+        readonly mode: typeof TIME_ZONE_MODE.IANA;
 
         /**
          * Structurally valid IANA time-zone identifier.
@@ -73,7 +128,7 @@ export type DisplaySettings =
         /**
          * Uses the browser locale's standard date and time format.
          */
-        readonly formatMode: "system";
+        readonly formatMode: typeof FORMAT_MODE.SYSTEM;
 
         /**
          * Time zone applied before the system format renders the timestamp.
@@ -84,7 +139,7 @@ export type DisplaySettings =
         /**
          * Uses a validated user-supplied date-fns pattern.
          */
-        readonly formatMode: "custom";
+        readonly formatMode: typeof FORMAT_MODE.CUSTOM;
 
         /**
          * Validated date-fns pattern used to render the timestamp.
@@ -187,8 +242,8 @@ export const SETTINGS_PREVIOUS_STORAGE_KEY = "settings.previous" as const;
  * Immutable system-format fallback used when no valid saved display choice exists.
  */
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = Object.freeze({
-    formatMode: "system",
-    timeZone: Object.freeze({ mode: "system" }),
+    formatMode: FORMAT_MODE.SYSTEM,
+    timeZone: Object.freeze({ mode: TIME_ZONE_MODE.SYSTEM }),
 });
 
 /**
@@ -224,7 +279,7 @@ export type SettingsLoadResult =
          * `discarded` means a document of another schema version was found
          * and replaced by persisted defaults.
          */
-        readonly source: "default" | "stored" | "recovered" | "discarded";
+        readonly source: SettingsLoadSource;
     }
     | {
         /**
@@ -235,7 +290,7 @@ export type SettingsLoadResult =
         /**
          * Stable reason the settings load failed closed.
          */
-        readonly error: "load-failed" | "invalid-settings";
+        readonly error: SettingsLoadError;
     };
 
 const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
@@ -276,7 +331,7 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: string): boole
  * @returns - Whether the selection satisfies its domain constraints.
  */
 export function isTimeZoneSelection(value: TimeZoneSelection): boolean {
-    if (value.mode === "system" || value.mode === "utc") {
+    if (value.mode === TIME_ZONE_MODE.SYSTEM || value.mode === TIME_ZONE_MODE.UTC) {
         return true;
     }
     return isStructurallyValidTimeZoneIdentifier(value.identifier);
@@ -292,8 +347,8 @@ export function parseTimeZoneSelection(value: TimeZoneSelection): TimeZoneSelect
     if (!isTimeZoneSelection(value)) {
         return null;
     }
-    return value.mode === "iana"
-        ? Object.freeze({ mode: "iana", identifier: value.identifier })
+    return value.mode === TIME_ZONE_MODE.IANA
+        ? Object.freeze({ mode: TIME_ZONE_MODE.IANA, identifier: value.identifier })
         : Object.freeze({ mode: value.mode });
 }
 
@@ -318,14 +373,14 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
     if (timeZone === null) {
         return null;
     }
-    if (value.formatMode === "system") {
-        return Object.freeze({ formatMode: "system", timeZone });
+    if (value.formatMode === FORMAT_MODE.SYSTEM) {
+        return Object.freeze({ formatMode: FORMAT_MODE.SYSTEM, timeZone });
     }
     const checked = validateCustomFormatPattern(value.pattern);
     if (!checked.ok) {
         return null;
     }
-    return Object.freeze({ formatMode: "custom", pattern: checked.pattern, timeZone });
+    return Object.freeze({ formatMode: FORMAT_MODE.CUSTOM, pattern: checked.pattern, timeZone });
 }
 
 /**
@@ -339,15 +394,19 @@ export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boo
     if (a.formatMode !== b.formatMode) {
         return false;
     }
-    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) {
+    if (
+        a.formatMode === FORMAT_MODE.CUSTOM
+        && b.formatMode === FORMAT_MODE.CUSTOM
+        && a.pattern !== b.pattern
+    ) {
         return false;
     }
     if (a.timeZone.mode !== b.timeZone.mode) {
         return false;
     }
     return (
-        a.timeZone.mode !== "iana"
-        || b.timeZone.mode !== "iana"
+        a.timeZone.mode !== TIME_ZONE_MODE.IANA
+        || b.timeZone.mode !== TIME_ZONE_MODE.IANA
         || a.timeZone.identifier === b.timeZone.identifier
     );
 }

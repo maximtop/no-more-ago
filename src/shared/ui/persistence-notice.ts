@@ -3,17 +3,28 @@
  */
 
 import { CLIENT_RESULT_KIND, type MutationResult } from "../client-result";
-import type { SiteSettingsError } from "../messaging/view-state-values";
+import {
+    SETTINGS_PERSISTENCE_ERROR,
+    SITE_SETTINGS_ERROR,
+    type SiteSettingsError,
+} from "../messaging/view-state-values";
 
 /**
- * User-visible outcome of a settings mutation shared by the popup and Settings.
+ * Named outcomes of a settings mutation shared by the popup and Settings.
+ */
+export const MUTATION_NOTICE = {
+    SAVE_FAILED: SITE_SETTINGS_ERROR.SAVE_FAILED,
+    INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
+    LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
+    INTERRUPTED: "interrupted",
+    UNKNOWN: "unknown",
+} as const;
+
+/**
+ * User-visible outcome of a settings mutation, or undefined when there is none.
  */
 export type MutationNotice =
-    | "save-failed"
-    | "invalid-hostname"
-    | "list-full"
-    | "interrupted"
-    | "unknown"
+    | (typeof MUTATION_NOTICE)[keyof typeof MUTATION_NOTICE]
     | undefined;
 
 /**
@@ -24,7 +35,9 @@ export type MutationNotice =
  * @returns - Notice to show for the error.
  */
 export function persistenceNotice(error: SiteSettingsError): MutationNotice {
-    return error === "settings-unavailable" ? "unknown" : error;
+    return error === SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE
+        ? MUTATION_NOTICE.UNKNOWN
+        : error;
 }
 
 /**
@@ -62,8 +75,8 @@ export function settleMutation<TState>(
         };
     }
     return result.state
-        ? { state: result.state, notice: "interrupted" }
-        : { state: undefined, notice: "unknown" };
+        ? { state: result.state, notice: MUTATION_NOTICE.INTERRUPTED }
+        : { state: undefined, notice: MUTATION_NOTICE.UNKNOWN };
 }
 
 /**
@@ -77,20 +90,20 @@ export function mutationNoticeText(
     notice: MutationNotice,
     retryHint: string,
 ): string | undefined {
-    if (notice === "save-failed") {
+    if (notice === MUTATION_NOTICE.SAVE_FAILED) {
         return "Could not save this change. Try again.";
     }
-    if (notice === "invalid-hostname") {
+    if (notice === MUTATION_NOTICE.INVALID_HOSTNAME) {
         return "This hostname is invalid. Use an exact hostname without a scheme, port, path, "
             + "or wildcard.";
     }
-    if (notice === "list-full") {
+    if (notice === MUTATION_NOTICE.LIST_FULL) {
         return "This list is full. Remove a hostname before adding another.";
     }
-    if (notice === "interrupted") {
+    if (notice === MUTATION_NOTICE.INTERRUPTED) {
         return "The response was interrupted. Current state was reloaded.";
     }
-    if (notice === "unknown") {
+    if (notice === MUTATION_NOTICE.UNKNOWN) {
         return `Could not confirm whether the change was saved. ${retryHint}`;
     }
     return undefined;

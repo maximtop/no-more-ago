@@ -16,12 +16,19 @@ export const DIAGNOSTICS_ARCHIVE_MEMBER = "diagnostics.json" as const;
 export const DIAGNOSTICS_ARCHIVE_FILE = "no-more-ago-diagnostics.zip" as const;
 
 /**
- * Stable archive failures shown by both surfaces.
+ * Named archive failures shown by both surfaces.
+ */
+export const DIAGNOSTIC_ARCHIVE_ERROR = {
+    EMPTY: "empty",
+    COMPRESSION_FAILED: "compression-failed",
+    DOWNLOAD_FAILED: "download-failed",
+} as const;
+
+/**
+ * Stable archive failure shown by both surfaces.
  */
 export type DiagnosticArchiveErrorCode =
-    | "empty"
-    | "compression-failed"
-    | "download-failed";
+    (typeof DIAGNOSTIC_ARCHIVE_ERROR)[keyof typeof DIAGNOSTIC_ARCHIVE_ERROR];
 
 /**
  * Validated snapshot accepted by archive creation.
@@ -116,14 +123,17 @@ export function createDiagnosticsZip(
     encoder: ZipEncoder = fflate.zipSync,
 ): Uint8Array {
     if (snapshot.entries.length === 0) {
-        throw new DiagnosticArchiveError("empty", "There are no diagnostic entries to download.");
+        throw new DiagnosticArchiveError(
+            DIAGNOSTIC_ARCHIVE_ERROR.EMPTY,
+            "There are no diagnostic entries to download.",
+        );
     }
     try {
         const json = fflate.strToU8(JSON.stringify(snapshot));
         return encoder({ [DIAGNOSTICS_ARCHIVE_MEMBER]: new Uint8Array(json) });
     } catch (cause) {
         throw new DiagnosticArchiveError(
-            "compression-failed",
+            DIAGNOSTIC_ARCHIVE_ERROR.COMPRESSION_FAILED,
             "The diagnostic archive could not be created.",
             { cause },
         );
@@ -159,7 +169,7 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRunti
         }
         anchor?.remove?.();
         throw new DiagnosticArchiveError(
-            "download-failed",
+            DIAGNOSTIC_ARCHIVE_ERROR.DOWNLOAD_FAILED,
             "The diagnostic archive could not be downloaded.",
             { cause },
         );

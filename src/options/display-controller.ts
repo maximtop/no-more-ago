@@ -9,9 +9,19 @@ import {
     type DisplayState,
 } from "../shared/messaging/view-state-schemas";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import { sameDisplaySettings, type Appearance } from "../shared/settings/snapshot";
+import {
+    FORMAT_MODE,
+    TIME_ZONE_MODE,
+    sameDisplaySettings,
+    type Appearance,
+} from "../shared/settings/snapshot";
+import {
+    DISPLAY_SETTINGS_ERROR,
+    type DisplaySettingsError,
+} from "../shared/messaging/view-state-values";
 import type { SitesClient } from "./client";
 import {
+    DISPLAY_NOTICE,
     customPatternError,
     displayFromDraft,
     draftFromDisplay,
@@ -143,9 +153,31 @@ export interface DisplayController {
 }
 
 const DEFAULT_DISPLAY_DRAFT = draftFromDisplay({
-    formatMode: "system",
-    timeZone: { mode: "system" },
+    formatMode: FORMAT_MODE.SYSTEM,
+    timeZone: { mode: TIME_ZONE_MODE.SYSTEM },
 });
+
+/**
+ * Maps a rejected display command to the notice shown beside the form.
+ *
+ * @param error - Error returned by the display-settings command.
+ * @returns - Notice describing the rejection.
+ */
+function displayNoticeForError(error: DisplaySettingsError): DisplayNotice {
+    if (
+        error === DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE
+        || error === DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS
+    ) {
+        return DISPLAY_NOTICE.INVALID_TIME_ZONE;
+    }
+    if (error === DISPLAY_SETTINGS_ERROR.INVALID_FORMAT) {
+        return DISPLAY_NOTICE.INVALID_FORMAT;
+    }
+    if (error === DISPLAY_SETTINGS_ERROR.SAVE_FAILED) {
+        return DISPLAY_NOTICE.SAVE_FAILED;
+    }
+    return DISPLAY_NOTICE.UNKNOWN;
+}
 
 /**
  * Reports whether the draft differs from the committed display settings.
@@ -238,12 +270,12 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         if (!state || state.availability !== STATE_AVAILABILITY.READY || !draft || saving) {
             return;
         }
-        if (draft.formatMode === "custom" && customPatternError(draft.pattern)) {
-            setNotice("invalid-format");
+        if (draft.formatMode === FORMAT_MODE.CUSTOM && customPatternError(draft.pattern)) {
+            setNotice(DISPLAY_NOTICE.INVALID_FORMAT);
             return;
         }
-        if (draft.timeZoneMode === "iana" && validateIdentifier(draft.identifier)) {
-            setNotice("invalid-time-zone");
+        if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
+            setNotice(DISPLAY_NOTICE.INVALID_TIME_ZONE);
             return;
         }
         setSaving(true);
@@ -254,7 +286,8 @@ export function useDisplayController(options: DisplayControllerOptions): Display
             if (accepts(responseState)) {
                 if (
                     responseState.availability === STATE_AVAILABILITY.READY
-                    && (result.response.ok || result.response.error !== "invalid-format")
+                    && (result.response.ok
+                        || result.response.error !== DISPLAY_SETTINGS_ERROR.INVALID_FORMAT)
                 ) {
                     adopt(responseState);
                 } else {
@@ -262,29 +295,20 @@ export function useDisplayController(options: DisplayControllerOptions): Display
                 }
             }
             if (!result.response.ok) {
-                setNotice(
-                    result.response.error === "invalid-time-zone"
-                    || result.response.error === "invalid-display-settings"
-                        ? "invalid-time-zone"
-                        : result.response.error === "invalid-format"
-                            ? "invalid-format"
-                            : result.response.error === "save-failed"
-                                ? "save-failed"
-                                : "unknown",
-                );
+                setNotice(displayNoticeForError(result.response.error));
             } else if (result.response.refreshFailures.length > 0) {
-                setNotice("partial-refresh");
+                setNotice(DISPLAY_NOTICE.PARTIAL_REFRESH);
             } else {
-                setNotice("saved");
+                setNotice(DISPLAY_NOTICE.SAVED);
             }
         } else if (result.state) {
             if (accepts(result.state)) {
                 adopt(result.state);
             }
-            setNotice("interrupted");
+            setNotice(DISPLAY_NOTICE.INTERRUPTED);
         } else {
             setState(createUnavailableDisplayState());
-            setNotice("unknown");
+            setNotice(DISPLAY_NOTICE.UNKNOWN);
         }
         setSaving(false);
     };
@@ -294,7 +318,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
             adopt(await client.getDisplayState());
         } catch {
             setState(createUnavailableDisplayState());
-            setNotice("unknown");
+            setNotice(DISPLAY_NOTICE.UNKNOWN);
         } finally {
             setLoading(false);
         }
@@ -318,7 +342,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
             return;
         }
         if (dirty) {
-            setNotice("external-change");
+            setNotice(DISPLAY_NOTICE.EXTERNAL_CHANGE);
         } else {
             setDraft(draftFromDisplay(next.display));
         }

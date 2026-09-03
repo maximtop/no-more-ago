@@ -4,7 +4,10 @@
 
 import { useRef, useState } from "react";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import {
+    SETTINGS_PERSISTENCE_ERROR,
+    STATE_AVAILABILITY,
+} from "../shared/messaging/view-state-values";
 import type { StateAvailability } from "../shared/messaging/view-state-values";
 import type { SitesClient } from "./client";
 import type { DiagnosticsController } from "./diagnostics-controller";
@@ -12,9 +15,17 @@ import type { DisplayController } from "./display-controller";
 import type { SitesController } from "./sites-controller";
 
 /**
- * User-visible outcome of resetting all settings.
+ * Named outcomes of resetting all settings.
  */
-export type ResetNotice = "save-failed" | "ambiguous" | undefined;
+export const RESET_NOTICE = {
+    SAVE_FAILED: SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
+    AMBIGUOUS: "ambiguous",
+} as const;
+
+/**
+ * User-visible outcome of resetting all settings, or undefined when there is none.
+ */
+export type ResetNotice = (typeof RESET_NOTICE)[keyof typeof RESET_NOTICE] | undefined;
 
 /**
  * Availability state from which a reset was initiated.
@@ -111,7 +122,9 @@ export function useResetController(options: ResetControllerOptions): ResetContro
                     sites.applyState(result.response.state);
                 }
                 setNotice(
-                    result.response.error === "save-failed" ? "save-failed" : "ambiguous",
+                    result.response.error === SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED
+                        ? RESET_NOTICE.SAVE_FAILED
+                        : RESET_NOTICE.AMBIGUOUS,
                 );
             }
         } else {
@@ -120,7 +133,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
             if (nextOrigin === STATE_AVAILABILITY.UNAVAILABLE) {
                 sites.markUnavailable();
             }
-            setNotice("ambiguous");
+            setNotice(RESET_NOTICE.AMBIGUOUS);
         }
         inFlight.current = false;
         setResetting(false);

@@ -97,23 +97,34 @@ export const GET_DIAGNOSTICS_SNAPSHOT_MESSAGE = "no-more-ago:get-diagnostics-sna
 export const CLEAR_DIAGNOSTICS_MESSAGE = "no-more-ago:clear-diagnostics" as const;
 
 /**
+ * Named reasons a diagnostics read or clear fails.
+ */
+export const DIAGNOSTICS_ERROR = {
+    DISABLED: "disabled",
+    UNAVAILABLE: "unavailable",
+    EMPTY: "empty",
+    INVALID_JOURNAL: "invalid-journal",
+    STORAGE_FAILED: "storage-failed",
+} as const;
+
+/**
  * Errors returned when a diagnostic snapshot cannot be read.
  */
 export const DIAGNOSTICS_SNAPSHOT_ERRORS = [
-    "disabled",
-    "unavailable",
-    "empty",
-    "invalid-journal",
-    "storage-failed",
+    DIAGNOSTICS_ERROR.DISABLED,
+    DIAGNOSTICS_ERROR.UNAVAILABLE,
+    DIAGNOSTICS_ERROR.EMPTY,
+    DIAGNOSTICS_ERROR.INVALID_JOURNAL,
+    DIAGNOSTICS_ERROR.STORAGE_FAILED,
 ] as const;
 
 /**
  * Errors returned when diagnostic entries cannot be cleared.
  */
 export const DIAGNOSTICS_CLEAR_ERRORS = [
-    "disabled",
-    "unavailable",
-    "storage-failed",
+    DIAGNOSTICS_ERROR.DISABLED,
+    DIAGNOSTICS_ERROR.UNAVAILABLE,
+    DIAGNOSTICS_ERROR.STORAGE_FAILED,
 ] as const;
 
 /**

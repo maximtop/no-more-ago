@@ -13,7 +13,11 @@ import {
     type SubscribeSettingsChanged,
 } from "../shared/messaging/settings-notifications";
 import { useSettingsChanged } from "../shared/ui/use-settings-changed";
-import { settleMutation, type MutationNotice } from "../shared/ui/persistence-notice";
+import {
+    MUTATION_NOTICE,
+    settleMutation,
+    type MutationNotice,
+} from "../shared/ui/persistence-notice";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import { downloadDiagnosticsSnapshot } from "../shared/diagnostics/download";
 import { createPopupClient, type PopupClient } from "./client";
@@ -24,9 +28,17 @@ import { createPopupClient, type PopupClient } from "./client";
 export const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
 
 /**
+ * Named popup notices: every shared mutation outcome plus an external change.
+ */
+export const POPUP_NOTICE = {
+    ...MUTATION_NOTICE,
+    EXTERNAL_CHANGE: "external-change",
+} as const;
+
+/**
  * User-visible outcome of a popup settings mutation or an external change.
  */
-export type PopupNotice = MutationNotice | "external-change";
+export type PopupNotice = MutationNotice | typeof POPUP_NOTICE.EXTERNAL_CHANGE;
 
 /**
  * Dependencies and preloaded state for the popup controller.
@@ -175,7 +187,7 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         void client.getState().then(
             (next) => {
                 setState(next);
-                setNotice("external-change");
+                setNotice(POPUP_NOTICE.EXTERNAL_CHANGE);
             },
             () => undefined,
         );
@@ -242,14 +254,14 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         const reset = await client.resetAllSettings();
         inFlight.current = false;
         if (!reset) {
-            setNotice("unknown");
+            setNotice(POPUP_NOTICE.UNKNOWN);
             setSaving(false);
             return;
         }
         try {
             setState(await client.getState());
         } catch {
-            setNotice("unknown");
+            setNotice(POPUP_NOTICE.UNKNOWN);
         } finally {
             setSaving(false);
         }

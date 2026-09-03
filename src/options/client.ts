@@ -20,6 +20,7 @@ import {
     SET_SITE_SCOPE_MODE_MESSAGE,
     clearDiagnosticsResponseSchema,
     getDiagnosticsSnapshotResponseSchema,
+    DIAGNOSTICS_ERROR,
     type DiagnosticsClearError,
 } from "../shared/messaging/contracts";
 import {
@@ -340,10 +341,10 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({ type: GET_DIAGNOSTICS_SNAPSHOT_MESSAGE });
         } catch {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         return response.ok
             ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }
@@ -360,10 +361,10 @@ export class SitesClient {
         try {
             response = await this.transport.sendMessage({ type: CLEAR_DIAGNOSTICS_MESSAGE });
         } catch {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         if (!v.is(clearDiagnosticsResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.ERROR, error: "unavailable" };
+            return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         return response.ok
             ? { kind: CLIENT_RESULT_KIND.RESPONSE }

@@ -3,6 +3,11 @@
  */
 
 import * as v from "valibot";
+import {
+    DIAGNOSTICS_ERROR,
+    type DiagnosticsClearError,
+    type DiagnosticsSnapshotError,
+} from "../../shared/messaging/contracts";
 import { diagnosticEventSchema, type DiagnosticEvent } from "../../shared/diagnostics/events";
 
 /**
@@ -61,7 +66,7 @@ export type DiagnosticJournalSnapshotResult =
         /**
          * Stable failure reported to the options page.
          */
-        readonly error: "disabled" | "empty" | "invalid-journal" | "storage-failed";
+        readonly error: DiagnosticsSnapshotError;
     };
 
 /**
@@ -83,7 +88,7 @@ export type DiagnosticJournalClearResult =
         /**
          * Stable clear failure reported to the options page.
          */
-        readonly error: "disabled" | "storage-failed";
+        readonly error: DiagnosticsClearError;
     };
 
 const envelopeSchema = v.strictObject({ entries: v.array(diagnosticEventSchema) });
@@ -225,13 +230,13 @@ export class DiagnosticJournal {
      */
     public readSnapshot(): Promise<DiagnosticJournalSnapshotResult> {
         if (!this.enabledState) {
-            return Promise.resolve({ ok: false, error: "disabled" });
+            return Promise.resolve({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
         }
         const generation = this.generation;
         return this.serialize(async () =>
             this.isCurrent(generation)
                 ? this.readEnvelope()
-                : { ok: false, error: "disabled" } as const);
+                : { ok: false, error: DIAGNOSTICS_ERROR.DISABLED } as const);
     }
 
     /**
@@ -254,16 +259,18 @@ export class DiagnosticJournal {
         try {
             values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
         } catch {
-            return { ok: false, error: "storage-failed" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED };
         }
         if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
-            return { ok: false, error: "empty" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.EMPTY };
         }
         const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
         if (!entries) {
-            return { ok: false, error: "invalid-journal" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.INVALID_JOURNAL };
         }
-        return entries.length === 0 ? { ok: false, error: "empty" } : { ok: true, entries };
+        return entries.length === 0
+            ? { ok: false, error: DIAGNOSTICS_ERROR.EMPTY }
+            : { ok: true, entries };
     }
 
     /**
@@ -273,7 +280,7 @@ export class DiagnosticJournal {
      */
     public clearEntries(): Promise<DiagnosticJournalClearResult> {
         if (!this.enabledState) {
-            return Promise.resolve({ ok: false, error: "disabled" });
+            return Promise.resolve({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
         }
         this.generation += 1;
         return this.serialize(async () => {
@@ -281,7 +288,7 @@ export class DiagnosticJournal {
                 await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
                 return { ok: true } as const;
             } catch {
-                return { ok: false, error: "storage-failed" } as const;
+                return { ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED } as const;
             }
         });
     }

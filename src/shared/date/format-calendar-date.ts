@@ -9,6 +9,7 @@ import type { CalendarDate } from "./calendar-date";
 import { resolveDateLocale } from "./date-locale";
 import {
     DEFAULT_DISPLAY_SETTINGS,
+    FORMAT_MODE,
     type DisplaySettings,
 } from "../settings/snapshot";
 
@@ -250,7 +251,7 @@ export function formatCalendarDate(
     display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
 ): string {
     const fallback = systemCalendarFormat(value, locales);
-    if (display.formatMode === "system") {
+    if (display.formatMode === FORMAT_MODE.SYSTEM) {
         return fallback;
     }
     try {

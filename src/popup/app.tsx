@@ -7,6 +7,7 @@ import { useMemo, useState, type ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import { APPEARANCE } from "../shared/settings/snapshot";
 import {
+    SITE_REPORT_ERROR,
     createDefaultSiteReportReporter,
     type SiteReportError,
     type SiteReportReporter,
@@ -66,25 +67,25 @@ export interface PopupAppProps {
  * @returns - The error message displayed to the user.
  */
 function siteReportErrorText(error: SiteReportError): string {
-    if (error === "missing-tab") {
+    if (error === SITE_REPORT_ERROR.MISSING_TAB) {
         return "Could not find the current site. Reopen the popup and try again.";
     }
-    if (error === "restricted-page") {
+    if (error === SITE_REPORT_ERROR.RESTRICTED_PAGE) {
         return "This page cannot be reported. Open an HTTP or HTTPS site.";
     }
-    if (error === "hostname-mismatch") {
+    if (error === SITE_REPORT_ERROR.HOSTNAME_MISMATCH) {
         return "The current site changed. Reopen the popup and try again.";
     }
-    if (error === "private-window") {
+    if (error === SITE_REPORT_ERROR.PRIVATE_WINDOW) {
         return "Could not safely open the report in this private window.";
     }
-    if (error === "browser-unavailable") {
+    if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
         return "Site reporting is unavailable in this browser.";
     }
-    if (error === "invalid-context") {
+    if (error === SITE_REPORT_ERROR.INVALID_CONTEXT) {
         return "Could not identify this site or extension. Reopen the popup and try again.";
     }
-    if (error === "busy") {
+    if (error === SITE_REPORT_ERROR.BUSY) {
         return "A site report is already being opened.";
     }
     return "Could not open the GitHub report. Try again.";

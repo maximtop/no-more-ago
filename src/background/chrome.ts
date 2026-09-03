@@ -9,6 +9,7 @@ import * as v from "valibot";
 import { BackgroundApplication } from "./application";
 import {
     CLEAR_DIAGNOSTICS_MESSAGE,
+    DIAGNOSTICS_ERROR,
     GET_DEBUG_STATE_MESSAGE,
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_DISPLAY_STATE_MESSAGE,
@@ -33,6 +34,7 @@ import {
     createUnavailableSitesState,
 } from "../shared/messaging/view-state-schemas";
 import {
+    SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_SURFACE,
     type SiteSettingsSurface,
 } from "../shared/messaging/view-state-values";
@@ -237,10 +239,10 @@ function isTrustedSurfaceSender(sender: chrome.runtime.MessageSender): boolean {
  */
 function unavailableCommand<TState>(state: TState): {
     readonly ok: false;
-    readonly error: "settings-unavailable";
+    readonly error: typeof SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
     readonly state: TState;
 } {
-    return { ok: false, error: "settings-unavailable", state };
+    return { ok: false, error: SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE, state };
 }
 
 /**
@@ -285,7 +287,10 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             }
             void application
                 .getDiagnosticsSnapshot()
-                .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
+                .then(
+                    sendOnce,
+                    () => sendOnce({ ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE }),
+                );
             return true;
         }
         if (request.type === CLEAR_DIAGNOSTICS_MESSAGE) {
@@ -294,7 +299,10 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             }
             void application
                 .clearDiagnostics()
-                .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
+                .then(
+                    sendOnce,
+                    () => sendOnce({ ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE }),
+                );
             return true;
         }
         if (request.type === GET_POPUP_STATE_MESSAGE) {

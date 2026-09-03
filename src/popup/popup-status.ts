@@ -15,9 +15,19 @@ import {
 } from "../shared/settings/site-scope";
 
 /**
- * Semantic tone paired with every status so state is never color alone.
+ * Named semantic tones paired with every status so state is never color alone.
  */
-export type StatusTone = "active" | "neutral" | "warning" | "danger";
+export const STATUS_TONE = {
+    ACTIVE: "active",
+    NEUTRAL: "neutral",
+    WARNING: "warning",
+    DANGER: "danger",
+} as const;
+
+/**
+ * Semantic tone paired with a popup status.
+ */
+export type StatusTone = (typeof STATUS_TONE)[keyof typeof STATUS_TONE];
 
 /**
  * Status text and its semantic tone.
@@ -43,22 +53,22 @@ export interface PopupStatusModel {
 export function popupStatusModel(state: PopupState): PopupStatusModel {
     if (state.availability === STATE_AVAILABILITY.UNAVAILABLE) {
         return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-            ? { text: "Current processing state is unknown", tone: "warning" }
-            : { text: "Settings are unavailable", tone: "danger" };
+            ? { text: "Current processing state is unknown", tone: STATUS_TONE.WARNING }
+            : { text: "Settings are unavailable", tone: STATUS_TONE.DANGER };
     }
     switch (state.status) {
         case POPUP_STATUS.ACTIVE:
-            return { text: "Active", tone: "active" };
+            return { text: "Active", tone: STATUS_TONE.ACTIVE };
         case POPUP_STATUS.GLOBAL_DISABLED:
-            return { text: "Extension is off", tone: "neutral" };
+            return { text: "Extension is off", tone: STATUS_TONE.NEUTRAL };
         case POPUP_STATUS.SITE_EXCLUDED:
-            return { text: "Excluded on this site", tone: "neutral" };
+            return { text: "Excluded on this site", tone: STATUS_TONE.NEUTRAL };
         case POPUP_STATUS.SITE_NOT_SELECTED:
-            return { text: "Not selected for this site", tone: "neutral" };
+            return { text: "Not selected for this site", tone: STATUS_TONE.NEUTRAL };
         case POPUP_STATUS.INACCESSIBLE:
-            return { text: "Cannot run on this page", tone: "warning" };
+            return { text: "Cannot run on this page", tone: STATUS_TONE.WARNING };
         case POPUP_STATUS.RUNTIME_FAILED:
-            return { text: "Could not process this page", tone: "danger" };
+            return { text: "Could not process this page", tone: STATUS_TONE.DANGER };
     }
 }
 

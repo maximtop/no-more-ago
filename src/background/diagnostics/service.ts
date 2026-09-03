@@ -24,10 +24,11 @@ import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
 import { STATE_AVAILABILITY } from "../../shared/messaging/view-state-values";
-import type {
-    ClearDiagnosticsResponse,
-    DiagnosticsEnvironment,
-    GetDiagnosticsSnapshotResponse,
+import {
+    DIAGNOSTICS_ERROR,
+    type ClearDiagnosticsResponse,
+    type DiagnosticsEnvironment,
+    type GetDiagnosticsSnapshotResponse,
 } from "../../shared/messaging/contracts";
 import {
     createUnavailableDebugState,
@@ -93,11 +94,11 @@ export class DiagnosticsService {
         state: ApplicationStateView,
     ): Promise<GetDiagnosticsSnapshotResponse> {
         if (!this.journal) {
-            return { ok: false, error: "unavailable" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         const snapshot = state.phase === APPLICATION_PHASE.READY ? state.snapshot : undefined;
         if (snapshot && !snapshot.debugEnabled) {
-            return { ok: false, error: "disabled" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.DISABLED };
         }
         const result = snapshot
             ? await this.journal.readSnapshot()
@@ -123,10 +124,10 @@ export class DiagnosticsService {
             || !state.snapshot
             || !this.journal
         ) {
-            return { ok: false, error: "unavailable" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         if (!state.snapshot.debugEnabled) {
-            return { ok: false, error: "disabled" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.DISABLED };
         }
         return this.journal.clearEntries();
     }

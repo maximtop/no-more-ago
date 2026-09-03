@@ -8,7 +8,7 @@ import type { ReadyPopupState } from "../shared/messaging/view-state-schemas";
 import { SITE_SCOPE_MODE_LABEL } from "../shared/settings/site-scope";
 import { GLOBAL_SWITCH_LABEL, updatedInAnotherWindow } from "../shared/ui/copy";
 import { mutationNoticeText } from "../shared/ui/persistence-notice";
-import type { PopupNotice } from "./popup-controller";
+import { POPUP_NOTICE, type PopupNotice } from "./popup-controller";
 import { popupStatusModel, siteControlDescription } from "./popup-status";
 
 /**
@@ -74,7 +74,7 @@ function noticePresentation(notice: PopupNotice): {
     readonly color: string;
     readonly role: "status" | "alert";
 } | undefined {
-    if (notice === "external-change") {
+    if (notice === POPUP_NOTICE.EXTERNAL_CHANGE) {
         return { text: updatedInAnotherWindow("Settings"), color: "gray", role: "status" };
     }
     const text = mutationNoticeText(notice, RETRY_HINT);

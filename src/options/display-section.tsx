@@ -10,8 +10,10 @@ import {
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
+import { FORMAT_MODE, TIME_ZONE_MODE } from "../shared/settings/snapshot";
 import type { DisplayController } from "./display-controller";
 import {
+    DISPLAY_NOTICE,
     DISPLAY_PREVIEW_SOURCE,
     customPatternError,
     displayNoticeText,
@@ -56,10 +58,10 @@ function noticePresentation(notice: DisplayNotice): {
     readonly color: string;
     readonly role: "status" | "alert";
 } {
-    if (notice === "saved") {
+    if (notice === DISPLAY_NOTICE.SAVED) {
         return { color: "signal", role: "status" };
     }
-    if (notice === "partial-refresh" || notice === "external-change") {
+    if (notice === DISPLAY_NOTICE.PARTIAL_REFRESH || notice === DISPLAY_NOTICE.EXTERNAL_CHANGE) {
         return { color: "yellow", role: "status" };
     }
     return { color: "red", role: "alert" };
@@ -79,7 +81,7 @@ function useDraftAnalysis(draft: DisplayDraft | undefined): {
         if (!draft) {
             return undefined;
         }
-        const patternError = draft.formatMode === "custom"
+        const patternError = draft.formatMode === FORMAT_MODE.CUSTOM
             ? customPatternError(draft.pattern)
             : undefined;
         return { patternError, preview: previewDisplayDraft(draft, patternError) };
@@ -96,7 +98,8 @@ function useDraftAnalysis(draft: DisplayDraft | undefined): {
 export function DisplaySection({ controller }: DisplaySectionProps): ReactElement {
     const { state, draft, loading, saving, notice } = controller;
     const analysis = useDraftAnalysis(draft);
-    const inlineNotice = notice === "invalid-time-zone" || notice === "invalid-format";
+    const inlineNotice = notice === DISPLAY_NOTICE.INVALID_TIME_ZONE
+        || notice === DISPLAY_NOTICE.INVALID_FORMAT;
     return (
         <Stack gap="lg" component="section" aria-labelledby="display-heading">
             <Box>
@@ -120,18 +123,18 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                         className="options-select"
                         value={draft.formatMode}
                         data={[
-                            { value: "system", label: "System" },
-                            { value: "custom", label: "Custom format" },
+                            { value: FORMAT_MODE.SYSTEM, label: "System" },
+                            { value: FORMAT_MODE.CUSTOM, label: "Custom format" },
                         ]}
                         onChange={(event) => {
                             const value = event.currentTarget.value;
-                            if (value === "system" || value === "custom") {
+                            if (value === FORMAT_MODE.SYSTEM || value === FORMAT_MODE.CUSTOM) {
                                 controller.setFormatMode(value);
                             }
                         }}
                         disabled={saving}
                     />
-                    {draft.formatMode === "custom" ? (
+                    {draft.formatMode === FORMAT_MODE.CUSTOM ? (
                         <TextInput
                             label="Format pattern"
                             aria-label="Format pattern"
@@ -143,8 +146,8 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             }}
                             error={
                                 analysis.patternError
-                                ?? (notice === "invalid-format"
-                                    ? displayNoticeText("invalid-format")
+                                ?? (notice === DISPLAY_NOTICE.INVALID_FORMAT
+                                    ? displayNoticeText(DISPLAY_NOTICE.INVALID_FORMAT)
                                     : undefined)
                             }
                             disabled={saving}
@@ -157,19 +160,23 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                         className="options-select"
                         value={draft.timeZoneMode}
                         data={[
-                            { value: "system", label: "System" },
-                            { value: "utc", label: "UTC" },
-                            { value: "iana", label: "IANA" },
+                            { value: TIME_ZONE_MODE.SYSTEM, label: "System" },
+                            { value: TIME_ZONE_MODE.UTC, label: "UTC" },
+                            { value: TIME_ZONE_MODE.IANA, label: "IANA" },
                         ]}
                         onChange={(event) => {
                             const value = event.currentTarget.value;
-                            if (value === "system" || value === "utc" || value === "iana") {
+                            if (
+                                value === TIME_ZONE_MODE.SYSTEM
+                                || value === TIME_ZONE_MODE.UTC
+                                || value === TIME_ZONE_MODE.IANA
+                            ) {
                                 controller.setTimeZoneMode(value);
                             }
                         }}
                         disabled={saving}
                     />
-                    {draft.timeZoneMode === "iana" ? (
+                    {draft.timeZoneMode === TIME_ZONE_MODE.IANA ? (
                         <TextInput
                             label="IANA time zone identifier"
                             aria-label="IANA time zone identifier"
@@ -180,7 +187,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                                 controller.setIdentifier(event.currentTarget.value);
                             }}
                             error={
-                                notice === "invalid-time-zone"
+                                notice === DISPLAY_NOTICE.INVALID_TIME_ZONE
                                     ? displayNoticeText(notice)
                                     : undefined
                             }
@@ -204,7 +211,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                     </div>
                     {state.error === UNAVAILABLE_TIME_ZONE_ERROR ? (
                         <Alert role="alert" color="yellow">
-                            {displayNoticeText(UNAVAILABLE_TIME_ZONE_ERROR)}
+                            {displayNoticeText(DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE)}
                         </Alert>
                     ) : null}
                     {notice && !inlineNotice && state.error !== UNAVAILABLE_TIME_ZONE_ERROR ? (
