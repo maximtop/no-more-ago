@@ -2,6 +2,8 @@
  * @file Extracts minimal timestamp records from structured Facebook Story payloads.
  */
 
+import * as v from "valibot";
+
 import {
     FACEBOOK_PAYLOAD_LIMIT,
     FACEBOOK_UNIX_SECONDS,
@@ -23,6 +25,60 @@ const INVALIDATE_ALL_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate =
 
 const FACEBOOK_STORY_TYPENAME = "Story" as const;
 const XSSI_PREFIX = "for (;;);" as const;
+
+/**
+ * Page-derived encrypted tracking value bounded enough to retain as an opaque mapping key.
+ */
+const trackingTokenSchema = v.pipe(
+    v.string(),
+    v.minLength(FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS),
+    v.maxLength(FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS),
+);
+
+/**
+ * Story creation time normalized to decimal seconds text under the shared Unix-seconds contract.
+ */
+const creationTimeSchema = v.union([
+    v.pipe(
+        v.number(),
+        v.safeInteger(),
+        v.minValue(0),
+        v.transform((seconds) => String(seconds)),
+    ),
+    v.pipe(v.string(), v.regex(FACEBOOK_UNIX_SECONDS)),
+]);
+
+/**
+ * Story fields the parser reads; a missing or unbounded token is skipped, not fatal.
+ *
+ * Arbitrary descendants are deliberately excluded: comment, media, Reel, actor,
+ * and accessibility objects can carry tracking tokens without representing the
+ * parent post timestamp. Only the direct Story token and the canonical
+ * timestamp-section token are read.
+ */
+const storySchema = v.object({
+    __typename: v.literal(FACEBOOK_STORY_TYPENAME),
+    creation_time: creationTimeSchema,
+    encrypted_click_tracking: v.fallback(v.optional(trackingTokenSchema), undefined),
+    comet_sections: v.fallback(
+        v.optional(v.object({
+            timestamp: v.object({
+                story: v.object({ encrypted_click_tracking: trackingTokenSchema }),
+            }),
+        })),
+        undefined,
+    ),
+});
+
+/**
+ * Typed Story retaining only the proven timestamp fields.
+ */
+type FacebookStory = v.InferOutput<typeof storySchema>;
+
+/**
+ * Any payload object whose values are walked; page-authored keys pass through untouched.
+ */
+const payloadNodeSchema = v.looseObject({});
 
 /**
  * Removes the Facebook cross-site script inclusion prefix from one JSON document.
@@ -91,75 +147,18 @@ function visitPayloadRoots(
 }
 
 /**
- * Narrows a parsed JSON value to a non-array object.
- *
- * @param value - Parsed JSON value to inspect.
- * @returns - Whether the value is an object record.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/**
- * Normalizes a Story creation time while preserving shared Unix-seconds validation.
- *
- * @param value - Story creation_time field.
- * @returns - Decimal seconds text, or null when the field cannot be eligible.
- */
-function rawCreationTime(value: unknown): string | null {
-    if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
-        return String(value);
-    }
-    return typeof value === "string" && FACEBOOK_UNIX_SECONDS.test(value) ? value : null;
-}
-
-/**
- * Checks whether a page-derived encrypted tracking value is safely bounded.
- *
- * @param value - Candidate encrypted_click_tracking field.
- * @returns - Whether the value can be retained as an opaque mapping key.
- */
-function isTrackingToken(value: unknown): value is string {
-    return typeof value === "string"
-        && value.length >= FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS
-        && value.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS;
-}
-
-/**
- * Reads a nested object property without accepting arrays.
- *
- * @param value - Candidate parent record.
- * @param property - Direct property to read.
- * @returns - Nested record, or null when the path is not an object path.
- */
-function nestedRecord(
-    value: Record<string, unknown>,
-    property: string,
-): Record<string, unknown> | null {
-    const nested = value[property];
-    return isRecord(nested) ? nested : null;
-}
-
-/**
  * Returns tokens proven to represent the Story or its post timestamp section.
- *
- * Arbitrary descendants are deliberately excluded: comment, media, Reel, actor,
- * and accessibility objects can carry tracking tokens without representing the
- * parent post timestamp.
  *
  * @param story - Typed Story with its own creation time.
  * @returns - Direct Story and canonical timestamp-section tokens.
  */
-function storyTimestampTokens(story: Record<string, unknown>): readonly string[] {
+function storyTimestampTokens(story: FacebookStory): readonly string[] {
     const tokens: string[] = [];
-    if (isTrackingToken(story.encrypted_click_tracking)) {
+    if (story.encrypted_click_tracking !== undefined) {
         tokens.push(story.encrypted_click_tracking);
     }
-    const cometSections = nestedRecord(story, "comet_sections");
-    const timestamp = cometSections && nestedRecord(cometSections, "timestamp");
-    const timestampStory = timestamp && nestedRecord(timestamp, "story");
-    const timestampToken = timestampStory?.encrypted_click_tracking;
-    if (isTrackingToken(timestampToken)) {
+    const timestampToken = story.comet_sections?.timestamp.story.encrypted_click_tracking;
+    if (timestampToken !== undefined) {
         tokens.push(timestampToken);
     }
     return tokens;
@@ -251,20 +250,22 @@ export function extractFacebookTimestampUpdate(
                 pushChildren(stack, children);
                 continue;
             }
-            if (!isRecord(value)) {
+            const node = v.safeParse(payloadNodeSchema, value);
+            if (!node.success) {
                 continue;
             }
-            if (value.__typename === FACEBOOK_STORY_TYPENAME) {
-                const storyTime = rawCreationTime(value.creation_time);
-                if (storyTime !== null) {
-                    for (const trackingToken of storyTimestampTokens(value)) {
+            if (node.output.__typename === FACEBOOK_STORY_TYPENAME) {
+                const story = v.safeParse(storySchema, node.output);
+                if (story.success) {
+                    const storyTime = story.output.creation_time;
+                    for (const trackingToken of storyTimestampTokens(story.output)) {
                         if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
                             return false;
                         }
                     }
                 }
             }
-            const children = Object.values(value);
+            const children = Object.values(node.output);
             const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
                 - visited
                 - stack.length;
