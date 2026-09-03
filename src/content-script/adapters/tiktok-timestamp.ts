@@ -2,6 +2,8 @@
  * @file Resolves trusted TikTok publication timestamps from embedded state and post IDs.
  */
 
+import * as v from "valibot";
+
 import { isHtmlElement } from "./html-element";
 
 /**
@@ -85,14 +87,14 @@ export function invalidateTikTokHydrationCache(document: Document): void {
 }
 
 /**
- * Narrows page-derived JSON objects without accepting primitives.
- *
- * @param value - Parsed JSON value.
- * @returns - Whether the value is a non-array record.
+ * Any hydration object whose values are walked; page-authored keys pass through untouched.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const hydrationNodeSchema = v.looseObject({});
+
+/**
+ * One hydration object carrying string-valued publication evidence.
+ */
+const hydrationPostSchema = v.object({ id: v.string(), createTime: v.string() });
 
 /**
  * Checks the one exact script whose JSON may supply TikTok publication evidence.
@@ -139,12 +141,13 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
             }
             continue;
         }
-        if (!isRecord(current)) {
+        const node = v.safeParse(hydrationNodeSchema, current);
+        if (!node.success) {
             continue;
         }
-        const id = current.id;
-        const createTime = current.createTime;
-        if (typeof id === "string" && typeof createTime === "string") {
+        const post = v.safeParse(hydrationPostSchema, node.output);
+        if (post.success) {
+            const { id, createTime } = post.output;
             const existing = index.get(id);
             if (existing === undefined) {
                 index.set(id, createTime);
@@ -152,7 +155,7 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
                 index.set(id, null);
             }
         }
-        for (const child of Object.values(current)) {
+        for (const child of Object.values(node.output)) {
             scheduledNodes += 1;
             if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
                 return EMPTY_INDEX;
