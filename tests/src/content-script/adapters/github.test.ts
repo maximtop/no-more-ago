@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import {
+    getRelativePresentationObservationTarget,
+} from "../../../../src/content-script/adapters/relative-presentation";
+import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
@@ -57,6 +60,36 @@ describe("GitHub adapter registry", () => {
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             presentation: ADJACENT_TIME_PRESENTATION,
         });
+    });
+
+    it("classifies the shadow-rendered label of a relative-time element", () => {
+        document.body.innerHTML =
+            '<relative-time datetime="2026-08-23T10:15:00Z">Aug 23, 2026</relative-time>';
+        const element = document.querySelector("relative-time");
+        if (!element) {
+            throw new Error("Fixture element is missing");
+        }
+        // GitHub keeps an absolute fallback in light DOM and renders the visible
+        // relative label into an open shadow root.
+        const shadow = element.attachShadow({ mode: "open" });
+        const label = document.createElement("span");
+        label.textContent = "2 hours ago";
+        shadow.append(label);
+        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
+        const candidate = adapter?.extract(element, extractionContext);
+        if (!adapter || !candidate) {
+            throw new Error("GitHub candidate is missing");
+        }
+        const presentationContext = {
+            locales: ["en-US"],
+            readPageText: (target: Text) => target.data,
+        };
+
+        expect(adapter.isRelativePresentation(candidate, presentationContext)).toBe(true);
+        expect(getRelativePresentationObservationTarget(candidate)).toBe(shadow);
+
+        label.textContent = "Aug 23, 2026";
+        expect(adapter.isRelativePresentation(candidate, presentationContext)).toBe(false);
     });
 
     it("includes an eligible element root exactly once in bounded discovery", () => {

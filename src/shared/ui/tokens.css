@@ -61,11 +61,14 @@ body {
   inset: -12px;
 }
 
+/* The radio label is one 20px line; 12px of padding on both sides makes the
+   label-bound target 44px tall, and the radio moves down to sit on that line. */
 .mantine-Radio-label {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding-block: 0;
+  padding-block: 12px;
+}
+
+.mantine-Radio-inner {
+  margin-top: 12px;
 }
 
 /* One label, description, and control row shared by the popup and Settings. */
