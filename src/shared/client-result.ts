@@ -1,8 +1,6 @@
 /**
- * @file Canonical discriminants and the shared dispatch of validated client mutations.
+ * @file Canonical discriminants and the shared dispatch of client mutations.
  */
-
-import * as v from "valibot";
 
 /**
  * Result kinds shared by popup and options clients and their consumers.
@@ -14,18 +12,18 @@ export const CLIENT_RESULT_KIND = {
 } as const;
 
 /**
- * Outcome of one settings mutation: a validated response, or the state reread
- * after the response was lost or malformed.
+ * Outcome of one settings mutation: the background response, or the state
+ * reread after that response was lost.
  */
 export type MutationResult<TResponse, TState> =
     | {
         /**
-         * Indicates that the background returned a validated command response.
+         * Indicates that the background answered the command.
          */
         readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
         /**
-         * Validated result of the command.
+         * Result of the command as the background reported it.
          */
         readonly response: TResponse;
     }
@@ -42,19 +40,19 @@ export type MutationResult<TResponse, TState> =
     };
 
 /**
- * Dispatches one mutation exactly once and rereads state when its response is
- * lost or malformed. The mutation is never retried, because a lost response may
- * follow a committed write.
+ * Dispatches one mutation exactly once and rereads state when no usable response
+ * arrives. The mutation is never retried, because a lost response may follow a
+ * committed write. The background produces the response, so its shape is the
+ * contract both sides compile against; only its presence and, where a command
+ * is answered per surface, its surface discriminant are read.
  *
- * @param send - Sends the mutation and resolves with the raw response.
- * @param schema - Response schema; a response is accepted only when it matches.
- * @param reread - Reads the surface's current state after an ambiguous response.
- * @param accept - Optional narrowing of a valid response, such as a surface check.
- * @returns - Validated response, or an ambiguous outcome with the reread state.
+ * @param send - Sends the mutation and resolves with the background response.
+ * @param reread - Reads the surface's current state after a lost response.
+ * @param accept - Optional discriminant check selecting this surface's response.
+ * @returns - The background response, or an ambiguous outcome with the reread state.
  */
 export async function runMutation<TResponse, TState, TAccepted extends TResponse = TResponse>(
     send: () => Promise<unknown>,
-    schema: v.GenericSchema<unknown, TResponse>,
     reread: () => Promise<TState>,
     accept?: (response: TResponse) => response is TAccepted,
 ): Promise<MutationResult<TAccepted, TState>> {
@@ -64,20 +62,20 @@ export async function runMutation<TResponse, TState, TAccepted extends TResponse
     } catch {
         return rereadAfterAmbiguousResponse(reread);
     }
-    const parsed = v.safeParse(schema, response);
-    if (parsed.success) {
-        if (accept === undefined) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: parsed.output as TAccepted };
-        }
-        if (accept(parsed.output)) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: parsed.output };
-        }
+    const result = response as TResponse | undefined;
+    if (result === undefined) {
+        return rereadAfterAmbiguousResponse(reread);
     }
-    return rereadAfterAmbiguousResponse(reread);
+    if (accept === undefined) {
+        return { kind: CLIENT_RESULT_KIND.RESPONSE, response: result as TAccepted };
+    }
+    return accept(result)
+        ? { kind: CLIENT_RESULT_KIND.RESPONSE, response: result }
+        : rereadAfterAmbiguousResponse(reread);
 }
 
 /**
- * Reads current state after a mutation response is lost or malformed.
+ * Reads current state after a mutation response is lost.
  *
  * @param reread - Reads the surface's current state.
  * @returns - An ambiguous result carrying the state when the reread succeeds.

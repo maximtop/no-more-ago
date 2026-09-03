@@ -4,7 +4,7 @@
 
 import { Alert, Box, Button, Group, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { ReadyPopupState } from "../shared/messaging/view-state-schemas";
+import type { ReadyPopupState } from "../shared/messaging/view-state";
 import { SITE_SCOPE_MODE_LABEL } from "../shared/settings/site-scope";
 import { GLOBAL_SWITCH_LABEL, updatedInAnotherWindow } from "../shared/ui/copy";
 import { mutationNoticeText } from "../shared/ui/persistence-notice";
@@ -171,17 +171,14 @@ export function PopupReadyView({
                                 Enabled on this site
                             </Text>
                             <Text size="xs" c="dimmed">
-                                {siteControlDescription(
-                                    state.scopeMode,
-                                    state.siteEnabled ?? false,
-                                )}
+                                {siteControlDescription(state.scopeMode, state.siteEnabled)}
                             </Text>
                         </Box>
                         <Switch
-                            checked={state.siteEnabled ?? false}
+                            checked={state.siteEnabled}
                             disabled={!state.globalEnabled}
                             aria-busy={saving}
-                            aria-label={`Enabled on ${state.hostname ?? "this site"}`}
+                            aria-label={`Enabled on ${state.hostname}`}
                             onChange={(event) => {
                                 onChangeSite(event.currentTarget.checked);
                             }}

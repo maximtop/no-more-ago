@@ -25,7 +25,7 @@ import type {
     DebugState,
     DisplayState,
     SitesState,
-} from "../../../src/shared/messaging/view-state-schemas";
+} from "../../../src/shared/messaging/view-state";
 import { APPEARANCE, type DisplaySettings } from "../../../src/shared/settings/snapshot";
 import { SITE_SCOPE_MODE } from "../../../src/shared/settings/site-scope";
 import {
@@ -119,6 +119,26 @@ interface RenderOptions {
 }
 
 /**
+ * Answers one background request with the preloaded projection for its surface.
+ *
+ * The background never answers a display or diagnostics request with the sites
+ * projection, so the stub routes by request type the way the real one does.
+ *
+ * @param message - Background request the surface sent.
+ * @param sites - Sites projection answered for every other request.
+ * @returns - Projection the background would return.
+ */
+function projectionFor(message: BackgroundMessage, sites: SitesState = ready): unknown {
+    if (message.type === GET_DISPLAY_STATE_MESSAGE) {
+        return displayReady;
+    }
+    if (message.type === GET_DEBUG_STATE_MESSAGE) {
+        return debugReady;
+    }
+    return sites;
+}
+
+/**
  * Renders the options application with injectable background and browser dependencies.
  *
  * @param state - Initial sites settings state.
@@ -130,7 +150,7 @@ async function renderOptions(
     options: RenderOptions = {},
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
     const {
-        transport = { sendMessage: () => Promise.resolve(state) },
+        transport = { sendMessage: (message) => Promise.resolve(projectionFor(message, state)) },
         initialDisplayState = displayReady,
         initialDebugState = debugReady,
         archiveRuntime,
@@ -433,7 +453,7 @@ describe("Options Sites contract", () => {
             transport: {
                 sendMessage: (message) => {
                     sent.push(message);
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -463,7 +483,7 @@ describe("Options Sites contract", () => {
             transport: {
                 sendMessage: (message) => {
                     sent.push(message);
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -522,7 +542,7 @@ describe("Options Sites contract", () => {
                             state: { ...ready, revision: 5, excludedSites: [] },
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -573,7 +593,9 @@ describe("Options Sites contract", () => {
                             },
                         });
                     }
-                    return Promise.resolve({ ...ready, revision: 5, globalEnabled });
+                    return Promise.resolve(
+                        projectionFor(message, { ...ready, revision: 5, globalEnabled }),
+                    );
                 },
             },
         });
@@ -614,7 +636,7 @@ describe("Options Sites contract", () => {
                         });
                     }
                     rereads += 1;
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -784,7 +806,7 @@ describe("Options Sites contract", () => {
                         });
                     }
                     rereads += 1;
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -814,7 +836,7 @@ describe("Options Sites contract", () => {
                     if (type === SET_SITE_ENABLED_MESSAGE || type === GET_SITES_STATE_MESSAGE) {
                         return Promise.reject(new Error("transport lost"));
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -846,7 +868,7 @@ describe("Options Sites contract", () => {
                             surface: SITE_SETTINGS_SURFACE.SITES,
                             state: stale,
                         })
-                        : Promise.resolve(ready),
+                        : Promise.resolve(projectionFor(message)),
             },
         });
         try {
@@ -933,7 +955,7 @@ describe("Options reset contract", () => {
                     if (type === GET_DEBUG_STATE_MESSAGE) {
                         return Promise.resolve(resetDebug);
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: custom,
@@ -985,7 +1007,7 @@ describe("Options reset contract", () => {
                     if (message.type === RESET_ALL_SETTINGS_MESSAGE) {
                         resetCalls += 1;
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1030,7 +1052,7 @@ describe("Options reset contract", () => {
                         resetCalls += 1;
                         return Promise.resolve({ ok: false, error: "save-failed", state: ready });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: custom,
@@ -1066,7 +1088,7 @@ describe("Options reset contract", () => {
                         resetCalls += 1;
                         return Promise.reject(new Error("response interrupted"));
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1415,7 +1437,7 @@ describe("Options Display contract", () => {
                             refreshFailures: [],
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1472,7 +1494,7 @@ describe("Options Display contract", () => {
                     if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes += 1;
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1539,7 +1561,7 @@ describe("Options Display contract", () => {
                             ],
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1602,13 +1624,13 @@ describe("Options Display contract", () => {
             transport: {
                 sendMessage: (message) => {
                     if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
-                        return Promise.resolve({ unexpected: true });
+                        return Promise.resolve(undefined);
                     }
                     if (message.type === GET_DISPLAY_STATE_MESSAGE) {
                         reads += 1;
                         return Promise.resolve(reread);
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1649,7 +1671,7 @@ describe("Options Display contract", () => {
                             state: stale,
                             refreshFailures: [],
                         })
-                        : Promise.resolve(ready),
+                        : Promise.resolve(projectionFor(message)),
             },
         });
         try {
@@ -1699,7 +1721,7 @@ describe("Options Display contract", () => {
                             refreshFailures: [],
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1754,7 +1776,7 @@ describe("Options Display contract", () => {
                     if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
                         writes += 1;
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -1817,7 +1839,7 @@ describe("Options Display contract", () => {
                             refreshFailures: [],
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: custom,
@@ -1991,7 +2013,7 @@ describe("Options Display contract", () => {
                             refreshFailures: [],
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: custom,
@@ -2041,7 +2063,7 @@ describe("Options Display contract", () => {
                             error: "invalid-format",
                             state: displayReady,
                         })
-                        : Promise.resolve(ready),
+                        : Promise.resolve(projectionFor(message)),
             },
         });
         try {
@@ -2154,7 +2176,7 @@ describe("Options Debug logs contract", () => {
                     if (message.type === GET_DEBUG_STATE_MESSAGE) {
                         return Promise.resolve(debugReady);
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -2224,7 +2246,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["interrupted", "malformed"] as const)(
+    it.each(["interrupted", "lost"] as const)(
         "rereads an authoritative state once after a %s toggle response",
         async (failure) => {
             let writes = 0;
@@ -2236,7 +2258,7 @@ describe("Options Debug logs contract", () => {
                             writes += 1;
                             return failure === "interrupted"
                                 ? Promise.reject(new Error("worker restarted"))
-                                : Promise.resolve({ unexpected: true });
+                                : Promise.resolve(undefined);
                         }
                         if (message.type === GET_DEBUG_STATE_MESSAGE) {
                             reads += 1;
@@ -2246,7 +2268,7 @@ describe("Options Debug logs contract", () => {
                                 enabled: true,
                             });
                         }
-                        return Promise.resolve(ready);
+                        return Promise.resolve(projectionFor(message));
                     },
                 },
             });
@@ -2284,7 +2306,7 @@ describe("Options Debug logs contract", () => {
                         writes += 1;
                         return pending;
                     }
-                    return Promise.resolve(debugReady);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
         });
@@ -2362,7 +2384,7 @@ describe("Options Debug logs contract", () => {
                             },
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: displayReady,
@@ -2399,7 +2421,7 @@ describe("Options Debug logs contract", () => {
                     if (message.type === CLEAR_DIAGNOSTICS_MESSAGE) {
                         return Promise.resolve({ ok: true });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: displayReady,
@@ -2433,7 +2455,7 @@ describe("Options Debug logs contract", () => {
                 sendMessage: (message) =>
                     message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ? Promise.resolve({ ok: false, error: "empty" })
-                        : Promise.resolve(ready),
+                        : Promise.resolve(projectionFor(message)),
             },
             initialDisplayState: displayReady,
             initialDebugState: { ...debugReady, enabled: true },
@@ -2453,7 +2475,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "invalid-journal", "unavailable", "malformed"] as const)(
+    it.each(["storage-failed", "invalid-journal", "unavailable", "lost"] as const)(
         "shows an actionable snapshot error without downloading for %s",
         async (failure) => {
             let requests = 0;
@@ -2478,12 +2500,12 @@ describe("Options Debug logs contract", () => {
                     sendMessage: (message) => {
                         if (message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
                             requests += 1;
-                            if (failure === "malformed") {
-                                return Promise.resolve({ unexpected: true });
+                            if (failure === "lost") {
+                                return Promise.resolve(undefined);
                             }
                             return Promise.resolve({ ok: false, error: failure });
                         }
-                        return Promise.resolve(ready);
+                        return Promise.resolve(projectionFor(message));
                     },
                 },
                 initialDisplayState: displayReady,
@@ -2552,7 +2574,7 @@ describe("Options Debug logs contract", () => {
                                 environment: { browserFamily: "chromium" },
                             },
                         })
-                        : Promise.resolve(ready),
+                        : Promise.resolve(projectionFor(message)),
             },
             initialDisplayState: displayReady,
             initialDebugState: { ...debugReady, enabled: true },
@@ -2597,7 +2619,7 @@ describe("Options Debug logs contract", () => {
                         requests += 1;
                         return pending;
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             initialDisplayState: displayReady,
@@ -2626,7 +2648,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "unavailable", "malformed", "transport"] as const)(
+    it.each(["storage-failed", "unavailable", "lost", "transport"] as const)(
         "dispatches Clear logs once and keeps Debug logs enabled after %s",
         async (failure) => {
             let requests = 0;
@@ -2638,12 +2660,12 @@ describe("Options Debug logs contract", () => {
                             if (failure === "transport") {
                                 return Promise.reject(new Error("worker unavailable"));
                             }
-                            if (failure === "malformed") {
-                                return Promise.resolve({ unexpected: true });
+                            if (failure === "lost") {
+                                return Promise.resolve(undefined);
                             }
                             return Promise.resolve({ ok: false, error: failure });
                         }
-                        return Promise.resolve(ready);
+                        return Promise.resolve(projectionFor(message));
                     },
                 },
                 initialDisplayState: displayReady,
@@ -2694,7 +2716,7 @@ describe("Options site reporting", () => {
                 transport: {
                     sendMessage: (message) => {
                         messages.push(message);
-                        return Promise.resolve(ready);
+                        return Promise.resolve(projectionFor(message));
                     },
                 },
                 initialDisplayState: displayReady,
@@ -2986,7 +3008,7 @@ describe("Options shell", () => {
                             state: { ...ready, revision: 5, excludedSites: [] },
                         });
                     }
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             subscribe: (listener) => {
@@ -3015,9 +3037,9 @@ describe("Options shell", () => {
         let reads = 0;
         const rendered = await renderOptions(ready, {
             transport: {
-                sendMessage: () => {
+                sendMessage: (message) => {
                     reads += 1;
-                    return Promise.resolve(ready);
+                    return Promise.resolve(projectionFor(message));
                 },
             },
             subscribe: (listener) => {

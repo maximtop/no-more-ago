@@ -4,7 +4,7 @@
 
 import { Alert, Box, Button, NativeSelect, Stack, Text, TextInput, Title } from "@mantine/core";
 import { useMemo, type ReactElement } from "react";
-import type { DisplayState } from "../shared/messaging/view-state-schemas";
+import type { DisplayState } from "../shared/messaging/view-state";
 import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,

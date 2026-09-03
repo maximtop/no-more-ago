@@ -2,37 +2,14 @@
  * @file Verifies the background-to-page settings change notification.
  */
 
-import * as v from "valibot";
 import { describe, expect, it, vi } from "vitest";
 import {
     SETTINGS_CHANGED_MESSAGE,
     createSettingsChangedSubscriber,
-    isSettingsChangedMessage,
-    settingsChangedMessageSchema,
 } from "../../../../src/shared/messaging/settings-notifications";
 
-describe("settings changed contract", () => {
-    it("accepts one revision and rejects anything else", () => {
-        expect(v.is(settingsChangedMessageSchema, {
-            type: SETTINGS_CHANGED_MESSAGE,
-            revision: 7,
-        })).toBe(true);
-        expect(isSettingsChangedMessage({ type: SETTINGS_CHANGED_MESSAGE, revision: 7 }))
-            .toBe(true);
-        expect(isSettingsChangedMessage({ type: SETTINGS_CHANGED_MESSAGE })).toBe(false);
-        expect(isSettingsChangedMessage({ type: SETTINGS_CHANGED_MESSAGE, revision: -1 }))
-            .toBe(false);
-        expect(isSettingsChangedMessage({
-            type: SETTINGS_CHANGED_MESSAGE,
-            revision: 7,
-            extra: true,
-        })).toBe(false);
-        expect(isSettingsChangedMessage({ type: "no-more-ago:status" })).toBe(false);
-    });
-});
-
 describe("settings changed subscriber", () => {
-    it("reports only valid revisions and stops on unsubscribe", () => {
+    it("reports announced revisions and stops on unsubscribe", () => {
         const listeners: ((message: unknown) => void)[] = [];
         const runtime = {
             onMessage: {

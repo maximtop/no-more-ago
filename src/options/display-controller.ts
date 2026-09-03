@@ -8,7 +8,7 @@ import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     createUnavailableDisplayState,
     type DisplayState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import {
     FORMAT_MODE,

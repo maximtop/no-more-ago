@@ -33,7 +33,7 @@ import {
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
 } from "../shared/messaging/document-messages";
-import { isDocumentState } from "../shared/messaging/document-state";
+import type { DocumentState } from "../shared/messaging/document-state";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     DEFAULT_DISPLAY_SETTINGS,
@@ -365,7 +365,7 @@ function beginHydration(
     }
     slot.hydration = Promise.resolve(request)
         .then(
-            (response) => {
+            (value) => {
                 if (
                     (slot.phase !== DOCUMENT_PHASE.WAITING
                         && slot.phase !== DOCUMENT_PHASE.ACTIVE)
@@ -373,10 +373,8 @@ function beginHydration(
                 ) {
                     return;
                 }
-                if (
-                    !isDocumentState(response)
-                    || response.availability !== STATE_AVAILABILITY.READY
-                ) {
+                const response = value as DocumentState | undefined;
+                if (response?.availability !== STATE_AVAILABILITY.READY) {
                     failHydration(slot, generation, failurePhase);
                     return;
                 }

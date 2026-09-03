@@ -34,7 +34,7 @@ import {
     createUnavailableDisplayState,
     createUnavailablePopupState,
     createUnavailableSitesState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import {
     SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_SURFACE,
@@ -43,7 +43,7 @@ import {
 import type {
     UnavailablePopupState,
     UnavailableSitesState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import { createUnavailableDocumentState } from "../shared/messaging/document-state";
 import { SettingsService, type SettingsStorage } from "./settings/service";
 import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";

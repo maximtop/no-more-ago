@@ -8,7 +8,7 @@ import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-erro
 import {
     createUnavailableDisplayState,
     type DisplayState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import { APPLICATION_PHASE } from "../application/contracts";
 import { TIME_ZONE_MODE } from "../../shared/settings/snapshot";
 

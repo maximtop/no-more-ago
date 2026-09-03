@@ -15,7 +15,7 @@ import { REFRESH_FAILURE_REASON } from "../../shared/messaging/view-state-values
 import type {
     RefreshFailure as DebugRefreshFailure,
     RefreshFailure as DisplayRefreshFailure,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import type { DisplaySettings, SettingsSnapshot } from "../../shared/settings/snapshot";
 import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";

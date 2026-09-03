@@ -10,7 +10,7 @@ import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../../../src/shared/messaging/view-state-values";
-import type { PopupState } from "../../../src/shared/messaging/view-state-schemas";
+import type { PopupState } from "../../../src/shared/messaging/view-state";
 import { popupStatusModel, siteControlDescription } from "../../../src/popup/popup-status";
 
 const ready = (overrides: Partial<PopupState> = {}): PopupState => ({

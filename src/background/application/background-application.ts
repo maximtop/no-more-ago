@@ -30,7 +30,7 @@ import type {
     DisplayState,
     PopupState,
     SitesState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import type {
     ResetAllSettingsResponse,
     SetAppearanceResponse,
@@ -39,7 +39,7 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SetSiteScopeModeResponse,
-} from "../../shared/messaging/response-schemas";
+} from "../../shared/messaging/responses";
 import type { SiteSettingsSurface } from "../../shared/messaging/view-state-values";
 import { SettingsCommands } from "../settings/commands";
 import { StateProjection } from "../projection/state-projection";

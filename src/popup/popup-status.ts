@@ -7,7 +7,7 @@ import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
-import type { PopupState } from "../shared/messaging/view-state-schemas";
+import type { PopupState } from "../shared/messaging/view-state";
 import {
     SITE_SCOPE_LIST_LABEL,
     SITE_SCOPE_MODE,
