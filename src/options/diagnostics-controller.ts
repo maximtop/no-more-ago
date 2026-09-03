@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import type {
     DebugState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import type {
     DiagnosticsClearError,
     DiagnosticsSnapshotError,
@@ -162,9 +162,6 @@ function diagnosticsErrorText(
     }
     if (error === "empty") {
         return "There are no diagnostic logs to download yet.";
-    }
-    if (error === "invalid-journal") {
-        return "Saved diagnostic logs are invalid. Clear logs and try again.";
     }
     if (error === "storage-failed") {
         return "Saved diagnostic logs could not be read. Try again later.";

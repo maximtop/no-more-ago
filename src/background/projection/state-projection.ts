@@ -18,7 +18,7 @@ import {
     createUnavailablePopupState,
     type PopupState,
     type SitesState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isFacebookHostname } from "../../shared/url/facebook";
 import { isSiteEnabled } from "../../shared/settings/snapshot";

@@ -22,25 +22,25 @@ import {
     debugStateSchema,
     displayStateSchema,
     sitesStateSchema,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import {
     resetAllSettingsResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
     setSiteEnabledResponseSchema,
-} from "../shared/messaging/response-schemas";
+} from "../shared/messaging/responses";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
 import type {
     DebugState,
     DisplayState,
     SitesState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import type {
     ResetAllSettingsResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetSiteEnabledResponse,
-} from "../shared/messaging/response-schemas";
+} from "../shared/messaging/responses";
 import type { DisplaySettings } from "../shared/settings/snapshot";
 import type {
     DiagnosticsClearError,

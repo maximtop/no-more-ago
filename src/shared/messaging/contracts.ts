@@ -12,14 +12,14 @@ import type {
     DisplayState,
     PopupState,
     SitesState,
-} from "./view-state-schemas";
+} from "./view-state";
 import type {
     ResetAllSettingsResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
-} from "./response-schemas";
+} from "./responses";
 import type { DocumentState } from "./document-state";
 
 /**
@@ -89,7 +89,6 @@ export const DIAGNOSTICS_SNAPSHOT_ERRORS = [
     "disabled",
     "unavailable",
     "empty",
-    "invalid-journal",
     "storage-failed",
 ] as const;
 

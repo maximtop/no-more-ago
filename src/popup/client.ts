@@ -10,21 +10,21 @@ import {
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
 } from "../shared/messaging/contracts";
-import { popupStateSchema } from "../shared/messaging/view-state-schemas";
+import { popupStateSchema } from "../shared/messaging/view-state";
 import {
     setGlobalEnabledResponseSchema,
     setSiteEnabledResponseSchema,
-} from "../shared/messaging/response-schemas";
+} from "../shared/messaging/responses";
 import {
     SITE_SETTINGS_SURFACE,
 } from "../shared/messaging/view-state-values";
 import type {
     PopupState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
-} from "../shared/messaging/response-schemas";
+} from "../shared/messaging/responses";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 
 /**

@@ -8,7 +8,7 @@ import {
     displayStateSchema,
     popupStateSchema,
     sitesStateSchema,
-} from "../../../../src/shared/messaging/view-state-schemas";
+} from "../../../../src/shared/messaging/view-state";
 import {
     POPUP_STATUS,
     STATE_AVAILABILITY,

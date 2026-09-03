@@ -24,7 +24,7 @@ import {
 import {
     createUnavailablePopupState,
     type PopupState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import {
     createDefaultSiteReportReporter,
     type SiteReportError,

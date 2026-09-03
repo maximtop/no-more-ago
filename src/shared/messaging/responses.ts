@@ -11,7 +11,7 @@ import {
     readySitesStateSchema,
     refreshFailuresSchema,
     sitesStateSchema,
-} from "./view-state-schemas";
+} from "./view-state";
 import {
     DISPLAY_SETTINGS_ERRORS,
     SETTINGS_PERSISTENCE_ERRORS,

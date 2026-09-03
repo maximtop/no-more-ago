@@ -6,7 +6,7 @@ import * as v from "valibot";
 
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 import type { DisplaySettings } from "../settings/snapshot";
-import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
+import { nonNegativeSafeIntegerSchema } from "./view-state";
 import {
     SETTINGS_STATE_FAILURES,
     STATE_AVAILABILITY,

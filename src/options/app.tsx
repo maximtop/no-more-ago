@@ -11,7 +11,7 @@ import type {
     DebugState,
     DisplayState,
     SitesState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import type { DownloadRuntime } from "./diagnostics/archive";
 import {
     createDefaultSiteReportReporter,

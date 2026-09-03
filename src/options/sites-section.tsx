@@ -4,7 +4,7 @@
 
 import { Alert, Box, Stack, Switch, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { SitesState } from "../shared/messaging/view-state-schemas";
+import type { SitesState } from "../shared/messaging/view-state";
 import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,

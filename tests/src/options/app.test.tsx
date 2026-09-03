@@ -21,7 +21,7 @@ import type {
     DebugState,
     DisplayState,
     SitesState,
-} from "../../../src/shared/messaging/view-state-schemas";
+} from "../../../src/shared/messaging/view-state";
 import type { DisplaySettings } from "../../../src/shared/settings/snapshot";
 import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
 import { OptionsApp } from "../../../src/options/app";
@@ -2157,7 +2157,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "invalid-journal", "unavailable", "malformed"] as const)(
+    it.each(["storage-failed", "unavailable", "malformed"] as const)(
         "shows an actionable snapshot error without downloading for %s",
         async (failure) => {
             let requests = 0;

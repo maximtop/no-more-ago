@@ -116,17 +116,6 @@ describe("DiagnosticJournal", () => {
         });
     });
 
-    it("validates stored data once when a snapshot is read", async () => {
-        const journal = new DiagnosticJournal(createStorage({
-            entries: [{ ...event(1), currentUrl: "https://github.com/private" }],
-        }));
-        await journal.setEnabled(true);
-        await expect(journal.readSnapshot()).resolves.toEqual({
-            ok: false,
-            error: "invalid-journal",
-        });
-    });
-
     it("clears entries without disabling future collection", async () => {
         const storage = createStorage();
         const journal = new DiagnosticJournal(storage);

@@ -8,7 +8,7 @@ import {
     resetAllSettingsResponseSchema,
     setDebugEnabledResponseSchema,
     setDisplaySettingsResponseSchema,
-} from "../../../../src/shared/messaging/response-schemas";
+} from "../../../../src/shared/messaging/responses";
 import { STATE_AVAILABILITY } from "../../../../src/shared/messaging/view-state-values";
 
 describe("settings response schemas", () => {

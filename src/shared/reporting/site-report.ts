@@ -2,10 +2,6 @@
  * @file Opens prefilled GitHub issue forms for site-support reports.
  */
 
-import * as v from "valibot";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
-import { isCanonicalHostname } from "../settings/snapshot";
-
 /**
  * GitHub issue composer used for site reports.
  */
@@ -44,19 +40,6 @@ export const SITE_REPORT_ERRORS = [
     "open-failed",
 ] as const;
 
-const hostnameSchema = v.pipe(v.string(), v.check(isCanonicalHostname));
-const versionSchema = v.pipe(v.string(), v.regex(SAFE_EXTENSION_VERSION_PATTERN));
-const reportContextSchema = v.strictObject({
-    reason: v.exactOptional(v.picklist(SITE_REPORT_REASONS)),
-    hostname: v.exactOptional(hostnameSchema),
-    currentUrl: v.exactOptional(v.string()),
-    extensionVersion: v.exactOptional(versionSchema),
-    browser: v.exactOptional(v.picklist(SITE_REPORT_BROWSERS)),
-});
-const popupStateSchema = v.strictObject({
-    hostname: hostnameSchema,
-});
-
 /**
  * Site-report reason inferred from the supported values.
  */
@@ -68,14 +51,44 @@ export type SiteReportReason = (typeof SITE_REPORT_REASONS)[number];
 export type SiteReportBrowser = (typeof SITE_REPORT_BROWSERS)[number];
 
 /**
- * Validated fields serialized into the GitHub issue form.
+ * Extension-derived fields serialized into the GitHub issue form.
  */
-export type SiteReportContext = v.InferOutput<typeof reportContextSchema>;
+export interface SiteReportContext {
+    /**
+     * Preselected issue-form reason.
+     */
+    readonly reason?: SiteReportReason;
+
+    /**
+     * Canonical hostname the report is about.
+     */
+    readonly hostname?: string;
+
+    /**
+     * Current page URL, included only when it belongs to the reported hostname.
+     */
+    readonly currentUrl?: string;
+
+    /**
+     * Current extension version read from the manifest.
+     */
+    readonly extensionVersion?: string;
+
+    /**
+     * Coarse browser label derived from the user agent.
+     */
+    readonly browser?: SiteReportBrowser;
+}
 
 /**
  * Popup state required to report the current site.
  */
-export type SiteReportPopupState = v.InferOutput<typeof popupStateSchema>;
+export interface SiteReportPopupState {
+    /**
+     * Canonical hostname shown by the popup for the active tab.
+     */
+    readonly hostname: string;
+}
 
 /**
  * Stable site-report failure.
@@ -236,17 +249,16 @@ function isReportableUrl(value: string, hostname: string): boolean {
 }
 
 /**
- * Creates a validated prefilled GitHub issue URL.
+ * Creates a prefilled GitHub issue URL for one report context.
+ *
+ * A current URL is included only when it provably belongs to the reported
+ * hostname, so a report never publishes an unrelated page address.
  *
  * @param context - Site-report fields to serialize.
- * @returns - GitHub issue URL, or null for invalid fields.
+ * @returns - GitHub issue URL, or null when the page URL cannot be published.
  */
-export function composeSiteReportUrl(context: unknown): string | null {
-    const parsed = v.safeParse(reportContextSchema, context);
-    if (!parsed.success) {
-        return null;
-    }
-    const value = parsed.output;
+export function composeSiteReportUrl(context: SiteReportContext): string | null {
+    const value = context;
     if (
         value.currentUrl !== undefined
         && (value.hostname === undefined || !isReportableUrl(value.currentUrl, value.hostname))
@@ -339,10 +351,6 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
             if (busy) {
                 return { ok: false, error: "busy" };
             }
-            const parsedState = v.safeParse(popupStateSchema, state);
-            if (!parsedState.success) {
-                return { ok: false, error: "invalid-context" };
-            }
             if (!runtime.tabs) {
                 return { ok: false, error: "browser-unavailable" };
             }
@@ -370,7 +378,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 if (url.username !== "" || url.password !== "") {
                     return { ok: false, error: "restricted-page" };
                 }
-                if (url.hostname !== parsedState.output.hostname) {
+                if (url.hostname !== state.hostname) {
                     return { ok: false, error: "hostname-mismatch" };
                 }
                 const env = environment();
@@ -380,7 +388,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 const reportUrl = composeSiteReportUrl({
                     ...env,
                     reason: SITE_REPORT_REASONS[1],
-                    hostname: parsedState.output.hostname,
+                    hostname: state.hostname,
                     currentUrl: tab.url,
                 });
                 if (!reportUrl) {

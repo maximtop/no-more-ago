@@ -4,7 +4,7 @@
 
 import { Alert, Box, Button, Stack, Text, TextInput } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { DisplayState } from "../shared/messaging/view-state-schemas";
+import type { DisplayState } from "../shared/messaging/view-state";
 import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,

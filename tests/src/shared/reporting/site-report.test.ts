@@ -93,10 +93,8 @@ describe("site report composer", () => {
         [{ hostname: "github.com", currentUrl: "ftp://github.com/a" }],
         [{ hostname: "github.com", currentUrl: "https://user:pass@github.com/a" }],
         [{ hostname: "github.com", currentUrl: "https://example.com/a" }],
-        [{ hostname: "github.com", extensionVersion: "not valid" }],
-        [{ hostname: "github.com", reason: "unexpected" }],
-        [{ hostname: "github.com", currentUrl: "https://github.com/a", secret: "private" }],
-    ])("rejects unsafe or non-contract composer context %j", (context) => {
+        [{ currentUrl: "https://github.com/a" }],
+    ])("omits a page URL that is not provably the reported site %j", (context) => {
         expect(composeSiteReportUrl(context)).toBeNull();
     });
 

@@ -8,7 +8,7 @@ import {
     STATE_AVAILABILITY,
 } from "../../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../../shared/date/presentation-errors";
-import type { DisplayState } from "../../shared/messaging/view-state-schemas";
+import type { DisplayState } from "../../shared/messaging/view-state";
 import { APPLICATION_PHASE } from "../application/contracts";
 
 /**

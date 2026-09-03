@@ -7,7 +7,7 @@ import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
-import type { SitesState } from "../shared/messaging/view-state-schemas";
+import type { SitesState } from "../shared/messaging/view-state";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { SitesClient } from "./client";
 import type { OptionsNotice } from "./options-notice";

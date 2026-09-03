@@ -5,7 +5,7 @@
 import * as v from "valibot";
 import { diagnosticEventInputSchema } from "../diagnostics/events";
 import type { DisplaySettings } from "../settings/snapshot";
-import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
+import { nonNegativeSafeIntegerSchema } from "./view-state";
 
 /**
  * Reconciles a document runtime with one effective, revisioned activation policy.

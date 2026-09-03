@@ -23,7 +23,7 @@ import {
     backgroundMessageSchema,
 } from "../shared/messaging/contracts";
 import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
-import { createUnavailablePopupState } from "../shared/messaging/view-state-schemas";
+import { createUnavailablePopupState } from "../shared/messaging/view-state";
 import {
     SETTINGS_STATE_FAILURE,
     SITE_SETTINGS_SURFACE,
