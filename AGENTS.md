@@ -51,7 +51,8 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Language:** TypeScript 6 with strict compiler settings and ES modules.
 - **Runtime:** Node.js 24 for builds; browser extension contexts in production.
 - **Package manager:** pnpm 10.34.5, pinned in `package.json`.
-- **UI:** React 19 and Mantine 9 for popup and options pages.
+- **UI:** React 19 and Mantine 9 for popup and options pages; XState 5 with
+  `@xstate/react` for stateful UI controllers.
 - **Date handling:** date-fns 4 and `@date-fns/tz`.
 - **Validation:** Domain validation for page-derived timestamps and
   user-authored date settings; internal extension data uses TypeScript
@@ -372,8 +373,14 @@ Known architectural exclusions to improve when their area changes:
 - Prefer cohesive feature boundaries over moving a large implementation
   unchanged into a generic helper or controller file.
 - Document files, functions, classes, methods, interfaces, type properties,
-  class properties, and exported variables according to the ESLint JSDoc
-  rules. Describe every parameter and return value.
+  class properties, exported variables, and named arrow functions declared
+  inside a function body according to the ESLint JSDoc rules. Describe every
+  parameter and return value. Anonymous callbacks passed as arguments need no
+  block.
+- Model a controller that coordinates loading, committed state, drafts,
+  in-flight commands, and notices as an XState machine (`setup().createMachine`
+  driven by `useMachine`) so every legal combination and transition has one
+  owner; keep plain `useState` for a single independent value.
 - Use four-space indentation, braces for every control-flow body, and no
   single-line brace blocks. Keep code and comments at or below 100 characters.
 - Prefer descriptive names and small functions over explanatory comments.

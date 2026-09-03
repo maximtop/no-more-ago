@@ -473,6 +473,10 @@ function processCandidateCollection(
 
     const outputs: HTMLTimeElement[] = [];
     let renderedCount = 0;
+
+    /**
+     * Renders or restores every discovered source in document order.
+     */
     const processSources = (): void => {
         for (const source of discoveredSources) {
             const candidates = candidatesBySource.get(source) ?? [];

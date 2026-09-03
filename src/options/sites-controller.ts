@@ -224,6 +224,12 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         }
     }, [client]);
 
+    /**
+     * Applies a settled mutation's projection and notice.
+     *
+     * @param next - Projection carried by the response, or undefined when it was lost.
+     * @param outcome - Notice describing the outcome.
+     */
     const apply = (next: SitesState | undefined, outcome: MutationNotice): void => {
         if (next === undefined) {
             setState(createUnavailableSitesState());
@@ -235,6 +241,13 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
 
     const ready = state?.availability === STATE_AVAILABILITY.READY && busy === undefined;
 
+    /**
+     * Saves one hostname decision under the rendered scope mode.
+     *
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
+     * @returns - Whether the background confirmed the change.
+     */
     const changeSiteProcessing = async (hostname: string, enabled: boolean): Promise<boolean> => {
         if (!ready) {
             return false;
@@ -249,6 +262,12 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         return settled.notice === undefined;
     };
 
+    /**
+     * Saves the scope mode.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeScopeMode = async (mode: SiteScopeMode): Promise<void> => {
         if (!ready) {
             return;
@@ -260,6 +279,12 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         setBusy(undefined);
     };
 
+    /**
+     * Saves global activation.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeGlobal = async (enabled: boolean): Promise<void> => {
         if (!ready) {
             return;

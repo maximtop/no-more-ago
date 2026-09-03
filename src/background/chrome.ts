@@ -262,6 +262,12 @@ function unavailableSurfaceState(
 if (application && chrome.runtime?.onMessage?.addListener) {
     chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
         let responseSent = false;
+
+        /**
+         * Sends the response once; a later attempt from the same handler is ignored.
+         *
+         * @param value - Response payload.
+         */
         const sendOnce = (value: unknown): void => {
             if (responseSent) {
                 return;

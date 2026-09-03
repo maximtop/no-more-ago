@@ -276,6 +276,12 @@ export class DocumentTransformationController {
                         : currentRules;
                 const sources: Element[] = [];
                 const seen = new Set<Element>();
+
+                /**
+                 * Collects a source once, in first-seen order.
+                 *
+                 * @param source - Timestamp source to collect.
+                 */
                 const addSource = (source: Element): void => {
                     if (!seen.has(source)) {
                         seen.add(source);

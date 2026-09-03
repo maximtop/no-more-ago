@@ -99,6 +99,11 @@ export function useResetController(options: ResetControllerOptions): ResetContro
     );
     const inFlight = useRef(false);
 
+    /**
+     * Dispatches one reset and rehydrates every section from the response.
+     *
+     * @returns - A promise that settles after the reset attempt completes.
+     */
     const reset = async (): Promise<void> => {
         if (!sites.state || resetting || inFlight.current) {
             return;

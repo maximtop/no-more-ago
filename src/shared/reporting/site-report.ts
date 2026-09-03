@@ -327,6 +327,12 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
  */
 export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): SiteReportReporter {
     let busy = false;
+
+    /**
+     * Reads the extension version and browser family for a report.
+     *
+     * @returns - Report environment, or null when the extension version is unknown.
+     */
     const environment = (): Pick<SiteReportContext, "extensionVersion" | "browser"> | null => {
         const version = extensionVersion(runtime);
         return version === null
@@ -336,6 +342,14 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 browser: browserContextFromUserAgent(runtime.navigator?.userAgent),
             };
     };
+
+    /**
+     * Opens the report URL in a new tab.
+     *
+     * @param url - Report URL.
+     * @param windowId - Window that receives the tab, when known.
+     * @returns - Whether the tab was opened.
+     */
     const open = async (url: string, windowId?: number): Promise<SiteReportResult> => {
         if (!runtime.tabs) {
             return { ok: false, error: SITE_REPORT_ERROR.BROWSER_UNAVAILABLE };

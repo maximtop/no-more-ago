@@ -132,6 +132,13 @@ describe("resolveTrustedTimestamp", () => {
         ).toBeNull();
     });
 
+    /**
+     * Builds a GitHub candidate with the given validation rule.
+     *
+     * @param rawDatetime - Raw datetime value.
+     * @param rule - Validation rule.
+     * @returns - Timestamp candidate.
+     */
     const candidate = (
         rawDatetime: string,
         rule: unknown = TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
@@ -216,6 +223,12 @@ describe("resolveTrustedTimestamp", () => {
         )).toBeNull();
     });
 
+    /**
+     * Builds a YouTube calendar-date candidate.
+     *
+     * @param rawDatetime - Raw datetime value.
+     * @returns - Timestamp candidate.
+     */
     const calendarCandidate = (rawDatetime: string): TimestampCandidate => ({
         ruleId: YOUTUBE_ADAPTER_ID,
         source: document.createElement("yt-formatted-string"),
@@ -261,6 +274,12 @@ describe("resolveTrustedTimestamp", () => {
             .toBeNull();
     });
 
+    /**
+     * Builds a YouTube player-response candidate.
+     *
+     * @param rawDatetime - Raw datetime value.
+     * @returns - Timestamp candidate.
+     */
     const combinedCandidate = (rawDatetime: string): TimestampCandidate => ({
         ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
         source: document.createElement("yt-formatted-string"),
@@ -419,6 +438,12 @@ describe("resolveTrustedTimestamp", () => {
         expect(source.textContent).toBe("3 months ago");
     });
 
+    /**
+     * Builds a generic time-element candidate.
+     *
+     * @param rawDatetime - Raw datetime value.
+     * @returns - Timestamp candidate.
+     */
     const htmlCandidate = (rawDatetime: string) =>
         ({
             ruleId: "generic-time",

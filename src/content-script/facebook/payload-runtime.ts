@@ -73,6 +73,12 @@ interface FacebookPayloadRuntimeSlot {
  */
 function payloadScriptCandidates(record: MutationRecord): readonly HTMLScriptElement[] {
     const candidates = new Set<HTMLScriptElement>();
+
+    /**
+     * Collects a payload script reached by a mutation node.
+     *
+     * @param node - Added or changed node.
+     */
     const addCandidate = (node: Node): void => {
         const element = node instanceof Element ? node : node.parentElement;
         if (
@@ -105,6 +111,12 @@ function payloadScriptCandidates(record: MutationRecord): readonly HTMLScriptEle
  */
 function trackedLinkCandidates(record: MutationRecord): readonly Element[] {
     const candidates = new Set<Element>();
+
+    /**
+     * Collects the tracked link closest to a mutation node.
+     *
+     * @param node - Added or changed node.
+     */
     const addClosest = (node: Node): void => {
         const element = node instanceof Element ? node : node.parentElement;
         const closest = element?.closest(FACEBOOK_TRACKED_LINK_SELECTOR);
@@ -157,6 +169,11 @@ export function installFacebookPayloadRuntime(input: {
     slot.enabled = false;
     slot.disposed = false;
 
+    /**
+     * Reapplies pending record changes to their tracked links.
+     *
+     * @param candidates - Links to retry, or every tracked link when omitted.
+     */
     const retryPending = (candidates?: readonly Element[]): void => {
         if (!slot.enabled || pendingChanges.size === 0) {
             return;
@@ -203,6 +220,11 @@ export function installFacebookPayloadRuntime(input: {
         }
     };
 
+    /**
+     * Applies record changes posted by the bridge, retaining unmatched ones.
+     *
+     * @param changes - Timestamp record changes posted by the bridge.
+     */
     const acceptChanges = (changes: readonly FacebookTimestampRecordChange[]): void => {
         if (!slot.enabled) {
             return;
@@ -224,6 +246,11 @@ export function installFacebookPayloadRuntime(input: {
         retryPending();
     };
 
+    /**
+     * Posts a bridge control message to the page.
+     *
+     * @param enabled - Requested bridge state.
+     */
     const postControl = (enabled: boolean): void => {
         try {
             input.window.postMessage(
@@ -235,6 +262,11 @@ export function installFacebookPayloadRuntime(input: {
         }
     };
 
+    /**
+     * Accepts record changes posted by the main-world bridge.
+     *
+     * @param event - Window message event.
+     */
     const messageListener = (event: MessageEvent): void => {
         if (
             event.source !== input.window
@@ -271,6 +303,11 @@ export function installFacebookPayloadRuntime(input: {
         }
     });
 
+    /**
+     * Enables or disables the payload runtime and its bridge.
+     *
+     * @param enabled - Requested runtime state.
+     */
     const setEnabled = (enabled: boolean): void => {
         if (slot.disposed || slot.enabled === enabled) {
             return;

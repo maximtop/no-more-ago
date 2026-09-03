@@ -91,6 +91,12 @@ function HostnameEntryForm({
 }: HostnameEntryFormProps): ReactElement {
     const [draft, setDraft] = useState("");
     const [formError, setFormError] = useState<string>();
+
+    /**
+     * Validates the entry and hands a canonical hostname to the section.
+     *
+     * @param event - Form submit event.
+     */
     const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
         event.preventDefault();
         const result = validateHostnameEntry(draft, hosts);
@@ -248,6 +254,13 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     const hosts = controller.activeHostnames;
     const scopeBusy = busy?.kind === SITES_BUSY_KIND.SCOPE;
     const noticeMessage = mutationNoticeText(notice, RETRY_HINT);
+
+    /**
+     * Adds a validated hostname and confirms it beside the list.
+     *
+     * @param hostname - Canonical hostname to add.
+     * @returns - Whether the background confirmed the addition.
+     */
     const onAdd = async (hostname: string): Promise<boolean> => {
         setConfirmation(undefined);
         const added = await controller.changeSiteProcessing(hostname, copy.addEnables);

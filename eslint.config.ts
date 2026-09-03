@@ -25,6 +25,10 @@ const jsdocRules = {
                 FunctionDeclaration: true,
             },
             contexts: [
+                // Named arrow functions declared inside a function body, such
+                // as controller commands; anonymous callbacks stay exempt.
+                ":function > BlockStatement > VariableDeclaration > VariableDeclarator"
+                + " > ArrowFunctionExpression",
                 "TSInterfaceDeclaration",
                 "TSTypeAliasDeclaration",
                 "TSInterfaceDeclaration TSPropertySignature",

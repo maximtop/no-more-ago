@@ -108,6 +108,11 @@ function createGenericControllerFixture(
 }
 
 describe("DocumentTransformationController", () => {
+    /**
+     * Flushes one MutationObserver delivery and its reconciliation.
+     *
+     * @returns - A promise settled after the microtasks ran.
+     */
     const flushMutations = async (): Promise<void> => {
         await Promise.resolve();
         await Promise.resolve();

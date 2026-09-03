@@ -185,6 +185,12 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         onExternalChange: refresh,
     });
 
+    /**
+     * Applies a settled mutation's projection and notice.
+     *
+     * @param next - Projection carried by the response, or undefined when it was lost.
+     * @param outcome - Notice describing the outcome.
+     */
     const apply = (next: PopupState | undefined, outcome: PopupNotice): void => {
         if (next === undefined) {
             setState(createUnavailablePopupState(undefined, state?.hostname ?? null));
@@ -198,6 +204,12 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         setNotice(outcome);
     };
 
+    /**
+     * Saves global activation from the popup.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeGlobal = async (enabled: boolean): Promise<void> => {
         if (!state || state.availability !== STATE_AVAILABILITY.READY || inFlight.current) {
             return;
@@ -211,6 +223,12 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         setSaving(false);
     };
 
+    /**
+     * Saves processing for the current hostname under the rendered scope mode.
+     *
+     * @param enabled - Whether processing should apply to the hostname.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeSite = async (enabled: boolean): Promise<void> => {
         if (
             !state
@@ -231,6 +249,11 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         setSaving(false);
     };
 
+    /**
+     * Resets every setting from the recovery view and rereads the popup state.
+     *
+     * @returns - A promise that settles after the reset attempt completes.
+     */
     const resetAll = async (): Promise<void> => {
         if (inFlight.current) {
             return;
@@ -254,6 +277,11 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         }
     };
 
+    /**
+     * Downloads retained diagnostic logs from the recovery view.
+     *
+     * @returns - A promise that settles after the download attempt.
+     */
     const downloadLogs = async (): Promise<void> => {
         if (downloadInFlight.current) {
             return;

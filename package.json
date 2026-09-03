@@ -22,10 +22,12 @@
     "@date-fns/tz": "1.5.0",
     "@mantine/core": "9.5.2",
     "@mantine/hooks": "9.5.2",
+    "@xstate/react": "6.1.0",
     "date-fns": "4.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "valibot": "1.4.2"
+    "valibot": "1.4.2",
+    "xstate": "5.32.6"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

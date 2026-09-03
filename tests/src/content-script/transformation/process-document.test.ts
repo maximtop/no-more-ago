@@ -457,6 +457,13 @@ describe("processDocument", () => {
     });
 
     it("emits bounded raw evidence only for failed Telegram timestamp resolution", () => {
+        /**
+         * Processes one Telegram bubble and captures its diagnostics.
+         *
+         * @param rawDatetime - Bubble timestamp attribute.
+         * @param label - Visible label text.
+         * @returns - Diagnostic sink that received the events.
+         */
         const runTelegram = (rawDatetime: string, label: string) => {
             document.body.innerHTML = `<div class="bubble" data-timestamp="${rawDatetime}">`
                 + `<span class="time-inner"><span id="telegram-diagnostic-clock" `
@@ -842,6 +849,14 @@ describe("processDocument", () => {
                 validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
             }));
+
+            /**
+             * Builds a source rule that matches only the fixture source.
+             *
+             * @param id - Rule identifier.
+             * @param extract - Extraction function under test.
+             * @returns - Source rule.
+             */
             const matchingRule = (id: string, extract: TimestampSourceRule["extract"]):
             TimestampSourceRule => ({
                 id,

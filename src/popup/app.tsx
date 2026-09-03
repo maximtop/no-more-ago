@@ -126,6 +126,11 @@ export function PopupApp({
     const { state } = controller;
     const appearance = state?.appearance ?? APPEARANCE.SYSTEM;
 
+    /**
+     * Opens a prefilled GitHub report for the current site.
+     *
+     * @returns - A promise that settles after the report attempt.
+     */
     const onReportSite = async (): Promise<void> => {
         if (
             !state
@@ -149,6 +154,9 @@ export function PopupApp({
         }
     };
 
+    /**
+     * Opens the Options page, ignoring browser failures.
+     */
     const onOpenSettings = (): void => {
         void openOptionsPage().catch(() => undefined);
     };

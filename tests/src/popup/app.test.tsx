@@ -369,6 +369,13 @@ describe("PopupApp contract", () => {
 
     it("reloads state when the background announces a newer revision", async () => {
         let announce: ((revision: number) => void) | undefined;
+
+        /**
+         * Captures the listener so the test can announce revisions.
+         *
+         * @param listener - Revision listener.
+         * @returns - Subscription handle.
+         */
         const subscribe: SubscribeSettingsChanged = (listener) => {
             announce = listener;
             return { unsubscribe: () => undefined };

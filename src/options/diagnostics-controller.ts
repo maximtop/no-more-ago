@@ -243,6 +243,12 @@ export function useDiagnosticsController(
         };
     }, [client, initialState]);
 
+    /**
+     * Persists the Debug logs toggle and applies the outcome.
+     *
+     * @param enabled - Requested logging state.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeDebug = async (enabled: boolean): Promise<void> => {
         if (
             !state
@@ -282,6 +288,11 @@ export function useDiagnosticsController(
         setSaving(false);
     };
 
+    /**
+     * Downloads the retained diagnostics archive.
+     *
+     * @returns - A promise that settles after the download attempt.
+     */
     const downloadDiagnostics = async (): Promise<void> => {
         if (diagnosticsInFlight.current) {
             return;
@@ -300,6 +311,11 @@ export function useDiagnosticsController(
         }
     };
 
+    /**
+     * Clears retained diagnostics while logging is enabled.
+     *
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const clearDiagnostics = async (): Promise<void> => {
         if (
             !state
@@ -325,6 +341,11 @@ export function useDiagnosticsController(
         }
     };
 
+    /**
+     * Opens a prefilled GitHub report from the Settings page.
+     *
+     * @returns - A promise that settles after the report attempt.
+     */
     const openGitHubIssue = async (): Promise<void> => {
         if (reporting || reportInFlight.current) {
             return;
@@ -345,6 +366,11 @@ export function useDiagnosticsController(
         }
     };
 
+    /**
+     * Rereads diagnostic logging state after a full reset.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
     const reloadAfterReset = async (): Promise<void> => {
         try {
             setState(await client.getDebugState());

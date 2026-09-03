@@ -625,6 +625,12 @@ function getChildListMutationSources(element: Element): readonly Element[] {
 export function createBlueskyAdapter(
     readResolution: (source: Element) => ResolvedBlueskyTarget | undefined,
 ): TimestampSourceRule {
+    /**
+     * Reads the source's descriptor together with its current resolution.
+     *
+     * @param source - Bluesky timestamp source.
+     * @returns - Descriptor and resolution, or null when the resolution no longer matches.
+     */
     const readCurrentResolution = (
         source: Element,
     ): { readonly descriptor: BlueskyRelativeTarget; readonly resolution: ResolvedBlueskyTarget }

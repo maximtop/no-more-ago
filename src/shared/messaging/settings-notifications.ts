@@ -115,6 +115,13 @@ export function createSettingsChangedSubscriber(
         if (!runtime) {
             return { unsubscribe: () => undefined };
         }
+
+        /**
+         * Forwards background revision announcements to the listener.
+         *
+         * @param message - Runtime message.
+         * @param sender - Message sender metadata.
+         */
         const receive: SettingsChangedRuntimeListener = (message, sender) => {
             // Only the background announces revisions; a message carrying a
             // sender tab came from a content script and is ignored.
