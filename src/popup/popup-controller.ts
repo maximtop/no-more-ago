@@ -7,7 +7,7 @@ import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     createUnavailablePopupState,
     type PopupState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import {
     INERT_SETTINGS_CHANGED_SUBSCRIBER,
     type SubscribeSettingsChanged,

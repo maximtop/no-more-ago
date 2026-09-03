@@ -35,7 +35,7 @@ import type {
     RefreshFailure,
     PopupState,
     SitesState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import type {
     ResetAllSettingsResponse,
     SetAppearanceResponse,
@@ -44,7 +44,7 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SetSiteScopeModeResponse,
-} from "../../shared/messaging/response-schemas";
+} from "../../shared/messaging/responses";
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,

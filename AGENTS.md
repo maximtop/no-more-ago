@@ -112,7 +112,7 @@ has an obvious, simpler standard-library replacement.
 │   ├── manifest/               # Common and browser-specific manifests
 │   ├── options/                # Settings page and feature sections
 │   ├── popup/                  # Toolbar popup
-│   └── shared/                 # Cross-context schemas and contracts
+│   └── shared/                 # Cross-context contracts and boundary schemas
 │       ├── diagnostics/        # Diagnostic contracts, events, archive, and download helper
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
 │       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
@@ -358,11 +358,21 @@ Known architectural exclusions to improve when their area changes:
 - Parse genuinely external values once at their boundary with Valibot or a
   focused parser, then trust the parsed type downstream. Do not revalidate
   extension-owned storage, internal messages, or typed browser API results.
+  Keep schemas in the modules that parse: page payloads, network responses, the
+  Facebook cross-world bridge, and document-supplied diagnostic fields. Every
+  other contract is a plain type, because a schema nothing parses is dead
+  runtime code standing in for a type declaration.
 - Never write hand-rolled type guards such as `isRecord` or
   `typeof value === "object" && value !== null && !Array.isArray(value)`
   chains. A guard over data the extension produced itself hides a producer bug
   instead of failing loudly, and a parameter typed `unknown` for such data is
   the usual root cause: type it with the owning contract instead.
+- Messages between extension contexts are trusted. Dispatch by casting to the
+  message union and reading its `type`. What still needs checking is whether an
+  answer arrived at all, since a frame may hold no runtime and a worker may
+  restart: acknowledgements must carry the exact revision that was sent, a
+  mutation with no response rereads state, and a per-surface command takes only
+  the response projected for the surface that asked.
 - Use typed result objects for expected failures. Reserve exceptions for
   programmer errors and truly exceptional failures.
 - Do not inline magic values that form a shared contract, including runtime

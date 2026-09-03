@@ -7,7 +7,7 @@ import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     createUnavailableSitesState,
     type SitesState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
 import { settleMutation, type MutationNotice } from "../shared/ui/persistence-notice";
 import { readWithDeadline } from "../shared/ui/read-with-deadline";

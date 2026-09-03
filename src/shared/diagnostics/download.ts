@@ -68,9 +68,6 @@ export function diagnosticsErrorText(
     if (error === DIAGNOSTICS_ERROR.EMPTY) {
         return "There are no diagnostic logs to download yet.";
     }
-    if (error === DIAGNOSTICS_ERROR.INVALID_JOURNAL) {
-        return "Saved diagnostic logs are invalid. Clear logs and try again.";
-    }
     if (error === DIAGNOSTICS_ERROR.STORAGE_FAILED) {
         return "Saved diagnostic logs could not be read. Try again later.";
     }

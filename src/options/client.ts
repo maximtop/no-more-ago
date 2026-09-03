@@ -4,7 +4,6 @@
  * @file Typed client for options-page requests and background responses.
  */
 
-import * as v from "valibot";
 import {
     GET_DISPLAY_STATE_MESSAGE,
     GET_DEBUG_STATE_MESSAGE,
@@ -18,36 +17,26 @@ import {
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_SITE_SCOPE_MODE_MESSAGE,
-    clearDiagnosticsResponseSchema,
-    getDiagnosticsSnapshotResponseSchema,
     DIAGNOSTICS_ERROR,
+    type ClearDiagnosticsResponse,
     type DiagnosticsClearError,
+    type GetDiagnosticsSnapshotResponse,
     type BackgroundMessage,
 } from "../shared/messaging/contracts";
-import {
-    debugStateSchema,
-    displayStateSchema,
-    sitesStateSchema,
-    type DebugState,
-    type DisplayState,
-    type SitesState,
-} from "../shared/messaging/view-state-schemas";
-import {
-    resetAllSettingsResponseSchema,
-    setAppearanceResponseSchema,
-    setDebugEnabledResponseSchema,
-    setDisplaySettingsResponseSchema,
-    setGlobalEnabledResponseSchema,
-    setSiteEnabledResponseSchema,
-    setSiteScopeModeResponseSchema,
-    type ResetAllSettingsResponse,
-    type SetAppearanceResponse,
-    type SetDebugEnabledResponse,
-    type SetDisplaySettingsResponse,
-    type SetGlobalEnabledResponse,
-    type SetSiteEnabledResponse,
-    type SetSiteScopeModeResponse,
-} from "../shared/messaging/response-schemas";
+import type {
+    DebugState,
+    DisplayState,
+    SitesState,
+} from "../shared/messaging/view-state";
+import type {
+    ResetAllSettingsResponse,
+    SetAppearanceResponse,
+    SetDebugEnabledResponse,
+    SetDisplaySettingsResponse,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
+} from "../shared/messaging/responses";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
 import type { Appearance, DisplaySettings } from "../shared/settings/snapshot";
 import type { SiteScopeMode } from "../shared/settings/site-scope";
@@ -182,10 +171,11 @@ export class SitesClient {
      */
     public async getState(): Promise<SitesState> {
         const response = await this.transport.sendMessage({ type: GET_SITES_STATE_MESSAGE });
-        if (!v.is(sitesStateSchema, response)) {
-            throw new Error("Invalid Sites state response");
+        const state = response as SitesState | undefined;
+        if (!state) {
+            throw new Error("Missing Sites state response");
         }
-        return response;
+        return state;
     }
 
     /**
@@ -195,11 +185,11 @@ export class SitesClient {
      */
     public async getDisplayState(): Promise<DisplayState> {
         const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
-        const parsed = v.safeParse(displayStateSchema, response);
-        if (!parsed.success) {
-            throw new Error("Invalid Display state response");
+        const state = response as DisplayState | undefined;
+        if (!state) {
+            throw new Error("Missing Display state response");
         }
-        return parsed.output;
+        return state;
     }
 
     /**
@@ -209,10 +199,11 @@ export class SitesClient {
      */
     public async getDebugState(): Promise<DebugState> {
         const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
-        if (!v.is(debugStateSchema, response)) {
-            throw new Error("Invalid Debug state response");
+        const state = response as DebugState | undefined;
+        if (!state) {
+            throw new Error("Missing Debug state response");
         }
-        return response;
+        return state;
     }
 
     /**
@@ -229,8 +220,9 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
         }
-        return v.is(resetAllSettingsResponseSchema, response)
-            ? { kind: CLIENT_RESULT_KIND.RESPONSE, response }
+        const result = response as ResetAllSettingsResponse | undefined;
+        return result
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, response: result }
             : { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
     }
 
@@ -255,9 +247,9 @@ export class SitesClient {
                 mode,
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
-            setSiteEnabledResponseSchema,
             () => this.getState(),
-            (response): response is SitesSurfaceResponse<SetSiteEnabledResponse> =>
+            (response: SetSiteEnabledResponse):
+                response is SitesSurfaceResponse<SetSiteEnabledResponse> =>
                 response.surface === SITE_SETTINGS_SURFACE.SITES,
         );
     }
@@ -271,7 +263,6 @@ export class SitesClient {
     public setSiteScopeMode(mode: SiteScopeMode): Promise<SitesScopeSetResult> {
         return runMutation(
             () => this.transport.sendMessage({ type: SET_SITE_SCOPE_MODE_MESSAGE, mode }),
-            setSiteScopeModeResponseSchema,
             () => this.getState(),
         );
     }
@@ -289,9 +280,9 @@ export class SitesClient {
                 enabled,
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
-            setGlobalEnabledResponseSchema,
             () => this.getState(),
-            (response): response is SitesSurfaceResponse<SetGlobalEnabledResponse> =>
+            (response: SetGlobalEnabledResponse):
+                response is SitesSurfaceResponse<SetGlobalEnabledResponse> =>
                 response.surface === SITE_SETTINGS_SURFACE.SITES,
         );
     }
@@ -305,7 +296,6 @@ export class SitesClient {
     public setDebugEnabled(enabled: boolean): Promise<DebugSetResult> {
         return runMutation(
             () => this.transport.sendMessage({ type: SET_DEBUG_ENABLED_MESSAGE, enabled }),
-            setDebugEnabledResponseSchema,
             () => this.getDebugState(),
         );
     }
@@ -319,7 +309,6 @@ export class SitesClient {
     public setDisplaySettings(display: DisplaySettings): Promise<DisplaySetResult> {
         return runMutation(
             () => this.transport.sendMessage({ type: SET_DISPLAY_SETTINGS_MESSAGE, display }),
-            setDisplaySettingsResponseSchema,
             () => this.getDisplayState(),
         );
     }
@@ -333,7 +322,6 @@ export class SitesClient {
     public setAppearance(appearance: Appearance): Promise<AppearanceSetResult> {
         return runMutation(
             () => this.transport.sendMessage({ type: SET_APPEARANCE_MESSAGE, appearance }),
-            setAppearanceResponseSchema,
             () => this.getDisplayState(),
         );
     }
@@ -350,12 +338,13 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
+        const result = response as GetDiagnosticsSnapshotResponse | undefined;
+        if (!result) {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        return response.ok
-            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }
-            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
+        return result.ok
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: result.snapshot }
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: result.error };
     }
 
     /**
@@ -370,12 +359,13 @@ export class SitesClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        if (!v.is(clearDiagnosticsResponseSchema, response)) {
+        const result = response as ClearDiagnosticsResponse | undefined;
+        if (!result) {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        return response.ok
+        return result.ok
             ? { kind: CLIENT_RESULT_KIND.RESPONSE }
-            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: result.error };
     }
 }
 

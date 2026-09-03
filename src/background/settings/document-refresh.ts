@@ -6,8 +6,8 @@
 import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-    isDebugPolicyUpdateAcknowledgement,
-    isPresentationUpdateAcknowledgement,
+    isDebugPolicyAcknowledgement,
+    isPresentationAcknowledgement,
     type DebugPolicyUpdateMessage,
     type PresentationUpdateMessage,
 } from "../../shared/messaging/document-messages";
@@ -15,7 +15,7 @@ import { REFRESH_FAILURE_REASON } from "../../shared/messaging/view-state-values
 import type {
     RefreshFailure as DebugRefreshFailure,
     RefreshFailure as DisplayRefreshFailure,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import type { DisplaySettings, SettingsSnapshot } from "../../shared/settings/snapshot";
 import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
@@ -39,8 +39,8 @@ function isRefreshAcknowledgement(
     message: RefreshMessage,
 ): boolean {
     return message.type === UPDATE_PRESENTATION_MESSAGE
-        ? isPresentationUpdateAcknowledgement(response, message.revision)
-        : isDebugPolicyUpdateAcknowledgement(response, message.revision);
+        ? isPresentationAcknowledgement(response, message.revision)
+        : isDebugPolicyAcknowledgement(response, message.revision);
 }
 
 /**

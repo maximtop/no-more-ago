@@ -15,7 +15,7 @@ import {
     type SiteScopePolicy,
 } from "../../shared/settings/site-scope";
 import {
-    isDocumentPolicyReconciledMessage,
+    isDocumentPolicyAcknowledgement,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     type ReconcileDocumentPolicyMessage,
 } from "../../shared/messaging/document-messages";
@@ -443,7 +443,7 @@ async function deliverPolicy(
         () => tabs.sendMessage(tabId, message, { frameId }),
     );
     return result.ok
-        && isDocumentPolicyReconciledMessage(result.value, message.revision);
+        && isDocumentPolicyAcknowledgement(result.value, message.revision);
 }
 
 /**
