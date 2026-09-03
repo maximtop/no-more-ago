@@ -9,7 +9,7 @@ import {
     FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY,
     FACEBOOK_PAYLOAD_LIMIT,
     createFacebookPayloadBridgeControlMessage,
-    isFacebookPayloadMessage,
+    readFacebookPayloadMessage,
 } from "../../../../src/content-script/facebook/contracts";
 import {
     FACEBOOK_TRANSPORT_LIMIT,
@@ -214,9 +214,8 @@ describe("Facebook main-world bridge", () => {
         });
 
         expect(clone).toHaveBeenCalledOnce();
-        const message = postMessage.mock.calls[0]?.[0] as unknown;
-        expect(isFacebookPayloadMessage(message)).toBe(true);
-        if (!isFacebookPayloadMessage(message)) {
+        const message = readFacebookPayloadMessage(postMessage.mock.calls[0]?.[0]);
+        if (!message) {
             throw new Error("Expected bounded payload message");
         }
         expect(message).toMatchObject({
@@ -408,7 +407,7 @@ describe("Facebook main-world bridge", () => {
         await vi.waitFor(() => {
             expect(postMessage).toHaveBeenCalledOnce();
         });
-        expect(isFacebookPayloadMessage(postMessage.mock.calls[0]?.[0])).toBe(true);
+        expect(readFacebookPayloadMessage(postMessage.mock.calls[0]?.[0])).not.toBeNull();
     });
 
     it("always calls native XHR send when request-body iteration throws", () => {
