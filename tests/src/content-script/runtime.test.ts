@@ -633,6 +633,12 @@ describe("installContentRuntime", () => {
     it("lets reinjection hydration replace a stale same-revision document policy", async () => {
         let completeStaleHydration: ((value: unknown) => void) | undefined;
         const source = messages();
+
+        /**
+         * Returns a hydration that completes only when the test releases it.
+         *
+         * @returns - Pending document-state promise.
+         */
         const staleLoader = () => new Promise<unknown>((resolve) => {
             completeStaleHydration = resolve;
         });
@@ -867,6 +873,10 @@ describe("installContentRuntime", () => {
                 throw new Error("Network access is forbidden in Watch lifecycle tests");
             });
             vi.stubGlobal("fetch", forbiddenFetch);
+
+            /**
+             * Installs the Watch runtime for the current href.
+             */
             const installWatchRuntime = (): void => {
                 installContentRuntime({
                     document,
@@ -940,6 +950,10 @@ describe("installContentRuntime", () => {
                 }
                 return classifyYouTubeWatchRouteHandoff(input);
             });
+
+            /**
+             * Installs the runtime with the controllable URL provider.
+             */
             const installRuntime = (): void => {
                 installContentRuntime({
                     document,

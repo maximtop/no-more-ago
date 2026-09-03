@@ -4,7 +4,8 @@
 
 import * as v from "valibot";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import type { DisplaySettings } from "../settings/snapshot";
+import { APPEARANCE, APPEARANCES, type DisplaySettings } from "../settings/snapshot";
+import { SITE_SCOPE_MODES } from "../settings/site-scope";
 import {
     POPUP_READY_STATUSES,
     POPUP_RUNTIME_FAILURES,
@@ -21,12 +22,17 @@ const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
 const settingsFailureSchema = v.picklist(SETTINGS_STATE_FAILURES);
 const popupStatusSchema = v.picklist(POPUP_READY_STATUSES);
 const popupFailureSchema = v.picklist(POPUP_RUNTIME_FAILURES);
+const scopeModeSchema = v.picklist(SITE_SCOPE_MODES);
+const appearanceSchema = v.picklist(APPEARANCES);
+const hostnameListSchema = v.pipe(v.array(v.string()), v.readonly());
 const readyPopupStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
     hostname: v.nullable(v.string()),
     siteEnabled: v.nullable(v.boolean()),
+    scopeMode: scopeModeSchema,
+    appearance: appearanceSchema,
     status: popupStatusSchema,
     failure: v.optional(popupFailureSchema),
 });
@@ -36,29 +42,31 @@ const unavailablePopupStateSchema = v.strictObject({
     globalEnabled: v.null(),
     hostname: v.nullable(v.string()),
     siteEnabled: v.null(),
+    scopeMode: v.null(),
+    appearance: appearanceSchema,
     status: v.picklist(POPUP_UNAVAILABLE_STATUSES),
     failure: settingsFailureSchema,
 });
-const siteListEntrySchema = v.strictObject({
-    hostname: v.string(),
-    enabled: v.boolean(),
-});
 
 /**
- * Complete ready site-preferences state accepted after a successful reset.
+ * Complete ready site-scope state accepted after a successful reset.
  */
 export const readySitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.READY),
     revision: revisionSchema,
     globalEnabled: v.boolean(),
-    sites: v.array(siteListEntrySchema),
+    scopeMode: scopeModeSchema,
+    excludedSites: hostnameListSchema,
+    allowedSites: hostnameListSchema,
 });
 
 const unavailableSitesStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     globalEnabled: v.null(),
-    sites: v.tuple([]),
+    scopeMode: v.null(),
+    excludedSites: v.tuple([]),
+    allowedSites: v.tuple([]),
     failure: settingsFailureSchema,
 });
 const readyDisplayStateSchema = v.strictObject({
@@ -68,6 +76,7 @@ const readyDisplayStateSchema = v.strictObject({
         v.unknown(),
         v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
     ),
+    appearance: appearanceSchema,
     debugEnabled: v.boolean(),
     error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
 });
@@ -75,6 +84,7 @@ const unavailableDisplayStateSchema = v.strictObject({
     availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
     revision: v.null(),
     display: v.null(),
+    appearance: appearanceSchema,
     failure: settingsFailureSchema,
 });
 const readyDebugStateSchema = v.strictObject({
@@ -103,7 +113,7 @@ export const popupStateSchema = v.union([
 ]);
 
 /**
- * Complete ready or unavailable site-preferences projection.
+ * Complete ready or unavailable site-scope projection.
  */
 export const sitesStateSchema = v.union([
     readySitesStateSchema,
@@ -149,20 +159,64 @@ export const refreshFailuresSchema = v.pipe(
 export type PopupState = v.InferOutput<typeof popupStateSchema>;
 
 /**
+ * Popup view while settings are available.
+ */
+export type ReadyPopupState = v.InferOutput<typeof readyPopupStateSchema>;
+
+/**
+ * Popup view while settings are unavailable.
+ */
+export type UnavailablePopupState = v.InferOutput<typeof unavailablePopupStateSchema>;
+
+/**
+ * Site scope view inferred from its runtime validation schema.
+ */
+export type SitesState = v.InferOutput<typeof sitesStateSchema>;
+
+/**
+ * Site scope view while settings are unavailable.
+ */
+export type UnavailableSitesState = v.InferOutput<typeof unavailableSitesStateSchema>;
+
+/**
+ * Display settings view inferred from its runtime validation schema.
+ */
+export type DisplayState = v.InferOutput<typeof displayStateSchema>;
+
+/**
+ * Display settings view while settings are unavailable.
+ */
+export type UnavailableDisplayState = v.InferOutput<typeof unavailableDisplayStateSchema>;
+
+/**
+ * Diagnostic logging view inferred from its runtime validation schema.
+ */
+export type DebugState = v.InferOutput<typeof debugStateSchema>;
+
+/**
+ * Diagnostic logging view while settings are unavailable.
+ */
+export type UnavailableDebugState = v.InferOutput<typeof unavailableDebugStateSchema>;
+
+/**
  * Builds the shared fail-closed popup projection used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the projection unavailable.
+ * @param hostname - Active tab hostname, when it is still known.
  * @returns - Complete unavailable popup state.
  */
 export function createUnavailablePopupState(
     failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-): PopupState {
+    hostname: string | null = null,
+): UnavailablePopupState {
     return {
         availability: STATE_AVAILABILITY.UNAVAILABLE,
         revision: null,
         globalEnabled: null,
-        hostname: null,
+        hostname,
         siteEnabled: null,
+        scopeMode: null,
+        appearance: APPEARANCE.SYSTEM,
         status: failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
             ? POPUP_STATUS.RUNTIME_FAILED
             : POPUP_STATUS.SETTINGS_UNAVAILABLE,
@@ -171,24 +225,59 @@ export function createUnavailablePopupState(
 }
 
 /**
- * Site-list entry inferred from its runtime validation schema.
+ * Builds the fail-closed sites projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable sites state.
  */
-export type SiteListEntry = v.InferOutput<typeof siteListEntrySchema>;
+export function createUnavailableSitesState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableSitesState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        globalEnabled: null,
+        scopeMode: null,
+        excludedSites: [],
+        allowedSites: [],
+        failure,
+    };
+}
 
 /**
- * Site preferences view inferred from its runtime validation schema.
+ * Builds the fail-closed display projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable display state.
  */
-export type SitesState = v.InferOutput<typeof sitesStateSchema>;
+export function createUnavailableDisplayState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableDisplayState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        display: null,
+        appearance: APPEARANCE.SYSTEM,
+        failure,
+    };
+}
 
 /**
- * Display settings view inferred from its runtime validation schema.
+ * Builds the fail-closed debug projection used when settings cannot be read safely.
+ *
+ * @param failure - Settings failure that made the projection unavailable.
+ * @returns - Complete unavailable debug state.
  */
-export type DisplayState = v.InferOutput<typeof displayStateSchema>;
-
-/**
- * Diagnostic logging view inferred from its runtime validation schema.
- */
-export type DebugState = v.InferOutput<typeof debugStateSchema>;
+export function createUnavailableDebugState(
+    failure: SettingsStateFailure = SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+): UnavailableDebugState {
+    return {
+        availability: STATE_AVAILABILITY.UNAVAILABLE,
+        revision: null,
+        enabled: null,
+        failure,
+    };
+}
 
 /**
  * Per-tab refresh failure inferred from its runtime validation schema.

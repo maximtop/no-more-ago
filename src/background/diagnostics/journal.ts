@@ -3,6 +3,11 @@
  */
 
 import * as v from "valibot";
+import {
+    DIAGNOSTICS_ERROR,
+    type DiagnosticsClearError,
+    type DiagnosticsSnapshotError,
+} from "../../shared/messaging/contracts";
 import { diagnosticEventSchema, type DiagnosticEvent } from "../../shared/diagnostics/events";
 
 /**
@@ -61,7 +66,7 @@ export type DiagnosticJournalSnapshotResult =
         /**
          * Stable failure reported to the options page.
          */
-        readonly error: "disabled" | "empty" | "invalid-journal" | "storage-failed";
+        readonly error: DiagnosticsSnapshotError;
     };
 
 /**
@@ -83,7 +88,7 @@ export type DiagnosticJournalClearResult =
         /**
          * Stable clear failure reported to the options page.
          */
-        readonly error: "disabled" | "storage-failed";
+        readonly error: DiagnosticsClearError;
     };
 
 const envelopeSchema = v.strictObject({ entries: v.array(diagnosticEventSchema) });
@@ -114,9 +119,58 @@ function parseEnvelope(value: unknown, maxBytes: number): DiagnosticEvent[] | nu
 }
 
 /**
+ * Durable diagnostic journal as the diagnostics service uses it.
+ */
+export interface DiagnosticJournalStore {
+    /**
+     * Enables or disables collection.
+     *
+     * @param enabled - Requested collection state.
+     * @returns - Promise settled after the policy change.
+     */
+    setEnabled(enabled: boolean): Promise<void>;
+
+    /**
+     * Appends one trusted event while collection is enabled.
+     *
+     * @param event - Sanitized diagnostic event.
+     * @returns - Promise settled after the storage attempt.
+     */
+    append(event: DiagnosticEvent): Promise<void>;
+
+    /**
+     * Removes every stored entry and disables collection.
+     *
+     * @returns - Promise settled after the removal attempt.
+     */
+    clear(): Promise<void>;
+
+    /**
+     * Reads stored entries while collection is enabled.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    readSnapshot(): Promise<DiagnosticJournalSnapshotResult>;
+
+    /**
+     * Reads stored entries regardless of the collection policy.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    readStored(): Promise<DiagnosticJournalSnapshotResult>;
+
+    /**
+     * Removes every stored entry while keeping collection enabled.
+     *
+     * @returns - Durable clear result.
+     */
+    clearEntries(): Promise<DiagnosticJournalClearResult>;
+}
+
+/**
  * Serializes diagnostic storage work and deletes entries when logging is disabled.
  */
-export class DiagnosticJournal {
+export class DiagnosticJournal implements DiagnosticJournalStore {
     /**
      * Whether new events may be persisted.
      */
@@ -219,36 +273,53 @@ export class DiagnosticJournal {
     }
 
     /**
-     * Reads and validates the current stored envelope once.
+     * Reads and validates the current stored envelope once while logging is enabled.
      *
      * @returns - Canonical events or a contained storage error.
      */
     public readSnapshot(): Promise<DiagnosticJournalSnapshotResult> {
         if (!this.enabledState) {
-            return Promise.resolve({ ok: false, error: "disabled" });
+            return Promise.resolve({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
         }
         const generation = this.generation;
-        return this.serialize(async () => {
-            if (!this.isCurrent(generation)) {
-                return { ok: false, error: "disabled" } as const;
-            }
-            let values: Record<string, unknown>;
-            try {
-                values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
-            } catch {
-                return { ok: false, error: "storage-failed" } as const;
-            }
-            if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
-                return { ok: false, error: "empty" } as const;
-            }
-            const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
-            if (!entries) {
-                return { ok: false, error: "invalid-journal" } as const;
-            }
-            return entries.length === 0
-                ? { ok: false, error: "empty" } as const
-                : { ok: true, entries } as const;
-        });
+        return this.serialize(async () =>
+            this.isCurrent(generation)
+                ? this.readEnvelope()
+                : { ok: false, error: DIAGNOSTICS_ERROR.DISABLED } as const);
+    }
+
+    /**
+     * Reads retained entries regardless of the logging policy, for recovery
+     * views that offer logs while settings cannot be read.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    public readStored(): Promise<DiagnosticJournalSnapshotResult> {
+        return this.serialize(() => this.readEnvelope());
+    }
+
+    /**
+     * Reads and validates the stored envelope.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    private async readEnvelope(): Promise<DiagnosticJournalSnapshotResult> {
+        let values: Record<string, unknown>;
+        try {
+            values = await this.storage.get(DIAGNOSTICS_STORAGE_KEY);
+        } catch {
+            return { ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED };
+        }
+        if (!Object.hasOwn(values, DIAGNOSTICS_STORAGE_KEY)) {
+            return { ok: false, error: DIAGNOSTICS_ERROR.EMPTY };
+        }
+        const entries = parseEnvelope(values[DIAGNOSTICS_STORAGE_KEY], this.maxBytes);
+        if (!entries) {
+            return { ok: false, error: DIAGNOSTICS_ERROR.INVALID_JOURNAL };
+        }
+        return entries.length === 0
+            ? { ok: false, error: DIAGNOSTICS_ERROR.EMPTY }
+            : { ok: true, entries };
     }
 
     /**
@@ -258,7 +329,7 @@ export class DiagnosticJournal {
      */
     public clearEntries(): Promise<DiagnosticJournalClearResult> {
         if (!this.enabledState) {
-            return Promise.resolve({ ok: false, error: "disabled" });
+            return Promise.resolve({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
         }
         this.generation += 1;
         return this.serialize(async () => {
@@ -266,7 +337,7 @@ export class DiagnosticJournal {
                 await this.storage.remove(DIAGNOSTICS_STORAGE_KEY);
                 return { ok: true } as const;
             } catch {
-                return { ok: false, error: "storage-failed" } as const;
+                return { ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED } as const;
             }
         });
     }

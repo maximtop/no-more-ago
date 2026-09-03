@@ -83,6 +83,12 @@ export function installDocumentRouteUpdates(input: {
 }): void {
     const deliveries = new Map<string, RouteDeliveryState>();
 
+    /**
+     * Queues one delivery for a route key unless one is scheduled or in flight.
+     *
+     * @param key - Route delivery key.
+     * @param state - Delivery state of the key.
+     */
     const schedule = (key: string, state: RouteDeliveryState): void => {
         if (state.scheduled || state.inFlight) {
             return;
@@ -95,6 +101,10 @@ export function installDocumentRouteUpdates(input: {
             }
             state.pending = false;
             state.inFlight = true;
+
+            /**
+             * Marks the delivery finished and reschedules it when a change arrived meanwhile.
+             */
             const complete = (): void => {
                 state.inFlight = false;
                 if (state.pending) {

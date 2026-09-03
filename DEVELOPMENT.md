@@ -12,6 +12,7 @@
   - [Development Workflow](#development-workflow)
     - [Branches and Pull Requests](#branches-and-pull-requests)
     - [Development Builds](#development-builds)
+    - [Regenerate the Icons](#regenerate-the-icons)
     - [Quality Checks](#quality-checks)
     - [Runtime Architecture](#runtime-architecture)
     - [Release Builds](#release-builds)
@@ -23,6 +24,7 @@
     - [Local Store Commands](#local-store-commands)
   - [Common Tasks](#common-tasks)
     - [Run a Focused Test](#run-a-focused-test)
+    - [Verify the Settings Surfaces](#verify-the-settings-surfaces)
     - [Add or Update a Site Adapter](#add-or-update-a-site-adapter)
     - [Verify Facebook Support](#verify-facebook-support)
     - [Debug the Extension](#debug-the-extension)
@@ -37,7 +39,7 @@ Install these tools before working on the project:
 - pnpm 10.34.5, installed directly. Do not use Corepack.
 - Git with access to the private
   `git@github.com:maximtop/no-more-ago.git` repository.
-- Chrome or Edge 102+, or Firefox 128+, for manual extension testing.
+- Chrome or Edge 111+, or Firefox 128+, for manual extension testing.
 - GNU Make only if you want to use the optional Makefile aliases.
 - Go 1.26+ with `go-webext` only for the optional
   [local store commands](#local-store-commands).
@@ -151,6 +153,19 @@ The development build includes source maps.
 Unpacked builds are written to `dist/dev/<browser>`. Matching ZIP files are
 written to `dist/dev/<browser>.zip`.
 
+### Regenerate the Icons
+
+The toolbar icons are exported from `src/assets/icons/icon.svg`. After editing
+the SVG, run:
+
+~~~sh
+pnpm icons
+~~~
+
+`scripts/icons.ts` renders `icon-16.png`, `icon-32.png`, `icon-48.png`, and
+`icon-128.png` beside the master with `@resvg/resvg-js`. Commit the PNGs
+together with the SVG; watch mode does not re-export them.
+
 ### Quality Checks
 
 | Command | Result |
@@ -171,9 +186,19 @@ details.
 
 The background registers one universal content runtime for HTTP and HTTPS
 documents at `document_start`, with `allFrames` enabled. It is controlled by
-global processing policy; a per-site preference affects the current
-top-level hostname and all reachable frames in that tab. Each frame uses its
-own URL to select applicable content rules.
+global processing policy and the run mode: `All supported sites` processes a
+tab unless its top-level hostname is in Excluded sites, and `Selected sites
+only` processes it only when that hostname is in Allowed sites. The decision
+covers all reachable frames in that tab. Each frame uses its own URL to select
+applicable content rules.
+
+Settings changes travel one way. A popup or Settings page sends a typed command
+to the background, which serializes it, commits the new settings snapshot, and
+then announces the committed revision with a `no-more-ago:settings-changed`
+message. Every open popup and Settings page, in every tab and window, compares
+that revision with the one it renders and refetches its own projections when
+the announcement is newer. Delivery to a closed page rejects and is ignored, so
+a command never fails because nothing was listening.
 
 Facebook is the one current integration that also needs page-main-world data.
 The background registers `facebook-payload-bridge.js` at `document_start` in
@@ -184,9 +209,10 @@ frames whose own URL is a Facebook URL. Registration comparison tolerates
 browser APIs omitting optional returned fields but corrects every explicit
 mismatch. The universal runtime and Facebook bridge registrations reconcile
 independently, so a bridge-specific browser rejection does not prevent the core
-runtime from registering. Chrome and Edge builds require version 102 or later,
-and Firefox builds require version 128 or later, for registered `MAIN`-world
-content scripts.
+runtime from registering. Registered `MAIN`-world content scripts need only
+Chrome or Edge 102 or later; the Chrome and Edge builds set their floor at 111
+because the shared theme uses `oklch()` and `color-mix()`. Firefox builds
+require version 128 or later.
 
 The Facebook bridge installs bounded page-transport wrappers in an inert state.
 The isolated runtime uses the shared controller's activity lifecycle to send
@@ -573,6 +599,32 @@ pnpm test tests/src/content-script/adapters/bluesky.test.ts \
 
 Inject a fake `BlueskyAppView` through the runtime or a generic participant
 factory for controller tests. Tests must not contact the live public service.
+
+### Verify the Settings Surfaces
+
+Load `dist/dev/chrome` as an unpacked extension and walk this matrix. Repeat
+the popup rows in Firefox with `dist/dev/firefox`.
+
+| Check | Expectation |
+| --- | --- |
+| Popup on a supported page | One hostname, `Active`, run mode `All supported sites` |
+| Site switch off | Status becomes `Excluded on this site`; hostname appears in Excluded sites |
+| Settings, run mode `Selected sites only` | Warning about the empty allowlist; popup shows `Not selected for this site` |
+| Popup site switch on | Hostname appears in Allowed sites; status returns to `Active` |
+| Switch modes twice | Both lists return unchanged |
+| Global switch off | Run mode and both lists stay visible and editable in Settings |
+| Two Settings tabs | A change in one appears in the other without a reload, behind `Settings were updated in another window.` |
+| Popup open while Settings changes the mode | Popup summary and status update |
+| Display, custom pattern | Preview follows every keystroke; an invalid pattern says it must be fixed |
+| Display, IANA zone | Invalid identifier blocks the save with an inline error |
+| Display edited while another window saves | The form says `Display settings were updated in another window. Saving here replaces them.` |
+| Appearance Dark | Popup and Settings both switch immediately, without saving the display form, and after reopening |
+| Appearance System | Both surfaces follow the browser color scheme |
+| Diagnostics | Download and Clear are unavailable until Debug logs is on |
+| Reset | Run mode, both lists, display, appearance, and diagnostics return to defaults |
+| Restricted page | `Cannot run on this page`, no site switch, no report action |
+| Widths 320 and desktop | No horizontal scrolling, no clipped text, in both themes |
+| Keyboard only | Every primary scenario completes with a visible focus ring |
 
 ### Add or Update a Site Adapter
 

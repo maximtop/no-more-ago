@@ -351,6 +351,20 @@ export function isRelativeLabelText(
 }
 
 /**
+ * Selects the subtree that renders a source element's visible label.
+ *
+ * Custom elements such as GitHub's `relative-time` render the label users see
+ * into an open shadow root and keep an absolute fallback in light DOM, so the
+ * shadow root is the label whenever one is attached.
+ *
+ * @param source - Element that owns the candidate label.
+ * @returns - Open shadow root, or the element itself.
+ */
+function visibleLabelRoot(source: Element): Node {
+    return source.shadowRoot ?? source;
+}
+
+/**
  * Checks whether one candidate label subtree stays within the fixed node budget.
  *
  * @param root - Candidate adjacent-label root.
@@ -426,7 +440,7 @@ function readPresentationText(
 ): { readonly source: Element; readonly text: string } | null {
     const presentation = candidate.presentation;
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME) {
-        const text = readBoundedPresentationText(candidate.source);
+        const text = readBoundedPresentationText(visibleLabelRoot(candidate.source));
         return text === null ? null : { source: candidate.source, text };
     }
     const pageText = context.readPageText(presentation.target);
@@ -450,11 +464,11 @@ function readPresentationText(
 export function getRelativePresentationObservationTarget(
     candidate: TimestampCandidate,
 ): Node | null {
-    return candidate.presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT
-        ? candidate.presentation.target
-        : hasBoundedPresentationSubtree(candidate.source)
-            ? candidate.source
-            : null;
+    if (candidate.presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
+        return candidate.presentation.target;
+    }
+    const root = visibleLabelRoot(candidate.source);
+    return hasBoundedPresentationSubtree(root) ? root : null;
 }
 
 /**

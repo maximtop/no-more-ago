@@ -1,38 +1,218 @@
-:root {
-  color-scheme: light;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f6f7f9;
-}
+@import "../shared/ui/tokens.css";
 
 body {
   min-width: 320px;
-  margin: 0;
 }
 
 .options {
   box-sizing: border-box;
-  width: min(680px, 100%);
-  min-height: 100vh;
+  width: min(1040px, 100%);
   margin: 0 auto;
-  padding: 24px;
+  padding: 0 clamp(18px, 4vw, 32px) 60px;
 }
 
-.options-card {
-  padding: 24px;
+.options-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-height: 62px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--nma-border);
 }
 
-.options-field-label {
+.options-brand {
+  font-family: var(--nma-font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.options-header-spacer {
+  flex: 1;
+}
+
+.options-appearance {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.options-appearance-select .mantine-InputWrapper-root,
+.options-appearance-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.options-appearance-select .mantine-InputWrapper-label {
+  margin: 0;
+}
+
+.options-select select {
+  cursor: pointer;
+}
+
+.options-layout {
   display: grid;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  grid-template-columns: 184px minmax(0, 680px);
+  justify-content: center;
+  align-items: start;
+  gap: clamp(36px, 7vw, 72px);
+  padding-block: 42px 68px;
 }
 
-.options-field-label select {
-  min-height: 36px;
-  padding: 6px 8px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: #fff;
+.options-nav {
+  min-width: 0;
+}
+
+.options-nav-title {
+  margin: 0 10px 12px;
+}
+
+.options-nav-list {
+  display: grid;
+  gap: 4px;
+}
+
+.options-nav-list [role="tab"] {
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nma-muted);
   font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.options-nav-list [role="tab"]:hover {
+  background: color-mix(in oklch, var(--nma-fg) 4%, var(--nma-surface));
+  color: var(--nma-fg);
+}
+
+.options-nav-list [role="tab"][aria-selected="true"] {
+  background: color-mix(in oklch, var(--nma-fg) 8%, var(--nma-surface));
+  color: var(--nma-fg);
+}
+
+.options-nav-list [role="tab"]:focus-visible {
+  outline: 3px solid var(--nma-accent);
+  outline-offset: 2px;
+}
+
+.options-content {
+  min-width: 0;
+}
+
+.options-unavailable {
+  padding-top: 36px;
+}
+
+.options-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.options-hostname-input {
+  min-height: 44px;
+}
+
+.options-site-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--nma-border);
+}
+
+.options-site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  border-bottom: 1px solid var(--nma-border);
+}
+
+.options-site-hostname {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.options-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 92px;
+  padding: 18px;
+  border: 1px solid var(--nma-border);
+  border-radius: var(--nma-radius);
+  background: var(--nma-fg-soft);
+}
+
+.options-preview[data-ok="false"] .options-preview-value {
+  color: var(--nma-muted);
+  font-family: var(--nma-font-body);
+  font-style: italic;
+}
+
+.options-preview-value {
+  margin-top: 6px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.options-preview-source {
+  color: var(--nma-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .options-layout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding-block: 28px 52px;
+  }
+
+  .options-nav-title {
+    margin-inline: 0;
+  }
+
+  .options-nav-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .options-nav-list [role="tab"] {
+    text-align: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .options-preview,
+  .options-site-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .options-preview-source {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

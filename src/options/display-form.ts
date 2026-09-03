@@ -5,25 +5,42 @@
 import type { DatePresentationResult } from "../shared/date/format-default-date";
 import { formatDateWithPresentation } from "../shared/date/format-default-date";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
-import type { DisplaySettings } from "../shared/settings/snapshot";
+import {
+    FORMAT_MODE,
+    TIME_ZONE_MODE,
+    type DisplaySettings,
+    type FormatMode,
+    type TimeZoneMode,
+} from "../shared/settings/snapshot";
 import {
     CUSTOM_FORMAT_MAX_LENGTH,
     CUSTOM_FORMAT_ERROR,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../shared/settings/custom-format";
+import { updatedInAnotherWindow } from "../shared/ui/copy";
+import { DISPLAY_SETTINGS_ERROR } from "../shared/messaging/view-state-values";
 
 /**
- * User-visible outcome of saving display settings.
+ * Named outcomes of saving display settings.
+ */
+export const DISPLAY_NOTICE = {
+    INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
+    UNAVAILABLE_TIME_ZONE: UNAVAILABLE_TIME_ZONE_ERROR,
+    SAVE_FAILED: DISPLAY_SETTINGS_ERROR.SAVE_FAILED,
+    INTERRUPTED: "interrupted",
+    PARTIAL_REFRESH: "partial-refresh",
+    SAVED: "saved",
+    EXTERNAL_CHANGE: "external-change",
+    UNKNOWN: "unknown",
+} as const;
+
+/**
+ * User-visible outcome of saving display settings, or undefined when there is none.
  */
 export type DisplayNotice =
-    | "invalid-time-zone"
-    | "invalid-format"
-    | typeof UNAVAILABLE_TIME_ZONE_ERROR
-    | "save-failed"
-    | "interrupted"
-    | "partial-refresh"
-    | "unknown"
+    | (typeof DISPLAY_NOTICE)[keyof typeof DISPLAY_NOTICE]
     | undefined;
 
 /**
@@ -33,7 +50,7 @@ export interface DisplayDraft {
     /**
      * Whether dates use the browser format or a custom pattern.
      */
-    readonly formatMode: "system" | "custom";
+    readonly formatMode: FormatMode;
 
     /**
      * Custom date format pattern, retained while system formatting is selected.
@@ -43,7 +60,7 @@ export interface DisplayDraft {
     /**
      * Whether dates use the system zone, UTC, or a named IANA zone.
      */
-    readonly timeZoneMode: "system" | "utc" | "iana";
+    readonly timeZoneMode: TimeZoneMode;
 
     /**
      * IANA zone identifier when the named-zone mode is selected.
@@ -51,44 +68,72 @@ export interface DisplayDraft {
     readonly identifier: string;
 }
 
-const PREVIEW_INSTANT = new Date("2026-08-25T12:34:00.000Z");
+/**
+ * Preview text and whether it is a rendered value or an instruction.
+ */
+export interface DisplayPreview {
+    /**
+     * Whether the text is the rendered fixture rather than a correction hint.
+     */
+    readonly ok: boolean;
+
+    /**
+     * Rendered fixture, or the sentence naming what must be fixed first.
+     */
+    readonly text: string;
+}
+
+/**
+ * Fixed instant previewed by the Display section.
+ */
+export const DISPLAY_PREVIEW_INSTANT = new Date("2026-08-27T19:32:28.000Z");
+
+/**
+ * Label naming the previewed fixture beside the rendered value.
+ */
+export const DISPLAY_PREVIEW_SOURCE =
+    `Fixed fixture · ${DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z")}`;
 
 /**
  * Converts saved display settings into fields for the editable form.
  *
- * @param display Persisted display settings.
- * @returns The corresponding form draft, with a default custom pattern when needed.
+ * @param display - Persisted display settings.
+ * @returns - The corresponding form draft, with a default custom pattern when needed.
  */
 export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     return {
         formatMode: display.formatMode,
-        pattern: display.formatMode === "custom" ? display.pattern : DEFAULT_CUSTOM_FORMAT_PATTERN,
+        pattern: display.formatMode === FORMAT_MODE.CUSTOM
+            ? display.pattern
+            : DEFAULT_CUSTOM_FORMAT_PATTERN,
         timeZoneMode: display.timeZone.mode,
-        identifier: display.timeZone.mode === "iana" ? display.timeZone.identifier : "",
+        identifier: display.timeZone.mode === TIME_ZONE_MODE.IANA
+            ? display.timeZone.identifier
+            : "",
     };
 }
 
 /**
  * Converts the display form fields into settings for persistence.
  *
- * @param draft Current form draft.
- * @returns Display settings represented by the draft.
+ * @param draft - Current form draft.
+ * @returns - Display settings represented by the draft.
  */
 export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
     const timeZone =
-        draft.timeZoneMode === "iana"
-            ? { mode: "iana" as const, identifier: draft.identifier }
+        draft.timeZoneMode === TIME_ZONE_MODE.IANA
+            ? { mode: TIME_ZONE_MODE.IANA, identifier: draft.identifier }
             : { mode: draft.timeZoneMode };
-    return draft.formatMode === "custom"
-        ? { formatMode: "custom", pattern: draft.pattern, timeZone }
-        : { formatMode: "system", timeZone };
+    return draft.formatMode === FORMAT_MODE.CUSTOM
+        ? { formatMode: FORMAT_MODE.CUSTOM, pattern: draft.pattern, timeZone }
+        : { formatMode: FORMAT_MODE.SYSTEM, timeZone };
 }
 
 /**
  * Validates an IANA time-zone identifier before settings are saved.
  *
- * @param identifier Candidate IANA time-zone identifier.
- * @returns A user-visible validation error, or undefined when the identifier is usable.
+ * @param identifier - Candidate IANA time-zone identifier.
+ * @returns - A user-visible validation error, or undefined when the identifier is usable.
  */
 export function validateIdentifier(identifier: string): string | undefined {
     if (identifier.length === 0 || identifier.trim() !== identifier) {
@@ -112,33 +157,39 @@ export function validateIdentifier(identifier: string): string | undefined {
 /**
  * Maps a display-settings outcome to its user-visible error message.
  *
- * @param notice Outcome reported after saving display settings.
- * @returns An error message, or undefined when there is no notice to show.
+ * @param notice - Outcome reported after saving display settings.
+ * @returns - An error message, or undefined when there is no notice to show.
  */
 export function displayNoticeText(notice: DisplayNotice): string | undefined {
-    if (notice === "invalid-time-zone") {
+    if (notice === DISPLAY_NOTICE.INVALID_TIME_ZONE) {
         return "This time zone is invalid or unavailable. Enter a supported IANA identifier and "
             + "try again.";
     }
-    if (notice === "invalid-format") {
+    if (notice === DISPLAY_NOTICE.INVALID_FORMAT) {
         return "The date format is invalid. Correct the pattern and try again.";
     }
-    if (notice === UNAVAILABLE_TIME_ZONE_ERROR) {
+    if (notice === DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE) {
         return "The saved time zone is unavailable in this browser. Choose System or another "
             + "supported zone, then save.";
     }
-    if (notice === "save-failed") {
+    if (notice === DISPLAY_NOTICE.SAVE_FAILED) {
         return "Could not save the display settings. Your previous format remains active. "
             + "Try again.";
     }
-    if (notice === "interrupted") {
+    if (notice === DISPLAY_NOTICE.INTERRUPTED) {
         return "The response was interrupted. Display settings were reread.";
     }
-    if (notice === "partial-refresh") {
+    if (notice === DISPLAY_NOTICE.PARTIAL_REFRESH) {
         return "Display settings were saved, but one or more open pages could not be refreshed. "
             + "New dates will use the saved setting.";
     }
-    if (notice === "unknown") {
+    if (notice === DISPLAY_NOTICE.SAVED) {
+        return "Display settings saved.";
+    }
+    if (notice === DISPLAY_NOTICE.EXTERNAL_CHANGE) {
+        return `${updatedInAnotherWindow("Display settings")} Saving here replaces them.`;
+    }
+    if (notice === DISPLAY_NOTICE.UNKNOWN) {
         return "Could not confirm whether the display settings were saved. Reopen Settings to "
             + "try again.";
     }
@@ -148,8 +199,8 @@ export function displayNoticeText(notice: DisplayNotice): string | undefined {
 /**
  * Maps custom date-format validation failures to form errors.
  *
- * @param pattern Candidate custom date-format pattern.
- * @returns A validation error, or undefined when the pattern is valid.
+ * @param pattern - Candidate custom date-format pattern.
+ * @returns - A validation error, or undefined when the pattern is valid.
  */
 export function customPatternError(pattern: string): string | undefined {
     const result = validateCustomFormatPattern(pattern);
@@ -178,22 +229,38 @@ export function customPatternError(pattern: string): string | undefined {
 }
 
 /**
- * Creates a localized preview for a valid custom-format draft.
+ * Renders the fixture with the current draft, or explains what must be fixed.
  *
- * @param draft Current display form fields.
- * @returns A presentation preview, or undefined when custom formatting is not ready.
+ * @param draft - Current display form fields.
+ * @param patternError - Custom-pattern error already computed for the draft, when any.
+ * @returns - Preview text and whether it is a rendered value.
  */
-export function previewDisplayDraft(draft: DisplayDraft): DatePresentationResult | undefined {
-    if (draft.formatMode !== "custom" || customPatternError(draft.pattern)) {
-        return undefined;
+export function previewDisplayDraft(
+    draft: DisplayDraft,
+    patternError: string | undefined = draft.formatMode === FORMAT_MODE.CUSTOM
+        ? customPatternError(draft.pattern)
+        : undefined,
+): DisplayPreview {
+    if (patternError) {
+        return { ok: false, text: "Fix the pattern to preview" };
     }
-    return formatDateWithPresentation(PREVIEW_INSTANT, previewLocales(), displayFromDraft(draft));
+    if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
+        return { ok: false, text: "Fix the time zone to preview" };
+    }
+    const result: DatePresentationResult = formatDateWithPresentation(
+        DISPLAY_PREVIEW_INSTANT,
+        previewLocales(),
+        displayFromDraft(draft),
+    );
+    return result.text.length === 0
+        ? { ok: false, text: "Fix the pattern to preview" }
+        : { ok: true, text: result.text };
 }
 
 /**
  * Selects browser locales for the display-format preview.
  *
- * @returns Browser preference locales, or en-US when browser information is unavailable.
+ * @returns - Browser preference locales, or en-US when browser information is unavailable.
  */
 function previewLocales(): readonly string[] {
     if (typeof navigator === "undefined") {

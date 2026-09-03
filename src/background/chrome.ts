@@ -9,6 +9,7 @@ import * as v from "valibot";
 import { BackgroundApplication } from "./application";
 import {
     CLEAR_DIAGNOSTICS_MESSAGE,
+    DIAGNOSTICS_ERROR,
     GET_DEBUG_STATE_MESSAGE,
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_DISPLAY_STATE_MESSAGE,
@@ -16,37 +17,65 @@ import {
     GET_POPUP_STATE_MESSAGE,
     GET_SITES_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
+    SET_APPEARANCE_MESSAGE,
     SET_DEBUG_ENABLED_MESSAGE,
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
+    SET_SITE_SCOPE_MODE_MESSAGE,
     backgroundMessageSchema,
 } from "../shared/messaging/contracts";
+import { SETTINGS_CHANGED_MESSAGE } from "../shared/messaging/settings-notifications";
 import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
-import { createUnavailablePopupState } from "../shared/messaging/view-state-schemas";
 import {
-    SETTINGS_STATE_FAILURE,
+    createUnavailableDebugState,
+    createUnavailableDisplayState,
+    createUnavailablePopupState,
+    createUnavailableSitesState,
+} from "../shared/messaging/view-state-schemas";
+import {
+    SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_SURFACE,
-    STATE_AVAILABILITY,
+    type SiteSettingsSurface,
 } from "../shared/messaging/view-state-values";
+import type {
+    UnavailablePopupState,
+    UnavailableSitesState,
+} from "../shared/messaging/view-state-schemas";
+import { createUnavailableDocumentState } from "../shared/messaging/document-state";
 import { SettingsService, type SettingsStorage } from "./settings/service";
 import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
 import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
 import { DocumentActivationCoordinator } from "./runtime/document-activation";
 import type { ScriptingRuntime } from "./runtime/scripting";
 import type { TabsRuntime } from "./runtime/tabs";
-import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
-import { LIFECYCLE_REASON } from "./application/contracts";
+import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from "../shared/extension-files";
+import { LIFECYCLE_REASON, type SettingsBroadcast } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 import { parseHttpUrl } from "../shared/url/http";
-import type {
-    DisplaySettings,
-    SettingsSnapshotV5,
-} from "../shared/settings/snapshot";
+import type { DisplaySettings } from "../shared/settings/snapshot";
 import {
     installDocumentRouteUpdates,
     type HistoryStateUpdateSource,
 } from "./runtime/document-route-updates";
+
+/**
+ * Announces committed settings revisions to open extension pages.
+ *
+ * Delivery rejects when no popup or options page is open, which is normal, so
+ * the rejection is contained here rather than failing a settings command.
+ */
+const settingsBroadcast: SettingsBroadcast = {
+    settingsChanged: (revision) => {
+        try {
+            void Promise.resolve(
+                chrome.runtime.sendMessage({ type: SETTINGS_CHANGED_MESSAGE, revision }),
+            ).catch(() => undefined);
+        } catch {
+            /* the runtime is unavailable in incomplete browser shims */
+        }
+    },
+};
 
 /**
  * Constructs the background application from available Chrome APIs, or returns undefined for
@@ -94,7 +123,7 @@ function installApplication(): BackgroundApplication | undefined {
 
     const storage: SettingsStorage & DiagnosticStorage = {
         get: (keys) => candidate.storage?.local?.get(keys) as Promise<
-            Readonly<Record<string, SettingsSnapshotV5 | undefined>>
+            Readonly<Record<string, unknown>>
         >,
         set: (items: Record<string, unknown>) =>
             candidate.storage?.local?.set(items) as Promise<void>,
@@ -178,31 +207,67 @@ function installApplication(): BackgroundApplication | undefined {
         tabs,
         journal: new DiagnosticJournal(storage),
         diagnosticEnvironment,
+        broadcast: settingsBroadcast,
     });
 }
 
 const application = installApplication();
 
 /**
- * Accepts only messages sent from this extension's options page.
+ * Accepts only messages sent from this extension's own options page or popup.
  *
  * @param sender - Runtime message sender metadata.
- * @returns - Whether the sender is this extension's options page.
+ * @returns - Whether the sender is one of this extension's settings surfaces.
  */
-function isTrustedOptionsSender(sender: chrome.runtime.MessageSender): boolean {
+function isTrustedSurfaceSender(sender: chrome.runtime.MessageSender): boolean {
     try {
         return (
-            sender.url === chrome.runtime.getURL(OPTIONS_PAGE_FILE)
-            && sender.id === chrome.runtime.id
+            sender.id === chrome.runtime.id
+            && (sender.url === chrome.runtime.getURL(OPTIONS_PAGE_FILE)
+                || sender.url === chrome.runtime.getURL(POPUP_PAGE_FILE))
         );
     } catch {
         return false;
     }
 }
 
+/**
+ * Builds the fail-closed response returned when a settings command itself rejects.
+ *
+ * @param state - Unavailable projection for the command's surface.
+ * @returns - Failed command response carrying the projection.
+ */
+function unavailableCommand<TState>(state: TState): {
+    readonly ok: false;
+    readonly error: typeof SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
+    readonly state: TState;
+} {
+    return { ok: false, error: SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE, state };
+}
+
+/**
+ * Selects the unavailable projection for a popup or sites request.
+ *
+ * @param surface - Surface that issued the request.
+ * @returns - Unavailable popup or sites projection.
+ */
+function unavailableSurfaceState(
+    surface: SiteSettingsSurface,
+): UnavailablePopupState | UnavailableSitesState {
+    return surface === SITE_SETTINGS_SURFACE.POPUP
+        ? createUnavailablePopupState()
+        : createUnavailableSitesState();
+}
+
 if (application && chrome.runtime?.onMessage?.addListener) {
     chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
         let responseSent = false;
+
+        /**
+         * Sends the response once; a later attempt from the same handler is ignored.
+         *
+         * @param value - Response payload.
+         */
         const sendOnce = (value: unknown): void => {
             if (responseSent) {
                 return;
@@ -223,21 +288,27 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         const request = parsed.output;
         if (request.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
-            if (!isTrustedOptionsSender(sender)) {
+            if (!isTrustedSurfaceSender(sender)) {
                 return false;
             }
             void application
                 .getDiagnosticsSnapshot()
-                .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
+                .then(
+                    sendOnce,
+                    () => sendOnce({ ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE }),
+                );
             return true;
         }
         if (request.type === CLEAR_DIAGNOSTICS_MESSAGE) {
-            if (!isTrustedOptionsSender(sender)) {
+            if (!isTrustedSurfaceSender(sender)) {
                 return false;
             }
             void application
                 .clearDiagnostics()
-                .then(sendOnce, () => sendOnce({ ok: false, error: "unavailable" }));
+                .then(
+                    sendOnce,
+                    () => sendOnce({ ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE }),
+                );
             return true;
         }
         if (request.type === GET_POPUP_STATE_MESSAGE) {
@@ -249,140 +320,80 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         if (request.type === GET_DOCUMENT_STATE_MESSAGE) {
             void application
                 .getDocumentState(sender)
-                .then(sendOnce, () => sendOnce({
-                    availability: STATE_AVAILABILITY.UNAVAILABLE,
-                    revision: null,
-                    enabled: false,
-                    display: null,
-                    debugEnabled: false,
-                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                }));
+                .then(sendOnce, () => sendOnce(createUnavailableDocumentState()));
             return true;
         }
         if (request.type === GET_DISPLAY_STATE_MESSAGE) {
             void application
                 .getDisplayState()
-                .then(sendOnce, () =>
-                    sendOnce({
-                        availability: STATE_AVAILABILITY.UNAVAILABLE,
-                        revision: null,
-                        display: null,
-                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                    }),
-                );
+                .then(sendOnce, () => sendOnce(createUnavailableDisplayState()));
             return true;
         }
         if (request.type === GET_DEBUG_STATE_MESSAGE) {
             void application
                 .getDebugState()
-                .then(sendOnce, () =>
-                    sendOnce({
-                        availability: STATE_AVAILABILITY.UNAVAILABLE,
-                        revision: null,
-                        enabled: null,
-                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                    }),
-                );
+                .then(sendOnce, () => sendOnce(createUnavailableDebugState()));
             return true;
+        }
+        if (request.type === GET_SITES_STATE_MESSAGE) {
+            void application
+                .getSitesState()
+                .then(sendOnce, () => sendOnce(createUnavailableSitesState()));
+            return true;
+        }
+        // Every mutation below is issued only by this extension's own popup or
+        // options page, so the sender gate is uniform with the diagnostics reads.
+        if (!isTrustedSurfaceSender(sender)) {
+            return false;
         }
         if (request.type === SET_DEBUG_ENABLED_MESSAGE) {
             void application
                 .setDebugEnabled(request.enabled)
-                .then(sendOnce, () =>
-                    sendOnce({
-                        ok: false,
-                        error: "settings-unavailable",
-                        state: {
-                            availability: STATE_AVAILABILITY.UNAVAILABLE,
-                            revision: null,
-                            enabled: null,
-                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                        },
-                    }),
-                );
+                .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableDebugState())));
             return true;
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
                 .setDisplaySettings(request.display as DisplaySettings)
                 .then(sendOnce, () =>
-                    sendOnce({
-                        ok: false,
-                        error: "settings-unavailable",
-                        state: {
-                            availability: STATE_AVAILABILITY.UNAVAILABLE,
-                            revision: null,
-                            display: null,
-                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                        },
-                    }),
-                );
+                    sendOnce(unavailableCommand(createUnavailableDisplayState())));
+            return true;
+        }
+        if (request.type === SET_APPEARANCE_MESSAGE) {
+            void application
+                .setAppearance(request.appearance)
+                .then(sendOnce, () =>
+                    sendOnce(unavailableCommand(createUnavailableDisplayState())));
             return true;
         }
         if (request.type === SET_GLOBAL_ENABLED_MESSAGE) {
             void application
-                .setGlobalEnabled(request.enabled)
-                .then(sendOnce, () =>
-                    sendOnce({
-                        ok: false,
-                        error: "settings-unavailable",
-                        state: createUnavailablePopupState(),
-                    }),
-                );
-            return true;
-        }
-        if (request.type === GET_SITES_STATE_MESSAGE) {
-            void application
-                .getSitesState()
-                .then(sendOnce, () =>
-                    sendOnce({
-                        availability: STATE_AVAILABILITY.UNAVAILABLE,
-                        revision: null,
-                        globalEnabled: null,
-                        sites: [],
-                        failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                    }),
-                );
+                .setGlobalEnabled(request.enabled, request.surface)
+                .then(sendOnce, () => sendOnce({
+                    ...unavailableCommand(unavailableSurfaceState(request.surface)),
+                    surface: request.surface,
+                }));
             return true;
         }
         if (request.type === RESET_ALL_SETTINGS_MESSAGE) {
             void application
                 .resetAllSettings()
-                .then(sendOnce, () =>
-                    sendOnce({
-                        ok: false,
-                        error: "settings-unavailable",
-                        state: {
-                            availability: STATE_AVAILABILITY.UNAVAILABLE,
-                            revision: null,
-                            globalEnabled: null,
-                            sites: [],
-                            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                        },
-                    }),
-                );
+                .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableSitesState())));
+            return true;
+        }
+        if (request.type === SET_SITE_SCOPE_MODE_MESSAGE) {
+            void application
+                .setSiteScopeMode(request.mode)
+                .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableSitesState())));
             return true;
         }
         if (request.type === SET_SITE_ENABLED_MESSAGE) {
             void application
-                .setSiteEnabled(request.hostname, request.enabled, request.surface)
-                .then(sendOnce, () =>
-                    sendOnce({
-                        ok: false,
-                        error: "settings-unavailable",
-                        surface: request.surface,
-                        state:
-                            request.surface === SITE_SETTINGS_SURFACE.POPUP
-                                ? createUnavailablePopupState()
-                                : {
-                                    availability: STATE_AVAILABILITY.UNAVAILABLE,
-                                    revision: null,
-                                    globalEnabled: null,
-                                    sites: [],
-                                    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-                                },
-                    }),
-                );
+                .setSiteEnabled(request.hostname, request.enabled, request.mode, request.surface)
+                .then(sendOnce, () => sendOnce({
+                    ...unavailableCommand(unavailableSurfaceState(request.surface)),
+                    surface: request.surface,
+                }));
             return true;
         }
         return false;

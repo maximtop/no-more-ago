@@ -8,12 +8,25 @@ import { promisify } from "node:util";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { BROWSERS } from "../../../scripts/build/contracts";
-import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
-    "../../../src/shared/extension-files";
+import {
+    EXTENSION_ICON_BASENAME,
+    EXTENSION_ICON_SIZES,
+    FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
+} from "../../../src/shared/extension-files";
 import { createBuildWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
 const PNPM_COMMAND = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+
+/**
+ * Reads the pixel size recorded in a PNG header, so a stale icon export fails the build test.
+ *
+ * @param bytes - PNG file contents.
+ * @returns - Width and height from the IHDR chunk.
+ */
+function pngDimensions(bytes: Buffer): { readonly width: number; readonly height: number } {
+    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
 
 describe("build commands", () => {
     it("shows Commander help without creating artifacts", async () => {
@@ -73,9 +86,23 @@ describe("build commands", () => {
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
                 } else {
-                    expect(manifest.minimum_chrome_version).toBe("102");
+                    expect(manifest.minimum_chrome_version).toBe("111");
                 }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
+                expect(manifest.icons).toEqual(Object.fromEntries(
+                    EXTENSION_ICON_SIZES.map((size) => [
+                        String(size),
+                        `icons/${EXTENSION_ICON_BASENAME}-${String(size)}.png`,
+                    ]),
+                ));
+                for (const size of EXTENSION_ICON_SIZES) {
+                    const icon = `${directory}/icons/${EXTENSION_ICON_BASENAME}-`
+                        + `${String(size)}.png`;
+                    expect(existsSync(icon)).toBe(true);
+                    expect(pngDimensions(readFileSync(icon)))
+                        .toEqual({ width: size, height: size });
+                }
+                expect(readdirSync(`${directory}/icons`)).toHaveLength(EXTENSION_ICON_SIZES.length);
                 expect(existsSync(`${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}`))
                     .toBe(true);
                 expect(existsSync(

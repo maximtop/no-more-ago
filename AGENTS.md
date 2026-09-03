@@ -39,8 +39,10 @@ anonymous public AppView lookups. Public `https://t.me/s/*` pages use the
 generic source. Timestamp extraction remains separate from current-label
 classification, semantic validation, presentation, and rendering.
 
-The extension provides a global switch, per-domain switches, date format and
-time-zone settings, and opt-in diagnostic logs. The UI is English-only.
+The extension provides a global switch, a run mode (`All supported sites` or
+`Selected sites only`) with independent Excluded sites and Allowed sites
+lists, date format and time-zone settings, an Appearance choice (`System`,
+`Light`, or `Dark`), and opt-in diagnostic logs. The UI is English-only.
 Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 
 ## Technical Context
@@ -49,13 +51,19 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Language:** TypeScript 6 with strict compiler settings and ES modules.
 - **Runtime:** Node.js 24 for builds; browser extension contexts in production.
 - **Package manager:** pnpm 10.34.5, pinned in `package.json`.
-- **UI:** React 19 and Mantine 9 for popup and options pages.
+- **UI:** React 19 and Mantine 9 for popup and options pages; XState 5 with
+  `@xstate/react` for stateful UI controllers.
 - **Date handling:** date-fns 4 and `@date-fns/tz`.
 - **Validation:** Domain validation for page-derived timestamps and
   user-authored date settings; internal extension data uses TypeScript
   contracts.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
-- **Storage:** `chrome.storage.local` stores settings and opt-in diagnostics.
+- **Storage:** `chrome.storage.local` stores one versioned settings snapshot
+  (`SettingsSnapshot`, schema version 1) with its previous-snapshot recovery
+  copy, plus opt-in diagnostics. A stored snapshot of any other schema version
+  is discarded rather than migrated, because nothing is published: defaults
+  are written back to both the active and recovery keys, the load reports
+  source `discarded`, and a `console.warn` is emitted.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
 - **Relative labels:** A conservative shared classifier covers 40 confirmed
   locales using current page language and browser locale evidence. Unknown,
@@ -90,7 +98,7 @@ has an obvious, simpler standard-library replacement.
 │   ├── actions/                # Composite toolchain setup shared by workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── src/
-│   ├── assets/                 # Extension icons
+│   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
 │   │   ├── application/        # Lifecycle and coordination
 │   │   ├── diagnostics/        # Opt-in bounded diagnostic journal
@@ -105,9 +113,13 @@ has an obvious, simpler standard-library replacement.
 │   ├── options/                # Settings page and feature sections
 │   ├── popup/                  # Toolbar popup
 │   └── shared/                 # Cross-context schemas and contracts
+│       ├── diagnostics/        # Diagnostic contracts, events, archive, and download helper
+│       ├── settings/           # Snapshot, hostname, and site-scope contracts
+│       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
 │   ├── build.ts                # Build command entry point
-│   └── build/                  # Build pipeline and artifacts
+│   ├── build/                  # Build pipeline and artifacts
+│   └── icons.ts                # Icon PNG export from the SVG master
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
@@ -174,8 +186,20 @@ is needed.
   and registered specialized rules may transform content.
 - Register one universal HTTP(S) document runtime at `document_start` with
   `allFrames` enabled. Global policy controls registration; the top-level
-  hostname controls processing for every reachable frame in its tab. Hydrate
-  reachable frames on startup and policy refresh without duplicating runtimes.
+  hostname's scope rule controls processing for every reachable frame in its
+  tab: in `All supported sites` a hostname runs unless it is in Excluded
+  sites, and in `Selected sites only` it runs only when it is in Allowed
+  sites. Hydrate reachable frames on startup and policy refresh without
+  duplicating runtimes.
+- Keep the scope decision in `isSiteProcessingEnabled`; no consumer may
+  inspect either hostname list directly. Both lists persist independently of
+  the active mode, and a mode change never moves an entry. Each list is capped
+  at `MAX_SITE_LIST_ENTRIES` (1000) hostnames; adding beyond the cap fails
+  with a list-is-full notice.
+- Announce every committed settings write to open extension pages through the
+  background broadcast, and treat a delivery failure as normal, because no
+  page has to be open. Surfaces refetch when the announced revision is newer
+  than the one they render.
 - Register the Facebook `MAIN`-world bridge at `document_start` in every
   matching Facebook frame, but keep it inert until the isolated runtime signals
   activity. For already-open tabs, inject it only into enumerated Facebook
@@ -250,8 +274,9 @@ is needed.
 - Bound browser operations that gate background initialization or UI queries.
   A pending operation for one stale or discarded tab must become a contained
   runtime failure and must not block popup or settings availability.
-- Restore original page text immediately when global or per-domain processing
-  is disabled, and reprocess the current document when it is enabled.
+- Restore original page text immediately when global or per-hostname
+  processing is disabled, and reprocess the current document when it is
+  enabled.
 - Keep settings schema versions and forward migrations explicit. Before store
   publication, do not add backward compatibility unless a real persisted
   release requires it.
@@ -287,6 +312,7 @@ Apply these principles throughout the project:
 | Content script | Observe documents and apply transformations | Shared contracts and adapters |
 | Adapters | Apply generic fallback and site-specific sources | Content adapter contracts |
 | Shared | Own schemas, messages, values, settings, and date contracts | General-purpose libraries |
+| Shared UI | Provide the theme, brand mark, and subscription hook | Shared contracts, React, Mantine, and browser DOM |
 | Build | Assemble manifests, bundles, and archives | Source contracts and build tooling |
 
 The expected dependency flow is:
@@ -317,9 +343,6 @@ parsing and presentation remain site-agnostic.
 
 Known architectural exclusions to improve when their area changes:
 
-- `BackgroundApplicationOptions` exposes concrete `SettingsService` and
-  `DiagnosticJournal` types. Prefer narrow capability interfaces when those
-  collaborators next need meaningful changes.
 - `src/shared/reporting/site-report.ts` contains both report composition and a
   browser implementation. Split the pure report model from browser execution
   when reporting behavior expands.
@@ -333,8 +356,13 @@ Known architectural exclusions to improve when their area changes:
 - Use strict TypeScript and preserve `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes` guarantees.
 - Parse genuinely external values once at their boundary with Valibot or a
-  focused parser. Do not revalidate extension-owned storage, internal messages,
-  or typed browser API results with generic record checks.
+  focused parser, then trust the parsed type downstream. Do not revalidate
+  extension-owned storage, internal messages, or typed browser API results.
+- Never write hand-rolled type guards such as `isRecord` or
+  `typeof value === "object" && value !== null && !Array.isArray(value)`
+  chains. A guard over data the extension produced itself hides a producer bug
+  instead of failing loudly, and a parameter typed `unknown` for such data is
+  the usual root cause: type it with the owning contract instead.
 - Use typed result objects for expected failures. Reserve exceptions for
   programmer errors and truly exceptional failures.
 - Do not inline magic values that form a shared contract, including runtime
@@ -358,8 +386,14 @@ Known architectural exclusions to improve when their area changes:
 - Prefer cohesive feature boundaries over moving a large implementation
   unchanged into a generic helper or controller file.
 - Document files, functions, classes, methods, interfaces, type properties,
-  class properties, and exported variables according to the ESLint JSDoc
-  rules. Describe every parameter and return value.
+  class properties, exported variables, and named arrow functions declared
+  inside a function body according to the ESLint JSDoc rules. Describe every
+  parameter and return value. Anonymous callbacks passed as arguments need no
+  block.
+- Model a controller that coordinates loading, committed state, drafts,
+  in-flight commands, and notices as an XState machine (`setup().createMachine`
+  driven by `useMachine`) so every legal combination and transition has one
+  owner; keep plain `useState` for a single independent value.
 - Use four-space indentation, braces for every control-flow body, and no
   single-line brace blocks. Keep code and comments at or below 100 characters.
 - Prefer descriptive names and small functions over explanatory comments.
@@ -478,3 +512,10 @@ Known architectural exclusions to improve when their area changes:
   current watch markup as a best-effort source, not a compatibility promise.
 - Treat third-party site support as best-effort because markup can change
   independently of the extension.
+- Ship the mark as `src/assets/icons/icon.svg` with `icon-16.png`,
+  `icon-32.png`, `icon-48.png`, and `icon-128.png` exported from it by
+  `pnpm icons` (`scripts/icons.ts`), and as the inline brand mark on both
+  surfaces. The build test asserts each emitted PNG's pixel dimensions. Both
+  the popup and Settings take their colors from the shared theme in
+  `src/shared/ui`, in light and dark, so neither surface may declare its own
+  palette.

@@ -74,6 +74,13 @@ function createFetchDouble(responses: readonly (Response | Error)[]): {
     readonly calls: Array<Parameters<typeof fetch>>;
 } {
     const calls: Array<Parameters<typeof fetch>> = [];
+
+    /**
+     * Serves the scripted responses in order and records each call.
+     *
+     * @param parameters - Fetch call arguments.
+     * @returns - Next scripted response.
+     */
     const implementation = async (...parameters: Parameters<typeof fetch>): Promise<Response> => {
         calls.push(parameters);
         const response = responses[calls.length - 1];

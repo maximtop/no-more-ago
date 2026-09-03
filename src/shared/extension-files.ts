@@ -36,3 +36,8 @@ export const MANIFEST_FILE = "manifest.json" as const;
  * Icon sizes emitted into every browser artifact and declared by its manifest.
  */
 export const EXTENSION_ICON_SIZES = [16, 32, 48, 128] as const;
+
+/**
+ * Base filename of the toolbar icon emitted at every icon size.
+ */
+export const EXTENSION_ICON_BASENAME = "icon" as const;

@@ -336,6 +336,14 @@ function installTransportWrappers(
     inspectTextResponse: (payloadText: string, generation: number) => void,
 ): InstalledFacebookTransportWrappers {
     const originalFetch = unknownProperty(target, "fetch") as Window["fetch"];
+
+    /**
+     * Forwards to the page's fetch and inspects the response while the bridge is enabled.
+     *
+     * @param input - Fetch resource.
+     * @param init - Fetch options.
+     * @returns - The page's fetch result.
+     */
     const wrappedFetch: Window["fetch"] = (input, init) => {
         const response = Reflect.apply(originalFetch, target, [input, init]);
         const generation = getGeneration();
@@ -581,15 +589,39 @@ export function installFacebookPayloadBridge(target: Window): void {
     let disposed = false;
     let activeInspections = 0;
     const activeReaders = new Set<ReadableStreamDefaultReader<Uint8Array>>();
+
+    /**
+     * Reports the active bridge generation, or null while disabled or disposed.
+     *
+     * @returns - Active generation, or null.
+     */
     const getGeneration = (): number | null => enabled && !disposed ? generation : null;
+
+    /**
+     * Reports whether a captured generation is still the active one.
+     *
+     * @param capturedGeneration - Generation captured when a response arrived.
+     * @returns - Whether the generation is still active.
+     */
     const isCurrent = (capturedGeneration: number): boolean =>
         getGeneration() === capturedGeneration;
+
+    /**
+     * Cancels every response reader still inspecting a body.
+     */
     const cancelActiveReaders = (): void => {
         for (const reader of activeReaders) {
             void cancelReader(reader);
         }
         activeReaders.clear();
     };
+
+    /**
+     * Extracts timestamp records from a response body captured under a generation.
+     *
+     * @param payloadText - Response body text.
+     * @param capturedGeneration - Generation captured when the response arrived.
+     */
     const inspectTextResponse = (
         payloadText: string,
         capturedGeneration: number,
@@ -611,6 +643,13 @@ export function installFacebookPayloadBridge(target: Window): void {
             activeInspections -= 1;
         }
     };
+
+    /**
+     * Reads a cloned fetch response body for timestamp records.
+     *
+     * @param response - Fetch response to inspect.
+     * @param capturedGeneration - Generation captured when the response arrived.
+     */
     const inspectFetchResponse = (
         response: Response,
         capturedGeneration: number,
@@ -649,6 +688,12 @@ export function installFacebookPayloadBridge(target: Window): void {
         inspectFetchResponse,
         inspectTextResponse,
     );
+
+    /**
+     * Applies bridge control messages posted by the isolated runtime.
+     *
+     * @param event - Window message event.
+     */
     const messageListener = (event: MessageEvent): void => {
         if (
             event.source !== target
@@ -666,6 +711,9 @@ export function installFacebookPayloadBridge(target: Window): void {
     };
     target.addEventListener("message", messageListener);
 
+    /**
+     * Disables the bridge, restores the page transports, and releases readers.
+     */
     const dispose = (): void => {
         if (disposed) {
             return;

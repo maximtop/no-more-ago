@@ -1,14 +1,15 @@
 /**
- * @file Verifies V5 settings construction and user-authored domain validation.
+ * @file Verifies settings snapshot construction and user-authored domain validation.
  */
 
 import { describe, expect, it } from "vitest";
 import {
+    APPEARANCE,
     DEFAULT_DISPLAY_SETTINGS,
     DEFAULT_SETTINGS_SNAPSHOT,
     SETTINGS_SCHEMA_VERSION,
     createSettingsSnapshot,
-    isCanonicalHostname,
+    isCurrentSettingsSnapshot,
     isDisplaySettings,
     isStructurallyValidTimeZoneIdentifier,
     isTimeZoneSelection,
@@ -17,27 +18,30 @@ import {
     type DisplaySettings,
     type TimeZoneSelection,
 } from "../../../../src/shared/settings/snapshot";
+import { DEFAULT_SITE_SCOPE, SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 
 const display = (mode: "system" | "utc" | "iana", identifier?: string): DisplaySettings => ({
     formatMode: "system" as const,
     timeZone: mode === "iana" ? { mode, identifier: identifier ?? "America/New_York" } : { mode },
 });
-describe("Settings Snapshot V5", () => {
-    it("uses one frozen default with debug logging off", () => {
+
+describe("Settings Snapshot", () => {
+    it("uses one frozen default with the default scope and system appearance", () => {
         expect(DEFAULT_SETTINGS_SNAPSHOT).toEqual({
-            schemaVersion: 5,
+            schemaVersion: SETTINGS_SCHEMA_VERSION,
             revision: 0,
             globalEnabled: true,
-            sitePreferences: {},
+            siteScope: DEFAULT_SITE_SCOPE,
             display: DEFAULT_DISPLAY_SETTINGS,
+            appearance: APPEARANCE.SYSTEM,
             debugEnabled: false,
         });
         expect(Object.isFrozen(DEFAULT_SETTINGS_SNAPSHOT)).toBe(true);
-        expect(Object.isFrozen(DEFAULT_SETTINGS_SNAPSHOT.sitePreferences)).toBe(true);
+        expect(Object.isFrozen(DEFAULT_SETTINGS_SNAPSHOT.siteScope)).toBe(true);
         expect(Object.isFrozen(DEFAULT_SETTINGS_SNAPSHOT.display)).toBe(true);
     });
 
-    it("preserves strict display, hostname, and time-zone validation", () => {
+    it("preserves strict display and time-zone validation", () => {
         expect(
             parseDisplaySettings({
                 formatMode: "custom",
@@ -52,22 +56,55 @@ describe("Settings Snapshot V5", () => {
                 timeZone: { mode: "utc" },
             }),
         ).toBeNull();
-        expect(isCanonicalHostname("github.com")).toBe(true);
-        expect(isCanonicalHostname("EXAMPLE.COM")).toBe(false);
     });
 
-    it("constructs V5 while preserving every field", () => {
+    it("constructs a snapshot while preserving every field", () => {
         expect(
-            createSettingsSnapshot(3, false, { "github.com": false }, display("utc"), true),
+            createSettingsSnapshot({
+                revision: 3,
+                globalEnabled: false,
+                siteScope: {
+                    mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                    excludedSites: ["excluded.test"],
+                    allowedSites: ["github.com"],
+                },
+                display: display("utc"),
+                appearance: APPEARANCE.DARK,
+                debugEnabled: true,
+            }),
         ).toEqual({
             schemaVersion: SETTINGS_SCHEMA_VERSION,
             revision: 3,
             globalEnabled: false,
-            sitePreferences: { "github.com": false },
+            siteScope: {
+                mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                excludedSites: ["excluded.test"],
+                allowedSites: ["github.com"],
+            },
             display: display("utc"),
+            appearance: APPEARANCE.DARK,
             debugEnabled: true,
         });
-        expect(() => createSettingsSnapshot(-1, true)).toThrow(TypeError);
+        expect(() => createSettingsSnapshot({ revision: -1, globalEnabled: true }))
+            .toThrow(TypeError);
+        expect(() => createSettingsSnapshot({
+            revision: 1,
+            globalEnabled: true,
+            siteScope: {
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                excludedSites: ["EXAMPLE.COM"],
+                allowedSites: [],
+            },
+        })).toThrow(TypeError);
+    });
+
+    it("accepts only the current schema version at the storage boundary", () => {
+        expect(isCurrentSettingsSnapshot(DEFAULT_SETTINGS_SNAPSHOT)).toBe(true);
+        expect(isCurrentSettingsSnapshot({ ...DEFAULT_SETTINGS_SNAPSHOT, schemaVersion: 6 }))
+            .toBe(false);
+        expect(isCurrentSettingsSnapshot(undefined)).toBe(false);
+        expect(isCurrentSettingsSnapshot(null)).toBe(false);
+        expect(isCurrentSettingsSnapshot("settings")).toBe(false);
     });
 });
 
@@ -79,70 +116,8 @@ describe("strict schema and policy boundaries", () => {
         Number.MAX_SAFE_INTEGER + 1,
         1.5,
     ])("rejects unsafe revision %s", (revision) => {
-        expect(() => createSettingsSnapshot(revision, true)).toThrow(TypeError);
-    });
-
-    it.each([
-        "example.test",
-        "sub.example.test",
-        "127.0.0.1",
-        "localhost",
-        "[::1]",
-        "xn--bcher-kva.example",
-        "example.test.",
-        "__proto__",
-        "constructor",
-        "tostring",
-    ])("accepts canonical exact hostname %s", (hostname) => {
-        expect(isCanonicalHostname(hostname)).toBe(true);
-        expect(createSettingsSnapshot(0, true, { [hostname]: false })).toMatchObject({
-            sitePreferences: { [hostname]: false },
-        });
-    });
-
-    it.each([
-        "EXAMPLE.TEST",
-        "BÜCHER.example",
-        "bücher.example",
-        "example.test..",
-        "example.test:443",
-        "::1",
-        "https://example.test",
-        "example.test/path",
-        "example.test?query",
-        "example.test#hash",
-        "user:pass@example.test",
-        "*.example.test",
-        " example.test",
-        "example.test ",
-    ])("rejects noncanonical intent hostname %s", (hostname) => {
-        expect(isCanonicalHostname(hostname)).toBe(false);
-        expect(() => createSettingsSnapshot(0, true, { [hostname]: false })).toThrow(TypeError);
-    });
-
-    it("copies own prototype-like map keys without invoking their prototypes", () => {
-        const map = Object.fromEntries([
-            ["__proto__", false],
-            ["constructor", true],
-            ["tostring", false],
-        ]);
-        const snapshot = createSettingsSnapshot(0, true, map);
-        expect(Object.hasOwn(snapshot.sitePreferences, "__proto__")).toBe(true);
-        expect(Object.hasOwn(snapshot.sitePreferences, "constructor")).toBe(true);
-        expect(snapshot.sitePreferences.__proto__).toBe(false);
-    });
-
-    it.each([
-        { "EXAMPLE.TEST": false },
-        { "example.test:443": false },
-    ])("rejects noncanonical site preference map %o", (sitePreferences) => {
-        expect(() => createSettingsSnapshot(0, true, sitePreferences)).toThrow(TypeError);
-    });
-
-    it("preserves explicit true as an own preference instead of treating it as missing", () => {
-        const snapshot = createSettingsSnapshot(0, true, { "example.test": true });
-        expect(snapshot.sitePreferences).toEqual({ "example.test": true });
-        expect(Object.hasOwn(snapshot.sitePreferences, "example.test")).toBe(true);
+        expect(() => createSettingsSnapshot({ revision, globalEnabled: true }))
+            .toThrow(TypeError);
     });
 });
 
@@ -181,7 +156,7 @@ describe("display and timezone snapshot validation", () => {
         "",
         "   ",
         "x".repeat(257),
-        "yyyy-MM-dd\u0000",
+        `yyyy-MM-dd${String.fromCharCode(0)}`,
         "yyyy-MM-dd '",
         "yyyy-MM-dd J",
         "YYYY-MM-dd",
@@ -223,7 +198,7 @@ describe("display and timezone snapshot validation", () => {
         "A\\B",
         "A B",
         "1Europe",
-        "Europe/\u0000City",
+        `Europe/${String.fromCharCode(0)}City`,
     ])("rejects unsafe timezone identifier %s", (identifier) => {
         expect(isStructurallyValidTimeZoneIdentifier(identifier)).toBe(false);
         expect(parseTimeZoneSelection({ mode: "iana", identifier })).toBeNull();
@@ -238,16 +213,15 @@ describe("display and timezone snapshot validation", () => {
     });
 
     it("freezes parsed nested display and timezone values", () => {
-        const snapshot = createSettingsSnapshot(
-            0,
-            true,
-            {},
-            {
+        const snapshot = createSettingsSnapshot({
+            revision: 0,
+            globalEnabled: true,
+            display: {
                 formatMode: "custom",
                 pattern: "yyyy-MM-dd",
                 timeZone: { mode: "iana", identifier: "UTC" },
             },
-        );
+        });
         expect(Object.isFrozen(snapshot)).toBe(true);
         expect(Object.isFrozen(snapshot.display)).toBe(true);
         expect(Object.isFrozen(snapshot.display.timeZone)).toBe(true);

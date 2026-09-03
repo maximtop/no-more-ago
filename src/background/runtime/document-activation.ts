@@ -9,7 +9,11 @@ import {
 } from "../../shared/extension-files";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
 import { isFacebookUrl } from "../../shared/url/facebook";
-import { isSiteEnabled } from "../../shared/settings/snapshot";
+import {
+    DEFAULT_SITE_SCOPE,
+    isSiteProcessingEnabled,
+    type SiteScopePolicy,
+} from "../../shared/settings/site-scope";
 import {
     isDocumentPolicyReconciledMessage,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
@@ -194,9 +198,9 @@ interface ReconcileOptions {
     readonly policy: ActivationPolicy;
 
     /**
-     * Per-host activation preferences.
+     * Active scope mode and hostname lists.
      */
-    readonly sitePreferences?: Readonly<Record<string, boolean>>;
+    readonly siteScope?: SiteScopePolicy;
 
     /**
      * Optional host filter for a settings update.
@@ -780,7 +784,10 @@ export class DocumentActivationCoordinator {
                 );
                 return;
             }
-            const siteEnabled = isSiteEnabled(input.sitePreferences ?? {}, url.hostname);
+            const siteEnabled = isSiteProcessingEnabled(
+                input.siteScope ?? DEFAULT_SITE_SCOPE,
+                url.hostname,
+            );
             await refresh(
                 tab,
                 url.hostname,

@@ -2,15 +2,18 @@
  * @file Background initialization, serialization, and lifecycle reconciliation.
  */
 
-import type {
-    ActivationPolicy,
-    ActivationReconcileResult,
-} from "../runtime/document-activation";
+import {
+    SETTINGS_LOAD_SOURCE,
+    type SettingsLoadResult,
+    type SettingsSnapshot,
+} from "../../shared/settings/snapshot";
 import {
     ACTIVATION_POLICY,
+    type ActivationPolicy,
+    type ActivationReconcileResult,
 } from "../runtime/document-activation";
-import type { SettingsService } from "../settings/service";
-import type { SettingsSnapshotV5 } from "../../shared/settings/snapshot";
+import type { SettingsLoader } from "../settings/service";
+import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { ActivationManager } from "./activation-manager";
 import {
     APPLICATION_PHASE,
@@ -35,7 +38,7 @@ export class ApplicationLifecycle {
     /**
      * Persistence boundary used during initialization and recovery.
      */
-    private readonly settings: SettingsService;
+    private readonly settings: SettingsLoader;
 
     /**
      * Runtime reconciliation state.
@@ -60,7 +63,7 @@ export class ApplicationLifecycle {
     /**
      * Last successfully loaded authoritative settings.
      */
-    private snapshotValue: SettingsSnapshotV5 | undefined;
+    private snapshotValue: SettingsSnapshot | undefined;
 
     /**
      * Failure retained while the application is unavailable.
@@ -96,7 +99,7 @@ export class ApplicationLifecycle {
      * @param diagnostics - Diagnostic journal service.
      */
     public constructor(
-        settings: SettingsService,
+        settings: SettingsLoader,
         activation: ActivationManager,
         projection: StateProjection,
         diagnostics: DiagnosticsService,
@@ -121,7 +124,7 @@ export class ApplicationLifecycle {
      *
      * @returns - Loaded settings, when available.
      */
-    public get snapshot(): SettingsSnapshotV5 | undefined {
+    public get snapshot(): SettingsSnapshot | undefined {
         return this.snapshotValue;
     }
 
@@ -167,7 +170,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly persisted snapshot.
      */
-    public adoptSnapshot(snapshot: SettingsSnapshotV5): void {
+    public adoptSnapshot(snapshot: SettingsSnapshot): void {
         this.snapshotValue = snapshot;
     }
 
@@ -176,7 +179,7 @@ export class ApplicationLifecycle {
      *
      * @param snapshot - Newly authoritative snapshot.
      */
-    public markReady(snapshot: SettingsSnapshotV5): void {
+    public markReady(snapshot: SettingsSnapshot): void {
         this.snapshotValue = snapshot;
         this.failureValue = undefined;
         this.phaseValue = APPLICATION_PHASE.READY;
@@ -194,7 +197,7 @@ export class ApplicationLifecycle {
         const cleanup = await this.reconcile(
             ACTIVATION_POLICY.UNKNOWN,
             null,
-            {},
+            DEFAULT_SITE_SCOPE,
         );
         if (inspectCleanup && cleanup.failures.length > 0) {
             this.failureValue = SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP;
@@ -230,21 +233,20 @@ export class ApplicationLifecycle {
      *
      * @param policy - Effective global policy.
      * @param revision - Associated settings revision.
-     * @param sitePreferences - Canonical-host activation overrides.
+     * @param siteScope - Active scope mode and hostname lists.
      * @param affectedHostnames - Optional hostnames limiting reconciliation.
      * @returns - Reconciliation result.
      */
     public async reconcile(
         policy: ActivationPolicy,
         revision: number | null,
-        sitePreferences: Readonly<Record<string, boolean>> =
-            this.snapshotValue?.sitePreferences ?? {},
+        siteScope: SiteScopePolicy = this.snapshotValue?.siteScope ?? DEFAULT_SITE_SCOPE,
         affectedHostnames?: readonly string[],
     ): Promise<ActivationReconcileResult> {
         const result = await this.activation.reconcile(
             policy,
             revision,
-            sitePreferences,
+            siteScope,
             affectedHostnames,
         );
         this.projection.refreshCachedPopup(this.state);
@@ -305,7 +307,7 @@ export class ApplicationLifecycle {
                         ? ACTIVATION_POLICY.ENABLED
                         : ACTIVATION_POLICY.DISABLED,
                     snapshot.revision,
-                    snapshot.sitePreferences,
+                    snapshot.siteScope,
                 );
                 this.lifecycleReasons.clear();
                 this.diagnostics.log({
@@ -344,16 +346,14 @@ export class ApplicationLifecycle {
         }
         this.snapshotValue = loaded.snapshot;
         this.failureValue = undefined;
-        if (loaded.snapshot.debugEnabled) {
-            await this.diagnostics.setEnabled(true);
-        }
+        await this.applyJournalPolicy(loaded);
         try {
             await this.reconcile(
                 loaded.snapshot.globalEnabled
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
-                loaded.snapshot.sitePreferences,
+                loaded.snapshot.siteScope,
             );
             this.lifecycleReasons.clear();
             this.phaseValue = APPLICATION_PHASE.READY;
@@ -369,7 +369,7 @@ export class ApplicationLifecycle {
                     ? ACTIVATION_POLICY.ENABLED
                     : ACTIVATION_POLICY.DISABLED,
                 loaded.snapshot.revision,
-                loaded.snapshot.sitePreferences,
+                loaded.snapshot.siteScope,
             );
             this.lifecycleReasons.clear();
             this.phaseValue = APPLICATION_PHASE.READY;
@@ -385,23 +385,45 @@ export class ApplicationLifecycle {
     }
 
     /**
+     * Aligns the diagnostic journal with freshly loaded settings. Defaults that
+     * replaced a discarded document have Debug logs off, so entries collected
+     * under the discarded opt-in are removed rather than kept dormant.
+     *
+     * @param loaded - Successful settings load.
+     */
+    private async applyJournalPolicy(
+        loaded: Extract<SettingsLoadResult, { readonly ok: true }>,
+    ): Promise<void> {
+        if (loaded.source === SETTINGS_LOAD_SOURCE.DISCARDED) {
+            await this.diagnostics.reset();
+            return;
+        }
+        if (loaded.snapshot.debugEnabled) {
+            await this.diagnostics.setEnabled(true);
+        }
+    }
+
+    /**
      * Retries settings and fail-closed cleanup for an unavailable application.
      */
     private async recover(): Promise<void> {
         const loaded = await this.settings.load();
-        if (!loaded.ok || loaded.source === "default") {
+        // An empty store during recovery means storage was wiped underneath a
+        // failure, so it stays failed closed; discarded documents were replaced
+        // by persisted defaults and are trustworthy.
+        if (!loaded.ok || loaded.source === SETTINGS_LOAD_SOURCE.DEFAULT) {
             await this.enterFailedClosed(true);
             return;
         }
         this.snapshotValue = loaded.snapshot;
         this.failureValue = undefined;
-        if (loaded.snapshot.debugEnabled) {
-            await this.diagnostics.setEnabled(true);
-        }
+        await this.applyJournalPolicy(loaded);
         await this.reconcile(
-            loaded.snapshot.globalEnabled ? "enabled" : "disabled",
+            loaded.snapshot.globalEnabled
+                ? ACTIVATION_POLICY.ENABLED
+                : ACTIVATION_POLICY.DISABLED,
             loaded.snapshot.revision,
-            loaded.snapshot.sitePreferences,
+            loaded.snapshot.siteScope,
         );
         this.phaseValue = APPLICATION_PHASE.READY;
         await this.projection.seed(this.state);

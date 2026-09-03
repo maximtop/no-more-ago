@@ -47,6 +47,9 @@ function activateWatchHandoff(
     let reconciliationQueued = false;
     const observers = new Map<HTMLScriptElement, MutationObserver>();
 
+    /**
+     * Coalesces reconciliation requests into one microtask.
+     */
     const queueReconciliation = (): void => {
         if (disposed || reconciliationQueued) {
             return;
@@ -60,6 +63,12 @@ function activateWatchHandoff(
         });
     };
 
+    /**
+     * Observes every player-response script under the root that is not observed yet.
+     *
+     * @param root - Subtree to scan for player-response scripts.
+     * @returns - Whether a new script was bound.
+     */
     const bind = (root: ParentNode): boolean => {
         let added = false;
         for (const script of findYouTubePlayerResponseScripts(root)) {

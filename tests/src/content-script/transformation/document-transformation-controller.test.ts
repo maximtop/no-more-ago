@@ -108,6 +108,11 @@ function createGenericControllerFixture(
 }
 
 describe("DocumentTransformationController", () => {
+    /**
+     * Flushes one MutationObserver delivery and its reconciliation.
+     *
+     * @returns - A promise settled after the microtasks ran.
+     */
     const flushMutations = async (): Promise<void> => {
         await Promise.resolve();
         await Promise.resolve();
@@ -144,6 +149,44 @@ describe("DocumentTransformationController", () => {
             expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
             expect(document.querySelectorAll("[data-no-more-ago-output]"))
                 .toHaveLength(1);
+        } finally {
+            controller.teardown();
+            document.documentElement.removeAttribute("lang");
+        }
+    });
+
+    it("restores and reclaims a GitHub source as its shadow-rendered label changes", async () => {
+        document.documentElement.lang = "en";
+        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
+            + "Aug 23, 2026</relative-time>";
+        const source = document.querySelector("relative-time");
+        if (!source) {
+            throw new Error("Expected GitHub source");
+        }
+        const label = document.createTextNode("2 hours ago");
+        const shadowLabel = document.createElement("span");
+        shadowLabel.append(label);
+        source.attachShadow({ mode: "open" }).append(shadowLabel);
+        const controller = new DocumentTransformationController({
+            root: document,
+            url: new URL("https://github.com/facebook/react/commits/main"),
+            locales: ["en-US"],
+        });
+        try {
+            expect(controller.start()).toHaveLength(1);
+            expect(source.hasAttribute("hidden")).toBe(true);
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+
+            label.data = "Aug 23, 2026";
+            await flushMutations();
+            expect(source.hasAttribute("hidden")).toBe(false);
+            expect(source.nextElementSibling).toBeNull();
+
+            label.data = "3 hours ago";
+            await flushMutations();
+            expect(source.hasAttribute("hidden")).toBe(true);
+            expect(source.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
+            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(1);
         } finally {
             controller.teardown();
             document.documentElement.removeAttribute("lang");

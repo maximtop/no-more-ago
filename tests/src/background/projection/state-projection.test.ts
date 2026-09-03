@@ -27,7 +27,15 @@ import {
     POPUP_STATUS,
     STATE_AVAILABILITY,
 } from "../../../../src/shared/messaging/view-state-values";
-import { DEFAULT_SETTINGS_SNAPSHOT } from "../../../../src/shared/settings/snapshot";
+import {
+    APPEARANCE,
+    DEFAULT_SETTINGS_SNAPSHOT,
+    createSettingsSnapshot,
+} from "../../../../src/shared/settings/snapshot";
+import {
+    DEFAULT_SITE_SCOPE,
+    SITE_SCOPE_MODE,
+} from "../../../../src/shared/settings/site-scope";
 import type { TabsRuntime } from "../../../../src/background/runtime/tabs";
 import { FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID } from
     "../../../../src/background/runtime/register-documents";
@@ -49,7 +57,7 @@ describe("StateProjection", () => {
         const activation = new ActivationManager({
             reconcile: vi.fn(() => Promise.resolve(result)),
         });
-        await activation.reconcile(ACTIVATION_POLICY.ENABLED, 1, {});
+        await activation.reconcile(ACTIVATION_POLICY.ENABLED, 1, DEFAULT_SITE_SCOPE);
         let tabUrl = "https://example.test/page";
         const tabs: TabsRuntime = {
             query: vi.fn(() => Promise.resolve([{ id: 1, url: tabUrl }])),
@@ -100,11 +108,7 @@ describe("StateProjection", () => {
             reconcile: vi.fn(() => Promise.resolve(result)),
         };
         const activation = new ActivationManager(coordinator);
-        await activation.reconcile(
-            ACTIVATION_POLICY.ENABLED,
-            1,
-            {},
-        );
+        await activation.reconcile(ACTIVATION_POLICY.ENABLED, 1, DEFAULT_SITE_SCOPE);
 
         let tabUrl = "https://a.test/page";
         const tabs: TabsRuntime = {
@@ -190,5 +194,79 @@ describe("StateProjection", () => {
         } finally {
             vi.useRealTimers();
         }
+    });
+
+    it.each([
+        [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, ["example.test"], [], POPUP_STATUS.SITE_EXCLUDED],
+        [SITE_SCOPE_MODE.SELECTED_ONLY, [], [], POPUP_STATUS.SITE_NOT_SELECTED],
+        [SITE_SCOPE_MODE.SELECTED_ONLY, [], ["example.test"], POPUP_STATUS.ACTIVE],
+    ])(
+        "reports %s coverage for the current hostname",
+        async (mode, excludedSites, allowedSites, expected) => {
+            const activation = new ActivationManager({
+                reconcile: vi.fn(() => Promise.resolve({
+                    revision: 1,
+                    policy: ACTIVATION_POLICY.ENABLED,
+                    failures: [],
+                    registration: REGISTRATION_OUTCOME.UNCHANGED,
+                    registrations: [],
+                    tabs: [],
+                })),
+            });
+            const tabs: TabsRuntime = {
+                query: vi.fn(() => Promise.resolve([{ id: 1, url: "https://example.test/a" }])),
+                getAllFrames: vi.fn(() => Promise.resolve([])),
+                sendMessage: vi.fn(() => Promise.resolve({
+                    type: DOCUMENT_STATUS_MESSAGE,
+                    phase: DOCUMENT_PHASE.ACTIVE,
+                })),
+            };
+            const state: ApplicationStateView = {
+                phase: APPLICATION_PHASE.READY,
+                snapshot: createSettingsSnapshot({
+                    revision: 1,
+                    globalEnabled: true,
+                    siteScope: { mode, excludedSites, allowedSites },
+                }),
+                failure: undefined,
+            };
+
+            const popup = await new StateProjection(tabs, activation).derivePopup(state);
+
+            expect(popup.status).toBe(expected);
+            expect(popup.scopeMode).toBe(mode);
+            expect(popup.appearance).toBe(APPEARANCE.SYSTEM);
+        },
+    );
+
+    it("projects both retained hostname lists for the settings page", () => {
+        const activation = new ActivationManager({ reconcile: vi.fn() });
+        const tabs: TabsRuntime = {
+            query: vi.fn(() => Promise.resolve([])),
+            getAllFrames: vi.fn(() => Promise.resolve([])),
+            sendMessage: vi.fn(() => Promise.resolve(undefined)),
+        };
+        const sites = new StateProjection(tabs, activation).deriveSites({
+            phase: APPLICATION_PHASE.READY,
+            snapshot: createSettingsSnapshot({
+                revision: 2,
+                globalEnabled: true,
+                siteScope: {
+                    mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                    excludedSites: ["excluded.test"],
+                    allowedSites: ["allowed.test"],
+                },
+            }),
+            failure: undefined,
+        });
+
+        expect(sites).toEqual({
+            availability: STATE_AVAILABILITY.READY,
+            revision: 2,
+            globalEnabled: true,
+            scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
+            excludedSites: ["excluded.test"],
+            allowedSites: ["allowed.test"],
+        });
     });
 });

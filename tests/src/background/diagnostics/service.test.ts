@@ -11,18 +11,24 @@ import {
     DIAGNOSTIC_REASON,
 } from "../../../../src/shared/diagnostics/contracts";
 import { createSettingsSnapshot } from "../../../../src/shared/settings/snapshot";
+import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 
 /**
  * Creates a diagnostics service and observable journal.
  *
- * @param sitePreferences - Top-level site policy overrides.
+ * @param excludedSites - Top-level hostnames excluded from processing.
  * @returns - Service, state, and journal append spy.
  */
-function fixture(sitePreferences: Record<string, boolean> = {}) {
+function fixture(excludedSites: readonly string[] = []) {
     const append = vi.fn(async () => undefined);
     const journal = { append } as unknown as DiagnosticJournal;
     const service = new DiagnosticsService(journal, { browserFamily: "other" });
-    const snapshot = createSettingsSnapshot(1, true, sitePreferences, undefined, true);
+    const snapshot = createSettingsSnapshot({
+        revision: 1,
+        globalEnabled: true,
+        siteScope: { mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, excludedSites, allowedSites: [] },
+        debugEnabled: true,
+    });
     const state = { phase: "ready" as const, snapshot, failure: undefined };
     return { append, service, state };
 }
@@ -47,7 +53,7 @@ describe("DiagnosticsService frame authorization", () => {
     });
 
     it("rejects frames when the top-level site is disabled", async () => {
-        const fixtureValue = fixture({ "top.example": false });
+        const fixtureValue = fixture(["top.example"]);
         const accepted = await fixtureValue.service.record(
             { category: "timing", count: 1 },
             {
@@ -86,5 +92,40 @@ describe("DiagnosticsService frame authorization", () => {
         }));
         expect(JSON.stringify(fixtureValue.append.mock.calls))
             .not.toMatch(/private|query|fragment/u);
+    });
+});
+
+describe("DiagnosticsService recovery reads", () => {
+    it("reads retained entries while settings are unavailable", async () => {
+        const entries = [{
+            category: "lifecycle",
+            timestamp: 1,
+            hostname: "github.com",
+            pageCategory: "repository",
+            incognito: false,
+        }];
+        const readSnapshot = vi.fn(async () => ({ ok: false, error: "disabled" } as const));
+        const readStored = vi.fn(async () => ({ ok: true, entries } as const));
+        const journal = { readSnapshot, readStored } as unknown as DiagnosticJournal;
+        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+
+        await expect(service.readSnapshot({
+            phase: "failed-closed" as const,
+            snapshot: undefined,
+            failure: "settings-load",
+        })).resolves.toMatchObject({ ok: true, snapshot: { entries } });
+        expect(readSnapshot).not.toHaveBeenCalled();
+    });
+
+    it("still reports disabled logging while settings are available", async () => {
+        const readStored = vi.fn();
+        const journal = { readSnapshot: vi.fn(), readStored } as unknown as DiagnosticJournal;
+        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+        const snapshot = createSettingsSnapshot({ revision: 1, globalEnabled: true });
+
+        await expect(
+            service.readSnapshot({ phase: "ready" as const, snapshot, failure: undefined }),
+        ).resolves.toEqual({ ok: false, error: "disabled" });
+        expect(readStored).not.toHaveBeenCalled();
     });
 });

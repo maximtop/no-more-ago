@@ -17,11 +17,8 @@ import type {
     RefreshFailure as DisplayRefreshFailure,
 } from "../../shared/messaging/view-state-schemas";
 import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
-import {
-    isSiteEnabled,
-    type DisplaySettings,
-    type SettingsSnapshotV5,
-} from "../../shared/settings/snapshot";
+import type { DisplaySettings, SettingsSnapshot } from "../../shared/settings/snapshot";
+import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
 import { settleBrowserOperation } from "../runtime/settle";
 
@@ -67,7 +64,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     public refreshDebugPolicy(
-        snapshot: SettingsSnapshotV5,
+        snapshot: SettingsSnapshot,
         enabled: boolean,
         revision: number,
     ): Promise<readonly DebugRefreshFailure[]> {
@@ -87,7 +84,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     public refreshDisplay(
-        snapshot: SettingsSnapshotV5,
+        snapshot: SettingsSnapshot,
         display: DisplaySettings,
         revision: number,
     ): Promise<readonly DisplayRefreshFailure[]> {
@@ -106,7 +103,7 @@ export class DocumentRefresh {
      * @returns - Refresh failures by tab.
      */
     private async broadcast(
-        snapshot: SettingsSnapshotV5,
+        snapshot: SettingsSnapshot,
         message: RefreshMessage,
     ): Promise<readonly DisplayRefreshFailure[]> {
         if (!snapshot.globalEnabled) {
@@ -129,7 +126,7 @@ export class DocumentRefresh {
             }
             seen.add(tab.id);
             const url = parseHttpUrl(tab.url);
-            if (!url || !isSiteEnabled(snapshot.sitePreferences, url.hostname)) {
+            if (!url || !isSiteProcessingEnabled(snapshot.siteScope, url.hostname)) {
                 return;
             }
             try {

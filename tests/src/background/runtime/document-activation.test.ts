@@ -33,6 +33,7 @@ import {
     type ContentRuntimeHandle,
 } from "../../../../src/content-script/runtime";
 import { STATE_AVAILABILITY } from "../../../../src/shared/messaging/view-state-values";
+import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
     "../../../../src/shared/extension-files";
 
@@ -183,7 +184,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 1,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "example.test": true },
         });
 
         expect(result.registration).toBe(REGISTRATION_OUTCOME.REGISTERED);
@@ -249,7 +249,6 @@ describe("DocumentActivationCoordinator", () => {
             const result = await coordinator.reconcile({
                 revision: 1,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
 
             expect(result.registration).toBe(REGISTRATION_OUTCOME.FAILED);
@@ -279,7 +278,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "www.facebook.com": true },
         });
 
         expect(result.tabs).toEqual([{
@@ -312,7 +310,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "example.test": true },
         });
 
         expect(result.tabs).toEqual([{
@@ -341,7 +338,6 @@ describe("DocumentActivationCoordinator", () => {
         await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "www.facebook.com": true },
         });
 
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
@@ -358,7 +354,6 @@ describe("DocumentActivationCoordinator", () => {
         await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "example.test": true },
         });
 
         expect(fake.scripting.executeScript).toHaveBeenCalledTimes(1);
@@ -372,7 +367,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "www.facebook.com": true },
         });
 
         expect(result.tabs).toEqual([{
@@ -395,7 +389,11 @@ describe("DocumentActivationCoordinator", () => {
         await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "example.test": false },
+            siteScope: {
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                excludedSites: ["example.test"],
+                allowedSites: [],
+            },
         });
 
         expect(fake.tabs.sendMessage).toHaveBeenCalledWith(
@@ -488,7 +486,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 4,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: { "first.test": true, "second.test": true },
         });
 
         expect(result.tabs).toEqual([
@@ -532,7 +529,6 @@ describe("DocumentActivationCoordinator", () => {
                 const reconciliation = coordinator.reconcile({
                     revision: 6,
                     policy: ACTIVATION_POLICY.ENABLED,
-                    sitePreferences: {},
                 });
                 const outcome = Promise.race([
                     reconciliation.then((result) => ({ kind: "resolved" as const, result })),
@@ -577,7 +573,6 @@ describe("DocumentActivationCoordinator", () => {
                 const reconciliation = coordinator.reconcile({
                     revision: 7,
                     policy: ACTIVATION_POLICY.ENABLED,
-                    sitePreferences: {},
                 });
 
                 await vi.advanceTimersByTimeAsync(1_000);
@@ -610,7 +605,6 @@ describe("DocumentActivationCoordinator", () => {
             const enabling = coordinator.reconcile({
                 revision: 8,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.advanceTimersByTimeAsync(1_000);
             await enabling;
@@ -661,7 +655,6 @@ describe("DocumentActivationCoordinator", () => {
         const result = await coordinator.reconcile({
             revision: 5,
             policy: ACTIVATION_POLICY.ENABLED,
-            sitePreferences: {},
         });
 
         expect(result.tabs).toEqual([
@@ -689,7 +682,6 @@ describe("DocumentActivationCoordinator", () => {
             const reconciliation = coordinator.reconcile({
                 revision: 6,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.runAllTimersAsync();
 
@@ -724,7 +716,6 @@ describe("DocumentActivationCoordinator", () => {
             const reconciliation = coordinator.reconcile({
                 revision: 7,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.runAllTimersAsync();
 
@@ -756,7 +747,6 @@ describe("DocumentActivationCoordinator", () => {
             const reconciliation = coordinator.reconcile({
                 revision: 8,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.runAllTimersAsync();
 
@@ -783,7 +773,6 @@ describe("DocumentActivationCoordinator", () => {
             const reconciliation = coordinator.reconcile({
                 revision: 9,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.runAllTimersAsync();
 
@@ -813,7 +802,6 @@ describe("DocumentActivationCoordinator", () => {
             const reconciliation = coordinator.reconcile({
                 revision: 10,
                 policy: ACTIVATION_POLICY.ENABLED,
-                sitePreferences: {},
             });
             await vi.runAllTimersAsync();
 
@@ -864,7 +852,11 @@ describe("DocumentActivationCoordinator", () => {
                 const siteDisabled = await coordinator.reconcile({
                     revision,
                     policy: ACTIVATION_POLICY.ENABLED,
-                    sitePreferences: { "example.test": false },
+                    siteScope: {
+                        mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                        excludedSites: ["example.test"],
+                        allowedSites: [],
+                    },
                 });
                 await Promise.resolve();
                 await Promise.resolve();
@@ -879,7 +871,6 @@ describe("DocumentActivationCoordinator", () => {
                 const siteEnabledResult = await coordinator.reconcile({
                     revision,
                     policy: ACTIVATION_POLICY.ENABLED,
-                    sitePreferences: { "example.test": true },
                 });
                 await Promise.resolve();
                 await Promise.resolve();

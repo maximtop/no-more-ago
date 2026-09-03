@@ -1,0 +1,98 @@
+/* Brand tokens from the approved prototype visual system. */
+:root {
+  --nma-bg: oklch(98% 0.005 250);
+  --nma-surface: oklch(100% 0 0);
+  --nma-fg: oklch(22% 0.02 240);
+  --nma-muted: oklch(50% 0.018 240);
+  --nma-border: oklch(90% 0.008 240);
+  --nma-accent: oklch(58% 0.16 145);
+  --nma-danger: oklch(52% 0.18 25);
+  --nma-warning: oklch(61% 0.13 75);
+  --nma-fg-soft: color-mix(in oklch, var(--nma-fg) 5%, var(--nma-surface));
+  --nma-accent-soft: color-mix(in oklch, var(--nma-accent) 12%, var(--nma-surface));
+  --nma-danger-soft: color-mix(in oklch, var(--nma-danger) 10%, var(--nma-surface));
+  --nma-radius: 10px;
+  --nma-font-display: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
+  --nma-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --nma-font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --nma-bg: oklch(21% 0.012 250);
+  --nma-surface: oklch(25% 0.014 250);
+  --nma-fg: oklch(96% 0.005 240);
+  --nma-muted: oklch(74% 0.015 240);
+  --nma-border: oklch(36% 0.014 240);
+  --nma-accent: oklch(70% 0.15 145);
+  --nma-danger: oklch(70% 0.16 25);
+  --nma-warning: oklch(76% 0.12 75);
+  --nma-fg-soft: color-mix(in oklch, var(--nma-fg) 8%, var(--nma-surface));
+  --nma-accent-soft: color-mix(in oklch, var(--nma-accent) 18%, var(--nma-surface));
+  --nma-danger-soft: color-mix(in oklch, var(--nma-danger) 16%, var(--nma-surface));
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--nma-bg);
+  color: var(--nma-fg);
+  font-family: var(--nma-font-body);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every interactive control offers a 44px target. Buttons grow to it; switch
+   and radio controls keep their compact look but accept a padded hit area,
+   because the track and the radio input are label-bound. */
+.mantine-Button-root {
+  min-height: 44px;
+}
+
+.mantine-Switch-track {
+  position: relative;
+}
+
+.mantine-Switch-track::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+
+/* The radio label is one 20px line; 12px of padding on both sides makes the
+   label-bound target 44px tall, and the radio moves down to sit on that line. */
+.mantine-Radio-label {
+  padding-block: 12px;
+}
+
+.mantine-Radio-inner {
+  margin-top: 12px;
+}
+
+/* One label, description, and control row shared by the popup and Settings. */
+.nma-row {
+  min-height: 66px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--nma-border);
+}
+
+.nma-mono {
+  font-family: var(--nma-font-mono);
+}
+
+.nma-eyebrow {
+  color: var(--nma-muted);
+  font-family: var(--nma-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.nma-reset-confirmation {
+  padding: 16px 18px;
+  border: 1px solid color-mix(in oklch, var(--nma-danger) 45%, var(--nma-border));
+  border-radius: var(--nma-radius);
+  background: var(--nma-danger-soft);
+}

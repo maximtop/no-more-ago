@@ -177,6 +177,10 @@ function watchBrowser(
     const done = new Promise<void>((resolve) => {
         finish = resolve;
     });
+
+    /**
+     * Closes the watching compiler once, on the first termination signal.
+     */
     const stop = (): void => {
         if (stopping) {
             return;

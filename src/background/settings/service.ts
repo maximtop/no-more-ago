@@ -4,15 +4,34 @@
 
 import {
     DEFAULT_SETTINGS_SNAPSHOT,
+    FORMAT_MODE,
+    SETTINGS_LOAD_ERROR,
+    SETTINGS_LOAD_SOURCE,
     SETTINGS_PREVIOUS_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
+    TIME_ZONE_MODE,
     createSettingsSnapshot,
-    isCanonicalHostname,
+    isCurrentSettingsSnapshot,
     parseDisplaySettings,
+    sameDisplaySettings,
+    type Appearance,
     type DisplaySettings,
+    type SettingsLoadError,
     type SettingsLoadResult,
-    type SettingsSnapshotV5,
+    type SettingsSnapshot,
+    type SettingsSnapshotInput,
 } from "../../shared/settings/snapshot";
+import {
+    DISPLAY_SETTINGS_ERROR,
+    SITE_SETTINGS_ERROR,
+} from "../../shared/messaging/view-state-values";
+import { isCanonicalHostname } from "../../shared/settings/hostname";
+import {
+    isSiteListFull,
+    isSiteProcessingEnabled,
+    withSiteProcessing,
+    type SiteScopeMode,
+} from "../../shared/settings/site-scope";
 import { validateCustomFormatPattern } from "../../shared/settings/custom-format";
 
 /**
@@ -24,55 +43,160 @@ export interface SettingsStorage {
      */
     get(
         keys?: string | readonly string[] | Record<string, unknown>,
-    ): Promise<Readonly<Record<string, SettingsSnapshotV5 | undefined>>>;
+    ): Promise<Readonly<Record<string, unknown>>>;
 
     /**
      * Persists a complete record of key-value updates.
      */
-    set(items: Readonly<Record<string, SettingsSnapshotV5>>): Promise<void>;
+    set(items: Readonly<Record<string, SettingsSnapshot>>): Promise<void>;
 }
 
 /**
- * Persisted mutation outcome, including the revision that callers may safely project.
+ * Successful persisted mutation, including the revision that callers may safely project.
  */
-export type SettingsWriteResult =
-    | {
-        /**
-         * Indicates that the requested mutation completed successfully.
-         */
-        readonly ok: true;
+export interface SettingsWriteSuccess {
+    /**
+     * Indicates that the requested mutation completed successfully.
+     */
+    readonly ok: true;
 
-        /**
-         * Whether the persisted settings differ from the previous snapshot.
-         */
-        readonly changed: boolean;
+    /**
+     * Whether the persisted settings differ from the previous snapshot.
+     */
+    readonly changed: boolean;
 
-        /**
-         * Authoritative settings snapshot after the mutation.
-         */
-        readonly snapshot: SettingsSnapshotV5;
-    }
-    | {
-        /**
-         * Indicates that the requested mutation was rejected or could not be persisted.
-         */
-        readonly ok: false;
+    /**
+     * Authoritative settings snapshot after the mutation.
+     */
+    readonly snapshot: SettingsSnapshot;
+}
 
-        /**
-         * Stable reason the settings mutation failed.
-         */
-        readonly error:
-              | "persistence-failed"
-              | "invalid-hostname"
-              | "invalid-time-zone"
-              | "invalid-format"
-              | "invalid-display-settings";
+/**
+ * Named reasons a settings mutation is rejected or cannot be persisted.
+ */
+export const SETTINGS_WRITE_ERROR = {
+    PERSISTENCE_FAILED: "persistence-failed",
+    INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
+    LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
+    SCOPE_CHANGED: SITE_SETTINGS_ERROR.SCOPE_CHANGED,
+    INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
+    INVALID_DISPLAY_SETTINGS: DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS,
+} as const;
 
-        /**
-         * Last authoritative settings snapshot retained after the failure.
-         */
-        readonly snapshot: SettingsSnapshotV5;
-    };
+/**
+ * Reason a settings mutation failed.
+ */
+export type SettingsWriteError = (typeof SETTINGS_WRITE_ERROR)[keyof typeof SETTINGS_WRITE_ERROR];
+
+/**
+ * Rejected or unpersisted mutation and the snapshot that remains authoritative.
+ */
+export interface SettingsWriteFailure {
+    /**
+     * Indicates that the requested mutation was rejected or could not be persisted.
+     */
+    readonly ok: false;
+
+    /**
+     * Stable reason the settings mutation failed.
+     */
+    readonly error: SettingsWriteError;
+
+    /**
+     * Last authoritative settings snapshot retained after the failure.
+     */
+    readonly snapshot: SettingsSnapshot;
+}
+
+/**
+ * Persisted mutation outcome.
+ */
+export type SettingsWriteResult = SettingsWriteSuccess | SettingsWriteFailure;
+
+/**
+ * Settings load as the lifecycle uses it.
+ */
+export interface SettingsLoader {
+    /**
+     * Loads the current or recovery snapshot, or reports why neither is usable.
+     *
+     * @returns - Loaded settings snapshot or a contained load failure.
+     */
+    load(): Promise<SettingsLoadResult>;
+}
+
+/**
+ * Settings persistence as the command handler uses it: serialized writes and
+ * the last load failure for unavailable-state reporting.
+ */
+export interface SettingsPersistence extends SettingsLoader {
+    /**
+     * Last initialization failure, when settings are unavailable.
+     */
+    readonly lastLoadError: SettingsLoadError | undefined;
+
+    /**
+     * Persists the global activation flag.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult>;
+
+    /**
+     * Applies one hostname decision to the list of the given scope mode.
+     *
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists the active scope mode.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists the appearance applied to both extension surfaces.
+     *
+     * @param appearance - Requested appearance.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setAppearance(appearance: Appearance): Promise<SettingsWriteResult>;
+
+    /**
+     * Validates and persists presentation choices.
+     *
+     * @param display - Typed display settings to validate and persist.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists diagnostic journaling policy.
+     *
+     * @param enabled - Requested diagnostic journaling state.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult>;
+
+    /**
+     * Replaces the stored pair with a known-good default pair.
+     *
+     * @returns - Persisted reset result with the default snapshot.
+     */
+    resetAll(): Promise<SettingsWriteResult>;
+}
 
 /**
  * Injected capability check that separates structural zone validation from runtime Intl support.
@@ -95,43 +219,102 @@ function defaultTimeZoneAvailability(identifier: string): boolean {
 }
 
 /**
- * Compares display choices without relying on object identity.
+ * Builds the successor of a snapshot, carrying every field forward except the patch.
  *
- * @param a - First display-settings value.
- * @param b - Second display-settings value.
- * @returns - Whether both values contain the same presentation choices.
+ * @param current - Snapshot being replaced.
+ * @param patch - Fields that change in the successor.
+ * @returns - Frozen successor with the next revision.
  */
-function sameDisplay(a: DisplaySettings, b: DisplaySettings): boolean {
-    if (a.formatMode !== b.formatMode) {
-        return false;
+function next(
+    current: SettingsSnapshot,
+    patch: Partial<Omit<SettingsSnapshotInput, "revision">>,
+): SettingsSnapshot {
+    return createSettingsSnapshot({ ...current, ...patch, revision: current.revision + 1 });
+}
+
+/**
+ * Named outcomes of one pure snapshot transformation.
+ */
+const MUTATION_OUTCOME = {
+    CHANGED: "changed",
+    UNCHANGED: "unchanged",
+    REJECTED: "rejected",
+} as const;
+
+/**
+ * Result of transforming the loaded snapshot: a successor to persist, nothing
+ * to persist, or a domain rejection that leaves the snapshot untouched.
+ */
+type MutationOutcome =
+    | {
+        /**
+         * The transformation produced a successor snapshot.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.CHANGED;
+
+        /**
+         * Successor snapshot to persist.
+         */
+        readonly snapshot: SettingsSnapshot;
     }
-    if (a.formatMode === "custom" && b.formatMode === "custom" && a.pattern !== b.pattern) {
-        return false;
+    | {
+        /**
+         * The request is already satisfied by the loaded snapshot.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.UNCHANGED;
     }
-    if (a.timeZone.mode !== b.timeZone.mode) {
-        return false;
-    }
-    return (
-        a.timeZone.mode !== "iana" ||
-        b.timeZone.mode !== "iana" ||
-        a.timeZone.identifier === b.timeZone.identifier
-    );
+    | {
+        /**
+         * The request was rejected by a domain rule.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.REJECTED;
+
+        /**
+         * Reason the request was rejected.
+         */
+        readonly error: SettingsWriteError;
+    };
+
+/**
+ * Pure snapshot transformation applied under the mutation lock.
+ */
+type SnapshotMutator = (current: SettingsSnapshot) => MutationOutcome;
+
+const UNCHANGED: MutationOutcome = { kind: MUTATION_OUTCOME.UNCHANGED };
+
+/**
+ * Wraps a successor snapshot as a changed outcome.
+ *
+ * @param snapshot - Successor snapshot to persist.
+ * @returns - Changed outcome.
+ */
+function changed(snapshot: SettingsSnapshot): MutationOutcome {
+    return { kind: MUTATION_OUTCOME.CHANGED, snapshot };
+}
+
+/**
+ * Wraps a domain rejection as a mutation outcome.
+ *
+ * @param error - Reason the request was rejected.
+ * @returns - Rejected outcome.
+ */
+function rejected(error: SettingsWriteError): MutationOutcome {
+    return { kind: MUTATION_OUTCOME.REJECTED, error };
 }
 
 /**
  * Serializes settings reads and writes, preserving a recoverable previous snapshot across failures.
- *
  */
-export class SettingsService {
+export class SettingsService implements SettingsPersistence {
     /**
      * Last loaded snapshot, used to project settings while storage remains available.
      */
-    private current: SettingsSnapshotV5 | undefined;
+    private current: SettingsSnapshot | undefined;
 
     /**
      * Most recent load failure retained so clients can present the unavailable state accurately.
      */
-    private loadError: "load-failed" | "invalid-settings" | undefined;
+    private loadError: SettingsLoadError | undefined;
 
     /**
      * Promise tail that makes settings mutations durable in revision order.
@@ -157,37 +340,58 @@ export class SettingsService {
      * @returns - Loaded settings snapshot or a contained load failure.
      */
     public async load(): Promise<SettingsLoadResult> {
-        let values: Readonly<Record<string, SettingsSnapshotV5 | undefined>>;
+        let values: Readonly<Record<string, unknown>>;
         try {
             values = await this.storage.get([this.key, SETTINGS_PREVIOUS_STORAGE_KEY]);
         } catch {
-            this.loadError = "load-failed";
-            return { ok: false, error: "load-failed" };
+            this.loadError = SETTINGS_LOAD_ERROR.LOAD_FAILED;
+            return { ok: false, error: SETTINGS_LOAD_ERROR.LOAD_FAILED };
         }
 
-        const current = values[this.key];
-        const storedPrevious = values[SETTINGS_PREVIOUS_STORAGE_KEY];
+        const stored = values[this.key];
+        const storedPreviousValue = values[SETTINGS_PREVIOUS_STORAGE_KEY];
+        const current = isCurrentSettingsSnapshot(stored) ? stored : undefined;
+        const storedPrevious = isCurrentSettingsSnapshot(storedPreviousValue)
+            ? storedPreviousValue
+            : undefined;
         if (current !== undefined) {
             this.loadError = undefined;
             this.current = current;
-            return { ok: true, snapshot: current, source: "stored" };
+            return { ok: true, snapshot: current, source: SETTINGS_LOAD_SOURCE.STORED };
         }
 
         if (storedPrevious === undefined) {
+            if (stored === undefined && storedPreviousValue === undefined) {
+                this.loadError = undefined;
+                this.current = DEFAULT_SETTINGS_SNAPSHOT;
+                return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DEFAULT };
+            }
+            // A document of another schema version is discarded, not migrated.
+            // The defaults are persisted so the stale document stops being
+            // re-read on every worker start and recovery can trust storage.
+            try {
+                await this.storage.set(
+                    this.pair(DEFAULT_SETTINGS_SNAPSHOT, DEFAULT_SETTINGS_SNAPSHOT),
+                );
+            } catch {
+                this.loadError = SETTINGS_LOAD_ERROR.INVALID_SETTINGS;
+                return { ok: false, error: SETTINGS_LOAD_ERROR.INVALID_SETTINGS };
+            }
+            console.warn("Discarded stored settings of another schema version");
             this.loadError = undefined;
             this.current = DEFAULT_SETTINGS_SNAPSHOT;
-            return { ok: true, snapshot: this.current, source: "default" };
+            return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DISCARDED };
         }
 
         try {
             await this.storage.set(this.pair(storedPrevious, storedPrevious));
         } catch {
-            this.loadError = "invalid-settings";
-            return { ok: false, error: "invalid-settings" };
+            this.loadError = SETTINGS_LOAD_ERROR.INVALID_SETTINGS;
+            return { ok: false, error: SETTINGS_LOAD_ERROR.INVALID_SETTINGS };
         }
         this.loadError = undefined;
         this.current = storedPrevious;
-        return { ok: true, snapshot: storedPrevious, source: "recovered" };
+        return { ok: true, snapshot: storedPrevious, source: SETTINGS_LOAD_SOURCE.RECOVERED };
     }
 
     /**
@@ -195,7 +399,7 @@ export class SettingsService {
      *
      * @returns - Most recently loaded valid snapshot, if available.
      */
-    public get loadedSnapshot(): SettingsSnapshotV5 | undefined {
+    public get loadedSnapshot(): SettingsSnapshot | undefined {
         return this.current;
     }
 
@@ -204,7 +408,7 @@ export class SettingsService {
      *
      * @returns - Most recent settings initialization failure, if any.
      */
-    public get lastLoadError(): "load-failed" | "invalid-settings" | undefined {
+    public get lastLoadError(): SettingsLoadError | undefined {
         return this.loadError;
     }
 
@@ -213,7 +417,7 @@ export class SettingsService {
      *
      * @returns - Current snapshot or immutable default snapshot.
      */
-    private fallbackSnapshot(): SettingsSnapshotV5 {
+    private fallbackSnapshot(): SettingsSnapshot {
         return this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
     }
 
@@ -225,41 +429,48 @@ export class SettingsService {
      * @returns - Atomic storage payload containing both snapshots.
      */
     private pair(
-        current: SettingsSnapshotV5,
-        previous: SettingsSnapshotV5,
-    ): Readonly<Record<string, SettingsSnapshotV5>> {
+        current: SettingsSnapshot,
+        previous: SettingsSnapshot,
+    ): Readonly<Record<string, SettingsSnapshot>> {
         return { [this.key]: current, [SETTINGS_PREVIOUS_STORAGE_KEY]: previous };
     }
 
     /**
      * Applies a serialized mutation and persists its incremented snapshot revision.
      *
-     * @param mutator - Pure snapshot transformation, or null for an invalid request.
+     * @param mutator - Pure snapshot transformation applied to the loaded snapshot.
      * @returns - Persisted write result with the effective snapshot.
      */
-    private async mutate(
-        mutator: (current: SettingsSnapshotV5) => SettingsSnapshotV5 | null,
-    ): Promise<SettingsWriteResult> {
+    private async mutate(mutator: SnapshotMutator): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
             const loaded = await this.load();
             if (!loaded.ok) {
                 result = {
                     ok: false,
-                    error: "persistence-failed",
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
                     snapshot: this.fallbackSnapshot(),
                 };
                 return;
             }
-            const candidate = mutator(loaded.snapshot);
-            if (candidate === null) {
+            const outcome = mutator(loaded.snapshot);
+            if (outcome.kind === MUTATION_OUTCOME.UNCHANGED) {
                 result = { ok: true, changed: false, snapshot: loaded.snapshot };
                 return;
             }
+            if (outcome.kind === MUTATION_OUTCOME.REJECTED) {
+                result = { ok: false, error: outcome.error, snapshot: loaded.snapshot };
+                return;
+            }
+            const candidate = outcome.snapshot;
             try {
                 await this.storage.set(this.pair(candidate, loaded.snapshot));
             } catch {
-                result = { ok: false, error: "persistence-failed", snapshot: loaded.snapshot };
+                result = {
+                    ok: false,
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                    snapshot: loaded.snapshot,
+                };
                 return;
             }
             this.current = candidate;
@@ -272,10 +483,18 @@ export class SettingsService {
         try {
             await run;
         } catch {
-            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+            result = {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return (
-            result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }
+            result ?? {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            }
         );
     }
 
@@ -288,54 +507,79 @@ export class SettingsService {
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
             current.globalEnabled === enabled
-                ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    enabled,
-                    current.sitePreferences,
-                    current.display,
-                    current.debugEnabled,
-                ),
+                ? UNCHANGED
+                : changed(next(current, { globalEnabled: enabled })),
         );
     }
 
     /**
-     * Persists one canonical-host override without changing other site preferences.
+     * Applies one hostname decision to the list of the scope mode the caller
+     * was looking at. The decision is rejected when another surface changed
+     * the mode first, because the same flag would then edit the other list.
      *
-     * @param hostname - Canonical hostname to override.
-     * @param enabled - Requested activation state for the hostname.
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
      * @returns - Persisted write result with the effective snapshot.
      */
-    public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
+    public async setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<SettingsWriteResult> {
         if (!isCanonicalHostname(hostname)) {
-            return { ok: false, error: "invalid-hostname", snapshot: this.fallbackSnapshot() };
+            return {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.INVALID_HOSTNAME,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return this.mutate((current) => {
-            if (
-                Object.hasOwn(current.sitePreferences, hostname) &&
-                current.sitePreferences[hostname] === enabled
-            ) {
-                return null;
+            if (current.siteScope.mode !== mode) {
+                return rejected(SETTINGS_WRITE_ERROR.SCOPE_CHANGED);
             }
-            const entries = Object.entries(current.sitePreferences);
-            const index = entries.findIndex(([key]) => key === hostname);
-            if (index >= 0) {
-                entries[index] = [hostname, enabled];
-            } else {
-                entries.push([hostname, enabled]);
+            if (isSiteProcessingEnabled(current.siteScope, hostname) === enabled) {
+                return UNCHANGED;
             }
-            return createSettingsSnapshot(
-                current.revision + 1,
-                current.globalEnabled,
-                Object.fromEntries(entries),
-                current.display,
-                current.debugEnabled,
-            );
+            if (isSiteListFull(current.siteScope, hostname)) {
+                return rejected(SETTINGS_WRITE_ERROR.LIST_FULL);
+            }
+            return changed(next(current, {
+                siteScope: withSiteProcessing(current.siteScope, hostname, enabled),
+            }));
         });
     }
 
     /**
-     * Persists validated presentation choices and refreshes the derived display projection.
+     * Persists the active scope mode without changing either hostname list.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    public async setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult> {
+        return this.mutate((current) =>
+            current.siteScope.mode === mode
+                ? UNCHANGED
+                : changed(next(current, { siteScope: { ...current.siteScope, mode } })),
+        );
+    }
+
+    /**
+     * Persists the appearance applied to both extension surfaces.
+     *
+     * @param appearance - Requested appearance.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    public async setAppearance(appearance: Appearance): Promise<SettingsWriteResult> {
+        return this.mutate((current) =>
+            current.appearance === appearance
+                ? UNCHANGED
+                : changed(next(current, { appearance })),
+        );
+    }
+
+    /**
+     * Persists validated presentation choices.
      *
      * @param display - Typed display settings to validate and persist.
      * @returns - Persisted write result with the effective snapshot.
@@ -344,33 +588,35 @@ export class SettingsService {
         const parsed = parseDisplaySettings(display);
         if (parsed === null) {
             if (
-                display.formatMode === "custom"
+                display.formatMode === FORMAT_MODE.CUSTOM
                 && !validateCustomFormatPattern(display.pattern).ok
             ) {
-                return { ok: false, error: "invalid-format", snapshot: this.fallbackSnapshot() };
+                return {
+                    ok: false,
+                    error: SETTINGS_WRITE_ERROR.INVALID_FORMAT,
+                    snapshot: this.fallbackSnapshot(),
+                };
             }
             return {
                 ok: false,
-                error: "invalid-display-settings",
+                error: SETTINGS_WRITE_ERROR.INVALID_DISPLAY_SETTINGS,
                 snapshot: this.fallbackSnapshot(),
             };
         }
         if (
-            parsed.timeZone.mode === "iana" &&
+            parsed.timeZone.mode === TIME_ZONE_MODE.IANA &&
             !this.isTimeZoneAvailable(parsed.timeZone.identifier)
         ) {
-            return { ok: false, error: "invalid-time-zone", snapshot: this.fallbackSnapshot() };
+            return {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.INVALID_TIME_ZONE,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return this.mutate((current) =>
-            sameDisplay(current.display, parsed)
-                ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    current.globalEnabled,
-                    current.sitePreferences,
-                    parsed,
-                    current.debugEnabled,
-                ),
+            sameDisplaySettings(current.display, parsed)
+                ? UNCHANGED
+                : changed(next(current, { display: parsed })),
         );
     }
 
@@ -383,14 +629,8 @@ export class SettingsService {
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
             current.debugEnabled === enabled
-                ? null
-                : createSettingsSnapshot(
-                    current.revision + 1,
-                    current.globalEnabled,
-                    current.sitePreferences,
-                    current.display,
-                    enabled,
-                ),
+                ? UNCHANGED
+                : changed(next(current, { debugEnabled: enabled })),
         );
     }
 
@@ -406,19 +646,16 @@ export class SettingsService {
             const previous = loaded.ok
                 ? loaded.snapshot
                 : this.current ?? DEFAULT_SETTINGS_SNAPSHOT;
-            const defaults = createSettingsSnapshot(
-                previous.revision + 1,
-                DEFAULT_SETTINGS_SNAPSHOT.globalEnabled,
-                DEFAULT_SETTINGS_SNAPSHOT.sitePreferences,
-                DEFAULT_SETTINGS_SNAPSHOT.display,
-                DEFAULT_SETTINGS_SNAPSHOT.debugEnabled,
-            );
+            const defaults = createSettingsSnapshot({
+                revision: previous.revision + 1,
+                globalEnabled: DEFAULT_SETTINGS_SNAPSHOT.globalEnabled,
+            });
             try {
                 await this.storage.set(this.pair(defaults, defaults));
             } catch {
                 result = {
                     ok: false,
-                    error: "persistence-failed",
+                    error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
                     snapshot: this.fallbackSnapshot(),
                 };
                 return;
@@ -434,10 +671,18 @@ export class SettingsService {
         try {
             await run;
         } catch {
-            result = { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() };
+            result = {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            };
         }
         return (
-            result ?? { ok: false, error: "persistence-failed", snapshot: this.fallbackSnapshot() }
+            result ?? {
+                ok: false,
+                error: SETTINGS_WRITE_ERROR.PERSISTENCE_FAILED,
+                snapshot: this.fallbackSnapshot(),
+            }
         );
     }
 

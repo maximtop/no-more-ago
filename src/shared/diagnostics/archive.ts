@@ -3,7 +3,7 @@
  */
 
 import * as fflate from "fflate";
-import type { DiagnosticsSnapshot } from "../../shared/messaging/contracts";
+import type { DiagnosticsSnapshot } from "../messaging/contracts";
 
 /**
  * JSON member stored inside a diagnostic archive.
@@ -16,12 +16,19 @@ export const DIAGNOSTICS_ARCHIVE_MEMBER = "diagnostics.json" as const;
 export const DIAGNOSTICS_ARCHIVE_FILE = "no-more-ago-diagnostics.zip" as const;
 
 /**
- * Stable archive failures shown by the options page.
+ * Named archive failures shown by both surfaces.
+ */
+export const DIAGNOSTIC_ARCHIVE_ERROR = {
+    EMPTY: "empty",
+    COMPRESSION_FAILED: "compression-failed",
+    DOWNLOAD_FAILED: "download-failed",
+} as const;
+
+/**
+ * Stable archive failure shown by both surfaces.
  */
 export type DiagnosticArchiveErrorCode =
-    | "empty"
-    | "compression-failed"
-    | "download-failed";
+    (typeof DIAGNOSTIC_ARCHIVE_ERROR)[keyof typeof DIAGNOSTIC_ARCHIVE_ERROR];
 
 /**
  * Validated snapshot accepted by archive creation.
@@ -116,14 +123,17 @@ export function createDiagnosticsZip(
     encoder: ZipEncoder = fflate.zipSync,
 ): Uint8Array {
     if (snapshot.entries.length === 0) {
-        throw new DiagnosticArchiveError("empty", "There are no diagnostic entries to download.");
+        throw new DiagnosticArchiveError(
+            DIAGNOSTIC_ARCHIVE_ERROR.EMPTY,
+            "There are no diagnostic entries to download.",
+        );
     }
     try {
         const json = fflate.strToU8(JSON.stringify(snapshot));
         return encoder({ [DIAGNOSTICS_ARCHIVE_MEMBER]: new Uint8Array(json) });
     } catch (cause) {
         throw new DiagnosticArchiveError(
-            "compression-failed",
+            DIAGNOSTIC_ARCHIVE_ERROR.COMPRESSION_FAILED,
             "The diagnostic archive could not be created.",
             { cause },
         );
@@ -131,46 +141,12 @@ export function createDiagnosticsZip(
 }
 
 /**
- * Creates a browser-backed download runtime.
- *
- * @returns - Download runtime for the options page.
- */
-function defaultDownloadRuntime(): DownloadRuntime {
-    if (
-        typeof Blob === "undefined"
-        || typeof URL === "undefined"
-        || typeof document === "undefined"
-    ) {
-        throw new DiagnosticArchiveError(
-            "download-failed",
-            "Local downloads are unavailable in this context.",
-        );
-    }
-    return {
-        Blob,
-        createObjectURL: (blob) => URL.createObjectURL(blob),
-        revokeObjectURL: (url) => {
-            URL.revokeObjectURL(url);
-        },
-        createAnchor: () => {
-            const anchor = document.createElement("a");
-            document.body.append(anchor);
-            return anchor;
-        },
-        scheduleRevoke: (callback) => {
-            setTimeout(callback, 0);
-        },
-    };
-}
-
-/**
  * Downloads prepared diagnostic ZIP bytes.
  *
  * @param bytes - ZIP archive bytes.
- * @param runtime - Optional browser download primitives.
+ * @param browser - Browser download primitives.
  */
-export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRuntime): void {
-    const browser = runtime ?? defaultDownloadRuntime();
+export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRuntime): void {
     let objectUrl: string | undefined;
     let anchor: ReturnType<DownloadRuntime["createAnchor"]> | undefined;
     try {
@@ -193,7 +169,7 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, runtime?: DownloadRunt
         }
         anchor?.remove?.();
         throw new DiagnosticArchiveError(
-            "download-failed",
+            DIAGNOSTIC_ARCHIVE_ERROR.DOWNLOAD_FAILED,
             "The diagnostic archive could not be downloaded.",
             { cause },
         );

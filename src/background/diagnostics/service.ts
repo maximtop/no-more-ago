@@ -17,22 +17,23 @@ import {
     DIAGNOSTIC_PAGE_CATEGORY,
 } from "../../shared/diagnostics/contracts";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
-import type { DiagnosticJournal } from "../diagnostics/journal";
-import { isSiteEnabled } from "../../shared/settings/snapshot";
+import type { DiagnosticJournalStore } from "../diagnostics/journal";
+import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import { parseHttpUrl } from "../../shared/url/http";
 import type { BackgroundApplicationOptions } from "../application/contracts";
 import type { ApplicationStateView } from "../application/state";
 import { APPLICATION_PHASE } from "../application/contracts";
+import { STATE_AVAILABILITY } from "../../shared/messaging/view-state-values";
 import {
-    SETTINGS_STATE_FAILURE,
-    STATE_AVAILABILITY,
-} from "../../shared/messaging/view-state-values";
-import type {
-    ClearDiagnosticsResponse,
-    DiagnosticsEnvironment,
-    GetDiagnosticsSnapshotResponse,
+    DIAGNOSTICS_ERROR,
+    type ClearDiagnosticsResponse,
+    type DiagnosticsEnvironment,
+    type GetDiagnosticsSnapshotResponse,
 } from "../../shared/messaging/contracts";
-import type { DebugState } from "../../shared/messaging/view-state-schemas";
+import {
+    createUnavailableDebugState,
+    type DebugState,
+} from "../../shared/messaging/view-state-schemas";
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
@@ -43,7 +44,7 @@ export class DiagnosticsService {
     /**
      * Optional persistent diagnostic journal.
      */
-    private readonly journal: DiagnosticJournal | undefined;
+    private readonly journal: DiagnosticJournalStore | undefined;
 
     /**
      * Trusted browser and extension metadata.
@@ -57,7 +58,7 @@ export class DiagnosticsService {
      * @param environment - Trusted browser and extension metadata.
      */
     public constructor(
-        journal: DiagnosticJournal | undefined,
+        journal: DiagnosticJournalStore | undefined,
         environment: BackgroundApplicationOptions["diagnosticEnvironment"],
     ) {
         this.journal = journal;
@@ -72,14 +73,7 @@ export class DiagnosticsService {
      */
     public debugState(state: ApplicationStateView): DebugState {
         if (state.phase !== APPLICATION_PHASE.READY || !state.snapshot) {
-            return {
-                availability: STATE_AVAILABILITY.UNAVAILABLE,
-                revision: null,
-                enabled: null,
-                failure: state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-                    ? SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-                    : SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-            };
+            return createUnavailableDebugState(state.failure);
         }
         return {
             availability: STATE_AVAILABILITY.READY,
@@ -89,7 +83,9 @@ export class DiagnosticsService {
     }
 
     /**
-     * Reads persisted diagnostics when logging and the journal are available.
+     * Reads persisted diagnostics. While settings are unavailable the journal's
+     * retained entries are still readable, because the recovery views offer
+     * them for a problem report.
      *
      * @param state - Current lifecycle state.
      * @returns - Persisted diagnostics or a contained availability error.
@@ -97,17 +93,16 @@ export class DiagnosticsService {
     public async readSnapshot(
         state: ApplicationStateView,
     ): Promise<GetDiagnosticsSnapshotResponse> {
-        if (
-            state.phase !== APPLICATION_PHASE.READY
-            || !state.snapshot
-            || !this.journal
-        ) {
-            return { ok: false, error: "unavailable" };
+        if (!this.journal) {
+            return { ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        if (!state.snapshot.debugEnabled) {
-            return { ok: false, error: "disabled" };
+        const snapshot = state.phase === APPLICATION_PHASE.READY ? state.snapshot : undefined;
+        if (snapshot && !snapshot.debugEnabled) {
+            return { ok: false, error: DIAGNOSTICS_ERROR.DISABLED };
         }
-        const result = await this.journal.readSnapshot();
+        const result = snapshot
+            ? await this.journal.readSnapshot()
+            : await this.journal.readStored();
         if (!result.ok) {
             return result;
         }
@@ -129,10 +124,10 @@ export class DiagnosticsService {
             || !state.snapshot
             || !this.journal
         ) {
-            return { ok: false, error: "unavailable" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
         if (!state.snapshot.debugEnabled) {
-            return { ok: false, error: "disabled" };
+            return { ok: false, error: DIAGNOSTICS_ERROR.DISABLED };
         }
         return this.journal.clearEntries();
     }
@@ -207,7 +202,7 @@ export class DiagnosticsService {
             return false;
         }
         const topLevelUrl = parseHttpUrl(sender.tab?.url);
-        if (!topLevelUrl || !isSiteEnabled(snapshot.sitePreferences, topLevelUrl.hostname)) {
+        if (!topLevelUrl || !isSiteProcessingEnabled(snapshot.siteScope, topLevelUrl.hostname)) {
             return false;
         }
         const event = createDiagnosticEvent(input, sender);

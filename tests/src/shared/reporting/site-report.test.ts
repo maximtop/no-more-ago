@@ -68,7 +68,7 @@ describe("site report composer", () => {
         expect(parsed.pathname).toBe("/maximtop/no-more-ago/issues/new");
         expect(parsed.searchParams.get("template")).toBe("site-report.yml");
         expect(parsed.searchParams.get("reason")).toBe("Dates are not working correctly");
-        expect(parsed.searchParams.get("hostname")).toBe("github.com");
+        expect(parsed.searchParams.has("hostname")).toBe(false);
         expect(parsed.searchParams.get("current_url")).toBe(
             "https://github.com/acme/repo/issues/1?filter=all#discussion",
         );

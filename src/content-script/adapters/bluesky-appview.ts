@@ -208,6 +208,10 @@ async function requestJson(
             resolve(null);
         };
     });
+
+    /**
+     * Aborts the request and settles the cancellation promise.
+     */
     const cancel = (): void => {
         requestController.abort();
         resolveCancellation?.();

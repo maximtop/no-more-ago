@@ -2,33 +2,61 @@
  * @file Owns debug logging, diagnostic archives, and site-report actions for options.
  */
 
-import { useEffect, useRef, useState } from "react";
-import type {
-    DebugState,
-} from "../shared/messaging/view-state-schemas";
-import type {
-    DiagnosticsClearError,
-    DiagnosticsSnapshotError,
-} from "../shared/messaging/contracts";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    SETTINGS_STATE_FAILURE,
+    createUnavailableDebugState,
+    type DebugState,
+} from "../shared/messaging/view-state-schemas";
+import {
+    SETTINGS_PERSISTENCE_ERROR,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
+import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import {
-    DiagnosticArchiveError,
-    createDiagnosticsZip,
-    downloadDiagnosticsZip,
-    type DownloadRuntime,
-} from "./diagnostics/archive";
-import type { SiteReportReporter } from "../shared/reporting/site-report";
+    DIAGNOSTICS_CLEARED_NOTICE,
+    diagnosticsErrorText,
+    downloadDiagnosticsSnapshot,
+} from "../shared/diagnostics/download";
+import {
+    SITE_REPORT_ERROR,
+    type SiteReportError,
+    type SiteReportReporter,
+} from "../shared/reporting/site-report";
 import type { SitesClient } from "./client";
-import type { OptionsNotice } from "./options-notice";
 
 /**
- * Message used after diagnostic entries are removed successfully.
+ * Named outcomes of a Debug logs mutation.
  */
-export const DIAGNOSTICS_CLEARED_NOTICE = "Diagnostic logs cleared.";
+export const DEBUG_NOTICE = {
+    SAVE_FAILED: SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
+    INTERRUPTED: "interrupted",
+    UNKNOWN: "unknown",
+} as const;
+
+/**
+ * User-visible outcome of a Debug logs mutation, or undefined when there is none.
+ */
+export type DebugNotice = (typeof DEBUG_NOTICE)[keyof typeof DEBUG_NOTICE] | undefined;
+
+/**
+ * Maps a Debug logs outcome to its user-visible error message.
+ *
+ * @param notice - Outcome reported after changing the Debug logs setting.
+ * @returns - An error message, or undefined when there is no notice to show.
+ */
+export function debugNoticeText(notice: DebugNotice): string | undefined {
+    if (notice === DEBUG_NOTICE.SAVE_FAILED) {
+        return "Could not save the Debug logs setting. Try again.";
+    }
+    if (notice === DEBUG_NOTICE.INTERRUPTED) {
+        return "The Debug logs response was interrupted. Current state was reloaded.";
+    }
+    if (notice === DEBUG_NOTICE.UNKNOWN) {
+        return "Could not confirm the Debug logs setting. Reopen Settings to try again.";
+    }
+    return undefined;
+}
 
 /**
  * Dependencies and optional initial state for diagnostics controls.
@@ -50,14 +78,9 @@ export interface DiagnosticsControllerOptions {
     readonly initialState: DebugState | undefined;
 
     /**
-     * Runtime used to create and download a diagnostics archive.
+     * Runtime used to hand a diagnostics archive to the browser.
      */
     readonly archiveRuntime: DownloadRuntime | undefined;
-
-    /**
-     * Replaces the shared site or Debug logs mutation notice.
-     */
-    readonly onNoticeChange: (notice: OptionsNotice) => void;
 }
 
 /**
@@ -78,6 +101,11 @@ export interface DiagnosticsController {
      * Whether a Debug logs mutation is in flight.
      */
     readonly saving: boolean;
+
+    /**
+     * Latest Debug logs outcome that needs user guidance.
+     */
+    readonly notice: DebugNotice;
 
     /**
      * Whether a diagnostic snapshot or clear request is in flight.
@@ -102,29 +130,29 @@ export interface DiagnosticsController {
     /**
      * Changes whether bounded diagnostic logging is enabled.
      *
-     * @param enabled Whether diagnostic logging should be enabled.
-     * @returns A promise that settles after the command outcome has been applied.
+     * @param enabled - Whether diagnostic logging should be enabled.
+     * @returns - A promise that settles after the command outcome has been applied.
      */
     changeDebug(enabled: boolean): Promise<void>;
 
     /**
      * Downloads a snapshot of stored diagnostic logs.
      *
-     * @returns A promise that settles after the download attempt completes.
+     * @returns - A promise that settles after the download attempt completes.
      */
     downloadDiagnostics(): Promise<void>;
 
     /**
      * Removes stored diagnostic logs without changing the Debug logs setting.
      *
-     * @returns A promise that settles after the clear attempt completes.
+     * @returns - A promise that settles after the clear attempt completes.
      */
     clearDiagnostics(): Promise<void>;
 
     /**
      * Opens the generic GitHub site-report form.
      *
-     * @returns A promise that settles after the open attempt completes.
+     * @returns - A promise that settles after the open attempt completes.
      */
     openGitHubIssue(): Promise<void>;
 
@@ -136,56 +164,32 @@ export interface DiagnosticsController {
     /**
      * Rehydrates the Debug logs setting after all persisted settings were reset.
      *
-     * @returns A promise that settles after the fresh projection has been applied.
+     * @returns - A promise that settles after the fresh projection has been applied.
      */
     reloadAfterReset(): Promise<void>;
-}
 
-const UNAVAILABLE_DEBUG_STATE: DebugState = {
-    availability: STATE_AVAILABILITY.UNAVAILABLE,
-    revision: null,
-    enabled: null,
-    failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
-};
-
-/**
- * Maps a diagnostics service failure to user guidance.
- *
- * @param error Stable service failure returned by the background page.
- * @returns The diagnostic error message displayed to the user.
- */
-function diagnosticsErrorText(
-    error: DiagnosticsSnapshotError | DiagnosticsClearError,
-): string {
-    if (error === "disabled") {
-        return "Debug logs are off. Turn them on to use saved diagnostics.";
-    }
-    if (error === "empty") {
-        return "There are no diagnostic logs to download yet.";
-    }
-    if (error === "invalid-journal") {
-        return "Saved diagnostic logs are invalid. Clear logs and try again.";
-    }
-    if (error === "storage-failed") {
-        return "Saved diagnostic logs could not be read. Try again later.";
-    }
-    return "Diagnostic logs are unavailable. Try again later.";
+    /**
+     * Rereads the Debug logs setting after another surface changed settings.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
+    readonly reload: () => Promise<void>;
 }
 
 /**
  * Maps a site-report failure to guidance shown in settings.
  *
- * @param error Failure returned by the site-report service.
- * @returns The error message displayed to the user.
+ * @param error - Failure returned by the site-report service.
+ * @returns - The error message displayed to the user.
  */
-function siteReportErrorText(error: string): string {
-    if (error === "busy") {
+function siteReportErrorText(error: SiteReportError): string {
+    if (error === SITE_REPORT_ERROR.BUSY) {
         return "A GitHub report is already being opened.";
     }
-    if (error === "open-failed") {
+    if (error === SITE_REPORT_ERROR.OPEN_FAILED) {
         return "Could not open the GitHub report. Try again.";
     }
-    if (error === "browser-unavailable") {
+    if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
         return "Could not open the GitHub report in this browser.";
     }
     return "Could not open the GitHub report. Check the browser context and try again.";
@@ -194,16 +198,17 @@ function siteReportErrorText(error: string): string {
 /**
  * Creates the diagnostics controller for the options page.
  *
- * @param options Controller dependencies and optional preloaded state.
- * @returns Current diagnostics state together with logging, archive, and report commands.
+ * @param options - Controller dependencies and optional preloaded state.
+ * @returns - Current diagnostics state together with logging, archive, and report commands.
  */
 export function useDiagnosticsController(
     options: DiagnosticsControllerOptions,
 ): DiagnosticsController {
-    const { client, reporter, initialState, archiveRuntime, onNoticeChange } = options;
+    const { client, reporter, initialState, archiveRuntime } = options;
     const [state, setState] = useState<DebugState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);
     const [saving, setSaving] = useState(false);
+    const [notice, setNotice] = useState<DebugNotice>();
     const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
     const [diagnosticsNotice, setDiagnosticsNotice] = useState<string>();
     const [reporting, setReporting] = useState(false);
@@ -230,7 +235,7 @@ export function useDiagnosticsController(
                 if (!mounted) {
                     return;
                 }
-                setState(UNAVAILABLE_DEBUG_STATE);
+                setState(createUnavailableDebugState());
                 setLoading(false);
             });
         return () => {
@@ -238,6 +243,12 @@ export function useDiagnosticsController(
         };
     }, [client, initialState]);
 
+    /**
+     * Persists the Debug logs toggle and applies the outcome.
+     *
+     * @param enabled - Requested logging state.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeDebug = async (enabled: boolean): Promise<void> => {
         if (
             !state
@@ -249,17 +260,17 @@ export function useDiagnosticsController(
         }
         debugInFlight.current = true;
         setSaving(true);
-        onNoticeChange(undefined);
+        setNotice(undefined);
         const result = await client.setDebugEnabled(enabled);
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
             if (
-                result.response.state.availability !== STATE_AVAILABILITY.READY ||
-                result.response.state.revision >= state.revision
+                result.response.state.availability !== STATE_AVAILABILITY.READY
+                || result.response.state.revision >= state.revision
             ) {
                 setState(result.response.state);
             }
             if (!result.response.ok) {
-                onNoticeChange("debug-save-failed");
+                setNotice(DEBUG_NOTICE.SAVE_FAILED);
             }
         } else if (result.state) {
             if (
@@ -268,55 +279,49 @@ export function useDiagnosticsController(
             ) {
                 setState(result.state);
             }
-            onNoticeChange("debug-interrupted");
+            setNotice(DEBUG_NOTICE.INTERRUPTED);
         } else {
-            setState(UNAVAILABLE_DEBUG_STATE);
-            onNoticeChange("debug-unknown");
+            setState(createUnavailableDebugState());
+            setNotice(DEBUG_NOTICE.UNKNOWN);
         }
         debugInFlight.current = false;
         setSaving(false);
     };
 
+    /**
+     * Downloads the retained diagnostics archive.
+     *
+     * @returns - A promise that settles after the download attempt.
+     */
     const downloadDiagnostics = async (): Promise<void> => {
-        if (
-            !state ||
-            state.availability !== STATE_AVAILABILITY.READY ||
-            !state.enabled ||
-            diagnosticsInFlight.current
-        ) {
+        if (diagnosticsInFlight.current) {
             return;
         }
         diagnosticsInFlight.current = true;
         setDiagnosticsBusy(true);
         setDiagnosticsNotice(undefined);
         try {
-            const result = await client.getDiagnosticsSnapshot();
-            if (result.kind === CLIENT_RESULT_KIND.ERROR) {
-                setDiagnosticsNotice(diagnosticsErrorText(result.error));
-                return;
-            }
-            try {
-                const bytes = createDiagnosticsZip(result.snapshot);
-                downloadDiagnosticsZip(bytes, archiveRuntime);
-            } catch (error) {
-                setDiagnosticsNotice(
-                    error instanceof DiagnosticArchiveError
-                        ? error.message
-                        : "The diagnostic archive could not be downloaded. Try again later.",
-                );
-            }
+            setDiagnosticsNotice(downloadDiagnosticsSnapshot(
+                await client.getDiagnosticsSnapshot(),
+                archiveRuntime,
+            ));
         } finally {
             diagnosticsInFlight.current = false;
             setDiagnosticsBusy(false);
         }
     };
 
+    /**
+     * Clears retained diagnostics while logging is enabled.
+     *
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const clearDiagnostics = async (): Promise<void> => {
         if (
-            !state ||
-            state.availability !== STATE_AVAILABILITY.READY ||
-            !state.enabled ||
-            diagnosticsInFlight.current
+            !state
+            || state.availability !== STATE_AVAILABILITY.READY
+            || !state.enabled
+            || diagnosticsInFlight.current
         ) {
             return;
         }
@@ -336,6 +341,11 @@ export function useDiagnosticsController(
         }
     };
 
+    /**
+     * Opens a prefilled GitHub report from the Settings page.
+     *
+     * @returns - A promise that settles after the report attempt.
+     */
     const openGitHubIssue = async (): Promise<void> => {
         if (reporting || reportInFlight.current) {
             return;
@@ -356,21 +366,45 @@ export function useDiagnosticsController(
         }
     };
 
+    /**
+     * Rereads diagnostic logging state after a full reset.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
     const reloadAfterReset = async (): Promise<void> => {
         try {
             setState(await client.getDebugState());
         } catch {
-            setState(UNAVAILABLE_DEBUG_STATE);
-            onNoticeChange("debug-unknown");
+            setState(createUnavailableDebugState());
+            setNotice(DEBUG_NOTICE.UNKNOWN);
         } finally {
             setLoading(false);
         }
     };
 
+    // A failed live reread keeps the last READY projection: one lost message
+    // does not mean processing stopped, and the next announcement retries. A
+    // reread older than the rendered projection is dropped for the same reason.
+    const reload = useCallback(async (): Promise<void> => {
+        try {
+            const next = await client.getDebugState();
+            setState((current) => (
+                next.availability !== STATE_AVAILABILITY.READY
+                || current?.availability !== STATE_AVAILABILITY.READY
+                || next.revision >= current.revision
+                    ? next
+                    : current
+            ));
+        } catch {
+            /* keep the current projection */
+        }
+    }, [client]);
+
     return {
         state,
         loading,
         saving,
+        notice,
         diagnosticsBusy,
         diagnosticsNotice,
         reporting,
@@ -380,10 +414,12 @@ export function useDiagnosticsController(
         clearDiagnostics,
         openGitHubIssue,
         beginReset: () => {
+            setNotice(undefined);
             setDiagnosticsNotice(undefined);
             setReportNotice(undefined);
             setLoading(true);
         },
         reloadAfterReset,
+        reload,
     };
 }

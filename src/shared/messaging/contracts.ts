@@ -6,6 +6,8 @@ import * as v from "valibot";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
 import { DIAGNOSTIC_BROWSER_FAMILIES } from "../diagnostics/contracts";
 import { diagnosticEventSchema } from "../diagnostics/events";
+import { APPEARANCES } from "../settings/snapshot";
+import { SITE_SCOPE_MODES } from "../settings/site-scope";
 import { SITE_SETTINGS_SURFACES } from "./view-state-values";
 import type {
     DebugState,
@@ -15,10 +17,12 @@ import type {
 } from "./view-state-schemas";
 import type {
     ResetAllSettingsResponse,
+    SetAppearanceResponse,
     SetDebugEnabledResponse,
     SetDisplaySettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
+    SetSiteScopeModeResponse,
 } from "./response-schemas";
 import type { DocumentState } from "./document-state";
 
@@ -38,7 +42,7 @@ export const GET_DOCUMENT_STATE_MESSAGE = "no-more-ago:get-document-state" as co
 export const SET_GLOBAL_ENABLED_MESSAGE = "no-more-ago:set-global-enabled" as const;
 
 /**
- * Requests the site-preferences list.
+ * Requests the scope mode and both hostname lists.
  */
 export const GET_SITES_STATE_MESSAGE = "no-more-ago:get-sites-state" as const;
 
@@ -46,6 +50,11 @@ export const GET_SITES_STATE_MESSAGE = "no-more-ago:get-sites-state" as const;
  * Changes a single site's activation setting.
  */
 export const SET_SITE_ENABLED_MESSAGE = "no-more-ago:set-site-enabled" as const;
+
+/**
+ * Changes the active site scope mode.
+ */
+export const SET_SITE_SCOPE_MODE_MESSAGE = "no-more-ago:set-site-scope-mode" as const;
 
 /**
  * Requests the current display configuration.
@@ -56,6 +65,11 @@ export const GET_DISPLAY_STATE_MESSAGE = "no-more-ago:get-display-state" as cons
  * Changes the display configuration.
  */
 export const SET_DISPLAY_SETTINGS_MESSAGE = "no-more-ago:set-display-settings" as const;
+
+/**
+ * Changes the appearance applied to both extension surfaces.
+ */
+export const SET_APPEARANCE_MESSAGE = "no-more-ago:set-appearance" as const;
 
 /**
  * Restores every setting to its default.
@@ -83,23 +97,34 @@ export const GET_DIAGNOSTICS_SNAPSHOT_MESSAGE = "no-more-ago:get-diagnostics-sna
 export const CLEAR_DIAGNOSTICS_MESSAGE = "no-more-ago:clear-diagnostics" as const;
 
 /**
+ * Named reasons a diagnostics read or clear fails.
+ */
+export const DIAGNOSTICS_ERROR = {
+    DISABLED: "disabled",
+    UNAVAILABLE: "unavailable",
+    EMPTY: "empty",
+    INVALID_JOURNAL: "invalid-journal",
+    STORAGE_FAILED: "storage-failed",
+} as const;
+
+/**
  * Errors returned when a diagnostic snapshot cannot be read.
  */
 export const DIAGNOSTICS_SNAPSHOT_ERRORS = [
-    "disabled",
-    "unavailable",
-    "empty",
-    "invalid-journal",
-    "storage-failed",
+    DIAGNOSTICS_ERROR.DISABLED,
+    DIAGNOSTICS_ERROR.UNAVAILABLE,
+    DIAGNOSTICS_ERROR.EMPTY,
+    DIAGNOSTICS_ERROR.INVALID_JOURNAL,
+    DIAGNOSTICS_ERROR.STORAGE_FAILED,
 ] as const;
 
 /**
  * Errors returned when diagnostic entries cannot be cleared.
  */
 export const DIAGNOSTICS_CLEAR_ERRORS = [
-    "disabled",
-    "unavailable",
-    "storage-failed",
+    DIAGNOSTICS_ERROR.DISABLED,
+    DIAGNOSTICS_ERROR.UNAVAILABLE,
+    DIAGNOSTICS_ERROR.STORAGE_FAILED,
 ] as const;
 
 /**
@@ -122,10 +147,11 @@ export const getDocumentStateMessageSchema = v.strictObject({
 export const setGlobalEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_GLOBAL_ENABLED_MESSAGE),
     enabled: v.boolean(),
+    surface: v.picklist(SITE_SETTINGS_SURFACES),
 });
 
 /**
- * Exact request for site-preferences state.
+ * Exact request for the scope mode and both hostname lists.
  */
 export const getSitesStateMessageSchema = v.strictObject({
     type: v.literal(GET_SITES_STATE_MESSAGE),
@@ -138,7 +164,16 @@ export const setSiteEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_SITE_ENABLED_MESSAGE),
     hostname: v.string(),
     enabled: v.boolean(),
+    mode: v.picklist(SITE_SCOPE_MODES),
     surface: v.picklist(SITE_SETTINGS_SURFACES),
+});
+
+/**
+ * Exact request for a scope-mode change.
+ */
+export const setSiteScopeModeMessageSchema = v.strictObject({
+    type: v.literal(SET_SITE_SCOPE_MODE_MESSAGE),
+    mode: v.picklist(SITE_SCOPE_MODES),
 });
 
 /**
@@ -154,6 +189,14 @@ export const getDisplayStateMessageSchema = v.strictObject({
 export const setDisplaySettingsMessageSchema = v.strictObject({
     type: v.literal(SET_DISPLAY_SETTINGS_MESSAGE),
     display: v.unknown(),
+});
+
+/**
+ * Exact request for an appearance change.
+ */
+export const setAppearanceMessageSchema = v.strictObject({
+    type: v.literal(SET_APPEARANCE_MESSAGE),
+    appearance: v.picklist(APPEARANCES),
 });
 
 /**
@@ -201,8 +244,10 @@ export const backgroundMessageSchema = v.union([
     setGlobalEnabledMessageSchema,
     getSitesStateMessageSchema,
     setSiteEnabledMessageSchema,
+    setSiteScopeModeMessageSchema,
     getDisplayStateMessageSchema,
     setDisplaySettingsMessageSchema,
+    setAppearanceMessageSchema,
     resetAllSettingsMessageSchema,
     getDebugStateMessageSchema,
     setDebugEnabledMessageSchema,
@@ -281,6 +326,11 @@ export type GetSitesStateMessage = v.InferOutput<typeof getSitesStateMessageSche
 export type SetSiteEnabledMessage = v.InferOutput<typeof setSiteEnabledMessageSchema>;
 
 /**
+ * Scope-mode request inferred from its schema.
+ */
+export type SetSiteScopeModeMessage = v.InferOutput<typeof setSiteScopeModeMessageSchema>;
+
+/**
  * Display-state request inferred from its schema.
  */
 export type GetDisplayStateMessage = v.InferOutput<typeof getDisplayStateMessageSchema>;
@@ -289,6 +339,11 @@ export type GetDisplayStateMessage = v.InferOutput<typeof getDisplayStateMessage
  * Display-settings request inferred from its schema.
  */
 export type SetDisplaySettingsMessage = v.InferOutput<typeof setDisplaySettingsMessageSchema>;
+
+/**
+ * Appearance request inferred from its schema.
+ */
+export type SetAppearanceMessage = v.InferOutput<typeof setAppearanceMessageSchema>;
 
 /**
  * Reset request inferred from its schema.
@@ -360,7 +415,9 @@ export type BackgroundResponse =
     | DebugState
     | SetGlobalEnabledResponse
     | SetSiteEnabledResponse
+    | SetSiteScopeModeResponse
     | SetDisplaySettingsResponse
+    | SetAppearanceResponse
     | ResetAllSettingsResponse
     | SetDebugEnabledResponse
     | GetDiagnosticsSnapshotResponse

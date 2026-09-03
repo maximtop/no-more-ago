@@ -8,7 +8,8 @@
 export const POPUP_STATUS = {
     ACTIVE: "active",
     GLOBAL_DISABLED: "global-disabled",
-    SITE_DISABLED: "site-disabled",
+    SITE_EXCLUDED: "site-excluded",
+    SITE_NOT_SELECTED: "site-not-selected",
     INACCESSIBLE: "inaccessible",
     RUNTIME_FAILED: "runtime-failed",
     SETTINGS_UNAVAILABLE: "settings-unavailable",
@@ -44,7 +45,8 @@ export const SITE_SETTINGS_SURFACES = [
 export const POPUP_READY_STATUSES = [
     POPUP_STATUS.ACTIVE,
     POPUP_STATUS.GLOBAL_DISABLED,
-    POPUP_STATUS.SITE_DISABLED,
+    POPUP_STATUS.SITE_EXCLUDED,
+    POPUP_STATUS.SITE_NOT_SELECTED,
     POPUP_STATUS.INACCESSIBLE,
     POPUP_STATUS.RUNTIME_FAILED,
 ] as const;
@@ -98,25 +100,58 @@ export const SETTINGS_STATE_FAILURES = [
 ] as const;
 
 /**
- * Errors shared by settings persistence commands.
+ * Named errors shared by settings persistence commands.
  */
-export const SETTINGS_PERSISTENCE_ERRORS = ["save-failed", "settings-unavailable"] as const;
+export const SETTINGS_PERSISTENCE_ERROR = {
+    SAVE_FAILED: "save-failed",
+    SETTINGS_UNAVAILABLE: "settings-unavailable",
+} as const;
 
 /**
- * Additional semantic error accepted by per-site settings commands.
+ * Errors shared by settings persistence commands.
+ */
+export const SETTINGS_PERSISTENCE_ERRORS = [
+    SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
+    SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE,
+] as const;
+
+/**
+ * Named errors accepted by per-site settings commands.
+ */
+export const SITE_SETTINGS_ERROR = {
+    ...SETTINGS_PERSISTENCE_ERROR,
+    INVALID_HOSTNAME: "invalid-hostname",
+    LIST_FULL: "list-full",
+    SCOPE_CHANGED: "scope-changed",
+} as const;
+
+/**
+ * Errors accepted by per-site settings commands.
  */
 export const SITE_SETTINGS_ERRORS = [
     ...SETTINGS_PERSISTENCE_ERRORS,
-    "invalid-hostname",
+    SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
+    SITE_SETTINGS_ERROR.LIST_FULL,
+    SITE_SETTINGS_ERROR.SCOPE_CHANGED,
 ] as const;
+
+/**
+ * Named errors accepted by display-settings commands.
+ */
+export const DISPLAY_SETTINGS_ERROR = {
+    ...SETTINGS_PERSISTENCE_ERROR,
+    INVALID_FORMAT: "invalid-format",
+    INVALID_TIME_ZONE: "invalid-time-zone",
+    INVALID_DISPLAY_SETTINGS: "invalid-display-settings",
+} as const;
 
 /**
  * Errors accepted by display-settings commands.
  */
 export const DISPLAY_SETTINGS_ERRORS = [
-    "invalid-format",
-    "invalid-time-zone",
-    "invalid-display-settings",
+    DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
+    DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS,
     ...SETTINGS_PERSISTENCE_ERRORS,
 ] as const;
 

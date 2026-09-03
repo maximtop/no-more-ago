@@ -279,6 +279,56 @@ describe("processDocument", () => {
         ).toMatch(/^visible:/);
     });
 
+    it("processes a GitHub label that is rendered into an open shadow root", async () => {
+        // The light DOM holds an absolute fallback that must not be mistaken for
+        // the visible label; the shadow root carries what the user sees.
+        document.body.innerHTML = await readFile(
+            "tests/src/content-script/fixtures/github/shadow-relative-time.html",
+            "utf8",
+        );
+        const source = document.querySelector("relative-time");
+        if (!source) {
+            throw new Error("Fixture element is missing");
+        }
+        const label = document.createElement("span");
+        label.setAttribute("part", "root");
+        label.textContent = "2 hours ago";
+        source.attachShadow({ mode: "open" }).append(label);
+
+        const outputs = processDocument({
+            url: new URL("https://github.com/facebook/react/commits/main"),
+            root: document,
+            locales: ["en-GB"],
+        });
+
+        expect(outputs).toHaveLength(1);
+        expect(outputs[0]?.textContent).toBe(new Intl.DateTimeFormat(["en-GB"], {
+            dateStyle: "medium",
+            timeStyle: "short",
+        }).format(new Date("2026-08-23T10:15:00Z")));
+        expect(source.hasAttribute("hidden")).toBe(true);
+        expect(source.textContent).toBe("Aug 23, 2026");
+    });
+
+    it("leaves a GitHub element alone when its shadow-rendered label is absolute", () => {
+        const source = document.querySelector("relative-time");
+        if (!source) {
+            throw new Error("Fixture element is missing");
+        }
+        const label = document.createElement("span");
+        label.textContent = "23 Aug 2026";
+        source.attachShadow({ mode: "open" }).append(label);
+
+        const outputs = processDocument({
+            url: new URL("https://github.com/maximtop/no-more-ago/commit/abc"),
+            root: document,
+            locales: ["en-GB"],
+        });
+
+        expect(outputs).toHaveLength(0);
+        expect(source.hasAttribute("hidden")).toBe(false);
+    });
+
     it("renders a valid custom display through the public document boundary", () => {
         const outputs = processDocument({
             url: new URL("https://github.com/maximtop/no-more-ago/commit/abc"),
@@ -407,6 +457,13 @@ describe("processDocument", () => {
     });
 
     it("emits bounded raw evidence only for failed Telegram timestamp resolution", () => {
+        /**
+         * Processes one Telegram bubble and captures its diagnostics.
+         *
+         * @param rawDatetime - Bubble timestamp attribute.
+         * @param label - Visible label text.
+         * @returns - Diagnostic sink that received the events.
+         */
         const runTelegram = (rawDatetime: string, label: string) => {
             document.body.innerHTML = `<div class="bubble" data-timestamp="${rawDatetime}">`
                 + `<span class="time-inner"><span id="telegram-diagnostic-clock" `
@@ -792,6 +849,14 @@ describe("processDocument", () => {
                 validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
             }));
+
+            /**
+             * Builds a source rule that matches only the fixture source.
+             *
+             * @param id - Rule identifier.
+             * @param extract - Extraction function under test.
+             * @returns - Source rule.
+             */
             const matchingRule = (id: string, extract: TimestampSourceRule["extract"]):
             TimestampSourceRule => ({
                 id,

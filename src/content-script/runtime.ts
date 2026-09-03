@@ -250,6 +250,12 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
         return;
     }
     const report = slot.reportDiagnostic;
+
+    /**
+     * Forwards a document diagnostic while debug logging is enabled, containing report failures.
+     *
+     * @param event - Diagnostic event emitted by document processing.
+     */
     const sink: DocumentDiagnosticSink = (event) => {
         if (!slot.debugEnabled) {
             return;

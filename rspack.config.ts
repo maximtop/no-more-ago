@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { sources, Compilation } from "@rspack/core";
 import {
+    EXTENSION_ICON_BASENAME,
     EXTENSION_ICON_SIZES,
     MANIFEST_FILE,
     OPTIONS_PAGE_FILE,
@@ -36,7 +37,7 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     const variantPath = path.join(workspaceRoot, `src/manifest/${browser}.json`);
     const packagePath = path.join(workspaceRoot, "package.json");
     const iconPaths = EXTENSION_ICON_SIZES.map((size) =>
-        path.join(workspaceRoot, `src/assets/icons/clock-${size}.png`),
+        path.join(workspaceRoot, `src/assets/icons/${EXTENSION_ICON_BASENAME}-${size}.png`),
     );
     const popupHtmlPath = path.join(workspaceRoot, "src/popup", POPUP_PAGE_FILE);
     const optionsHtmlPath = path.join(workspaceRoot, "src/options", OPTIONS_PAGE_FILE);
@@ -79,10 +80,10 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
                         for (const size of EXTENSION_ICON_SIZES) {
                             const file = path.join(
                                 workspaceRoot,
-                                `src/assets/icons/clock-${size}.png`,
+                                `src/assets/icons/${EXTENSION_ICON_BASENAME}-${size}.png`,
                             );
                             compilation.emitAsset(
-                                `icons/clock-${size}.png`,
+                                `icons/${EXTENSION_ICON_BASENAME}-${size}.png`,
                                 new sources.RawSource(readFileSync(file)),
                             );
                         }

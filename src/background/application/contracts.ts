@@ -3,13 +3,14 @@
  */
 
 import type { DiagnosticBrowserFamily } from "../../shared/diagnostics/events";
-import type { DiagnosticJournal } from "../diagnostics/journal";
+import type { DiagnosticJournalStore } from "../diagnostics/journal";
 import type {
     ActivationPolicy,
     ActivationReconcileResult,
 } from "../runtime/document-activation";
 import type { TabsRuntime } from "../runtime/tabs";
-import type { SettingsService } from "../settings/service";
+import type { SettingsPersistence } from "../settings/service";
+import type { SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { SettingsStateFailure } from "../../shared/messaging/view-state-values";
 
 /**
@@ -51,9 +52,9 @@ export interface ActivationCoordinator {
         readonly policy: ActivationPolicy;
 
         /**
-         * Per-host activation overrides used by the document runtime.
+         * Active scope mode and hostname lists used by the document runtime.
          */
-        readonly sitePreferences?: Readonly<Record<string, boolean>>;
+        readonly siteScope?: SiteScopePolicy;
 
         /**
          * Limits reconciliation to these top-level hostnames when provided.
@@ -63,13 +64,26 @@ export interface ActivationCoordinator {
 }
 
 /**
+ * Announces committed settings changes to open extension pages.
+ */
+export interface SettingsBroadcast {
+    /**
+     * Announces one committed settings revision. Delivery failure is contained
+     * by the implementation, because no page may be listening.
+     *
+     * @param revision - Committed settings revision.
+     */
+    settingsChanged(revision: number): void;
+}
+
+/**
  * Dependencies used by the background application.
  */
 export interface BackgroundApplicationOptions {
     /**
-     * Service that loads and persists extension settings.
+     * Settings load and serialized writes.
      */
-    readonly settings: SettingsService;
+    readonly settings: SettingsPersistence;
 
     /**
      * Runtime registration and tab-reconciliation implementation.
@@ -84,7 +98,12 @@ export interface BackgroundApplicationOptions {
     /**
      * Optional persistent diagnostic-event journal.
      */
-    readonly journal?: DiagnosticJournal;
+    readonly journal?: DiagnosticJournalStore;
+
+    /**
+     * Optional announcer for committed settings changes.
+     */
+    readonly broadcast?: SettingsBroadcast;
 
     /**
      * Optional browser and extension metadata added to diagnostic events.

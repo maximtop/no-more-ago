@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Exact Point — a precise moment fixed at the center</title>
+  <defs>
+    <mask id="ring-cut">
+      <rect width="128" height="128" fill="white"/>
+      <circle cx="64" cy="64" r="27" fill="black"/>
+    </mask>
+  </defs>
+  <!-- The mark is scaled about its own bounding box so it fills the canvas
+       with a 2px vertical margin instead of the 16px side gutters of the
+       original export. -->
+  <g fill="rgb(41 146 54)" transform="translate(64 64) scale(1.148) translate(-64 -58)">
+    <circle cx="64" cy="64" r="48" mask="url(#ring-cut)"/>
+    <rect x="59" y="4" width="10" height="23" rx="5"/>
+    <circle cx="64" cy="64" r="9"/>
+  </g>
+</svg>
