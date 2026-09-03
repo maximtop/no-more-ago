@@ -1,254 +1,77 @@
 /**
- * @file Verifies content runtime command and acknowledgement validators.
+ * @file Verifies how background reads replies from frames that may hold no runtime.
  */
 
 import { describe, expect, it } from "vitest";
 
 import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_REASON,
-} from "../../../../src/shared/diagnostics/contracts";
-import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
-    DOCUMENT_STATUS_MESSAGE,
-    DOCUMENT_PHASES,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
-    DIAGNOSTIC_EVENT_MESSAGE,
-    RECONCILE_DOCUMENT_ROUTE_MESSAGE,
+    DOCUMENT_STATUS_MESSAGE,
     PRESENTATION_UPDATED_MESSAGE,
-    RECONCILE_DOCUMENT_POLICY_MESSAGE,
-    UPDATE_DEBUG_POLICY_MESSAGE,
-    UPDATE_PRESENTATION_MESSAGE,
-    isDebugPolicyUpdateAcknowledgement,
-    isDebugPolicyUpdateMessage,
-    isDocumentStatusMessage,
-    isDocumentStatusResponse,
-    isDocumentPolicyReconciledMessage,
-    isDiagnosticEventMessage,
-    isPresentationUpdateAcknowledgement,
-    isPresentationUpdateMessage,
-    isReconcileDocumentPolicyMessage,
-    isReconcileDocumentRouteMessage,
+    isDebugPolicyAcknowledgement,
+    isDocumentPolicyAcknowledgement,
+    isPresentationAcknowledgement,
+    readDocumentStatusPhase,
 } from "../../../../src/shared/messaging/document-messages";
 
-const display = { formatMode: "system" as const, timeZone: { mode: "utc" as const } };
-const customDisplay = {
-    formatMode: "custom" as const,
-    pattern: "yyyy-MM-dd",
-    timeZone: { mode: "utc" as const },
-};
+describe("document policy acknowledgement", () => {
+    it("accepts only the exact retained revision", () => {
+        const reply = { type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision: 7 };
 
-describe("document status message", () => {
-    it("accepts only the exact request and guarded response phases", () => {
-        expect(isDocumentStatusMessage({ type: DOCUMENT_STATUS_MESSAGE })).toBe(true);
-        for (const value of [
+        expect(isDocumentPolicyAcknowledgement(reply, 7)).toBe(true);
+        expect(isDocumentPolicyAcknowledgement(reply, 6)).toBe(false);
+        expect(isDocumentPolicyAcknowledgement(
+            { type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision: null },
             null,
-            [],
-            {},
-            { type: DOCUMENT_STATUS_MESSAGE, extra: true },
-            { type: "other" },
-        ]) {
-            expect(isDocumentStatusMessage(value)).toBe(false);
-        }
-        for (const phase of DOCUMENT_PHASES) {
-            expect(isDocumentStatusResponse({ type: DOCUMENT_STATUS_MESSAGE, phase })).toBe(true);
-        }
-        expect(isDocumentStatusResponse({ type: DOCUMENT_STATUS_MESSAGE, phase: "unknown" })).toBe(
-            false,
-        );
-        expect(
-            isDocumentStatusResponse({
-                type: DOCUMENT_STATUS_MESSAGE,
-                phase: DOCUMENT_PHASE.ACTIVE,
-                extra: true,
-            }),
-        ).toBe(false);
+        )).toBe(true);
+    });
+
+    it("rejects a frame that returned no reply", () => {
+        expect(isDocumentPolicyAcknowledgement(undefined, 7)).toBe(false);
+        expect(isDocumentPolicyAcknowledgement(undefined, null)).toBe(false);
     });
 });
 
-describe("document policy messages", () => {
-    it("accepts only complete revisioned reconciliation commands", () => {
-        expect(isReconcileDocumentPolicyMessage({
-            type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
-            revision: 3,
-            enabled: true,
-        })).toBe(true);
-        expect(isReconcileDocumentPolicyMessage({
-            type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
-            revision: null,
-            enabled: false,
-        })).toBe(true);
-        for (const value of [
-            null,
-            RECONCILE_DOCUMENT_POLICY_MESSAGE,
-            { type: RECONCILE_DOCUMENT_POLICY_MESSAGE, enabled: true },
-            { type: RECONCILE_DOCUMENT_POLICY_MESSAGE, revision: -1, enabled: true },
-            {
-                type: RECONCILE_DOCUMENT_POLICY_MESSAGE,
-                revision: 3,
-                enabled: true,
-                extra: true,
-            },
-        ]) {
-            expect(isReconcileDocumentPolicyMessage(value)).toBe(false);
-        }
+describe("presentation and diagnostic acknowledgements", () => {
+    it("accepts only the acknowledgement sent for the exact revision", () => {
+        expect(isPresentationAcknowledgement(
+            { type: PRESENTATION_UPDATED_MESSAGE, revision: 3 },
+            3,
+        )).toBe(true);
+        expect(isPresentationAcknowledgement(
+            { type: PRESENTATION_UPDATED_MESSAGE, revision: 2 },
+            3,
+        )).toBe(false);
+        expect(isPresentationAcknowledgement(
+            { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 3 },
+            3,
+        )).toBe(false);
+        expect(isPresentationAcknowledgement(undefined, 3)).toBe(false);
     });
 
-    it("acknowledges only the expected retained revision", () => {
-        expect(isDocumentPolicyReconciledMessage({
-            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
-            revision: 3,
-        }, 3)).toBe(true);
-        expect(isDocumentPolicyReconciledMessage({
-            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
-            revision: null,
-        }, null)).toBe(true);
-        expect(isDocumentPolicyReconciledMessage({
-            type: DOCUMENT_POLICY_RECONCILED_MESSAGE,
-            revision: 4,
-        }, 3)).toBe(false);
+    it("keeps diagnostic acknowledgements distinct from presentation replies", () => {
+        expect(isDebugPolicyAcknowledgement(
+            { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 4 },
+            4,
+        )).toBe(true);
+        expect(isDebugPolicyAcknowledgement(
+            { type: PRESENTATION_UPDATED_MESSAGE, revision: 4 },
+            4,
+        )).toBe(false);
+        expect(isDebugPolicyAcknowledgement(undefined, 4)).toBe(false);
     });
 });
 
-describe("document route messages", () => {
-    it("accepts only payload-free route commands", () => {
-        expect(
-            isReconcileDocumentRouteMessage({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE }),
-        ).toBe(true);
-
-        for (const property of ["url", "query", "videoId", "generation", "pageData"]) {
-            expect(
-                isReconcileDocumentRouteMessage({
-                    type: RECONCILE_DOCUMENT_ROUTE_MESSAGE,
-                    [property]: "forbidden",
-                }),
-            ).toBe(false);
-        }
-
-        for (const value of [null, [], {}, { type: "other" }]) {
-            expect(isReconcileDocumentRouteMessage(value)).toBe(false);
-        }
-    });
-});
-
-describe("revisioned presentation messages", () => {
-    it("accepts complete updates and rejects unsafe revisions", () => {
-        expect(
-            isPresentationUpdateMessage({
-                type: UPDATE_PRESENTATION_MESSAGE,
-                revision: 4,
-                display,
-            }),
-        ).toBe(true);
-        expect(
-            isPresentationUpdateMessage({
-                type: UPDATE_PRESENTATION_MESSAGE,
-                revision: 0,
-                display: {
-                    formatMode: "system",
-                    timeZone: { mode: "iana", identifier: "America/New_York" },
-                },
-            }),
-        ).toBe(true);
-        expect(
-            isPresentationUpdateMessage({
-                type: UPDATE_PRESENTATION_MESSAGE,
-                revision: 0,
-                display: customDisplay,
-            }),
-        ).toBe(true);
-        for (const value of [
-            { type: UPDATE_PRESENTATION_MESSAGE, revision: -1, display },
-            { type: UPDATE_PRESENTATION_MESSAGE, revision: Number.NaN, display },
-            { type: UPDATE_PRESENTATION_MESSAGE, revision: 1.5, display },
-        ]) {
-            expect(isPresentationUpdateMessage(value)).toBe(false);
-        }
-    });
-
-    it("requires an exact two-field acknowledgement and optional exact revision", () => {
-        expect(
-            isPresentationUpdateAcknowledgement({
-                type: PRESENTATION_UPDATED_MESSAGE,
-                revision: 4,
-            }),
-        ).toBe(true);
-        expect(
-            isPresentationUpdateAcknowledgement(
-                { type: PRESENTATION_UPDATED_MESSAGE, revision: 4 },
-                4,
-            ),
-        ).toBe(true);
-        expect(
-            isPresentationUpdateAcknowledgement(
-                { type: PRESENTATION_UPDATED_MESSAGE, revision: 3 },
-                4,
-            ),
-        ).toBe(false);
-        for (const value of [
-            undefined,
-            null,
-            { type: PRESENTATION_UPDATED_MESSAGE, revision: 4, extra: true },
-            { type: PRESENTATION_UPDATED_MESSAGE },
-            { type: "other", revision: 4 },
-            { type: PRESENTATION_UPDATED_MESSAGE, revision: -1 },
-            { type: PRESENTATION_UPDATED_MESSAGE, revision: Number.POSITIVE_INFINITY },
-        ]) {
-            expect(isPresentationUpdateAcknowledgement(value)).toBe(false);
-        }
-    });
-});
-
-describe("diagnostic policy and event messages", () => {
-    it("validates policy revisions and reuses the diagnostic input schema", () => {
-        expect(
-            isDebugPolicyUpdateMessage({
-                type: UPDATE_DEBUG_POLICY_MESSAGE,
-                revision: 2,
-                enabled: true,
-            }),
-        ).toBe(true);
-        expect(
-            isDebugPolicyUpdateAcknowledgement(
-                { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 2 },
-                2,
-            ),
-        ).toBe(true);
-        expect(
-            isDebugPolicyUpdateAcknowledgement(
-                { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 1 },
-                2,
-            ),
-        ).toBe(false);
-        expect(
-            isDiagnosticEventMessage({
-                type: DIAGNOSTIC_EVENT_MESSAGE,
-                event: { category: DIAGNOSTIC_CATEGORY.MUTATION, count: 1 },
-            }),
-        ).toBe(true);
-        expect(
-            isDiagnosticEventMessage({
-                type: DIAGNOSTIC_EVENT_MESSAGE,
-                event: {
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-                    count: 1,
-                    sourceTimestamp: "123456789",
-                },
-            }),
-        ).toBe(true);
-        expect(
-            isDiagnosticEventMessage({
-                type: DIAGNOSTIC_EVENT_MESSAGE,
-                event: { category: "unsupported" },
-            }),
-        ).toBe(false);
-        expect(
-            isDiagnosticEventMessage({
-                type: DIAGNOSTIC_EVENT_MESSAGE,
-                event: { category: DIAGNOSTIC_CATEGORY.MUTATION, extra: true },
-            }),
-        ).toBe(false);
+describe("document status reply", () => {
+    it("reads the reported phase and reports an absent runtime", () => {
+        expect(readDocumentStatusPhase({
+            type: DOCUMENT_STATUS_MESSAGE,
+            phase: DOCUMENT_PHASE.ACTIVE,
+        })).toBe(DOCUMENT_PHASE.ACTIVE);
+        expect(readDocumentStatusPhase(undefined)).toBeUndefined();
+        expect(readDocumentStatusPhase({ type: PRESENTATION_UPDATED_MESSAGE, revision: 1 }))
+            .toBeUndefined();
     });
 });

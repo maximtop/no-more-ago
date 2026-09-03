@@ -1,152 +1,309 @@
 /**
- * @file Valibot schemas for background view states shared by response validators.
+ * @file Background view states projected for the popup and options surfaces.
  */
 
-import * as v from "valibot";
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
+import type { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 import type { DisplaySettings } from "../settings/snapshot";
 import {
-    POPUP_READY_STATUSES,
-    POPUP_RUNTIME_FAILURES,
-    POPUP_UNAVAILABLE_STATUSES,
-    REFRESH_FAILURE_REASONS,
-    SETTINGS_STATE_FAILURES,
-    STATE_AVAILABILITY,
-    SETTINGS_STATE_FAILURE,
     POPUP_STATUS,
+    SETTINGS_STATE_FAILURE,
+    STATE_AVAILABILITY,
+    type PopupRuntimeFailure,
+    type ReadyPopupStatus,
+    type RefreshFailureReason,
     type SettingsStateFailure,
+    type UnavailablePopupStatus,
 } from "./view-state-values";
 
-const revisionSchema = v.pipe(v.number(), v.safeInteger(), v.minValue(0));
-const settingsFailureSchema = v.picklist(SETTINGS_STATE_FAILURES);
-const popupStatusSchema = v.picklist(POPUP_READY_STATUSES);
-const popupFailureSchema = v.picklist(POPUP_RUNTIME_FAILURES);
-const readyPopupStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.READY),
-    revision: revisionSchema,
-    globalEnabled: v.boolean(),
-    hostname: v.nullable(v.string()),
-    siteEnabled: v.nullable(v.boolean()),
-    status: popupStatusSchema,
-    failure: v.optional(popupFailureSchema),
-});
-const unavailablePopupStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
-    revision: v.null(),
-    globalEnabled: v.null(),
-    hostname: v.nullable(v.string()),
-    siteEnabled: v.null(),
-    status: v.picklist(POPUP_UNAVAILABLE_STATUSES),
-    failure: settingsFailureSchema,
-});
-const siteListEntrySchema = v.strictObject({
-    hostname: v.string(),
-    enabled: v.boolean(),
-});
+/**
+ * Popup projection built from a loaded settings snapshot.
+ */
+interface ReadyPopupState {
+    /**
+     * Marks a projection built from a loaded settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.READY;
+
+    /**
+     * Settings revision the projection was built from.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether the extension processes supported pages at all.
+     */
+    readonly globalEnabled: boolean;
+
+    /**
+     * Active tab hostname, or null when no supported page is open.
+     */
+    readonly hostname: string | null;
+
+    /**
+     * Whether the active hostname is enabled, or null when there is none.
+     */
+    readonly siteEnabled: boolean | null;
+
+    /**
+     * Activation status presented for the active tab.
+     */
+    readonly status: ReadyPopupStatus;
+
+    /**
+     * Runtime failure explaining a status the user can act on.
+     */
+    readonly failure?: PopupRuntimeFailure | undefined;
+}
 
 /**
- * Complete ready site-preferences state accepted after a successful reset.
+ * Fail-closed popup projection used when settings cannot be read safely.
  */
-export const readySitesStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.READY),
-    revision: revisionSchema,
-    globalEnabled: v.boolean(),
-    sites: v.array(siteListEntrySchema),
-});
+interface UnavailablePopupState {
+    /**
+     * Marks a projection built without a usable settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.UNAVAILABLE;
 
-const unavailableSitesStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
-    revision: v.null(),
-    globalEnabled: v.null(),
-    sites: v.tuple([]),
-    failure: settingsFailureSchema,
-});
-const readyDisplayStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.READY),
-    revision: revisionSchema,
-    display: v.pipe(
-        v.unknown(),
-        v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
-    ),
-    debugEnabled: v.boolean(),
-    error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
-});
-const unavailableDisplayStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
-    revision: v.null(),
-    display: v.null(),
-    failure: settingsFailureSchema,
-});
-const readyDebugStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.READY),
-    revision: revisionSchema,
-    enabled: v.boolean(),
-});
-const unavailableDebugStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
-    revision: v.null(),
-    enabled: v.null(),
-    failure: settingsFailureSchema,
-});
+    /**
+     * Absent settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Absent global activation setting.
+     */
+    readonly globalEnabled: null;
+
+    /**
+     * Active tab hostname, or null when no supported page is open.
+     */
+    readonly hostname: string | null;
+
+    /**
+     * Absent per-site activation setting.
+     */
+    readonly siteEnabled: null;
+
+    /**
+     * Status presented while settings are unavailable.
+     */
+    readonly status: UnavailablePopupStatus;
+
+    /**
+     * Settings failure that made the projection unavailable.
+     */
+    readonly failure: SettingsStateFailure;
+}
 
 /**
- * Non-negative safe integer used for settings revisions and discovered tab identifiers.
+ * One hostname listed on the options page with its activation setting.
  */
-export const nonNegativeSafeIntegerSchema = revisionSchema;
+export interface SiteListEntry {
+    /**
+     * Canonical hostname the preference applies to.
+     */
+    readonly hostname: string;
+
+    /**
+     * Whether processing is enabled for the hostname.
+     */
+    readonly enabled: boolean;
+}
+
+/**
+ * Site-preferences projection built from a loaded settings snapshot.
+ */
+export interface ReadySitesState {
+    /**
+     * Marks a projection built from a loaded settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.READY;
+
+    /**
+     * Settings revision the projection was built from.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether the extension processes supported pages at all.
+     */
+    readonly globalEnabled: boolean;
+
+    /**
+     * Explicit per-site preferences, sorted by hostname.
+     */
+    readonly sites: readonly SiteListEntry[];
+}
+
+/**
+ * Fail-closed site-preferences projection used when settings cannot be read.
+ */
+interface UnavailableSitesState {
+    /**
+     * Marks a projection built without a usable settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.UNAVAILABLE;
+
+    /**
+     * Absent settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Absent global activation setting.
+     */
+    readonly globalEnabled: null;
+
+    /**
+     * No preferences are listed while settings are unavailable.
+     */
+    readonly sites: readonly [];
+
+    /**
+     * Settings failure that made the projection unavailable.
+     */
+    readonly failure: SettingsStateFailure;
+}
+
+/**
+ * Display-settings projection built from a loaded settings snapshot.
+ */
+interface ReadyDisplayState {
+    /**
+     * Marks a projection built from a loaded settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.READY;
+
+    /**
+     * Settings revision the projection was built from.
+     */
+    readonly revision: number;
+
+    /**
+     * Committed display settings.
+     */
+    readonly display: DisplaySettings;
+
+    /**
+     * Whether diagnostic logging is enabled.
+     */
+    readonly debugEnabled: boolean;
+
+    /**
+     * Presentation error reported when the configured time zone is unavailable.
+     */
+    readonly error?: typeof UNAVAILABLE_TIME_ZONE_ERROR;
+}
+
+/**
+ * Fail-closed display projection used when settings cannot be read safely.
+ */
+interface UnavailableDisplayState {
+    /**
+     * Marks a projection built without a usable settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.UNAVAILABLE;
+
+    /**
+     * Absent settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Absent display settings.
+     */
+    readonly display: null;
+
+    /**
+     * Settings failure that made the projection unavailable.
+     */
+    readonly failure: SettingsStateFailure;
+}
+
+/**
+ * Diagnostic-policy projection built from a loaded settings snapshot.
+ */
+interface ReadyDebugState {
+    /**
+     * Marks a projection built from a loaded settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.READY;
+
+    /**
+     * Settings revision the projection was built from.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether diagnostic logging is enabled.
+     */
+    readonly enabled: boolean;
+}
+
+/**
+ * Fail-closed diagnostic projection used when settings cannot be read safely.
+ */
+interface UnavailableDebugState {
+    /**
+     * Marks a projection built without a usable settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.UNAVAILABLE;
+
+    /**
+     * Absent settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Absent diagnostic logging setting.
+     */
+    readonly enabled: null;
+
+    /**
+     * Settings failure that made the projection unavailable.
+     */
+    readonly failure: SettingsStateFailure;
+}
 
 /**
  * Complete ready or unavailable popup projection.
  */
-export const popupStateSchema = v.union([
-    readyPopupStateSchema,
-    unavailablePopupStateSchema,
-]);
+export type PopupState = ReadyPopupState | UnavailablePopupState;
 
 /**
  * Complete ready or unavailable site-preferences projection.
  */
-export const sitesStateSchema = v.union([
-    readySitesStateSchema,
-    unavailableSitesStateSchema,
-]);
+export type SitesState = ReadySitesState | UnavailableSitesState;
 
 /**
  * Complete ready or unavailable display-settings projection.
  */
-export const displayStateSchema = v.union([
-    readyDisplayStateSchema,
-    unavailableDisplayStateSchema,
-]);
+export type DisplayState = ReadyDisplayState | UnavailableDisplayState;
 
 /**
  * Complete ready or unavailable diagnostic-policy projection.
  */
-export const debugStateSchema = v.union([
-    readyDebugStateSchema,
-    unavailableDebugStateSchema,
-]);
+export type DebugState = ReadyDebugState | UnavailableDebugState;
 
 /**
  * Exact tab-refresh failure reported after a settings update.
  */
-export const refreshFailureSchema = v.strictObject({
-    hostname: v.string(),
-    tabId: v.optional(nonNegativeSafeIntegerSchema),
-    reason: v.picklist(REFRESH_FAILURE_REASONS),
-});
+export interface RefreshFailure {
+    /**
+     * Hostname of the tab that could not be refreshed.
+     */
+    readonly hostname: string;
 
-/**
- * Immutable collection of tab-refresh failures returned by settings commands.
- */
-export const refreshFailuresSchema = v.pipe(
-    v.array(refreshFailureSchema),
-    v.readonly(),
-);
+    /**
+     * Identifier of the tab that could not be refreshed, when known.
+     */
+    readonly tabId?: number | undefined;
 
-/**
- * Popup view inferred from its runtime validation schema.
- */
-export type PopupState = v.InferOutput<typeof popupStateSchema>;
+    /**
+     * Reason the tab could not be refreshed.
+     */
+    readonly reason: RefreshFailureReason;
+}
 
 /**
  * Builds the shared fail-closed popup projection used when settings cannot be read safely.
@@ -169,28 +326,3 @@ export function createUnavailablePopupState(
         failure,
     };
 }
-
-/**
- * Site-list entry inferred from its runtime validation schema.
- */
-export type SiteListEntry = v.InferOutput<typeof siteListEntrySchema>;
-
-/**
- * Site preferences view inferred from its runtime validation schema.
- */
-export type SitesState = v.InferOutput<typeof sitesStateSchema>;
-
-/**
- * Display settings view inferred from its runtime validation schema.
- */
-export type DisplayState = v.InferOutput<typeof displayStateSchema>;
-
-/**
- * Diagnostic logging view inferred from its runtime validation schema.
- */
-export type DebugState = v.InferOutput<typeof debugStateSchema>;
-
-/**
- * Per-tab refresh failure inferred from its runtime validation schema.
- */
-export type RefreshFailure = v.InferOutput<typeof refreshFailureSchema>;

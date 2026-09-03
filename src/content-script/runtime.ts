@@ -22,18 +22,18 @@ import {
     DOCUMENT_PHASE,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
     DOCUMENT_STATUS_MESSAGE,
-    isDebugPolicyUpdateMessage,
-    isDocumentStatusMessage,
-    isReconcileDocumentPolicyMessage,
-    isReconcileDocumentRouteMessage,
-    isPresentationUpdateMessage,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
+    RECONCILE_DOCUMENT_ROUTE_MESSAGE,
+    UPDATE_DEBUG_POLICY_MESSAGE,
+    UPDATE_PRESENTATION_MESSAGE,
+    type DocumentCommand,
     PRESENTATION_UPDATED_MESSAGE,
     type DocumentPolicyReconciledMessage,
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
 } from "../shared/messaging/document-messages";
-import { isDocumentState } from "../shared/messaging/document-state";
+import type { DocumentState } from "../shared/messaging/document-state";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     DEFAULT_DISPLAY_SETTINGS,
@@ -359,7 +359,7 @@ function beginHydration(
     }
     slot.hydration = Promise.resolve(request)
         .then(
-            (response) => {
+            (value) => {
                 if (
                     (slot.phase !== DOCUMENT_PHASE.WAITING
                         && slot.phase !== DOCUMENT_PHASE.ACTIVE)
@@ -367,10 +367,8 @@ function beginHydration(
                 ) {
                     return;
                 }
-                if (
-                    !isDocumentState(response)
-                    || response.availability !== STATE_AVAILABILITY.READY
-                ) {
+                const response = value as DocumentState | undefined;
+                if (response?.availability !== STATE_AVAILABILITY.READY) {
                     failHydration(slot, generation, failurePhase);
                     return;
                 }
@@ -706,8 +704,9 @@ export function installContentRuntime(input: {
             slot.controller.reconcileSources(sources);
         },
     };
-    slot.messages.onMessage.addListener((message, _sender, sendResponse) => {
-        if (isReconcileDocumentPolicyMessage(message)) {
+    slot.messages.onMessage.addListener((value, _sender, sendResponse) => {
+        const message = value as DocumentCommand | undefined;
+        if (message?.type === RECONCILE_DOCUMENT_POLICY_MESSAGE) {
             const retainedRevision = reconcilePolicy(
                 slot,
                 message.revision,
@@ -717,16 +716,16 @@ export function installContentRuntime(input: {
             sendResponse?.(response);
             return response;
         }
-        if (isReconcileDocumentRouteMessage(message)) {
+        if (message?.type === RECONCILE_DOCUMENT_ROUTE_MESSAGE) {
             reconcileCurrentRoute(slot);
             return undefined;
         }
-        if (isDocumentStatusMessage(message)) {
+        if (message?.type === DOCUMENT_STATUS_MESSAGE) {
             const response = { type: DOCUMENT_STATUS_MESSAGE, phase: slot.phase };
             sendResponse?.(response);
             return response;
         }
-        if (isPresentationUpdateMessage(message)) {
+        if (message?.type === UPDATE_PRESENTATION_MESSAGE) {
             if (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE) {
                 return undefined;
             }
@@ -752,7 +751,7 @@ export function installContentRuntime(input: {
             sendResponse?.(response);
             return response;
         }
-        if (isDebugPolicyUpdateMessage(message)) {
+        if (message?.type === UPDATE_DEBUG_POLICY_MESSAGE) {
             if (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE) {
                 return undefined;
             }

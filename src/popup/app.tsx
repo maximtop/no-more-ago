@@ -390,13 +390,13 @@ export function PopupApp({
                         />
                         {siteSwitchVisible ? (
                             <Switch
-                                label={`Enabled on ${state.hostname ?? "current site"}`}
-                                checked={state.siteEnabled ?? false}
+                                label={`Enabled on ${state.hostname}`}
+                                checked={state.siteEnabled}
                                 disabled={disabled}
                                 onChange={(event) => {
                                     void onSiteChange(event);
                                 }}
-                                aria-label={`Enabled on ${state.hostname ?? "current site"}`}
+                                aria-label={`Enabled on ${state.hostname}`}
                             />
                         ) : null}
                         <Text role="status">{statusText(state)}</Text>

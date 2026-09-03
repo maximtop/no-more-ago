@@ -618,7 +618,7 @@ describe("Options Sites contract", () => {
         }
     });
 
-    it("does not retry an interrupted or malformed reset response", async () => {
+    it("does not retry an interrupted reset response", async () => {
         const unavailable: SitesState = {
             availability: "unavailable",
             revision: null,
@@ -1253,7 +1253,7 @@ describe("Options Display contract", () => {
                     "type" in message &&
                     message.type === SET_DISPLAY_SETTINGS_MESSAGE
                 ) {
-                    return Promise.resolve({ unexpected: true });
+                    return Promise.resolve(undefined);
                 }
                 if (
                     message &&
@@ -1872,7 +1872,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["interrupted", "malformed"] as const)(
+    it.each(["interrupted", "lost"] as const)(
         "rereads an authoritative state once after a %s toggle response",
         async (failure) => {
             let writes = 0;
@@ -1888,7 +1888,7 @@ describe("Options Debug logs contract", () => {
                         writes += 1;
                         return failure === "interrupted"
                             ? Promise.reject(new Error("worker restarted"))
-                            : Promise.resolve({ unexpected: true });
+                            : Promise.resolve(undefined);
                     }
                     if (
                         message &&
@@ -2157,7 +2157,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "unavailable", "malformed"] as const)(
+    it.each(["storage-failed", "unavailable", "lost"] as const)(
         "shows an actionable snapshot error without downloading for %s",
         async (failure) => {
             let requests = 0;
@@ -2188,8 +2188,8 @@ describe("Options Debug logs contract", () => {
                             message.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE
                         ) {
                             requests += 1;
-                            if (failure === "malformed") {
-                                return Promise.resolve({ unexpected: true });
+                            if (failure === "lost") {
+                                return Promise.resolve(undefined);
                             }
                             return Promise.resolve({ ok: false, error: failure });
                         }
@@ -2349,7 +2349,7 @@ describe("Options Debug logs contract", () => {
         }
     });
 
-    it.each(["storage-failed", "unavailable", "malformed", "transport"] as const)(
+    it.each(["storage-failed", "unavailable", "lost", "transport"] as const)(
         "dispatches Clear logs once and keeps Debug logs enabled after %s",
         async (failure) => {
             let requests = 0;
@@ -2367,8 +2367,8 @@ describe("Options Debug logs contract", () => {
                             if (failure === "transport") {
                                 return Promise.reject(new Error("worker unavailable"));
                             }
-                            if (failure === "malformed") {
-                                return Promise.resolve({ unexpected: true });
+                            if (failure === "lost") {
+                                return Promise.resolve(undefined);
                             }
                             return Promise.resolve({ ok: false, error: failure });
                         }

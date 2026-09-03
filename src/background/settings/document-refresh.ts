@@ -6,8 +6,8 @@
 import {
     UPDATE_DEBUG_POLICY_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-    isDebugPolicyUpdateAcknowledgement,
-    isPresentationUpdateAcknowledgement,
+    isDebugPolicyAcknowledgement,
+    isPresentationAcknowledgement,
     type DebugPolicyUpdateMessage,
     type PresentationUpdateMessage,
 } from "../../shared/messaging/document-messages";
@@ -42,8 +42,8 @@ function isRefreshAcknowledgement(
     message: RefreshMessage,
 ): boolean {
     return message.type === UPDATE_PRESENTATION_MESSAGE
-        ? isPresentationUpdateAcknowledgement(response, message.revision)
-        : isDebugPolicyUpdateAcknowledgement(response, message.revision);
+        ? isPresentationAcknowledgement(response, message.revision)
+        : isDebugPolicyAcknowledgement(response, message.revision);
 }
 
 /**

@@ -5,7 +5,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
-import * as v from "valibot";
 import { BackgroundApplication } from "./application";
 import {
     CLEAR_DIAGNOSTICS_MESSAGE,
@@ -20,9 +19,12 @@ import {
     SET_DISPLAY_SETTINGS_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
-    backgroundMessageSchema,
+    type BackgroundMessage,
 } from "../shared/messaging/contracts";
-import { isDiagnosticEventMessage } from "../shared/messaging/document-messages";
+import {
+    DIAGNOSTIC_EVENT_MESSAGE,
+    type DiagnosticEventMessage,
+} from "../shared/messaging/document-messages";
 import { createUnavailablePopupState } from "../shared/messaging/view-state";
 import {
     SETTINGS_STATE_FAILURE,
@@ -39,10 +41,7 @@ import { OPTIONS_PAGE_FILE } from "../shared/extension-files";
 import { LIFECYCLE_REASON } from "./application/contracts";
 import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
 import { parseHttpUrl } from "../shared/url/http";
-import type {
-    DisplaySettings,
-    SettingsSnapshotV5,
-} from "../shared/settings/snapshot";
+import type { SettingsSnapshotV5 } from "../shared/settings/snapshot";
 import {
     installDocumentRouteUpdates,
     type HistoryStateUpdateSource,
@@ -201,7 +200,8 @@ function isTrustedOptionsSender(sender: chrome.runtime.MessageSender): boolean {
 }
 
 if (application && chrome.runtime?.onMessage?.addListener) {
-    chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((value: unknown, sender, sendResponse) => {
+        const message = value as BackgroundMessage | DiagnosticEventMessage | undefined;
         let responseSent = false;
         const sendOnce = (value: unknown): void => {
             if (responseSent) {
@@ -210,18 +210,17 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             responseSent = true;
             sendResponse(value);
         };
-        if (isDiagnosticEventMessage(message)) {
+        if (message?.type === DIAGNOSTIC_EVENT_MESSAGE) {
             void application.recordDocumentEvent(message.event, sender).then(
                 (accepted) => sendOnce({ ok: accepted }),
                 () => sendOnce({ ok: false }),
             );
             return true;
         }
-        const parsed = v.safeParse(backgroundMessageSchema, message);
-        if (!parsed.success) {
+        if (!message) {
             return false;
         }
-        const request = parsed.output;
+        const request = message;
         if (request.type === GET_DIAGNOSTICS_SNAPSHOT_MESSAGE) {
             if (!isTrustedOptionsSender(sender)) {
                 return false;
@@ -304,7 +303,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(request.display as DisplaySettings)
+                .setDisplaySettings(request.display)
                 .then(sendOnce, () =>
                     sendOnce({
                         ok: false,

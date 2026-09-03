@@ -4,17 +4,11 @@
  * @file Typed client for popup requests and ambiguous-response recovery.
  */
 
-import * as v from "valibot";
 import {
     GET_POPUP_STATE_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
 } from "../shared/messaging/contracts";
-import { popupStateSchema } from "../shared/messaging/view-state";
-import {
-    setGlobalEnabledResponseSchema,
-    setSiteEnabledResponseSchema,
-} from "../shared/messaging/responses";
 import {
     SITE_SETTINGS_SURFACE,
 } from "../shared/messaging/view-state-values";
@@ -124,10 +118,11 @@ export class PopupClient {
      */
     public async getState(): Promise<PopupState> {
         const response = await this.transport.sendMessage({ type: GET_POPUP_STATE_MESSAGE });
-        if (!v.is(popupStateSchema, response)) {
-            throw new Error("Invalid popup state response");
+        const state = response as PopupState | undefined;
+        if (!state) {
+            throw new Error("Missing popup state response");
         }
-        return response;
+        return state;
     }
 
     /**
@@ -146,8 +141,9 @@ export class PopupClient {
         } catch {
             return this.rereadAfterAmbiguousResponse();
         }
-        if (v.is(setGlobalEnabledResponseSchema, response)) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
+        const result = response as SetGlobalEnabledResponse | undefined;
+        if (result) {
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: result };
         }
         return this.rereadAfterAmbiguousResponse();
     }
@@ -171,11 +167,16 @@ export class PopupClient {
         } catch {
             return this.rereadAfterAmbiguousSiteResponse();
         }
-        if (
-            v.is(setSiteEnabledResponseSchema, response)
-            && response.surface === SITE_SETTINGS_SURFACE.POPUP
-        ) {
-            return { kind: CLIENT_RESULT_KIND.RESPONSE, response };
+        const result = response as
+            | Extract<SetSiteEnabledResponse, {
+                /**
+                 * Selects the popup-surface response projected for this request.
+                 */
+                readonly surface: typeof SITE_SETTINGS_SURFACE.POPUP;
+            }>
+            | undefined;
+        if (result) {
+            return { kind: CLIENT_RESULT_KIND.RESPONSE, response: result };
         }
         return this.rereadAfterAmbiguousSiteResponse();
     }
