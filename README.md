@@ -413,8 +413,9 @@ independent of the display settings form.
 ### Report a Site
 
 Open the toolbar popup and choose **Report this site**. The report form includes
-the current hostname, page URL, extension version, and browser when those
-values can be collected safely.
+the page URL, extension version, and browser when those values can be
+collected safely. **Open GitHub issue** in Settings opens the same form without
+a page, so its URL field starts empty.
 
 Use this action both to request support for a new site and to report dates that
 are not working correctly on a supported site.

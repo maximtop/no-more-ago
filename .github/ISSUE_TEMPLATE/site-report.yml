@@ -13,15 +13,10 @@ body:
     validations:
       required: true
   - type: input
-    id: hostname
-    attributes:
-      label: Hostname
-      description: The hostname where the problem was observed.
-  - type: input
     id: current_url
     attributes:
-      label: Current URL
-      description: The full URL where the problem was observed.
+      label: Page URL
+      description: Full address of the page where you saw the problem, if any.
   - type: input
     id: extension_version
     attributes:

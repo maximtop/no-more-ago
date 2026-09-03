@@ -258,9 +258,8 @@ export function composeSiteReportUrl(context: unknown): string | null {
     if (value.reason !== undefined) {
         url.searchParams.set("reason", value.reason);
     }
-    if (value.hostname !== undefined) {
-        url.searchParams.set("hostname", value.hostname);
-    }
+    // The hostname only guards that the URL belongs to the reported site; the
+    // form carries the URL alone, because the host is readable from it.
     if (value.currentUrl !== undefined) {
         url.searchParams.set("current_url", value.currentUrl);
     }
