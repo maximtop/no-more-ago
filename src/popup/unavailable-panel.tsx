@@ -6,6 +6,8 @@ import { Alert, Button, Stack, Text } from "@mantine/core";
 import type { ReactElement } from "react";
 import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
 import type { UnavailableSettingsCopy } from "../shared/ui/copy";
+import { ResetConfirmation } from "../shared/ui/reset-confirmation";
+import type { NoticePresentation } from "./ready-view";
 
 /**
  * Recovery actions offered while settings are unavailable.
@@ -22,12 +24,17 @@ export interface PopupUnavailablePanelProps {
     readonly busy: boolean;
 
     /**
+     * Outcome of the latest recovery attempt, when it needs guidance.
+     */
+    readonly notice: NoticePresentation | undefined;
+
+    /**
      * Opens a prefilled GitHub report.
      */
     readonly onReport: () => void;
 
     /**
-     * Restores every setting to its default.
+     * Restores every setting to its default after the user confirmed.
      */
     readonly onReset: () => void;
 
@@ -58,8 +65,9 @@ export interface PopupUnavailablePanelProps {
  * @param props - Component properties.
  * @param props.copy - Status and consequence of the failure.
  * @param props.busy - Whether a recovery action is in flight.
+ * @param props.notice - Outcome of the latest recovery attempt.
  * @param props.onReport - Opens a prefilled GitHub report.
- * @param props.onReset - Restores every setting to its default.
+ * @param props.onReset - Restores every setting to its default after confirmation.
  * @param props.onDownloadLogs - Downloads retained diagnostic logs.
  * @param props.downloading - Whether a log download is in flight.
  * @param props.downloadNotice - Outcome of the latest log download.
@@ -69,6 +77,7 @@ export interface PopupUnavailablePanelProps {
 export function PopupUnavailablePanel({
     copy,
     busy,
+    notice,
     onReport,
     onReset,
     onDownloadLogs,
@@ -105,9 +114,12 @@ export function PopupUnavailablePanel({
                     {downloadNotice}
                 </Alert>
             ) : null}
-            <Button type="button" color="red" variant="outline" onClick={onReset} loading={busy}>
-                Reset all settings
-            </Button>
+            <ResetConfirmation resetting={busy} onConfirm={onReset} />
+            {notice ? (
+                <Alert role={notice.role} color={notice.color}>
+                    {notice.text}
+                </Alert>
+            ) : null}
             <Button type="button" variant="subtle" onClick={onOpenSettings}>
                 Settings
             </Button>

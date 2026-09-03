@@ -3,7 +3,7 @@
  */
 
 /* eslint-disable @typescript-eslint/require-await */
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -284,10 +284,13 @@ describe("Options Sites contract", () => {
             await act(async () => {
                 option.click();
             });
-            expect(sent).toEqual([{
-                type: SET_SITE_SCOPE_MODE_MESSAGE,
-                mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            }]);
+            // The committed revision moved past the other projections, so they
+            // are brought up to it.
+            expect(sent).toEqual([
+                { type: SET_SITE_SCOPE_MODE_MESSAGE, mode: SITE_SCOPE_MODE.SELECTED_ONLY },
+                { type: GET_DISPLAY_STATE_MESSAGE },
+                { type: GET_DEBUG_STATE_MESSAGE },
+            ]);
             const text = rendered.container.textContent;
             expect(text).toContain("Allowed sites");
             expect(text).toContain("allowed.test");
@@ -344,12 +347,17 @@ describe("Options Sites contract", () => {
                 setControlValue(field, "  Example.TEST. ");
                 submit.click();
             });
-            expect(sent).toEqual([{
-                type: SET_SITE_ENABLED_MESSAGE,
-                hostname: "example.test",
-                enabled: false,
-                surface: SITE_SETTINGS_SURFACE.SITES,
-            }]);
+            expect(sent).toEqual([
+                {
+                    type: SET_SITE_ENABLED_MESSAGE,
+                    hostname: "example.test",
+                    enabled: false,
+                    mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+                    surface: SITE_SETTINGS_SURFACE.SITES,
+                },
+                { type: GET_DISPLAY_STATE_MESSAGE },
+                { type: GET_DEBUG_STATE_MESSAGE },
+            ]);
             expect(rendered.container.textContent).toContain("example.test");
             expect(field.value).toBe("");
         } finally {
@@ -529,6 +537,7 @@ describe("Options Sites contract", () => {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname: "github.com",
                 enabled: true,
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
                 surface: SITE_SETTINGS_SURFACE.SITES,
             });
             expect(rendered.container.textContent).not.toContain("github.com");
@@ -579,7 +588,12 @@ describe("Options Sites contract", () => {
             await act(async () => {
                 toggle.click();
             });
-            expect(sent).toEqual([SET_GLOBAL_ENABLED_MESSAGE, GET_SITES_STATE_MESSAGE]);
+            expect(sent).toEqual([
+                SET_GLOBAL_ENABLED_MESSAGE,
+                GET_SITES_STATE_MESSAGE,
+                GET_DISPLAY_STATE_MESSAGE,
+                GET_DEBUG_STATE_MESSAGE,
+            ]);
             expect(rendered.container.textContent).toContain("Processing is paused.");
             expect(toggle.checked).toBe(false);
         } finally {
@@ -617,6 +631,112 @@ describe("Options Sites contract", () => {
             expect(rereads).toBe(0);
         } finally {
             await rendered.unmount();
+        }
+    });
+
+    it("explains a decision rejected because the run mode changed elsewhere", async () => {
+        let rereads = 0;
+        const switched: SitesState = {
+            ...ready,
+            revision: 5,
+            scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
+        };
+        const rendered = await renderOptions(ready, {
+            transport: {
+                sendMessage: (message) => {
+                    if (messageType(message) === SET_SITE_ENABLED_MESSAGE) {
+                        return Promise.resolve({
+                            ok: false,
+                            error: "scope-changed",
+                            surface: SITE_SETTINGS_SURFACE.SITES,
+                            state: switched,
+                        });
+                    }
+                    if (messageType(message) === GET_SITES_STATE_MESSAGE) {
+                        rereads += 1;
+                        return Promise.resolve(switched);
+                    }
+                    return Promise.reject(new Error("unexpected message"));
+                },
+            },
+        });
+        try {
+            const remove = findButton(rendered.container, "Remove");
+            if (!remove) {
+                throw new Error("Row action is missing");
+            }
+            await act(async () => {
+                remove.click();
+            });
+            expect(rendered.container.textContent)
+                .toContain("The run mode was changed in another window");
+            expect(rendered.container.textContent).toContain("allowed.test");
+            expect(rendered.container.textContent).not.toContain("github.com");
+            expect(rereads).toBe(0);
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("brings a projection loaded behind a newer sibling up to date, silently", async () => {
+        // The display read landed after another surface committed revision 5,
+        // so the sites projection read before it is one revision behind.
+        const sent: string[] = [];
+        const committed: SitesState = { ...ready, revision: 5, excludedSites: [] };
+        const rendered = await renderOptions(ready, {
+            initialDisplayState: { ...displayReady, revision: 5 },
+            transport: {
+                sendMessage: (message) => {
+                    const type = messageType(message);
+                    if (type) {
+                        sent.push(type);
+                    }
+                    if (type === GET_SITES_STATE_MESSAGE) {
+                        return Promise.resolve(committed);
+                    }
+                    if (type === GET_DEBUG_STATE_MESSAGE) {
+                        return Promise.resolve({ ...debugReady, revision: 5 });
+                    }
+                    return Promise.reject(new Error("unexpected message"));
+                },
+            },
+        });
+        try {
+            expect(sent).toEqual([GET_SITES_STATE_MESSAGE, GET_DEBUG_STATE_MESSAGE]);
+            expect(rendered.container.textContent).toContain("No sites are excluded.");
+            expect(rendered.container.textContent).not.toContain("updated in another window");
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("stops loading when the background state request never settles", async () => {
+        vi.useFakeTimers();
+        const container = document.createElement("div");
+        document.body.append(container);
+        const root = createRoot(container);
+        const pendingTransport: SitesTransport = {
+            sendMessage: () => new Promise(() => undefined),
+        };
+        try {
+            await act(async () => {
+                root.render(<OptionsApp client={new SitesClient(pendingTransport)} />);
+            });
+            expect(container.textContent).toContain("Loading settings");
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(5_000);
+            });
+
+            expect(container.textContent).not.toContain("Loading settings");
+            expect(container.textContent)
+                .toContain("Settings could not be read, so processing is disabled.");
+        } finally {
+            await act(async () => {
+                root.unmount();
+            });
+            container.remove();
+            vi.useRealTimers();
         }
     });
 
@@ -1001,7 +1121,7 @@ describe("Options reset contract", () => {
                         });
                     }
                     if (type === GET_DISPLAY_STATE_MESSAGE) {
-                        return Promise.resolve(displayReady);
+                        return Promise.resolve({ ...displayReady, revision: 0 });
                     }
                     if (type === GET_DEBUG_STATE_MESSAGE) {
                         return Promise.resolve({
@@ -1268,7 +1388,11 @@ describe("Options Display contract", () => {
             await act(async () => {
                 setControlValue(appearance, APPEARANCE.DARK);
             });
-            expect(sent).toEqual([{ type: SET_APPEARANCE_MESSAGE, appearance: APPEARANCE.DARK }]);
+            expect(sent).toEqual([
+                { type: SET_APPEARANCE_MESSAGE, appearance: APPEARANCE.DARK },
+                { type: GET_SITES_STATE_MESSAGE },
+                { type: GET_DEBUG_STATE_MESSAGE },
+            ]);
             expect(document.documentElement.dataset.mantineColorScheme).toBe("dark");
             expect(zone.value).toBe("utc");
             expect(rendered.container.querySelector('main select[aria-label="Appearance"]'))

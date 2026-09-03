@@ -16,6 +16,7 @@ export const MUTATION_NOTICE = {
     SAVE_FAILED: SITE_SETTINGS_ERROR.SAVE_FAILED,
     INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
     LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
+    SCOPE_CHANGED: SITE_SETTINGS_ERROR.SCOPE_CHANGED,
     INTERRUPTED: "interrupted",
     UNKNOWN: "unknown",
 } as const;
@@ -99,6 +100,10 @@ export function mutationNoticeText(
     }
     if (notice === MUTATION_NOTICE.LIST_FULL) {
         return "This list is full. Remove a hostname before adding another.";
+    }
+    if (notice === MUTATION_NOTICE.SCOPE_CHANGED) {
+        return "The run mode was changed in another window, so this change was not applied. "
+            + "Current lists were reloaded.";
     }
     if (notice === MUTATION_NOTICE.INTERRUPTED) {
         return "The response was interrupted. Current state was reloaded.";

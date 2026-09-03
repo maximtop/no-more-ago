@@ -23,6 +23,7 @@ import {
     type SetSiteEnabledResponse,
 } from "../shared/messaging/response-schemas";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
+import type { SiteScopeMode } from "../shared/settings/site-scope";
 import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from "../shared/client-result";
 import type { DiagnosticsSnapshotResult } from "../shared/diagnostics/download";
 
@@ -121,14 +122,20 @@ export class PopupClient {
      *
      * @param hostname - Exact hostname whose setting should change.
      * @param enabled - Whether processing should be enabled for the hostname.
+     * @param mode - Scope mode rendered when the decision was made.
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public setSiteEnabled(hostname: string, enabled: boolean): Promise<PopupSiteSetResult> {
+    public setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<PopupSiteSetResult> {
         return runMutation(
             () => this.transport.sendMessage({
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
+                mode,
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
             setSiteEnabledResponseSchema,

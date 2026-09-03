@@ -178,26 +178,19 @@ export function OptionsApp({
         inFlight: ownWriteInFlight,
         onExternalChange,
     });
-    // An own write refreshes one projection only. When the committed revision
-    // jumped past the next expected one, another surface wrote in between, so
-    // the siblings that are still behind are reread silently. The revision is
-    // captured once, when the write starts.
-    const beforeWrite = useRef<{ readonly revision: number | null } | undefined>(undefined);
+    // The projections are read one at a time and an own write refreshes only
+    // the projection it changed, so the page can hold two revisions for a
+    // moment: a commit that lands between two reads, or an own write beside
+    // untouched siblings. Either way, every projection behind the newest one
+    // is reread silently as soon as no write is in flight; the announcement
+    // for that revision then carries nothing new. Each revision is caught up
+    // once: a reread that still lags waits for the next announcement.
+    const caughtUp = useRef<number | undefined>(undefined);
     useEffect(() => {
-        if (ownWriteInFlight) {
-            beforeWrite.current ??= { revision: highest };
+        if (ownWriteInFlight || highest === null || caughtUp.current === highest) {
             return;
         }
-        const before = beforeWrite.current;
-        beforeWrite.current = undefined;
-        if (
-            before?.revision === null
-            || before === undefined
-            || highest === null
-            || highest <= before.revision + 1
-        ) {
-            return;
-        }
+        caughtUp.current = highest;
         if (isBehind(sites.state, highest)) {
             void reloadSites();
         }

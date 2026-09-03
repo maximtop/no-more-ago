@@ -17,7 +17,7 @@ import {
     DIAGNOSTIC_PAGE_CATEGORY,
 } from "../../shared/diagnostics/contracts";
 import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
-import type { DiagnosticJournal } from "../diagnostics/journal";
+import type { DiagnosticJournalStore } from "../diagnostics/journal";
 import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
 import { parseHttpUrl } from "../../shared/url/http";
 import type { BackgroundApplicationOptions } from "../application/contracts";
@@ -44,7 +44,7 @@ export class DiagnosticsService {
     /**
      * Optional persistent diagnostic journal.
      */
-    private readonly journal: DiagnosticJournal | undefined;
+    private readonly journal: DiagnosticJournalStore | undefined;
 
     /**
      * Trusted browser and extension metadata.
@@ -58,7 +58,7 @@ export class DiagnosticsService {
      * @param environment - Trusted browser and extension metadata.
      */
     public constructor(
-        journal: DiagnosticJournal | undefined,
+        journal: DiagnosticJournalStore | undefined,
         environment: BackgroundApplicationOptions["diagnosticEnvironment"],
     ) {
         this.journal = journal;

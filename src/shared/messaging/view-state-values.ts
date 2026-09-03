@@ -122,6 +122,7 @@ export const SITE_SETTINGS_ERROR = {
     ...SETTINGS_PERSISTENCE_ERROR,
     INVALID_HOSTNAME: "invalid-hostname",
     LIST_FULL: "list-full",
+    SCOPE_CHANGED: "scope-changed",
 } as const;
 
 /**
@@ -131,6 +132,7 @@ export const SITE_SETTINGS_ERRORS = [
     ...SETTINGS_PERSISTENCE_ERRORS,
     SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
     SITE_SETTINGS_ERROR.LIST_FULL,
+    SITE_SETTINGS_ERROR.SCOPE_CHANGED,
 ] as const;
 
 /**

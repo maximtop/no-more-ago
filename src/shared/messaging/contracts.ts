@@ -164,6 +164,7 @@ export const setSiteEnabledMessageSchema = v.strictObject({
     type: v.literal(SET_SITE_ENABLED_MESSAGE),
     hostname: v.string(),
     enabled: v.boolean(),
+    mode: v.picklist(SITE_SCOPE_MODES),
     surface: v.picklist(SITE_SETTINGS_SURFACES),
 });
 

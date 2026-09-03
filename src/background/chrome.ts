@@ -383,7 +383,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_SITE_ENABLED_MESSAGE) {
             void application
-                .setSiteEnabled(request.hostname, request.enabled, request.surface)
+                .setSiteEnabled(request.hostname, request.enabled, request.mode, request.surface)
                 .then(sendOnce, () => sendOnce({
                     ...unavailableCommand(unavailableSurfaceState(request.surface)),
                     surface: request.surface,

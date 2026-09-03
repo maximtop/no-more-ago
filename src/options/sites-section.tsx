@@ -14,7 +14,15 @@ import {
     TextInput,
     Title,
 } from "@mantine/core";
-import { useEffect, useState, type ReactElement, type SyntheticEvent } from "react";
+import {
+    memo,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type ReactElement,
+    type SyntheticEvent,
+} from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     SITE_SCOPE_LIST_LABEL,
@@ -24,7 +32,7 @@ import {
 } from "../shared/settings/site-scope";
 import { GLOBAL_SWITCH_LABEL } from "../shared/ui/copy";
 import { mutationNoticeText } from "../shared/ui/persistence-notice";
-import { activeListCopy, validateHostnameEntry } from "./site-scope-form";
+import { activeListCopy, validateHostnameEntry, type ActiveListCopy } from "./site-scope-form";
 import { SITES_BUSY_KIND, type SitesController } from "./sites-controller";
 
 /**
@@ -40,6 +48,161 @@ export interface SitesSectionProps {
 const RETRY_HINT = "Reopen Settings to try again. Current state is unavailable.";
 
 /**
+ * Properties for the hostname entry form.
+ */
+interface HostnameEntryFormProps {
+    /**
+     * Labels of the list the active mode owns.
+     */
+    readonly copy: ActiveListCopy;
+
+    /**
+     * Hostnames already in that list.
+     */
+    readonly hosts: readonly string[];
+
+    /**
+     * Adds a validated hostname and reports whether the background confirmed it.
+     */
+    readonly onAdd: (hostname: string) => Promise<boolean>;
+
+    /**
+     * Called when the entry was rejected before it reached the background.
+     */
+    readonly onRejected: () => void;
+}
+
+/**
+ * Renders the hostname field and its submit action. The draft lives here so a
+ * keystroke re-renders the form alone, not the hostname list beside it.
+ *
+ * @param props - Component properties.
+ * @param props.copy - Labels of the list the active mode owns.
+ * @param props.hosts - Hostnames already in that list.
+ * @param props.onAdd - Adds a validated hostname.
+ * @param props.onRejected - Called when the entry was rejected locally.
+ * @returns - The entry form.
+ */
+function HostnameEntryForm({
+    copy,
+    hosts,
+    onAdd,
+    onRejected,
+}: HostnameEntryFormProps): ReactElement {
+    const [draft, setDraft] = useState("");
+    const [formError, setFormError] = useState<string>();
+    const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
+        event.preventDefault();
+        const result = validateHostnameEntry(draft, hosts);
+        if (!result.ok) {
+            setFormError(result.error);
+            onRejected();
+            return;
+        }
+        setFormError(undefined);
+        void onAdd(result.hostname).then((added) => {
+            if (added) {
+                setDraft("");
+            }
+        });
+    };
+    return (
+        <form onSubmit={onSubmit} noValidate>
+            <Text component="label" htmlFor="hostname-entry" size="sm" fw={600}>
+                {copy.fieldLabel}
+            </Text>
+            <Text id="hostname-entry-hint" size="xs" c="dimmed" mb="xs">
+                Enter an exact hostname without https:// or a path.
+            </Text>
+            <Group align="flex-start" gap="sm" wrap="nowrap">
+                <TextInput
+                    id="hostname-entry"
+                    className="options-grow"
+                    aria-label={copy.fieldLabel}
+                    aria-describedby="hostname-entry-hint"
+                    placeholder="example.com"
+                    value={draft}
+                    error={formError}
+                    autoComplete="off"
+                    spellCheck={false}
+                    classNames={{ input: "nma-mono options-hostname-input" }}
+                    onChange={(event) => {
+                        setDraft(event.currentTarget.value);
+                        setFormError(undefined);
+                    }}
+                />
+                <Button type="submit" variant="default">
+                    {copy.submitLabel}
+                </Button>
+            </Group>
+        </form>
+    );
+}
+
+/**
+ * Properties for the active hostname list.
+ */
+interface SiteListProps {
+    /**
+     * Hostnames in the list the active mode owns.
+     */
+    readonly hosts: readonly string[];
+
+    /**
+     * Title of that list, used to label each removal.
+     */
+    readonly title: string;
+
+    /**
+     * Hostname whose removal is in flight, when any.
+     */
+    readonly busyHostname: string | undefined;
+
+    /**
+     * Removes one hostname from the list.
+     */
+    readonly onRemove: (hostname: string) => void;
+}
+
+/**
+ * Renders one row per hostname. Memoized so only list changes rebuild the rows.
+ *
+ * @param props - Component properties.
+ * @param props.hosts - Hostnames in the active list.
+ * @param props.title - Title of the active list.
+ * @param props.busyHostname - Hostname whose removal is in flight.
+ * @param props.onRemove - Removes one hostname.
+ * @returns - The hostname list.
+ */
+const SiteList = memo(function SiteList({
+    hosts,
+    title,
+    busyHostname,
+    onRemove,
+}: SiteListProps): ReactElement {
+    return (
+        <ul className="options-site-list">
+            {hosts.map((hostname) => (
+                <li className="options-site-row" key={hostname}>
+                    <span className="nma-mono options-site-hostname">{hostname}</span>
+                    <Button
+                        type="button"
+                        variant="subtle"
+                        loading={busyHostname === hostname}
+                        aria-label={`Remove ${hostname} from ${title}`}
+                        onClick={() => {
+                            onRemove(hostname);
+                        }}
+                    >
+                        Remove
+                    </Button>
+                </li>
+            ))}
+        </ul>
+    );
+});
+
+/**
  * Renders the run mode, the add-hostname form, and the active list.
  *
  * @param props - Component properties.
@@ -47,8 +210,6 @@ const RETRY_HINT = "Reopen Settings to try again. Current state is unavailable."
  * @returns - The Sites section.
  */
 export function SitesSection({ controller }: SitesSectionProps): ReactElement {
-    const [draft, setDraft] = useState("");
-    const [formError, setFormError] = useState<string>();
     const [confirmation, setConfirmation] = useState<string>();
     const { state, notice, busy } = controller;
     const scopeMode = state?.availability === STATE_AVAILABILITY.READY
@@ -59,6 +220,23 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     useEffect(() => {
         setConfirmation(undefined);
     }, [scopeMode, notice]);
+    // The controller's commands are recreated on every render; the list gets
+    // one stable callback that reads the latest ones.
+    const latest = useRef(controller);
+    useEffect(() => {
+        latest.current = controller;
+    });
+    const onRemove = useCallback((hostname: string) => {
+        setConfirmation(undefined);
+        const current = latest.current.state;
+        if (current?.availability !== STATE_AVAILABILITY.READY) {
+            return;
+        }
+        void latest.current.changeSiteProcessing(
+            hostname,
+            !activeListCopy(current.scopeMode).addEnables,
+        );
+    }, []);
     if (!state || state.availability !== STATE_AVAILABILITY.READY) {
         return (
             <Text role="status">
@@ -70,22 +248,13 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     const hosts = controller.activeHostnames;
     const scopeBusy = busy?.kind === SITES_BUSY_KIND.SCOPE;
     const noticeMessage = mutationNoticeText(notice, RETRY_HINT);
-    const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
-        event.preventDefault();
-        const result = validateHostnameEntry(draft, hosts);
-        if (!result.ok) {
-            setFormError(result.error);
-            setConfirmation(undefined);
-            return;
-        }
-        setFormError(undefined);
+    const onAdd = async (hostname: string): Promise<boolean> => {
         setConfirmation(undefined);
-        void controller.changeSiteProcessing(result.hostname, copy.addEnables).then((added) => {
-            if (added) {
-                setDraft("");
-                setConfirmation(`${result.hostname} was added to ${copy.title}.`);
-            }
-        });
+        const added = await controller.changeSiteProcessing(hostname, copy.addEnables);
+        if (added) {
+            setConfirmation(`${hostname} was added to ${copy.title}.`);
+        }
+        return added;
     };
     return (
         <Stack gap="lg" component="section" aria-labelledby="sites-heading">
@@ -146,35 +315,14 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                     />
                 </Stack>
             </Radio.Group>
-            <form onSubmit={onSubmit} noValidate>
-                <Text component="label" htmlFor="hostname-entry" size="sm" fw={600}>
-                    {copy.fieldLabel}
-                </Text>
-                <Text id="hostname-entry-hint" size="xs" c="dimmed" mb="xs">
-                    Enter an exact hostname without https:// or a path.
-                </Text>
-                <Group align="flex-start" gap="sm" wrap="nowrap">
-                    <TextInput
-                        id="hostname-entry"
-                        className="options-grow"
-                        aria-label={copy.fieldLabel}
-                        aria-describedby="hostname-entry-hint"
-                        placeholder="example.com"
-                        value={draft}
-                        error={formError}
-                        autoComplete="off"
-                        spellCheck={false}
-                        classNames={{ input: "nma-mono options-hostname-input" }}
-                        onChange={(event) => {
-                            setDraft(event.currentTarget.value);
-                            setFormError(undefined);
-                        }}
-                    />
-                    <Button type="submit" variant="default">
-                        {copy.submitLabel}
-                    </Button>
-                </Group>
-            </form>
+            <HostnameEntryForm
+                copy={copy}
+                hosts={hosts}
+                onAdd={onAdd}
+                onRejected={() => {
+                    setConfirmation(undefined);
+                }}
+            />
             <Box>
                 <Group justify="space-between" align="flex-end">
                     <Title order={3}>{copy.title}</Title>
@@ -196,29 +344,14 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                         {copy.emptyState}
                     </Alert>
                 ) : (
-                    <ul className="options-site-list">
-                        {hosts.map((hostname) => (
-                            <li className="options-site-row" key={hostname}>
-                                <span className="nma-mono options-site-hostname">{hostname}</span>
-                                <Button
-                                    type="button"
-                                    variant="subtle"
-                                    loading={busy?.kind === SITES_BUSY_KIND.SITE
-                                        && busy.hostname === hostname}
-                                    aria-label={`Remove ${hostname} from ${copy.title}`}
-                                    onClick={() => {
-                                        setConfirmation(undefined);
-                                        void controller.changeSiteProcessing(
-                                            hostname,
-                                            !copy.addEnables,
-                                        );
-                                    }}
-                                >
-                                    Remove
-                                </Button>
-                            </li>
-                        ))}
-                    </ul>
+                    <SiteList
+                        hosts={hosts}
+                        title={copy.title}
+                        busyHostname={busy?.kind === SITES_BUSY_KIND.SITE
+                            ? busy.hostname
+                            : undefined}
+                        onRemove={onRemove}
+                    />
                 )}
                 {confirmation ? (
                     <Text role="status" size="xs" c="dimmed" mt="xs">

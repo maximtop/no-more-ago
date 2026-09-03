@@ -3,7 +3,7 @@
  */
 
 import type {
-    SettingsService,
+    SettingsPersistence,
     SettingsWriteFailure,
     SettingsWriteResult,
     SettingsWriteSuccess,
@@ -72,7 +72,7 @@ export class SettingsCommands {
     /**
      * Settings persistence boundary.
      */
-    private readonly settings: SettingsService;
+    private readonly settings: SettingsPersistence;
 
     /**
      * Authoritative lifecycle and runtime reconciliation state.
@@ -110,7 +110,7 @@ export class SettingsCommands {
      * @param broadcast - Optional announcer for committed settings revisions.
      */
     public constructor(
-        settings: SettingsService,
+        settings: SettingsPersistence,
         lifecycle: ApplicationLifecycle,
         projection: StateProjection,
         diagnostics: DiagnosticsService,
@@ -366,12 +366,14 @@ export class SettingsCommands {
      *
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
      * @param surface - Response projection requested by the caller.
      * @returns - Persisted update and popup or sites state.
      */
     public async setSiteEnabled(
         hostname: string,
         enabled: boolean,
+        mode: SiteScopeMode,
         surface: SiteSettingsSurface,
     ): Promise<SetSiteEnabledResponse> {
         if (!isCanonicalHostname(hostname)) {
@@ -386,10 +388,11 @@ export class SettingsCommands {
                 : { ok: false, error, surface, state: state as SitesState };
         }
         const outcome = await this.runWrite(
-            () => this.settings.setSiteEnabled(hostname, enabled),
+            () => this.settings.setSiteEnabled(hostname, enabled, mode),
             (write) =>
                 write.error === SITE_SETTINGS_ERROR.INVALID_HOSTNAME
                 || write.error === SITE_SETTINGS_ERROR.LIST_FULL
+                || write.error === SITE_SETTINGS_ERROR.SCOPE_CHANGED
                     ? write.error
                     : undefined,
             (write) => this.reconcileSites(write, [hostname]),

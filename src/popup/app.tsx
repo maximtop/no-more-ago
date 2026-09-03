@@ -21,7 +21,7 @@ import type { PopupClient } from "./client";
 import type { PopupState } from "../shared/messaging/view-state-schemas";
 import { usePopupController } from "./popup-controller";
 import { popupStatusModel } from "./popup-status";
-import { PopupReadyView } from "./ready-view";
+import { PopupReadyView, noticePresentation } from "./ready-view";
 import { PopupUnavailablePanel } from "./unavailable-panel";
 import { openBrowserOptionsPage, type OpenOptionsPage } from "./options-page";
 
@@ -181,6 +181,7 @@ export function PopupApp({
                                 consequence: unavailableSettingsCopy(state.failure).consequence,
                             }}
                             busy={controller.saving}
+                            notice={noticePresentation(controller.notice)}
                             onReport={() => {
                                 void reporter.openOptionsReport().catch(() => undefined);
                             }}

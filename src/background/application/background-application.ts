@@ -321,15 +321,17 @@ export class BackgroundApplication {
      *
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
      * @param surface - Response projection requested by the caller.
      * @returns - Persisted update and popup or sites projection.
      */
     public setSiteEnabled(
         hostname: string,
         enabled: boolean,
+        mode: SiteScopeMode,
         surface: SiteSettingsSurface,
     ): Promise<SetSiteEnabledResponse> {
-        return this.commands.setSiteEnabled(hostname, enabled, surface);
+        return this.commands.setSiteEnabled(hostname, enabled, mode, surface);
     }
 
     /**

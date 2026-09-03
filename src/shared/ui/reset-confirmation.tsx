@@ -47,7 +47,7 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
         );
     }
     return (
-        <div className="options-reset-confirmation" role="group" aria-label="Confirm reset">
+        <div className="nma-reset-confirmation" role="group" aria-label="Confirm reset">
             <Text size="sm" fw={600}>
                 Reset every setting to its default?
             </Text>

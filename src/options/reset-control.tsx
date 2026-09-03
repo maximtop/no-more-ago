@@ -5,7 +5,7 @@
 import { Alert, Box, Stack, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
-import { ResetConfirmation } from "./reset-confirmation";
+import { ResetConfirmation } from "../shared/ui/reset-confirmation";
 import {
     RESET_NOTICE,
     type ResetController,

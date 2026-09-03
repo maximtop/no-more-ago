@@ -2,16 +2,17 @@
  * @file Background initialization, serialization, and lifecycle reconciliation.
  */
 
-import { SETTINGS_LOAD_SOURCE } from "../../shared/settings/snapshot";
-import type {
-    ActivationPolicy,
-    ActivationReconcileResult,
-} from "../runtime/document-activation";
+import {
+    SETTINGS_LOAD_SOURCE,
+    type SettingsLoadResult,
+    type SettingsSnapshot,
+} from "../../shared/settings/snapshot";
 import {
     ACTIVATION_POLICY,
+    type ActivationPolicy,
+    type ActivationReconcileResult,
 } from "../runtime/document-activation";
-import type { SettingsService } from "../settings/service";
-import type { SettingsSnapshot } from "../../shared/settings/snapshot";
+import type { SettingsLoader } from "../settings/service";
 import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { ActivationManager } from "./activation-manager";
 import {
@@ -37,7 +38,7 @@ export class ApplicationLifecycle {
     /**
      * Persistence boundary used during initialization and recovery.
      */
-    private readonly settings: SettingsService;
+    private readonly settings: SettingsLoader;
 
     /**
      * Runtime reconciliation state.
@@ -98,7 +99,7 @@ export class ApplicationLifecycle {
      * @param diagnostics - Diagnostic journal service.
      */
     public constructor(
-        settings: SettingsService,
+        settings: SettingsLoader,
         activation: ActivationManager,
         projection: StateProjection,
         diagnostics: DiagnosticsService,
@@ -345,9 +346,7 @@ export class ApplicationLifecycle {
         }
         this.snapshotValue = loaded.snapshot;
         this.failureValue = undefined;
-        if (loaded.snapshot.debugEnabled) {
-            await this.diagnostics.setEnabled(true);
-        }
+        await this.applyJournalPolicy(loaded);
         try {
             await this.reconcile(
                 loaded.snapshot.globalEnabled
@@ -386,6 +385,25 @@ export class ApplicationLifecycle {
     }
 
     /**
+     * Aligns the diagnostic journal with freshly loaded settings. Defaults that
+     * replaced a discarded document have Debug logs off, so entries collected
+     * under the discarded opt-in are removed rather than kept dormant.
+     *
+     * @param loaded - Successful settings load.
+     */
+    private async applyJournalPolicy(
+        loaded: Extract<SettingsLoadResult, { readonly ok: true }>,
+    ): Promise<void> {
+        if (loaded.source === SETTINGS_LOAD_SOURCE.DISCARDED) {
+            await this.diagnostics.reset();
+            return;
+        }
+        if (loaded.snapshot.debugEnabled) {
+            await this.diagnostics.setEnabled(true);
+        }
+    }
+
+    /**
      * Retries settings and fail-closed cleanup for an unavailable application.
      */
     private async recover(): Promise<void> {
@@ -399,9 +417,7 @@ export class ApplicationLifecycle {
         }
         this.snapshotValue = loaded.snapshot;
         this.failureValue = undefined;
-        if (loaded.snapshot.debugEnabled) {
-            await this.diagnostics.setEnabled(true);
-        }
+        await this.applyJournalPolicy(loaded);
         await this.reconcile(
             loaded.snapshot.globalEnabled
                 ? ACTIVATION_POLICY.ENABLED

@@ -78,6 +78,7 @@ export const SETTINGS_WRITE_ERROR = {
     PERSISTENCE_FAILED: "persistence-failed",
     INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
     LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
+    SCOPE_CHANGED: SITE_SETTINGS_ERROR.SCOPE_CHANGED,
     INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
     INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
     INVALID_DISPLAY_SETTINGS: DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS,
@@ -114,6 +115,90 @@ export interface SettingsWriteFailure {
 export type SettingsWriteResult = SettingsWriteSuccess | SettingsWriteFailure;
 
 /**
+ * Settings load as the lifecycle uses it.
+ */
+export interface SettingsLoader {
+    /**
+     * Loads the current or recovery snapshot, or reports why neither is usable.
+     *
+     * @returns - Loaded settings snapshot or a contained load failure.
+     */
+    load(): Promise<SettingsLoadResult>;
+}
+
+/**
+ * Settings persistence as the command handler uses it: serialized writes and
+ * the last load failure for unavailable-state reporting.
+ */
+export interface SettingsPersistence extends SettingsLoader {
+    /**
+     * Last initialization failure, when settings are unavailable.
+     */
+    readonly lastLoadError: SettingsLoadError | undefined;
+
+    /**
+     * Persists the global activation flag.
+     *
+     * @param enabled - Requested global activation state.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult>;
+
+    /**
+     * Applies one hostname decision to the list of the given scope mode.
+     *
+     * @param hostname - Canonical hostname whose processing state changes.
+     * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists the active scope mode.
+     *
+     * @param mode - Requested scope mode.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists the appearance applied to both extension surfaces.
+     *
+     * @param appearance - Requested appearance.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setAppearance(appearance: Appearance): Promise<SettingsWriteResult>;
+
+    /**
+     * Validates and persists presentation choices.
+     *
+     * @param display - Typed display settings to validate and persist.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult>;
+
+    /**
+     * Persists diagnostic journaling policy.
+     *
+     * @param enabled - Requested diagnostic journaling state.
+     * @returns - Persisted write result with the effective snapshot.
+     */
+    setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult>;
+
+    /**
+     * Replaces the stored pair with a known-good default pair.
+     *
+     * @returns - Persisted reset result with the default snapshot.
+     */
+    resetAll(): Promise<SettingsWriteResult>;
+}
+
+/**
  * Injected capability check that separates structural zone validation from runtime Intl support.
  */
 export type TimeZoneAvailability = (identifier: string) => boolean;
@@ -148,9 +233,79 @@ function next(
 }
 
 /**
+ * Named outcomes of one pure snapshot transformation.
+ */
+const MUTATION_OUTCOME = {
+    CHANGED: "changed",
+    UNCHANGED: "unchanged",
+    REJECTED: "rejected",
+} as const;
+
+/**
+ * Result of transforming the loaded snapshot: a successor to persist, nothing
+ * to persist, or a domain rejection that leaves the snapshot untouched.
+ */
+type MutationOutcome =
+    | {
+        /**
+         * The transformation produced a successor snapshot.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.CHANGED;
+
+        /**
+         * Successor snapshot to persist.
+         */
+        readonly snapshot: SettingsSnapshot;
+    }
+    | {
+        /**
+         * The request is already satisfied by the loaded snapshot.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.UNCHANGED;
+    }
+    | {
+        /**
+         * The request was rejected by a domain rule.
+         */
+        readonly kind: typeof MUTATION_OUTCOME.REJECTED;
+
+        /**
+         * Reason the request was rejected.
+         */
+        readonly error: SettingsWriteError;
+    };
+
+/**
+ * Pure snapshot transformation applied under the mutation lock.
+ */
+type SnapshotMutator = (current: SettingsSnapshot) => MutationOutcome;
+
+const UNCHANGED: MutationOutcome = { kind: MUTATION_OUTCOME.UNCHANGED };
+
+/**
+ * Wraps a successor snapshot as a changed outcome.
+ *
+ * @param snapshot - Successor snapshot to persist.
+ * @returns - Changed outcome.
+ */
+function changed(snapshot: SettingsSnapshot): MutationOutcome {
+    return { kind: MUTATION_OUTCOME.CHANGED, snapshot };
+}
+
+/**
+ * Wraps a domain rejection as a mutation outcome.
+ *
+ * @param error - Reason the request was rejected.
+ * @returns - Rejected outcome.
+ */
+function rejected(error: SettingsWriteError): MutationOutcome {
+    return { kind: MUTATION_OUTCOME.REJECTED, error };
+}
+
+/**
  * Serializes settings reads and writes, preserving a recoverable previous snapshot across failures.
  */
-export class SettingsService {
+export class SettingsService implements SettingsPersistence {
     /**
      * Last loaded snapshot, used to project settings while storage remains available.
      */
@@ -283,12 +438,10 @@ export class SettingsService {
     /**
      * Applies a serialized mutation and persists its incremented snapshot revision.
      *
-     * @param mutator - Pure snapshot transformation, or null for an invalid request.
+     * @param mutator - Pure snapshot transformation applied to the loaded snapshot.
      * @returns - Persisted write result with the effective snapshot.
      */
-    private async mutate(
-        mutator: (current: SettingsSnapshot) => SettingsSnapshot | null,
-    ): Promise<SettingsWriteResult> {
+    private async mutate(mutator: SnapshotMutator): Promise<SettingsWriteResult> {
         let result: SettingsWriteResult | undefined;
         const run = this.mutationTail.then(async () => {
             const loaded = await this.load();
@@ -300,11 +453,16 @@ export class SettingsService {
                 };
                 return;
             }
-            const candidate = mutator(loaded.snapshot);
-            if (candidate === null) {
+            const outcome = mutator(loaded.snapshot);
+            if (outcome.kind === MUTATION_OUTCOME.UNCHANGED) {
                 result = { ok: true, changed: false, snapshot: loaded.snapshot };
                 return;
             }
+            if (outcome.kind === MUTATION_OUTCOME.REJECTED) {
+                result = { ok: false, error: outcome.error, snapshot: loaded.snapshot };
+                return;
+            }
+            const candidate = outcome.snapshot;
             try {
                 await this.storage.set(this.pair(candidate, loaded.snapshot));
             } catch {
@@ -348,18 +506,27 @@ export class SettingsService {
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
-            current.globalEnabled === enabled ? null : next(current, { globalEnabled: enabled }),
+            current.globalEnabled === enabled
+                ? UNCHANGED
+                : changed(next(current, { globalEnabled: enabled })),
         );
     }
 
     /**
-     * Applies one hostname decision to the list the active scope mode owns.
+     * Applies one hostname decision to the list of the scope mode the caller
+     * was looking at. The decision is rejected when another surface changed
+     * the mode first, because the same flag would then edit the other list.
      *
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
+     * @param mode - Scope mode the caller rendered when it made the decision.
      * @returns - Persisted write result with the effective snapshot.
      */
-    public async setSiteEnabled(hostname: string, enabled: boolean): Promise<SettingsWriteResult> {
+    public async setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<SettingsWriteResult> {
         if (!isCanonicalHostname(hostname)) {
             return {
                 ok: false,
@@ -367,22 +534,20 @@ export class SettingsService {
                 snapshot: this.fallbackSnapshot(),
             };
         }
-        const bound = { full: false };
-        const result = await this.mutate((current) => {
+        return this.mutate((current) => {
+            if (current.siteScope.mode !== mode) {
+                return rejected(SETTINGS_WRITE_ERROR.SCOPE_CHANGED);
+            }
             if (isSiteProcessingEnabled(current.siteScope, hostname) === enabled) {
-                return null;
+                return UNCHANGED;
             }
             if (isSiteListFull(current.siteScope, hostname)) {
-                bound.full = true;
-                return null;
+                return rejected(SETTINGS_WRITE_ERROR.LIST_FULL);
             }
-            return next(current, {
+            return changed(next(current, {
                 siteScope: withSiteProcessing(current.siteScope, hostname, enabled),
-            });
+            }));
         });
-        return bound.full
-            ? { ok: false, error: SETTINGS_WRITE_ERROR.LIST_FULL, snapshot: result.snapshot }
-            : result;
     }
 
     /**
@@ -394,8 +559,8 @@ export class SettingsService {
     public async setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
             current.siteScope.mode === mode
-                ? null
-                : next(current, { siteScope: { ...current.siteScope, mode } }),
+                ? UNCHANGED
+                : changed(next(current, { siteScope: { ...current.siteScope, mode } })),
         );
     }
 
@@ -407,7 +572,9 @@ export class SettingsService {
      */
     public async setAppearance(appearance: Appearance): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
-            current.appearance === appearance ? null : next(current, { appearance }),
+            current.appearance === appearance
+                ? UNCHANGED
+                : changed(next(current, { appearance })),
         );
     }
 
@@ -448,8 +615,8 @@ export class SettingsService {
         }
         return this.mutate((current) =>
             sameDisplaySettings(current.display, parsed)
-                ? null
-                : next(current, { display: parsed }),
+                ? UNCHANGED
+                : changed(next(current, { display: parsed })),
         );
     }
 
@@ -461,7 +628,9 @@ export class SettingsService {
      */
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
         return this.mutate((current) =>
-            current.debugEnabled === enabled ? null : next(current, { debugEnabled: enabled }),
+            current.debugEnabled === enabled
+                ? UNCHANGED
+                : changed(next(current, { debugEnabled: enabled })),
         );
     }
 

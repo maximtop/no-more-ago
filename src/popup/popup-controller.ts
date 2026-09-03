@@ -20,12 +20,8 @@ import {
 } from "../shared/ui/persistence-notice";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import { downloadDiagnosticsSnapshot } from "../shared/diagnostics/download";
+import { readWithDeadline } from "../shared/ui/read-with-deadline";
 import { createPopupClient, type PopupClient } from "./client";
-
-/**
- * Time after which an unanswered state request renders the unavailable view.
- */
-export const POPUP_STATE_LOAD_TIMEOUT_MS = 5_000;
 
 /**
  * Named popup notices: every shared mutation outcome plus an external change.
@@ -153,33 +149,22 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
             return;
         }
         let mounted = true;
-        const loadTimeout = globalThis.setTimeout(() => {
-            if (mounted) {
-                setState(createUnavailablePopupState());
-                setLoading(false);
-            }
-        }, POPUP_STATE_LOAD_TIMEOUT_MS);
-        void client.getState().then(
+        void readWithDeadline(client.getState()).then(
             (next) => {
-                if (!mounted) {
-                    return;
+                if (mounted) {
+                    setState(next);
+                    setLoading(false);
                 }
-                globalThis.clearTimeout(loadTimeout);
-                setState(next);
-                setLoading(false);
             },
             () => {
-                if (!mounted) {
-                    return;
+                if (mounted) {
+                    setState(createUnavailablePopupState());
+                    setLoading(false);
                 }
-                globalThis.clearTimeout(loadTimeout);
-                setState(createUnavailablePopupState());
-                setLoading(false);
             },
         );
         return () => {
             mounted = false;
-            globalThis.clearTimeout(loadTimeout);
         };
     }, [client, options.initialState]);
 
@@ -238,7 +223,9 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
         inFlight.current = true;
         setSaving(true);
         setNotice(undefined);
-        const settled = settleMutation(await client.setSiteEnabled(state.hostname, enabled));
+        const settled = settleMutation(
+            await client.setSiteEnabled(state.hostname, enabled, state.scopeMode),
+        );
         apply(settled.state, settled.notice);
         inFlight.current = false;
         setSaving(false);

@@ -22,6 +22,8 @@ import {
     type SiteScopePolicy,
 } from "../../../../src/shared/settings/site-scope";
 
+const EXCLUDING = SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED;
+
 const v6 = (
     revision = 0,
     globalEnabled = true,
@@ -113,16 +115,17 @@ describe("SettingsService", () => {
         const service = new SettingsService(backend);
         await service.load();
 
-        const write = await service.setSiteEnabled("github.com", false);
+        const write = await service.setSiteEnabled("github.com", false, EXCLUDING);
 
         expect(write.ok).toBe(true);
         expect(write.snapshot.siteScope.excludedSites).toEqual(["github.com"]);
         expect(write.snapshot.siteScope.allowedSites).toEqual(["kept.test"]);
         expect(write.snapshot.revision).toBe(2);
-        await expect(service.setSiteEnabled("github.com", false)).resolves.toMatchObject({
-            ok: true,
-            changed: false,
-        });
+        await expect(service.setSiteEnabled(
+            "github.com",
+            false,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        )).resolves.toMatchObject({ ok: true, changed: false });
     });
 
     it("refuses to grow a full list and keeps the snapshot unchanged", async () => {
@@ -136,14 +139,43 @@ describe("SettingsService", () => {
         const service = new SettingsService(backend);
         await service.load();
 
-        await expect(service.setSiteEnabled("one-more.test", false)).resolves.toMatchObject({
+        await expect(service.setSiteEnabled(
+            "one-more.test",
+            false,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        )).resolves.toMatchObject({
             ok: false,
             error: "list-full",
             snapshot: { revision: 3 },
         });
         expect(backend.set).not.toHaveBeenCalled();
-        await expect(service.setSiteEnabled("host-0.test", true))
-            .resolves.toMatchObject({ ok: true, changed: true });
+        await expect(service.setSiteEnabled(
+            "host-0.test",
+            true,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        )).resolves.toMatchObject({ ok: true, changed: true });
+    });
+
+    it("rejects a hostname decision made under a scope mode that has since changed", async () => {
+        const backend = storage(v6(1, true, {
+            mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+            excludedSites: [],
+            allowedSites: [],
+        }));
+        const service = new SettingsService(backend);
+        await service.load();
+        await service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
+
+        await expect(service.setSiteEnabled(
+            "github.com",
+            false,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        )).resolves.toMatchObject({
+            ok: false,
+            error: "scope-changed",
+            snapshot: { revision: 2, siteScope: { excludedSites: [], allowedSites: [] } },
+        });
+        expect(backend.set).toHaveBeenCalledOnce();
     });
 
     it("changes the scope mode while retaining both lists", async () => {
@@ -213,7 +245,7 @@ describe("SettingsService", () => {
         const service = new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true);
         await service.load();
         await service.setGlobalEnabled(false);
-        await service.setSiteEnabled("github.com", false);
+        await service.setSiteEnabled("github.com", false, EXCLUDING);
         await service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
         await service.setDisplaySettings({
             formatMode: "custom",
@@ -427,10 +459,10 @@ describe("SettingsService global and exact-host policy", () => {
         const backend = storage(v6(3, true, undefined, undefined, true));
         const service = new SettingsService(backend);
 
-        await service.setSiteEnabled("example.test", false);
-        await service.setSiteEnabled("sub.example.test", true);
-        await service.setSiteEnabled("sibling.example.test", false);
-        await service.setSiteEnabled("example.test.", false);
+        await service.setSiteEnabled("example.test", false, EXCLUDING);
+        await service.setSiteEnabled("sub.example.test", true, EXCLUDING);
+        await service.setSiteEnabled("sibling.example.test", false, EXCLUDING);
+        await service.setSiteEnabled("example.test.", false, EXCLUDING);
 
         expect(backend.pair().current).toEqual(
             v6(
@@ -453,16 +485,18 @@ describe("SettingsService global and exact-host policy", () => {
         const backend = storage(v6(2, true, selected));
         const service = new SettingsService(backend);
 
-        await expect(service.setSiteEnabled("github.com", true)).resolves.toEqual({
-            ok: true,
-            changed: true,
-            snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
-        });
-        await expect(service.setSiteEnabled("github.com", true)).resolves.toEqual({
-            ok: true,
-            changed: false,
-            snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
-        });
+        await expect(service.setSiteEnabled("github.com", true, SITE_SCOPE_MODE.SELECTED_ONLY))
+            .resolves.toEqual({
+                ok: true,
+                changed: true,
+                snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
+            });
+        await expect(service.setSiteEnabled("github.com", true, SITE_SCOPE_MODE.SELECTED_ONLY))
+            .resolves.toEqual({
+                ok: true,
+                changed: false,
+                snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
+            });
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({
             current: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
@@ -488,7 +522,7 @@ describe("SettingsService global and exact-host policy", () => {
         const backend = storage(v6(2));
 
         await expect(
-            new SettingsService(backend).setSiteEnabled(hostname, false),
+            new SettingsService(backend).setSiteEnabled(hostname, false, EXCLUDING),
         ).resolves.toMatchObject({ ok: false, error: "invalid-hostname" });
         expect(backend.get).not.toHaveBeenCalled();
         expect(backend.set).not.toHaveBeenCalled();
@@ -508,7 +542,7 @@ describe("SettingsService global and exact-host policy", () => {
             const backend = storage(current, previous);
 
             await expect(
-                new SettingsService(backend).setSiteEnabled("github.com", enabled),
+                new SettingsService(backend).setSiteEnabled("github.com", enabled, EXCLUDING),
             ).resolves.toEqual({ ok: true, changed: false, snapshot: current });
             expect(backend.set).not.toHaveBeenCalled();
             expect(backend.pair()).toEqual({ current, previous });
@@ -738,7 +772,10 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
 
 const mutations = [
     ["global", (service: SettingsService) => service.setGlobalEnabled(false)],
-    ["site", (service: SettingsService) => service.setSiteEnabled("github.com", false)],
+    [
+        "site",
+        (service: SettingsService) => service.setSiteEnabled("github.com", false, EXCLUDING),
+    ],
     [
         "scope-mode",
         (service: SettingsService) => service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY),
@@ -824,7 +861,7 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
 
         const results = await Promise.all([
             service.setGlobalEnabled(false),
-            service.setSiteEnabled("github.com", false),
+            service.setSiteEnabled("github.com", false, EXCLUDING),
             service.setDisplaySettings(custom),
             service.setDebugEnabled(true),
         ]);
@@ -853,7 +890,7 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
 
         const [failed, savedSite, savedDebug] = await Promise.all([
             service.setGlobalEnabled(false),
-            service.setSiteEnabled("github.com", false),
+            service.setSiteEnabled("github.com", false, EXCLUDING),
             service.setDebugEnabled(true),
         ]);
 
@@ -1032,7 +1069,7 @@ describe("SettingsService reset", () => {
 
         const reset = service.resetAll();
         await started;
-        const edit = service.setSiteEnabled("github.com", false);
+        const edit = service.setSiteEnabled("github.com", false, EXCLUDING);
         await Promise.resolve();
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({ current, previous });
@@ -1061,7 +1098,7 @@ describe("SettingsService reset", () => {
         const service = new SettingsService(backend);
 
         const [site, enabled, reset] = await Promise.all([
-            service.setSiteEnabled("github.com", false),
+            service.setSiteEnabled("github.com", false, EXCLUDING),
             service.setDebugEnabled(true),
             service.resetAll(),
         ]);

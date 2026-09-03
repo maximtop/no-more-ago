@@ -8,7 +8,7 @@ import type { SettingsStateFailure } from "../shared/messaging/view-state-values
 import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
 import { unavailableSettingsCopy } from "../shared/ui/copy";
 import type { DiagnosticsController } from "./diagnostics-controller";
-import { ResetConfirmation } from "./reset-confirmation";
+import { ResetConfirmation } from "../shared/ui/reset-confirmation";
 import type { ResetController } from "./reset-controller";
 
 /**

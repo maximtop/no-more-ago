@@ -10,6 +10,7 @@ import {
 } from "../shared/messaging/view-state-schemas";
 import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
 import { settleMutation, type MutationNotice } from "../shared/ui/persistence-notice";
+import { readWithDeadline } from "../shared/ui/read-with-deadline";
 import type { SitesClient } from "./client";
 
 /**
@@ -189,23 +190,23 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         if (initialState) {
             return;
         }
+        // The whole page waits on this read, so a silent worker sends it
+        // to the recovery view instead of leaving it loading forever.
         let mounted = true;
-        void client
-            .getState()
-            .then((next) => {
-                if (!mounted) {
-                    return;
+        void readWithDeadline(client.getState()).then(
+            (next) => {
+                if (mounted) {
+                    setState(next);
+                    setLoading(false);
                 }
-                setState(next);
-                setLoading(false);
-            })
-            .catch(() => {
-                if (!mounted) {
-                    return;
+            },
+            () => {
+                if (mounted) {
+                    setState(createUnavailableSitesState());
+                    setLoading(false);
                 }
-                setState(createUnavailableSitesState());
-                setLoading(false);
-            });
+            },
+        );
         return () => {
             mounted = false;
         };
@@ -240,7 +241,9 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
         }
         setBusy({ kind: SITES_BUSY_KIND.SITE, hostname });
         setNotice(undefined);
-        const settled = settleMutation(await client.setSiteEnabled(hostname, enabled));
+        const settled = settleMutation(
+            await client.setSiteEnabled(hostname, enabled, state.scopeMode),
+        );
         apply(settled.state, settled.notice);
         setBusy(undefined);
         return settled.notice === undefined;

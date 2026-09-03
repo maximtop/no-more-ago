@@ -2,7 +2,7 @@
  * @file Owns editable display settings and their persistence lifecycle.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
     createUnavailableDisplayState,
@@ -152,6 +152,170 @@ export interface DisplayController {
     readonly reload: () => Promise<void>;
 }
 
+/**
+ * Everything the display form renders, changed only by the transitions below.
+ */
+interface DisplayModel {
+    /**
+     * Committed display projection, once loaded.
+     */
+    readonly state: DisplayState | undefined;
+
+    /**
+     * Editable fields, present once a ready projection was loaded.
+     */
+    readonly draft: DisplayDraft | undefined;
+
+    /**
+     * Whether an initial or post-reset read is pending.
+     */
+    readonly loading: boolean;
+
+    /**
+     * Whether a display-settings save is in flight.
+     */
+    readonly saving: boolean;
+
+    /**
+     * Whether an appearance save is in flight.
+     */
+    readonly appearanceSaving: boolean;
+
+    /**
+     * Whether the latest appearance save was rejected.
+     */
+    readonly appearanceFailed: boolean;
+
+    /**
+     * Latest outcome that needs user guidance.
+     */
+    readonly notice: DisplayNotice;
+}
+
+/**
+ * Named transitions of the display model.
+ */
+const DISPLAY_EVENT = {
+    LOADED: "loaded",
+    EDITED: "edited",
+    REJECTED: "rejected",
+    SAVE_STARTED: "save-started",
+    SAVE_SETTLED: "save-settled",
+    APPEARANCE_STARTED: "appearance-started",
+    APPEARANCE_SETTLED: "appearance-settled",
+    RESET_STARTED: "reset-started",
+    RELOADED: "reloaded",
+} as const;
+
+/**
+ * Transition of the display model.
+ */
+type DisplayEvent =
+    | {
+        /**
+         * An initial or post-reset read settled.
+         */
+        readonly type: typeof DISPLAY_EVENT.LOADED;
+
+        /**
+         * Projection returned by the read, or the unavailable projection.
+         */
+        readonly state: DisplayState;
+
+        /**
+         * Guidance to show beside the loaded projection, when the read failed.
+         */
+        readonly notice?: DisplayNotice;
+    }
+    | {
+        /**
+         * The user changed the draft.
+         */
+        readonly type: typeof DISPLAY_EVENT.EDITED;
+
+        /**
+         * Fields that changed.
+         */
+        readonly patch: Partial<DisplayDraft>;
+    }
+    | {
+        /**
+         * The draft was rejected before a save was attempted.
+         */
+        readonly type: typeof DISPLAY_EVENT.REJECTED;
+
+        /**
+         * Reason the draft was rejected.
+         */
+        readonly notice: DisplayNotice;
+    }
+    | {
+        /**
+         * A display-settings save was dispatched.
+         */
+        readonly type: typeof DISPLAY_EVENT.SAVE_STARTED;
+    }
+    | {
+        /**
+         * A display-settings save settled.
+         */
+        readonly type: typeof DISPLAY_EVENT.SAVE_SETTLED;
+
+        /**
+         * Projection carried by the response, or undefined when settings became unavailable.
+         */
+        readonly state: DisplayState | undefined;
+
+        /**
+         * Whether the draft keeps the user's edits instead of the committed display.
+         */
+        readonly keepDraft: boolean;
+
+        /**
+         * Outcome to show beside the form.
+         */
+        readonly notice: DisplayNotice;
+    }
+    | {
+        /**
+         * An appearance save was dispatched.
+         */
+        readonly type: typeof DISPLAY_EVENT.APPEARANCE_STARTED;
+    }
+    | {
+        /**
+         * An appearance save settled.
+         */
+        readonly type: typeof DISPLAY_EVENT.APPEARANCE_SETTLED;
+
+        /**
+         * Projection carried by the response, or undefined when it was lost.
+         */
+        readonly state: DisplayState | undefined;
+
+        /**
+         * Whether the save was rejected.
+         */
+        readonly failed: boolean;
+    }
+    | {
+        /**
+         * A full settings reset began elsewhere on the page.
+         */
+        readonly type: typeof DISPLAY_EVENT.RESET_STARTED;
+    }
+    | {
+        /**
+         * A live reread settled after another surface committed a change.
+         */
+        readonly type: typeof DISPLAY_EVENT.RELOADED;
+
+        /**
+         * Projection returned by the reread.
+         */
+        readonly state: DisplayState;
+    };
+
 const DEFAULT_DISPLAY_DRAFT = draftFromDisplay({
     formatMode: FORMAT_MODE.SYSTEM,
     timeZone: { mode: TIME_ZONE_MODE.SYSTEM },
@@ -182,14 +346,142 @@ function displayNoticeForError(error: DisplaySettingsError): DisplayNotice {
 /**
  * Reports whether the draft differs from the committed display settings.
  *
- * @param draft - Current form draft.
- * @param state - Current display projection.
+ * @param model - Current display model.
  * @returns - Whether the user has unsaved edits.
  */
-function isDirty(draft: DisplayDraft | undefined, state: DisplayState | undefined): boolean {
-    return draft !== undefined
-        && state?.availability === STATE_AVAILABILITY.READY
-        && !sameDisplaySettings(displayFromDraft(draft), state.display);
+function isDirty(model: DisplayModel): boolean {
+    return model.draft !== undefined
+        && model.state?.availability === STATE_AVAILABILITY.READY
+        && !sameDisplaySettings(displayFromDraft(model.draft), model.state.display);
+}
+
+/**
+ * Reports whether a projection returned by a command may replace the rendered one.
+ *
+ * @param current - Rendered projection.
+ * @param next - Projection returned by the command or reread.
+ * @returns - Whether the projection is at least as new as the rendered one.
+ */
+function accepts(current: DisplayState | undefined, next: DisplayState): boolean {
+    return next.availability !== STATE_AVAILABILITY.READY
+        || current?.availability !== STATE_AVAILABILITY.READY
+        || next.revision >= current.revision;
+}
+
+/**
+ * Builds the draft for a projection, or keeps the current draft while it is unavailable.
+ *
+ * @param state - Projection to edit.
+ * @param current - Draft rendered so far.
+ * @returns - Draft matching the projection's committed display, or the current draft.
+ */
+function draftFor(
+    state: DisplayState,
+    current: DisplayDraft | undefined,
+): DisplayDraft | undefined {
+    return state.availability === STATE_AVAILABILITY.READY
+        ? draftFromDisplay(state.display)
+        : current;
+}
+
+/**
+ * Applies one transition to the display model. Every legal combination of
+ * committed state, draft, activity, and notice is produced here, so the
+ * commands below only decide which transition their outcome is.
+ *
+ * @param model - Current display model.
+ * @param event - Transition to apply.
+ * @returns - Next display model.
+ */
+function reduceDisplay(model: DisplayModel, event: DisplayEvent): DisplayModel {
+    switch (event.type) {
+        case DISPLAY_EVENT.LOADED:
+            return {
+                ...model,
+                state: event.state,
+                draft: draftFor(event.state, model.draft),
+                loading: false,
+                notice: event.notice,
+            };
+        case DISPLAY_EVENT.EDITED:
+            return model.draft
+                ? { ...model, draft: { ...model.draft, ...event.patch }, notice: undefined }
+                : model;
+        case DISPLAY_EVENT.REJECTED:
+            return { ...model, notice: event.notice };
+        case DISPLAY_EVENT.SAVE_STARTED:
+            return { ...model, saving: true, notice: undefined };
+        case DISPLAY_EVENT.SAVE_SETTLED: {
+            const settled = { ...model, saving: false, notice: event.notice };
+            if (event.state === undefined) {
+                return { ...settled, state: createUnavailableDisplayState() };
+            }
+            if (!accepts(model.state, event.state)) {
+                return settled;
+            }
+            return {
+                ...settled,
+                state: event.state,
+                draft: event.keepDraft ? model.draft : draftFor(event.state, model.draft),
+            };
+        }
+        case DISPLAY_EVENT.APPEARANCE_STARTED:
+            return { ...model, appearanceSaving: true, appearanceFailed: false };
+        case DISPLAY_EVENT.APPEARANCE_SETTLED:
+            return {
+                ...model,
+                appearanceSaving: false,
+                appearanceFailed: event.failed,
+                state: event.state !== undefined && accepts(model.state, event.state)
+                    ? event.state
+                    : model.state,
+            };
+        case DISPLAY_EVENT.RESET_STARTED:
+            return { ...model, draft: DEFAULT_DISPLAY_DRAFT, loading: true, notice: undefined };
+        case DISPLAY_EVENT.RELOADED: {
+            // A failed reread never reaches here, and an older projection is
+            // dropped: one lost message does not mean processing stopped, and
+            // the next announcement retries.
+            if (!accepts(model.state, event.state)) {
+                return model;
+            }
+            if (event.state.availability !== STATE_AVAILABILITY.READY) {
+                return { ...model, state: event.state };
+            }
+            // A reread that only moved the revision, because another section
+            // of this page or another surface changed something else, keeps
+            // the draft and says nothing about it.
+            if (
+                model.state?.availability === STATE_AVAILABILITY.READY
+                && sameDisplaySettings(model.state.display, event.state.display)
+            ) {
+                return { ...model, state: event.state };
+            }
+            return isDirty(model)
+                ? { ...model, state: event.state, notice: DISPLAY_NOTICE.EXTERNAL_CHANGE }
+                : { ...model, state: event.state, draft: draftFromDisplay(event.state.display) };
+        }
+        default:
+            return model;
+    }
+}
+
+/**
+ * Builds the model rendered before any command runs.
+ *
+ * @param initialState - Preloaded projection, when any.
+ * @returns - Initial display model.
+ */
+function initialModel(initialState: DisplayState | undefined): DisplayModel {
+    return {
+        state: initialState,
+        draft: initialState === undefined ? undefined : draftFor(initialState, undefined),
+        loading: initialState === undefined,
+        saving: false,
+        appearanceSaving: false,
+        appearanceFailed: false,
+        notice: undefined,
+    };
 }
 
 /**
@@ -200,133 +492,104 @@ function isDirty(draft: DisplayDraft | undefined, state: DisplayState | undefine
  */
 export function useDisplayController(options: DisplayControllerOptions): DisplayController {
     const { client, initialState, loadWhenMissing } = options;
-    const [state, setState] = useState<DisplayState | undefined>(initialState);
-    const [loading, setLoading] = useState(initialState === undefined);
-    const [draft, setDraft] = useState<DisplayDraft | undefined>(
-        initialState?.availability === STATE_AVAILABILITY.READY
-            ? draftFromDisplay(initialState.display)
-            : undefined,
-    );
-    const [notice, setNotice] = useState<DisplayNotice>();
-    const [saving, setSaving] = useState(false);
-    const [appearanceSaving, setAppearanceSaving] = useState(false);
-    const [appearanceFailed, setAppearanceFailed] = useState(false);
-    const dirty = isDirty(draft, state);
+    const [model, dispatch] = useReducer(reduceDisplay, initialState, initialModel);
+    const { state, draft, saving, appearanceSaving } = model;
 
     useEffect(() => {
         if (initialState || !loadWhenMissing) {
-            setLoading(false);
             return;
         }
         let mounted = true;
-        void client
-            .getDisplayState()
-            .then((next) => {
-                if (!mounted) {
-                    return;
+        void client.getDisplayState().then(
+            (next) => {
+                if (mounted) {
+                    dispatch({ type: DISPLAY_EVENT.LOADED, state: next });
                 }
-                setState(next);
-                if (next.availability === STATE_AVAILABILITY.READY) {
-                    setDraft(draftFromDisplay(next.display));
+            },
+            () => {
+                if (mounted) {
+                    dispatch({
+                        type: DISPLAY_EVENT.LOADED,
+                        state: createUnavailableDisplayState(),
+                    });
                 }
-                setLoading(false);
-            })
-            .catch(() => {
-                if (!mounted) {
-                    return;
-                }
-                setState(createUnavailableDisplayState());
-                setLoading(false);
-            });
+            },
+        );
         return () => {
             mounted = false;
         };
     }, [client, initialState, loadWhenMissing]);
 
-    const updateDraft = (update: Partial<DisplayDraft>): void => {
-        setDraft((current) => (current ? { ...current, ...update } : current));
-        setNotice(undefined);
-    };
-
     /**
-     * Reports whether a state returned by a command may replace the rendered one.
+     * Validates the draft locally, then persists it and applies the outcome.
      *
-     * @param next - State returned by the command or reread.
-     * @returns - Whether the state is at least as new as the rendered one.
+     * @returns - A promise that settles after the save outcome has been applied.
      */
-    const accepts = (next: DisplayState): boolean =>
-        next.availability !== STATE_AVAILABILITY.READY
-        || state?.availability !== STATE_AVAILABILITY.READY
-        || next.revision >= state.revision;
-
-    const adopt = (next: DisplayState): void => {
-        setState(next);
-        if (next.availability === STATE_AVAILABILITY.READY) {
-            setDraft(draftFromDisplay(next.display));
-        }
-    };
-
     const save = async (): Promise<void> => {
         if (!state || state.availability !== STATE_AVAILABILITY.READY || !draft || saving) {
             return;
         }
         if (draft.formatMode === FORMAT_MODE.CUSTOM && customPatternError(draft.pattern)) {
-            setNotice(DISPLAY_NOTICE.INVALID_FORMAT);
+            dispatch({ type: DISPLAY_EVENT.REJECTED, notice: DISPLAY_NOTICE.INVALID_FORMAT });
             return;
         }
         if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
-            setNotice(DISPLAY_NOTICE.INVALID_TIME_ZONE);
+            dispatch({ type: DISPLAY_EVENT.REJECTED, notice: DISPLAY_NOTICE.INVALID_TIME_ZONE });
             return;
         }
-        setSaving(true);
-        setNotice(undefined);
+        dispatch({ type: DISPLAY_EVENT.SAVE_STARTED });
         const result = await client.setDisplaySettings(displayFromDraft(draft));
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            const responseState = result.response.state;
-            if (accepts(responseState)) {
-                if (
-                    responseState.availability === STATE_AVAILABILITY.READY
-                    && (result.response.ok
-                        || result.response.error !== DISPLAY_SETTINGS_ERROR.INVALID_FORMAT)
-                ) {
-                    adopt(responseState);
-                } else {
-                    setState(responseState);
-                }
+            const { response } = result;
+            // A rejected pattern stays in the form for correction; every other
+            // outcome shows the committed display.
+            const keepDraft = !response.ok
+                && response.error === DISPLAY_SETTINGS_ERROR.INVALID_FORMAT;
+            let notice: DisplayNotice = DISPLAY_NOTICE.SAVED;
+            if (!response.ok) {
+                notice = displayNoticeForError(response.error);
+            } else if (response.refreshFailures.length > 0) {
+                notice = DISPLAY_NOTICE.PARTIAL_REFRESH;
             }
-            if (!result.response.ok) {
-                setNotice(displayNoticeForError(result.response.error));
-            } else if (result.response.refreshFailures.length > 0) {
-                setNotice(DISPLAY_NOTICE.PARTIAL_REFRESH);
-            } else {
-                setNotice(DISPLAY_NOTICE.SAVED);
-            }
-        } else if (result.state) {
-            if (accepts(result.state)) {
-                adopt(result.state);
-            }
-            setNotice(DISPLAY_NOTICE.INTERRUPTED);
-        } else {
-            setState(createUnavailableDisplayState());
-            setNotice(DISPLAY_NOTICE.UNKNOWN);
+            dispatch({
+                type: DISPLAY_EVENT.SAVE_SETTLED,
+                state: response.state,
+                keepDraft,
+                notice,
+            });
+            return;
         }
-        setSaving(false);
+        dispatch({
+            type: DISPLAY_EVENT.SAVE_SETTLED,
+            state: result.state,
+            keepDraft: false,
+            notice: result.state ? DISPLAY_NOTICE.INTERRUPTED : DISPLAY_NOTICE.UNKNOWN,
+        });
     };
 
+    /**
+     * Rereads display settings after a full reset replaced every setting.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
     const reloadAfterReset = async (): Promise<void> => {
         try {
-            adopt(await client.getDisplayState());
+            dispatch({ type: DISPLAY_EVENT.LOADED, state: await client.getDisplayState() });
         } catch {
-            setState(createUnavailableDisplayState());
-            setNotice(DISPLAY_NOTICE.UNKNOWN);
-        } finally {
-            setLoading(false);
+            dispatch({
+                type: DISPLAY_EVENT.LOADED,
+                state: createUnavailableDisplayState(),
+                notice: DISPLAY_NOTICE.UNKNOWN,
+            });
         }
     };
 
-    // A failed live reread keeps the last READY projection: one lost message
-    // does not mean processing stopped, and the next announcement retries. A
-    // reread older than the rendered projection is dropped for the same reason.
+    /**
+     * Rereads display settings after another surface committed a change. A
+     * failed reread keeps the rendered projection.
+     *
+     * @returns - A promise that settles after the fresh projection has been applied.
+     */
     const reload = async (): Promise<void> => {
         let next: DisplayState;
         try {
@@ -334,68 +597,69 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         } catch {
             return;
         }
-        if (!accepts(next)) {
-            return;
-        }
-        setState(next);
-        if (next.availability !== STATE_AVAILABILITY.READY) {
-            return;
-        }
-        if (dirty) {
-            setNotice(DISPLAY_NOTICE.EXTERNAL_CHANGE);
-        } else {
-            setDraft(draftFromDisplay(next.display));
-        }
+        dispatch({ type: DISPLAY_EVENT.RELOADED, state: next });
     };
 
+    /**
+     * Saves a new appearance immediately, leaving any unsaved display draft untouched.
+     *
+     * @param appearance - New appearance choice.
+     * @returns - A promise that settles after the outcome has been applied.
+     */
     const changeAppearance = async (appearance: Appearance): Promise<void> => {
         if (!state || state.availability !== STATE_AVAILABILITY.READY || appearanceSaving) {
             return;
         }
-        setAppearanceSaving(true);
-        setAppearanceFailed(false);
+        dispatch({ type: DISPLAY_EVENT.APPEARANCE_STARTED });
         const result = await client.setAppearance(appearance);
         if (result.kind === CLIENT_RESULT_KIND.RESPONSE) {
-            if (accepts(result.response.state)) {
-                setState(result.response.state);
-            }
-            setAppearanceFailed(!result.response.ok);
-        } else if (result.state) {
-            if (accepts(result.state)) {
-                setState(result.state);
-            }
-        } else {
-            setAppearanceFailed(true);
+            dispatch({
+                type: DISPLAY_EVENT.APPEARANCE_SETTLED,
+                state: result.response.state,
+                failed: !result.response.ok,
+            });
+            return;
         }
-        setAppearanceSaving(false);
+        dispatch({
+            type: DISPLAY_EVENT.APPEARANCE_SETTLED,
+            state: result.state,
+            failed: result.state === undefined,
+        });
+    };
+
+    /**
+     * Applies one draft edit and clears the current notice.
+     *
+     * @param patch - Fields that changed.
+     */
+    const edit = (patch: Partial<DisplayDraft>): void => {
+        dispatch({ type: DISPLAY_EVENT.EDITED, patch });
     };
 
     return {
         state,
         draft,
-        loading,
+        loading: model.loading,
         saving,
         appearanceSaving,
-        appearanceFailed,
-        notice,
+        appearanceFailed: model.appearanceFailed,
+        notice: model.notice,
         setFormatMode: (formatMode) => {
-            updateDraft({ formatMode });
+            edit({ formatMode });
         },
         setPattern: (pattern) => {
-            updateDraft({ pattern });
+            edit({ pattern });
         },
         setTimeZoneMode: (timeZoneMode) => {
-            updateDraft({ timeZoneMode });
+            edit({ timeZoneMode });
         },
         setIdentifier: (identifier) => {
-            updateDraft({ identifier });
+            edit({ identifier });
         },
         changeAppearance,
         save,
         beginReset: () => {
-            setNotice(undefined);
-            setDraft(DEFAULT_DISPLAY_DRAFT);
-            setLoading(true);
+            dispatch({ type: DISPLAY_EVENT.RESET_STARTED });
         },
         reloadAfterReset,
         reload,

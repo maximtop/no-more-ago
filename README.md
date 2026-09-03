@@ -469,7 +469,8 @@ The extension requests:
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
   can verify each frame's revision acknowledgement, and coalesces YouTube
   history-state updates into payload-free route signals for the exact frame.
-- **Storage:** keeps one versioned settings snapshot (schema version 1) and
+- **Storage:** keeps one versioned settings snapshot (schema version 1), a
+  copy of the previous snapshot used to recover from a failed write, and
   optional diagnostic entries locally.
 
 No More Ago uses the current visible label only to decide whether its

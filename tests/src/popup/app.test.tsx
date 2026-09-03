@@ -184,6 +184,7 @@ describe("PopupApp contract", () => {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname: "example.test",
                 enabled: false,
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }]);
             expect(rendered.container.textContent).toContain("Excluded on this site");
@@ -304,7 +305,18 @@ describe("PopupApp contract", () => {
             await act(async () => {
                 reset.click();
             });
+            expect(resets).toBe(0);
+            const confirm = [...rendered.container.querySelectorAll("button")].find((button) =>
+                button.textContent.includes("Reset everything"));
+            if (!confirm) {
+                throw new Error("Reset confirmation is missing");
+            }
+            await act(async () => {
+                confirm.click();
+            });
             expect(resets).toBe(1);
+            expect(rendered.container.textContent)
+                .toContain("Could not confirm whether the change was saved");
         } finally {
             await rendered.unmount();
         }

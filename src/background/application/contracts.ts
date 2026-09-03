@@ -3,13 +3,13 @@
  */
 
 import type { DiagnosticBrowserFamily } from "../../shared/diagnostics/events";
-import type { DiagnosticJournal } from "../diagnostics/journal";
+import type { DiagnosticJournalStore } from "../diagnostics/journal";
 import type {
     ActivationPolicy,
     ActivationReconcileResult,
 } from "../runtime/document-activation";
 import type { TabsRuntime } from "../runtime/tabs";
-import type { SettingsService } from "../settings/service";
+import type { SettingsPersistence } from "../settings/service";
 import type { SiteScopePolicy } from "../../shared/settings/site-scope";
 import type { SettingsStateFailure } from "../../shared/messaging/view-state-values";
 
@@ -81,9 +81,9 @@ export interface SettingsBroadcast {
  */
 export interface BackgroundApplicationOptions {
     /**
-     * Service that loads and persists extension settings.
+     * Settings load and serialized writes.
      */
-    readonly settings: SettingsService;
+    readonly settings: SettingsPersistence;
 
     /**
      * Runtime registration and tab-reconciliation implementation.
@@ -98,7 +98,7 @@ export interface BackgroundApplicationOptions {
     /**
      * Optional persistent diagnostic-event journal.
      */
-    readonly journal?: DiagnosticJournal;
+    readonly journal?: DiagnosticJournalStore;
 
     /**
      * Optional announcer for committed settings changes.

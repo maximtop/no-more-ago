@@ -119,9 +119,58 @@ function parseEnvelope(value: unknown, maxBytes: number): DiagnosticEvent[] | nu
 }
 
 /**
+ * Durable diagnostic journal as the diagnostics service uses it.
+ */
+export interface DiagnosticJournalStore {
+    /**
+     * Enables or disables collection.
+     *
+     * @param enabled - Requested collection state.
+     * @returns - Promise settled after the policy change.
+     */
+    setEnabled(enabled: boolean): Promise<void>;
+
+    /**
+     * Appends one trusted event while collection is enabled.
+     *
+     * @param event - Sanitized diagnostic event.
+     * @returns - Promise settled after the storage attempt.
+     */
+    append(event: DiagnosticEvent): Promise<void>;
+
+    /**
+     * Removes every stored entry and disables collection.
+     *
+     * @returns - Promise settled after the removal attempt.
+     */
+    clear(): Promise<void>;
+
+    /**
+     * Reads stored entries while collection is enabled.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    readSnapshot(): Promise<DiagnosticJournalSnapshotResult>;
+
+    /**
+     * Reads stored entries regardless of the collection policy.
+     *
+     * @returns - Canonical events or a contained storage error.
+     */
+    readStored(): Promise<DiagnosticJournalSnapshotResult>;
+
+    /**
+     * Removes every stored entry while keeping collection enabled.
+     *
+     * @returns - Durable clear result.
+     */
+    clearEntries(): Promise<DiagnosticJournalClearResult>;
+}
+
+/**
  * Serializes diagnostic storage work and deletes entries when logging is disabled.
  */
-export class DiagnosticJournal {
+export class DiagnosticJournal implements DiagnosticJournalStore {
     /**
      * Whether new events may be persisted.
      */

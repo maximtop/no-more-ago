@@ -313,6 +313,38 @@ describe("DocumentMutationScheduler", () => {
         scheduler.stop();
     });
 
+    it("observes a candidate label rendered into the source's open shadow root", async () => {
+        const source = document.createElement("relative-time");
+        source.append(document.createTextNode("Aug 23, 2026"));
+        document.body.append(source);
+        const label = document.createElement("span");
+        const target = document.createTextNode("2 hours ago");
+        label.append(target);
+        const shadowRoot = source.attachShadow({ mode: "open" });
+        shadowRoot.append(label);
+        const batches: AffectedMutationBatch[] = [];
+        const scheduler = new DocumentMutationScheduler({
+            document,
+            onBatch: (batch) => batches.push(batch),
+            getOwnedSourceForOutput: () => null,
+        });
+        scheduler.start();
+        scheduler.trackSource(source, false);
+        scheduler.trackPageTextSource(source, shadowRoot);
+
+        target.data = "3 hours ago";
+        await flushMutations();
+        expect(batches).toHaveLength(1);
+        expect(batches[0]?.sourceTargets).toEqual([source]);
+
+        batches.length = 0;
+        scheduler.untrackPageTextSource(source);
+        target.data = "released";
+        await flushMutations();
+        expect(batches).toEqual([]);
+        scheduler.stop();
+    });
+
     it("releases candidate-label targets covered by one removed subtree", async () => {
         const wrapper = document.createElement("section");
         const removedSources = Array.from({ length: 50 }, (_, index) => {

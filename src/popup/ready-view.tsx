@@ -64,16 +64,32 @@ export interface PopupReadyViewProps {
 const RETRY_HINT = "Reopen the popup to try again.";
 
 /**
+ * Message, alert color, and live-region role of a popup notice.
+ */
+export interface NoticePresentation {
+    /**
+     * Sentence shown to the user.
+     */
+    readonly text: string;
+
+    /**
+     * Mantine alert color.
+     */
+    readonly color: string;
+
+    /**
+     * Live-region role matching the notice severity.
+     */
+    readonly role: "status" | "alert";
+}
+
+/**
  * Maps a popup notice to its message and severity.
  *
  * @param notice - Outcome reported after a mutation or an external change.
  * @returns - Message with its alert color and live-region role, or undefined.
  */
-function noticePresentation(notice: PopupNotice): {
-    readonly text: string;
-    readonly color: string;
-    readonly role: "status" | "alert";
-} | undefined {
+export function noticePresentation(notice: PopupNotice): NoticePresentation | undefined {
     if (notice === POPUP_NOTICE.EXTERNAL_CHANGE) {
         return { text: updatedInAnotherWindow("Settings"), color: "gray", role: "status" };
     }

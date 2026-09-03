@@ -46,6 +46,7 @@ describe("background message contracts", () => {
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname: "github.com",
                 enabled: false,
+                mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             },
             { type: GET_DISPLAY_STATE_MESSAGE },

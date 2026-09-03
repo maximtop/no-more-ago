@@ -238,14 +238,20 @@ export class SitesClient {
      *
      * @param hostname - Exact hostname whose setting should change.
      * @param enabled - Whether processing should be enabled for the hostname.
+     * @param mode - Scope mode rendered when the decision was made.
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
-    public setSiteEnabled(hostname: string, enabled: boolean): Promise<SitesSetResult> {
+    public setSiteEnabled(
+        hostname: string,
+        enabled: boolean,
+        mode: SiteScopeMode,
+    ): Promise<SitesSetResult> {
         return runMutation(
             () => this.transport.sendMessage({
                 type: SET_SITE_ENABLED_MESSAGE,
                 hostname,
                 enabled,
+                mode,
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
             setSiteEnabledResponseSchema,

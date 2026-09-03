@@ -168,6 +168,7 @@ describe("BackgroundApplication document state", () => {
         const response = await app.setSiteEnabled(
             "example.test",
             false,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             SITE_SETTINGS_SURFACE.SITES,
         );
 
@@ -277,24 +278,76 @@ describe("BackgroundApplication settings notifications", () => {
         };
     }
 
+    it("clears the diagnostic journal when a document of another schema is discarded", async () => {
+        const legacy = {
+            ...createSettingsSnapshot({ revision: 9, globalEnabled: true }),
+            schemaVersion: 5,
+        };
+        let stored: Record<string, unknown> = { [SETTINGS_STORAGE_KEY]: legacy };
+        const storage = {
+            get: vi.fn(() => Promise.resolve(stored)),
+            set: vi.fn((items: Readonly<Record<string, SettingsSnapshot>>) => {
+                stored = { ...stored, ...items };
+                return Promise.resolve();
+            }),
+        };
+        const tabs: TabsRuntime = {
+            query: vi.fn(async () => []),
+            getAllFrames: vi.fn(async () => []),
+            sendMessage: vi.fn(async () => undefined),
+        };
+        const journal = {
+            setEnabled: vi.fn(async () => undefined),
+            append: vi.fn(async () => undefined),
+            clear: vi.fn(async () => undefined),
+            readSnapshot: vi.fn(async () => ({ ok: true as const, entries: [] })),
+            readStored: vi.fn(async () => ({ ok: true as const, entries: [] })),
+            clearEntries: vi.fn(async () => ({ ok: true as const })),
+        };
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const app = new BackgroundApplication({
+            settings: new SettingsService(storage),
+            coordinator: { reconcile: vi.fn(async () => reconciled) },
+            tabs,
+            journal,
+        });
+
+        const response = await app.setGlobalEnabled(false, SITE_SETTINGS_SURFACE.SITES);
+
+        expect(response.ok).toBe(true);
+        expect(journal.clear).toHaveBeenCalledOnce();
+        expect(journal.setEnabled).not.toHaveBeenCalled();
+    });
+
     it("announces the committed revision after each accepted mutation", async () => {
         const { app, announced } = notifying();
 
         await app.setGlobalEnabled(false, SITE_SETTINGS_SURFACE.SITES);
         await app.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
-        await app.setSiteEnabled("github.com", true, SITE_SETTINGS_SURFACE.SITES);
+        await app.setSiteEnabled(
+            "github.com",
+            true,
+            SITE_SCOPE_MODE.SELECTED_ONLY,
+            SITE_SETTINGS_SURFACE.SITES,
+        );
 
         expect(announced).toEqual([1, 2, 3]);
     });
 
     it("switches the scope mode and reports both retained lists", async () => {
         const { app } = notifying();
-        await app.setSiteEnabled("excluded.test", false, SITE_SETTINGS_SURFACE.SITES);
+        await app.setSiteEnabled(
+            "excluded.test",
+            false,
+            SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+            SITE_SETTINGS_SURFACE.SITES,
+        );
         await app.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
 
         const response = await app.setSiteEnabled(
             "allowed.test",
             true,
+            SITE_SCOPE_MODE.SELECTED_ONLY,
             SITE_SETTINGS_SURFACE.SITES,
         );
 

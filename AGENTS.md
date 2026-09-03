@@ -334,9 +334,6 @@ parsing and presentation remain site-agnostic.
 
 Known architectural exclusions to improve when their area changes:
 
-- `BackgroundApplicationOptions` exposes concrete `SettingsService` and
-  `DiagnosticJournal` types. Prefer narrow capability interfaces when those
-  collaborators next need meaningful changes.
 - `src/shared/reporting/site-report.ts` contains both report composition and a
   browser implementation. Split the pure report model from browser execution
   when reporting behavior expands.

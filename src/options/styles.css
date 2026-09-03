@@ -114,13 +114,6 @@ body {
   padding-top: 36px;
 }
 
-.options-reset-confirmation {
-  padding: 16px 18px;
-  border: 1px solid color-mix(in oklch, var(--nma-danger) 45%, var(--nma-border));
-  border-radius: var(--nma-radius);
-  background: var(--nma-danger-soft);
-}
-
 .options-grow {
   flex: 1;
   min-width: 0;

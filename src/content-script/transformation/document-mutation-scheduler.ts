@@ -525,6 +525,9 @@ export class DocumentMutationScheduler {
     /**
      * Registers bounded character-data observation for one discovered label source.
      *
+     * The target is the source itself, a node inside it, or the source's open
+     * shadow root, which `contains` does not see across the shadow boundary.
+     *
      * @param source - Candidate source whose current text controls eligibility.
      * @param target - Smallest current page node containing the candidate label.
      */
@@ -534,7 +537,7 @@ export class DocumentMutationScheduler {
             || source.ownerDocument !== this.input.document
             || target.ownerDocument !== this.input.document
             || !source.isConnected
-            || (source !== target && !source.contains(target))
+            || (source !== target && source.shadowRoot !== target && !source.contains(target))
         ) {
             return;
         }
