@@ -94,6 +94,9 @@ has an obvious, simpler standard-library replacement.
 
 ~~~text
 .
+├── .github/
+│   ├── actions/                # Composite toolchain setup shared by workflows
+│   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
@@ -120,6 +123,7 @@ has an obvious, simpler standard-library replacement.
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
+├── .env.example                # Variable names for the local store commands
 ├── eslint.config.ts            # Lint, style, and JSDoc rules
 ├── rspack.config.ts            # Browser bundle entry points
 ├── tsconfig.json               # Strict TypeScript configuration
@@ -150,9 +154,13 @@ Run commands from the repository root.
 | `pnpm check` | Run lint, type checking, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development
-and release builds. Prefer the direct pnpm commands above. There is no separate
-formatter or development server. Load the relevant artifact from `dist/` as an
-unpacked or temporary extension when manual browser verification is needed.
+and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
+fallbacks that drive the Chrome Web Store with `go-webext` and the gitignored
+`.env`. Prefer the direct pnpm commands above, and the tagged release and
+deployment workflows described in `DEVELOPMENT.md` for real releases. There is
+no separate formatter or development server. Load the relevant artifact from
+`dist/` as an unpacked or temporary extension when manual browser verification
+is needed.
 
 ## Contribution Instructions
 
@@ -440,6 +448,13 @@ Known architectural exclusions to improve when their area changes:
   contracts.
 - Assemble manifests from `src/manifest/common.json` and one browser-specific
   variant. Keep browser differences declarative where possible.
+- Treat the GitHub Release asset names (`no-more-ago-<version>-<browser>.zip`,
+  `no-more-ago-<version>-source.zip`, and `SHA256SUMS.txt`) and the checksum
+  file format (GNU `sha256sum` lines with bare asset names, generated and
+  checked inside the directory holding the assets) as one contract shared by
+  `release.yml`, `deploy-chrome-store.yml` (which selects the Chrome archive
+  by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the README installation
+  steps. Change them together.
 - Keep settings in one typed, schema-versioned document and persist the current
   and previous snapshots together.
 - Route settings writes through the background settings service so concurrent
