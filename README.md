@@ -47,7 +47,9 @@ extension.
   Korean, Lithuanian, Norwegian Bokmål, Dutch, Polish, Brazilian Portuguese,
   European Portuguese, Romanian, Russian, Slovak, Slovenian, Serbian, Swedish,
   Thai, Turkish, Ukrainian, Vietnamese, Simplified Chinese, and Traditional
-  Chinese. Unknown wording fails closed and stays unchanged.
+  Chinese. Unknown wording fails closed and stays unchanged. This
+  recognition set is not the interface-language set: it includes
+  Lithuanian and Slovenian, while the interface adds Bengali and Malay.
 - **Global switch:** enables or disables all timestamp processing.
 - **Run mode:** `All supported sites` runs everywhere except hostnames in
   Excluded sites; `Selected sites only` runs only on hostnames in Allowed
@@ -61,6 +63,9 @@ extension.
 - **Display settings:** choose the date format and time zone used for output.
 - **Appearance:** `System`, `Light`, or `Dark`, chosen in the Settings header
   and applied immediately to the popup and Settings.
+- **Interface language:** the popup and Settings follow the browser's UI
+  language across 40 supported languages, falling back to English for any
+  other. There is no language setting inside the extension.
 - **Debug logs:** optional local diagnostics that can be downloaded for a
   problem report.
 

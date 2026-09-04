@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Thay thế dấu thời gian tương đối đáng tin cậy bằng ngày chính xác.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Cài đặt No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Đã bật tiện ích",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Cài đặt đã được cập nhật ở cửa sổ khác.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Cài đặt hiển thị đã được cập nhật ở cửa sổ khác. Lưu tại đây sẽ thay thế chúng.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Không rõ trạng thái xử lý hiện tại.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Đã đọc được cài đặt, nhưng không thể dọn dẹp trạng thái xử lý trước đó, nên một số trang có thể vẫn bị thay đổi.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Không đọc được cài đặt, nên quá trình xử lý đã bị tắt.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Không có trang nào bị thay đổi.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Hãy báo cáo sự cố, tải xuống nhật ký đã lưu, hoặc khôi phục cài đặt mặc định rồi mở lại cửa sổ bật lên.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Hãy báo cáo sự cố, tải xuống nhật ký đã lưu, hoặc khôi phục cài đặt mặc định.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Không thể lưu thay đổi này. Hãy thử lại.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Tên máy chủ này không hợp lệ. Hãy dùng tên máy chủ chính xác, không có lược đồ, cổng, đường dẫn hay ký tự đại diện.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Danh sách này đã đầy. Hãy xóa một tên máy chủ trước khi thêm tên khác.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Chế độ chạy đã bị thay đổi ở cửa sổ khác, nên thay đổi này không được áp dụng. Các danh sách hiện tại đã được tải lại.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Phản hồi bị gián đoạn. Trạng thái hiện tại đã được tải lại.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Không xác nhận được thay đổi đã lưu hay chưa. Hãy mở lại cửa sổ bật lên và thử lại.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Không xác nhận được thay đổi đã lưu hay chưa. Hãy mở lại cài đặt và thử lại.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Đặt lại tất cả cài đặt",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Xác nhận đặt lại",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Đưa tất cả cài đặt về giá trị mặc định?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Cả hai danh sách trang web, chế độ chạy, cài đặt hiển thị, giao diện và nhật ký gỡ lỗi đã lưu sẽ bị xóa. Không thể hoàn tác thao tác này.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Đặt lại tất cả",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Giữ cài đặt",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Tất cả trang web được hỗ trợ",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Chỉ các trang web đã chọn",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Trang web bị loại trừ",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Trang web được phép",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Đang tải trang web hiện tại…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Trang hiện tại",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Chế độ chạy",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Tạm dừng hoặc tiếp tục tất cả quy tắc trang web.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Đã bật trên trang web này",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Đã bật trên %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Báo cáo trang web này",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Cài đặt",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Đang hoạt động",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Tiện ích đã tắt",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Bị loại trừ trên trang web này",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Chưa chọn cho trang web này",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Không thể chạy trên trang này",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Không thể xử lý trang này",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Không rõ trạng thái xử lý hiện tại",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Cài đặt không khả dụng",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Tắt tùy chọn này sẽ thêm tên máy chủ này vào danh sách Trang web bị loại trừ.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Bật tùy chọn này sẽ xóa tên máy chủ này khỏi danh sách Trang web bị loại trừ.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Tắt tùy chọn này sẽ xóa tên máy chủ này khỏi danh sách Trang web được phép.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Bật tùy chọn này sẽ thêm tên máy chủ này vào danh sách Trang web được phép.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Không tìm thấy trang web hiện tại. Hãy mở lại cửa sổ bật lên và thử lại.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Không thể báo cáo trang này. Hãy mở một trang web HTTP hoặc HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Trang web hiện tại đã thay đổi. Hãy mở lại cửa sổ bật lên và thử lại.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Không thể mở báo cáo một cách an toàn trong cửa sổ riêng tư này.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Tính năng báo cáo trang web không khả dụng trong trình duyệt này.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Không nhận dạng được trang web hoặc tiện ích này. Hãy mở lại cửa sổ bật lên và thử lại.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Một báo cáo trang web đang được mở rồi.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Không thể mở báo cáo trên GitHub. Hãy thử lại.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Một báo cáo GitHub đang được mở rồi.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Không thể mở báo cáo GitHub trong trình duyệt này.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Không thể mở báo cáo GitHub. Hãy kiểm tra ngữ cảnh trình duyệt rồi thử lại.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Đang tải cài đặt…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Cài đặt",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Các mục cài đặt",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Giao diện",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Hệ thống",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Sáng",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Tối",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Không thể lưu giao diện. Hãy thử lại.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Trang web",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Chọn nơi tiện ích chạy, sau đó quản lý các tên máy chủ chính xác cho quy tắc đó.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Quá trình xử lý đang bật trên các trang web được hỗ trợ theo chế độ chạy bên dưới.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Quá trình xử lý đang tạm dừng. Chế độ chạy và cả hai danh sách trang web vẫn được giữ và sẽ áp dụng ngay khi bật xử lý.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Chạy trên",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Mỗi chế độ giữ danh sách riêng. Chuyển chế độ không bao giờ di chuyển tên máy chủ.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Chạy ở mọi nơi trừ các tên máy chủ trong danh sách Trang web bị loại trừ.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Chỉ chạy trên các tên máy chủ trong danh sách Trang web được phép.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Cài đặt trang web không khả dụng. Quá trình xử lý đã tắt.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% trang web|%count% trang web",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Xóa",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Xóa %hostname% khỏi danh sách Trang web bị loại trừ",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Xóa %hostname% khỏi danh sách Trang web được phép",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "Đã thêm %hostname% vào danh sách Trang web bị loại trừ.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "Đã thêm %hostname% vào danh sách Trang web được phép.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Tiện ích vẫn tắt trên đúng các tên máy chủ này.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Loại trừ tên máy chủ",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Loại trừ trang web",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Xóa một tên máy chủ sẽ cho phép tiện ích chạy lại trên đó.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Không có trang web nào bị loại trừ.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Tiện ích chỉ chạy trên đúng các tên máy chủ này.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Cho phép tên máy chủ",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Cho phép trang web",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Xóa một tên máy chủ sẽ tắt tiện ích trên đó trở lại.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Chưa có trang web nào được phép. Tiện ích sẽ vẫn tắt trên mọi trang web cho đến khi bạn thêm một trang.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Hãy nhập tên máy chủ.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Hãy dùng tên máy chủ chính xác, không có lược đồ, cổng hay đường dẫn.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Tên máy chủ này đã có trong danh sách.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Hãy nhập tên máy chủ chính xác, không có https:// hay đường dẫn.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Hiển thị",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Chọn cách hiển thị ngày chính xác.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Đang tải cài đặt hiển thị…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Định dạng ngày",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Hệ thống",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Định dạng tùy chỉnh",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Mẫu định dạng",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Ví dụ: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Múi giờ",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Hệ thống",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Mã định danh múi giờ IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Hãy nhập mã định danh múi giờ IANA, ví dụ America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Xem trước",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Hãy sửa mẫu để xem trước",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Hãy sửa múi giờ để xem trước",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Lưu cài đặt hiển thị",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Cài đặt hiển thị hiện tại không khả dụng trong khi trạng thái xử lý đang được khôi phục.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Cài đặt hiển thị không khả dụng. Quá trình xử lý đã tắt.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Hãy dùng mã định danh múi giờ IANA hợp lệ, không có duyệt đường dẫn.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Hãy dùng mã định danh múi giờ IANA hợp lệ, ví dụ America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Múi giờ này không khả dụng trong trình duyệt hiện tại. Hãy chọn mã định danh khác.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Múi giờ này không hợp lệ hoặc không khả dụng. Hãy nhập mã định danh IANA được hỗ trợ rồi thử lại.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Định dạng ngày không hợp lệ. Hãy sửa mẫu rồi thử lại.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Múi giờ đã lưu không khả dụng trong trình duyệt này. Hãy chọn Hệ thống hoặc một múi giờ khác được hỗ trợ rồi lưu.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Không thể lưu cài đặt hiển thị. Định dạng trước đó của bạn vẫn đang hoạt động. Hãy thử lại.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Phản hồi bị gián đoạn. Cài đặt hiển thị đã được đọc lại.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Đã lưu cài đặt hiển thị, nhưng không thể làm mới một hoặc nhiều trang đang mở. Các ngày mới sẽ dùng cài đặt đã lưu.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Đã lưu cài đặt hiển thị.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Không xác nhận được cài đặt hiển thị đã lưu hay chưa. Hãy mở lại cài đặt và thử lại.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Hãy nhập mẫu định dạng ngày.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Hãy dùng mẫu định dạng ngày dài tối đa %max% ký tự.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Hãy xóa các ký tự điều khiển khỏi mẫu định dạng ngày.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Hãy đóng phần văn bản trong dấu nháy của mẫu định dạng ngày.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Hãy đưa vào ít nhất một mã ngày hoặc giờ, ví dụ yyyy hoặc HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Hãy dùng mã ngày Unicode, ví dụ yyyy thay vì YYYY hoặc DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Hãy dùng mã ngày và giờ Unicode được hỗ trợ trong mẫu.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Định dạng ngày phải tạo ra văn bản hiển thị được.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Chẩn đoán",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Nhật ký được giữ trên thiết bị này và không bao giờ được gửi tự động. Chỉ đính kèm kho lưu trữ đã tải xuống vào báo cáo nếu bạn tự chọn làm vậy.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Đang tải cài đặt gỡ lỗi…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Nhật ký gỡ lỗi không khả dụng. Quá trình xử lý không thay đổi.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Nhật ký gỡ lỗi",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Giữ một bản ghi cục bộ có giới hạn về những gì tiện ích đã làm trên mỗi trang.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Tải xuống nhật ký",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Xóa nhật ký",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Mở vấn đề trên GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Đã tải xuống nhật ký chẩn đoán.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Đã xóa nhật ký chẩn đoán.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Nhật ký gỡ lỗi đang tắt. Hãy bật để dùng dữ liệu chẩn đoán đã lưu.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Chưa có nhật ký chẩn đoán nào để tải xuống.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Nhật ký chẩn đoán đã lưu không hợp lệ. Hãy xóa nhật ký rồi thử lại.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Không đọc được nhật ký chẩn đoán đã lưu. Hãy thử lại sau.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Nhật ký chẩn đoán không khả dụng. Hãy thử lại sau.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Không thể tải xuống cục bộ trong ngữ cảnh này.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Không có mục chẩn đoán nào để tải xuống.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Không thể tạo kho lưu trữ chẩn đoán. Hãy thử lại sau.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Không thể tải xuống kho lưu trữ chẩn đoán. Hãy thử lại sau.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Không thể chuẩn bị kho lưu trữ chẩn đoán. Hãy thử lại sau.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Không thể lưu cài đặt nhật ký gỡ lỗi. Hãy thử lại.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Phản hồi về nhật ký gỡ lỗi bị gián đoạn. Trạng thái hiện tại đã được tải lại.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Không xác nhận được cài đặt nhật ký gỡ lỗi. Hãy mở lại cài đặt và thử lại.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Đặt lại",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Khôi phục chế độ chạy, cả hai danh sách trang web, cài đặt hiển thị, giao diện và chẩn đoán về giá trị mặc định. Nhật ký gỡ lỗi đã lưu sẽ bị xóa.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Không thể đặt lại cài đặt. Cài đặt hiện tại của bạn vẫn đang hoạt động. Hãy thử lại.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Không xác nhận được cài đặt đã được đặt lại hay chưa. Hãy mở lại cài đặt để kiểm tra trạng thái hiện tại.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Không thể đặt lại cài đặt. Quá trình xử lý vẫn tắt. Hãy thử lại.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Không xác nhận được phản hồi đặt lại. Quá trình xử lý vẫn tắt. Hãy thử lại.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

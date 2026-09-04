@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "भरोसेमंद सापेक्ष समय-चिह्नों को सटीक तारीखों से बदलता है।",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago सेटिंग",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "एक्सटेंशन चालू है",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "सेटिंग किसी दूसरी विंडो में अपडेट हुई।",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "प्रदर्शन सेटिंग किसी दूसरी विंडो में अपडेट हुई। यहाँ सहेजने पर वे बदल दी जाएँगी।",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "मौजूदा प्रोसेसिंग स्थिति अज्ञात है।",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "सेटिंग पढ़ ली गई, लेकिन पिछली प्रोसेसिंग स्थिति साफ़ नहीं हो पाई, इसलिए कुछ पेज बदले हुए रह सकते हैं।",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "सेटिंग नहीं पढ़ी जा सकी, इसलिए प्रोसेसिंग बंद है।",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "कोई पेज नहीं बदला जा रहा।",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "समस्या की रिपोर्ट करें, सहेजे गए लॉग डाउनलोड करें, या डिफ़ॉल्ट सेटिंग बहाल करके पॉपअप दोबारा खोलें।",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "समस्या की रिपोर्ट करें, सहेजे गए लॉग डाउनलोड करें, या डिफ़ॉल्ट सेटिंग बहाल करें।",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "यह बदलाव सहेजा नहीं जा सका। दोबारा कोशिश करें।",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "यह होस्टनाम मान्य नहीं है। स्कीम, पोर्ट, पाथ या वाइल्डकार्ड के बिना सटीक होस्टनाम इस्तेमाल करें।",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "यह सूची भर चुकी है। नया जोड़ने से पहले एक होस्टनाम हटाएँ।",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "रन मोड किसी दूसरी विंडो में बदला गया, इसलिए यह बदलाव लागू नहीं हुआ। मौजूदा सूचियाँ फिर से लोड कर दी गईं।",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "प्रतिक्रिया बाधित हुई। मौजूदा स्थिति फिर से लोड कर दी गई।",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "पुष्टि नहीं हो सकी कि बदलाव सहेजा गया या नहीं। पॉपअप दोबारा खोलकर फिर कोशिश करें।",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "पुष्टि नहीं हो सकी कि बदलाव सहेजा गया या नहीं। सेटिंग दोबारा खोलकर फिर कोशिश करें।",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "सभी सेटिंग रीसेट करें",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "रीसेट की पुष्टि करें",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "सभी सेटिंग डिफ़ॉल्ट मानों पर लौटाएँ?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "दोनों साइट सूचियाँ, रन मोड, प्रदर्शन सेटिंग, रूप और सहेजे गए डिबग लॉग हटा दिए जाएँगे। इसे पूर्ववत नहीं किया जा सकता।",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "सब कुछ रीसेट करें",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "सेटिंग बनाए रखें",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "सभी समर्थित साइटें",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "केवल चयनित साइटें",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "बाहर रखी गई साइटें",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "अनुमत साइटें",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "मौजूदा साइट लोड हो रही है…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "मौजूदा पेज",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "रन मोड",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "सभी साइट नियमों को रोकें या फिर से चालू करें।",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "इस साइट पर चालू",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "%hostname% पर चालू",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "इस साइट की रिपोर्ट करें",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "सेटिंग",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "सक्रिय",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "एक्सटेंशन बंद है",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "इस साइट पर बाहर रखा गया",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "इस साइट के लिए चयनित नहीं",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "इस पेज पर नहीं चल सकता",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "यह पेज प्रोसेस नहीं हो सका",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "मौजूदा प्रोसेसिंग स्थिति अज्ञात है",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "सेटिंग उपलब्ध नहीं है",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "इसे बंद करने पर यह होस्टनाम बाहर रखी गई साइटों में जुड़ जाएगा।",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "इसे चालू करने पर यह होस्टनाम बाहर रखी गई साइटों से हट जाएगा।",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "इसे बंद करने पर यह होस्टनाम अनुमत साइटों से हट जाएगा।",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "इसे चालू करने पर यह होस्टनाम अनुमत साइटों में जुड़ जाएगा।",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "मौजूदा साइट नहीं मिली। पॉपअप दोबारा खोलकर फिर कोशिश करें।",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "इस पेज की रिपोर्ट नहीं की जा सकती। कोई HTTP या HTTPS साइट खोलें।",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "मौजूदा साइट बदल गई। पॉपअप दोबारा खोलकर फिर कोशिश करें।",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "इस निजी विंडो में रिपोर्ट सुरक्षित रूप से नहीं खुल सकी।",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "इस ब्राउज़र में साइट रिपोर्टिंग उपलब्ध नहीं है।",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "इस साइट या एक्सटेंशन की पहचान नहीं हो सकी। पॉपअप दोबारा खोलकर फिर कोशिश करें।",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "एक साइट रिपोर्ट पहले से खुल रही है।",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub रिपोर्ट नहीं खुल सकी। दोबारा कोशिश करें।",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "एक GitHub रिपोर्ट पहले से खुल रही है।",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "इस ब्राउज़र में GitHub रिपोर्ट नहीं खुल सकी।",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub रिपोर्ट नहीं खुल सकी। ब्राउज़र संदर्भ जाँचकर दोबारा कोशिश करें।",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "सेटिंग लोड हो रही है…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "सेटिंग",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "सेटिंग अनुभाग",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "रूप",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "सिस्टम",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "हल्का",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "गहरा",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "रूप सहेजा नहीं जा सका। दोबारा कोशिश करें।",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "साइटें",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "चुनें कि एक्सटेंशन कहाँ चले, फिर उस नियम के लिए सटीक होस्टनाम प्रबंधित करें।",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "नीचे दिए रन मोड के अनुसार समर्थित साइटों पर प्रोसेसिंग चालू है।",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "प्रोसेसिंग रुकी हुई है। रन मोड और दोनों साइट सूचियाँ बनी रहती हैं और प्रोसेसिंग चालू होते ही लागू हो जाती हैं।",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "यहाँ चलाएँ",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "हर मोड की अपनी सूची होती है। मोड बदलने से कोई होस्टनाम एक सूची से दूसरी में नहीं जाता।",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "बाहर रखी गई साइटों के होस्टनाम को छोड़कर हर जगह चलाएँ।",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "केवल अनुमत साइटों के होस्टनाम पर चलाएँ।",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "साइट सेटिंग उपलब्ध नहीं है। प्रोसेसिंग बंद है।",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% साइट|%count% साइटें",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "हटाएँ",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "%hostname% को बाहर रखी गई साइटों से हटाएँ",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "%hostname% को अनुमत साइटों से हटाएँ",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% बाहर रखी गई साइटों में जोड़ा गया।",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% अनुमत साइटों में जोड़ा गया।",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "एक्सटेंशन ठीक इन्हीं होस्टनामों पर बंद रहता है।",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "होस्टनाम बाहर रखें",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "साइट बाहर रखें",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "होस्टनाम हटाने पर एक्सटेंशन उस पर फिर से चलने लगता है।",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "कोई साइट बाहर नहीं रखी गई।",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "एक्सटेंशन केवल ठीक इन्हीं होस्टनामों पर चलता है।",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "होस्टनाम की अनुमति दें",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "साइट की अनुमति दें",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "होस्टनाम हटाने पर एक्सटेंशन उस पर फिर से बंद हो जाता है।",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "अभी कोई साइट अनुमत नहीं है। जब तक कोई जोड़ी नहीं जाती, एक्सटेंशन हर साइट पर बंद रहेगा।",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "होस्टनाम दर्ज करें।",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "स्कीम, पोर्ट या पाथ के बिना सटीक होस्टनाम इस्तेमाल करें।",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "यह होस्टनाम पहले से सूची में है।",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "https:// या पाथ के बिना सटीक होस्टनाम दर्ज करें।",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "प्रदर्शन",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "चुनें कि सटीक तारीखें कैसे दिखाई जाएँ।",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "प्रदर्शन सेटिंग लोड हो रही है…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "तारीख प्रारूप",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "सिस्टम",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "कस्टम प्रारूप",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "प्रारूप पैटर्न",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "उदाहरण: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "समय क्षेत्र",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "सिस्टम",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA समय क्षेत्र पहचानकर्ता",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "कोई IANA समय क्षेत्र पहचानकर्ता दर्ज करें, उदाहरण के लिए America/New_York।",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "पूर्वावलोकन",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "पूर्वावलोकन देखने के लिए पैटर्न ठीक करें",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "पूर्वावलोकन देखने के लिए समय क्षेत्र ठीक करें",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "प्रदर्शन सेटिंग सहेजें",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "प्रोसेसिंग स्थिति बहाल होने तक मौजूदा प्रदर्शन सेटिंग उपलब्ध नहीं है।",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "प्रदर्शन सेटिंग उपलब्ध नहीं है। प्रोसेसिंग बंद है।",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "पाथ ट्रैवर्सल के बिना मान्य IANA समय क्षेत्र पहचानकर्ता इस्तेमाल करें।",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "मान्य IANA समय क्षेत्र पहचानकर्ता इस्तेमाल करें, उदाहरण के लिए America/New_York।",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "यह समय क्षेत्र मौजूदा ब्राउज़र में उपलब्ध नहीं है। कोई दूसरा पहचानकर्ता चुनें।",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "यह समय क्षेत्र अमान्य या अनुपलब्ध है। कोई समर्थित IANA पहचानकर्ता दर्ज करके दोबारा कोशिश करें।",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "तारीख प्रारूप अमान्य है। पैटर्न ठीक करके दोबारा कोशिश करें।",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "सहेजा गया समय क्षेत्र इस ब्राउज़र में उपलब्ध नहीं है। सिस्टम या कोई अन्य समर्थित क्षेत्र चुनकर सहेजें।",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "प्रदर्शन सेटिंग सहेजी नहीं जा सकी। आपका पिछला प्रारूप सक्रिय रहेगा। दोबारा कोशिश करें।",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "प्रतिक्रिया बाधित हुई। प्रदर्शन सेटिंग फिर से पढ़ी गई।",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "प्रदर्शन सेटिंग सहेज दी गई, लेकिन एक या अधिक खुले पेज ताज़ा नहीं हो सके। नई तारीखें सहेजी गई सेटिंग का उपयोग करेंगी।",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "प्रदर्शन सेटिंग सहेज दी गई।",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "पुष्टि नहीं हो सकी कि प्रदर्शन सेटिंग सहेजी गई या नहीं। सेटिंग दोबारा खोलकर फिर कोशिश करें।",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "तारीख प्रारूप पैटर्न दर्ज करें।",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "%max% या उससे कम वर्णों का तारीख प्रारूप पैटर्न इस्तेमाल करें।",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "तारीख प्रारूप पैटर्न से नियंत्रण वर्ण हटाएँ।",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "तारीख प्रारूप पैटर्न में उद्धृत पाठ बंद करें।",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "कम से कम एक तारीख या समय टोकन शामिल करें, जैसे yyyy या HH:mm।",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "यूनिकोड तारीख टोकन इस्तेमाल करें, जैसे YYYY या DD के बजाय yyyy।",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "पैटर्न में समर्थित यूनिकोड तारीख और समय टोकन इस्तेमाल करें।",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "तारीख प्रारूप से दिखाई देने वाला पाठ बनना चाहिए।",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "डायग्नोस्टिक्स",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "लॉग इसी डिवाइस पर रहते हैं और कभी अपने आप नहीं भेजे जाते। डाउनलोड किया गया संग्रह रिपोर्ट के साथ तभी संलग्न करें जब आप ऐसा चुनें।",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "डिबग सेटिंग लोड हो रही है…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "डिबग लॉग उपलब्ध नहीं हैं। प्रोसेसिंग अपरिवर्तित रहती है।",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "डिबग लॉग",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "हर पेज पर एक्सटेंशन ने क्या किया, इसका सीमित स्थानीय रिकॉर्ड रखें।",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "लॉग डाउनलोड करें",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "लॉग साफ़ करें",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub पर इशू खोलें",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "डायग्नोस्टिक लॉग डाउनलोड हो गए।",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "डायग्नोस्टिक लॉग साफ़ हो गए।",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "डिबग लॉग बंद हैं। सहेजे गए डायग्नोस्टिक्स इस्तेमाल करने के लिए उन्हें चालू करें।",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "अभी डाउनलोड करने के लिए कोई डायग्नोस्टिक लॉग नहीं है।",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "सहेजे गए डायग्नोस्टिक लॉग अमान्य हैं। लॉग साफ़ करके दोबारा कोशिश करें।",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "सहेजे गए डायग्नोस्टिक लॉग पढ़े नहीं जा सके। बाद में दोबारा कोशिश करें।",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "डायग्नोस्टिक लॉग उपलब्ध नहीं हैं। बाद में दोबारा कोशिश करें।",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "इस संदर्भ में स्थानीय डाउनलोड उपलब्ध नहीं हैं।",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "डाउनलोड करने के लिए कोई डायग्नोस्टिक प्रविष्टि नहीं है।",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "डायग्नोस्टिक संग्रह नहीं बनाया जा सका। बाद में दोबारा कोशिश करें।",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "डायग्नोस्टिक संग्रह डाउनलोड नहीं हो सका। बाद में दोबारा कोशिश करें।",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "डायग्नोस्टिक संग्रह तैयार नहीं हो सका। बाद में दोबारा कोशिश करें।",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "डिबग लॉग सेटिंग सहेजी नहीं जा सकी। दोबारा कोशिश करें।",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "डिबग लॉग से जुड़ी प्रतिक्रिया बाधित हुई। मौजूदा स्थिति फिर से लोड कर दी गई।",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "डिबग लॉग सेटिंग की पुष्टि नहीं हो सकी। सेटिंग दोबारा खोलकर फिर कोशिश करें।",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "रीसेट",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "रन मोड, दोनों साइट सूचियाँ, प्रदर्शन सेटिंग, रूप और डायग्नोस्टिक्स को डिफ़ॉल्ट मानों पर लौटाता है। सहेजे गए डिबग लॉग हटा दिए जाते हैं।",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "सेटिंग रीसेट नहीं हो सकी। आपकी मौजूदा सेटिंग सक्रिय रहेगी। दोबारा कोशिश करें।",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "पुष्टि नहीं हो सकी कि सेटिंग रीसेट हुई या नहीं। मौजूदा स्थिति देखने के लिए सेटिंग दोबारा खोलें।",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "सेटिंग रीसेट नहीं हो सकी। प्रोसेसिंग बंद रहेगी। दोबारा कोशिश करें।",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "रीसेट की प्रतिक्रिया की पुष्टि नहीं हो सकी। प्रोसेसिंग बंद रहेगी। दोबारा कोशिश करें।",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

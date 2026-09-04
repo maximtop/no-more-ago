@@ -7,10 +7,10 @@ import {
     normalizeHostnameInput,
 } from "../shared/settings/hostname";
 import {
-    SITE_SCOPE_LIST_LABEL,
     SITE_SCOPE_MODE,
     type SiteScopeMode,
 } from "../shared/settings/site-scope";
+import type { MessageKey } from "../shared/i18n/translator";
 
 /**
  * Outcome of validating one hostname entered in the Sites form.
@@ -34,44 +34,54 @@ export type HostnameEntryResult =
         readonly ok: false;
 
         /**
-         * Inline message shown beneath the field.
+         * Key of the inline message shown beneath the field.
          */
-        readonly error: string;
+        readonly error: MessageKey;
     };
 
 /**
- * Labels and behavior of the list the active scope mode owns.
+ * Message keys and behavior of the list the active scope mode owns.
  */
 export interface ActiveListCopy {
     /**
-     * Heading above the list.
+     * Key of the heading above the list.
      */
-    readonly title: string;
+    readonly title: MessageKey;
 
     /**
-     * Sentence describing what membership means.
+     * Key of the sentence describing what membership means.
      */
-    readonly description: string;
+    readonly description: MessageKey;
 
     /**
-     * Label of the add-hostname field.
+     * Key of the add-hostname field label.
      */
-    readonly fieldLabel: string;
+    readonly fieldLabel: MessageKey;
 
     /**
-     * Label of the add-hostname submit action.
+     * Key of the add-hostname submit action label.
      */
-    readonly submitLabel: string;
+    readonly submitLabel: MessageKey;
 
     /**
-     * Sentence explaining what removing a hostname from this list does.
+     * Key of the sentence explaining what removing a hostname does.
      */
-    readonly removalEffect: string;
+    readonly removalEffect: MessageKey;
 
     /**
-     * Sentence shown when the list has no entries.
+     * Key of the sentence shown when the list has no entries.
      */
-    readonly emptyState: string;
+    readonly emptyState: MessageKey;
+
+    /**
+     * Key of the remove button's accessible name, which takes a hostname.
+     */
+    readonly removeAria: MessageKey;
+
+    /**
+     * Key of the confirmation announced after a hostname is added.
+     */
+    readonly addedConfirmation: MessageKey;
 
     /**
      * Whether adding a hostname to this list enables processing for it.
@@ -92,16 +102,13 @@ export function validateHostnameEntry(
 ): HostnameEntryResult {
     const hostname = normalizeHostnameInput(value);
     if (hostname.length === 0) {
-        return { ok: false, error: "Enter a hostname." };
+        return { ok: false, error: "sites_error_empty" };
     }
     if (!isCanonicalHostname(hostname)) {
-        return {
-            ok: false,
-            error: "Use an exact hostname without a scheme, port, or path.",
-        };
+        return { ok: false, error: "sites_error_invalid" };
     }
     if (existing.includes(hostname)) {
-        return { ok: false, error: "This hostname is already in the list." };
+        return { ok: false, error: "sites_error_duplicate" };
     }
     return { ok: true, hostname };
 }
@@ -110,28 +117,31 @@ export function validateHostnameEntry(
  * Describes the list the active scope mode owns.
  *
  * @param mode - Active scope mode.
- * @returns - Labels, empty state, and add semantics for that list.
+ * @returns - Message keys, empty state, and add semantics for that list.
  */
 export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
     if (mode === SITE_SCOPE_MODE.SELECTED_ONLY) {
         return {
-            title: SITE_SCOPE_LIST_LABEL[mode],
-            description: "The extension runs only on these exact hostnames.",
-            fieldLabel: "Allow hostname",
-            submitLabel: "Allow site",
-            removalEffect: "Removing a hostname turns the extension off on it again.",
-            emptyState: "No sites are allowed yet. The extension will stay off on every site "
-                + "until one is added.",
+            title: "scope_list_allowed",
+            description: "sites_allowed_description",
+            fieldLabel: "sites_allowed_field_label",
+            submitLabel: "sites_allowed_submit",
+            removalEffect: "sites_allowed_removal_effect",
+            emptyState: "sites_allowed_empty",
+            removeAria: "sites_remove_from_allowed_aria",
+            addedConfirmation: "sites_added_to_allowed",
             addEnables: true,
         };
     }
     return {
-        title: SITE_SCOPE_LIST_LABEL[mode],
-        description: "The extension stays off on these exact hostnames.",
-        fieldLabel: "Exclude hostname",
-        submitLabel: "Exclude site",
-        removalEffect: "Removing a hostname lets the extension run on it again.",
-        emptyState: "No sites are excluded.",
+        title: "scope_list_excluded",
+        description: "sites_excluded_description",
+        fieldLabel: "sites_excluded_field_label",
+        submitLabel: "sites_excluded_submit",
+        removalEffect: "sites_excluded_removal_effect",
+        emptyState: "sites_excluded_empty",
+        removeAria: "sites_remove_from_excluded_aria",
+        addedConfirmation: "sites_added_to_excluded",
         addEnables: false,
     };
 }

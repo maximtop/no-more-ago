@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Sostituisce i timestamp relativi affidabili con date esatte.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Impostazioni di No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Estensione attiva",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Le impostazioni sono state aggiornate in un'altra finestra.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Le impostazioni di visualizzazione sono state aggiornate in un'altra finestra. Salvando qui verranno sostituite.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Lo stato di elaborazione attuale è sconosciuto.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Le impostazioni sono state lette, ma non è stato possibile ripulire lo stato di elaborazione precedente, quindi alcune pagine potrebbero restare modificate.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Non è stato possibile leggere le impostazioni, quindi l'elaborazione è disattivata.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Nessuna pagina viene modificata.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Segnala il problema, scarica i log conservati oppure ripristina le impostazioni predefinite e riapri il popup.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Segnala il problema, scarica i log conservati oppure ripristina le impostazioni predefinite.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Impossibile salvare questa modifica. Riprova.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Questo nome host non è valido. Usa un nome host esatto senza schema, porta, percorso o caratteri jolly.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Questo elenco è pieno. Rimuovi un nome host prima di aggiungerne un altro.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "La modalità di esecuzione è stata cambiata in un'altra finestra, quindi questa modifica non è stata applicata. Gli elenchi attuali sono stati ricaricati.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "La risposta è stata interrotta. Lo stato attuale è stato ricaricato.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Impossibile confermare se la modifica è stata salvata. Riapri il popup e riprova.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Impossibile confermare se la modifica è stata salvata. Riapri le impostazioni e riprova.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Reimposta tutte le impostazioni",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Conferma reimpostazione",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Riportare tutte le impostazioni ai valori predefiniti?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Verranno rimossi entrambi gli elenchi di siti, la modalità di esecuzione, le impostazioni di visualizzazione, l'aspetto e i log di debug conservati. L'operazione non può essere annullata.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Reimposta tutto",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Mantieni le impostazioni",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Tutti i siti supportati",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Solo i siti selezionati",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Siti esclusi",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Siti consentiti",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Caricamento del sito attuale…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Pagina attuale",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Modalità di esecuzione",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Sospendi o riprendi tutte le regole dei siti.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Attiva su questo sito",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Attiva su %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Segnala questo sito",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Impostazioni",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Attiva",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "L'estensione è disattivata",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Esclusa su questo sito",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Non selezionata per questo sito",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Impossibile eseguire su questa pagina",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Impossibile elaborare questa pagina",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Lo stato di elaborazione attuale è sconosciuto",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Impostazioni non disponibili",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Disattivandolo, questo nome host viene aggiunto ai siti esclusi.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Attivandolo, questo nome host viene rimosso dai siti esclusi.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Disattivandolo, questo nome host viene rimosso dai siti consentiti.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Attivandolo, questo nome host viene aggiunto ai siti consentiti.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Impossibile trovare il sito attuale. Riapri il popup e riprova.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Questa pagina non può essere segnalata. Apri un sito HTTP o HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Il sito attuale è cambiato. Riapri il popup e riprova.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Impossibile aprire la segnalazione in modo sicuro in questa finestra privata.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "La segnalazione dei siti non è disponibile in questo browser.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Impossibile identificare questo sito o l'estensione. Riapri il popup e riprova.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Una segnalazione del sito è già in apertura.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Impossibile aprire la segnalazione su GitHub. Riprova.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Una segnalazione GitHub è già in apertura.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Impossibile aprire la segnalazione su GitHub in questo browser.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Impossibile aprire la segnalazione su GitHub. Controlla il contesto del browser e riprova.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Caricamento delle impostazioni…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Impostazioni",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Sezioni delle impostazioni",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Aspetto",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Sistema",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Chiaro",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Scuro",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Impossibile salvare l'aspetto. Riprova.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Siti",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Scegli dove viene eseguita l'estensione, poi gestisci i nomi host esatti per quella regola.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "L'elaborazione è attiva sui siti supportati secondo la modalità di esecuzione qui sotto.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "L'elaborazione è sospesa. La modalità di esecuzione ed entrambi gli elenchi di siti vengono mantenuti e si applicheranno non appena l'elaborazione sarà attivata.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Esegui su",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Ogni modalità mantiene il proprio elenco. Cambiare modalità non sposta mai un nome host.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Esegui ovunque, tranne sui nomi host nei siti esclusi.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Esegui solo sui nomi host nei siti consentiti.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Le impostazioni dei siti non sono disponibili. L'elaborazione è disattivata.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% siti|%count% sito|%count% siti",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Rimuovi",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Rimuovi %hostname% dai siti esclusi",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Rimuovi %hostname% dai siti consentiti",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% è stato aggiunto ai siti esclusi.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% è stato aggiunto ai siti consentiti.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "L'estensione resta disattivata su questi nomi host esatti.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Escludi nome host",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Escludi sito",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Rimuovendo un nome host, l'estensione torna a essere eseguita su di esso.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Nessun sito è escluso.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "L'estensione viene eseguita solo su questi nomi host esatti.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Consenti nome host",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Consenti sito",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Rimuovendo un nome host, l'estensione torna a essere disattivata su di esso.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Non ci sono ancora siti consentiti. L'estensione resterà disattivata su tutti i siti finché non ne verrà aggiunto uno.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Inserisci un nome host.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Usa un nome host esatto senza schema, porta o percorso.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Questo nome host è già presente nell'elenco.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Inserisci un nome host esatto senza https:// o percorso.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Visualizzazione",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Scegli come vengono mostrate le date esatte.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Caricamento delle impostazioni di visualizzazione…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Formato data",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Sistema",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Formato personalizzato",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Schema del formato",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Esempi: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Fuso orario",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Sistema",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Identificatore di fuso orario IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Inserisci un identificatore di fuso orario IANA, ad esempio America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Anteprima",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Correggi lo schema per l'anteprima",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Correggi il fuso orario per l'anteprima",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Salva le impostazioni di visualizzazione",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Le impostazioni di visualizzazione attuali non sono disponibili durante il ripristino dello stato di elaborazione.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Le impostazioni di visualizzazione non sono disponibili. L'elaborazione è disattivata.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Usa un identificatore di fuso orario IANA valido, senza attraversamento di percorsi.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Usa un identificatore di fuso orario IANA valido, ad esempio America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Questo fuso orario non è disponibile nel browser attuale. Scegli un altro identificatore.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Questo fuso orario non è valido o non è disponibile. Inserisci un identificatore IANA supportato e riprova.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Il formato data non è valido. Correggi lo schema e riprova.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Il fuso orario salvato non è disponibile in questo browser. Scegli Sistema o un altro fuso supportato, quindi salva.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Impossibile salvare le impostazioni di visualizzazione. Il formato precedente resta attivo. Riprova.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "La risposta è stata interrotta. Le impostazioni di visualizzazione sono state rilette.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Le impostazioni di visualizzazione sono state salvate, ma una o più pagine aperte non sono state aggiornate. Le nuove date useranno l'impostazione salvata.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Impostazioni di visualizzazione salvate.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Impossibile confermare se le impostazioni di visualizzazione sono state salvate. Riapri le impostazioni e riprova.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Inserisci uno schema di formato data.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Usa uno schema di formato data di massimo %max% caratteri.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Rimuovi i caratteri di controllo dallo schema di formato data.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Chiudi il testo tra virgolette nello schema di formato data.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Includi almeno un token di data o ora, ad esempio yyyy o HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Usa i token data Unicode, ad esempio yyyy invece di YYYY o DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Usa token data e ora Unicode supportati nello schema.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Il formato data deve produrre testo visibile.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostica",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "I log restano su questo dispositivo e non vengono mai inviati automaticamente. Allega un archivio scaricato a una segnalazione solo se lo desideri.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Caricamento delle impostazioni di debug…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "I log di debug non sono disponibili. L'elaborazione resta invariata.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Log di debug",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Mantieni una registrazione locale limitata di ciò che l'estensione ha fatto su ogni pagina.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Scarica i log",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Cancella i log",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Apri un'issue su GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Log diagnostici scaricati.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Log diagnostici cancellati.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "I log di debug sono disattivati. Attivali per usare la diagnostica salvata.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Non ci sono ancora log diagnostici da scaricare.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "I log diagnostici salvati non sono validi. Cancellali e riprova.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Impossibile leggere i log diagnostici salvati. Riprova più tardi.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "I log diagnostici non sono disponibili. Riprova più tardi.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "I download locali non sono disponibili in questo contesto.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Non ci sono voci diagnostiche da scaricare.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Impossibile creare l'archivio diagnostico. Riprova più tardi.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Impossibile scaricare l'archivio diagnostico. Riprova più tardi.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Impossibile preparare l'archivio diagnostico. Riprova più tardi.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Impossibile salvare l'impostazione dei log di debug. Riprova.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "La risposta sui log di debug è stata interrotta. Lo stato attuale è stato ricaricato.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Impossibile confermare l'impostazione dei log di debug. Riapri le impostazioni e riprova.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Reimposta",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Ripristina la modalità di esecuzione, entrambi gli elenchi di siti, le impostazioni di visualizzazione, l'aspetto e la diagnostica ai valori predefiniti. I log di debug conservati vengono rimossi.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Impossibile reimpostare le impostazioni. Le impostazioni attuali restano attive. Riprova.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Impossibile confermare se le impostazioni sono state reimpostate. Riapri le impostazioni per verificarne lo stato attuale.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Impossibile reimpostare le impostazioni. L'elaborazione resta disattivata. Riprova.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Non è stato possibile confermare la risposta alla reimpostazione. L'elaborazione resta disattivata. Riprova.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

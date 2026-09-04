@@ -25,13 +25,12 @@ import {
 } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
-    SITE_SCOPE_LIST_LABEL,
     SITE_SCOPE_MODE,
-    SITE_SCOPE_MODE_LABEL,
     parseSiteScopeMode,
 } from "../shared/settings/site-scope";
-import { GLOBAL_SWITCH_LABEL } from "../shared/ui/copy";
-import { mutationNoticeText } from "../shared/ui/persistence-notice";
+import { t, tPlural, type MessageKey } from "../shared/i18n/translator";
+import { SCOPE_MODE_KEY } from "../shared/ui/copy";
+import { NOTICE_SURFACE, mutationNoticeKey } from "../shared/ui/persistence-notice";
 import { activeListCopy, validateHostnameEntry, type ActiveListCopy } from "./site-scope-form";
 import { SITES_BUSY_KIND, type SitesController } from "./sites-controller";
 
@@ -44,8 +43,6 @@ export interface SitesSectionProps {
      */
     readonly controller: SitesController;
 }
-
-const RETRY_HINT = "Reopen Settings to try again. Current state is unavailable.";
 
 /**
  * Properties for the hostname entry form.
@@ -90,7 +87,7 @@ function HostnameEntryForm({
     onRejected,
 }: HostnameEntryFormProps): ReactElement {
     const [draft, setDraft] = useState("");
-    const [formError, setFormError] = useState<string>();
+    const [formError, setFormError] = useState<MessageKey>();
 
     /**
      * Validates the entry and hands a canonical hostname to the section.
@@ -115,20 +112,20 @@ function HostnameEntryForm({
     return (
         <form onSubmit={onSubmit} noValidate>
             <Text component="label" htmlFor="hostname-entry" size="sm" fw={600}>
-                {copy.fieldLabel}
+                {t(copy.fieldLabel)}
             </Text>
             <Text id="hostname-entry-hint" size="xs" c="dimmed" mb="xs">
-                Enter an exact hostname without https:// or a path.
+                {t("sites_hostname_hint")}
             </Text>
             <Group align="flex-start" gap="sm" wrap="nowrap">
                 <TextInput
                     id="hostname-entry"
                     className="options-grow"
-                    aria-label={copy.fieldLabel}
+                    aria-label={t(copy.fieldLabel)}
                     aria-describedby="hostname-entry-hint"
                     placeholder="example.com"
                     value={draft}
-                    error={formError}
+                    error={formError === undefined ? undefined : t(formError)}
                     autoComplete="off"
                     spellCheck={false}
                     classNames={{ input: "nma-mono options-hostname-input" }}
@@ -138,7 +135,7 @@ function HostnameEntryForm({
                     }}
                 />
                 <Button type="submit" variant="default">
-                    {copy.submitLabel}
+                    {t(copy.submitLabel)}
                 </Button>
             </Group>
         </form>
@@ -155,9 +152,9 @@ interface SiteListProps {
     readonly hosts: readonly string[];
 
     /**
-     * Title of that list, used to label each removal.
+     * Key of the remove button's accessible name, which takes a hostname.
      */
-    readonly title: string;
+    readonly removeAriaKey: MessageKey;
 
     /**
      * Hostname whose removal is in flight, when any.
@@ -182,7 +179,7 @@ interface SiteListProps {
  */
 const SiteList = memo(function SiteList({
     hosts,
-    title,
+    removeAriaKey,
     busyHostname,
     onRemove,
 }: SiteListProps): ReactElement {
@@ -195,12 +192,12 @@ const SiteList = memo(function SiteList({
                         type="button"
                         variant="subtle"
                         loading={busyHostname === hostname}
-                        aria-label={`Remove ${hostname} from ${title}`}
+                        aria-label={t(removeAriaKey, { hostname })}
                         onClick={() => {
                             onRemove(hostname);
                         }}
                     >
-                        Remove
+                        {t("sites_remove_action")}
                     </Button>
                 </li>
             ))}
@@ -246,14 +243,14 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     if (!state || state.availability !== STATE_AVAILABILITY.READY) {
         return (
             <Text role="status">
-                Sites settings are unavailable. Processing is disabled.
+                {t("sites_unavailable")}
             </Text>
         );
     }
     const copy = activeListCopy(state.scopeMode);
     const hosts = controller.activeHostnames;
     const scopeBusy = busy?.kind === SITES_BUSY_KIND.SCOPE;
-    const noticeMessage = mutationNoticeText(notice, RETRY_HINT);
+    const noticeKey = mutationNoticeKey(notice, NOTICE_SURFACE.OPTIONS);
 
     /**
      * Adds a validated hostname and confirms it beside the list.
@@ -265,7 +262,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
         setConfirmation(undefined);
         const added = await controller.changeSiteProcessing(hostname, copy.addEnables);
         if (added) {
-            setConfirmation(`${hostname} was added to ${copy.title}.`);
+            setConfirmation(t(copy.addedConfirmation, { hostname }));
         }
         return added;
     };
@@ -273,36 +270,35 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
         <Stack gap="lg" component="section" aria-labelledby="sites-heading">
             <Box>
                 <Title order={2} id="sites-heading">
-                    Sites
+                    {t("sites_heading")}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    Choose where the extension runs, then manage exact hostnames for that rule.
+                    {t("sites_intro")}
                 </Text>
             </Box>
             <Group justify="space-between" wrap="nowrap" className="nma-row">
                 <Box>
                     <Text size="sm" fw={600}>
-                        {GLOBAL_SWITCH_LABEL}
+                        {t("global_switch_label")}
                     </Text>
                     <Text size="xs" c="dimmed" aria-live="polite">
-                        {state.globalEnabled
-                            ? "Processing is enabled on supported sites under the run mode below."
-                            : "Processing is paused. The run mode and both site lists are kept. "
-                            + "They apply once processing is enabled."}
+                        {t(state.globalEnabled
+                            ? "sites_status_enabled"
+                            : "sites_status_paused")}
                     </Text>
                 </Box>
                 <Switch
                     checked={state.globalEnabled}
                     aria-busy={busy?.kind === SITES_BUSY_KIND.GLOBAL}
-                    aria-label={GLOBAL_SWITCH_LABEL}
+                    aria-label={t("global_switch_label")}
                     onChange={(event) => {
                         void controller.changeGlobal(event.currentTarget.checked);
                     }}
                 />
             </Group>
             <Radio.Group
-                label="Run on"
-                description="Each mode keeps its own list. Switching modes never moves a hostname."
+                label={t("sites_run_on_label")}
+                description={t("sites_run_on_hint")}
                 value={state.scopeMode}
                 onChange={(value) => {
                     const mode = parseSiteScopeMode(value);
@@ -314,16 +310,14 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                 <Stack gap="xs" mt="xs">
                     <Radio
                         value={SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED}
-                        label={SITE_SCOPE_MODE_LABEL[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]}
-                        description={"Run everywhere except hostnames in "
-                            + `${SITE_SCOPE_LIST_LABEL[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]}.`}
+                        label={t(SCOPE_MODE_KEY[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED])}
+                        description={t("sites_mode_all_description")}
                         aria-busy={scopeBusy}
                     />
                     <Radio
                         value={SITE_SCOPE_MODE.SELECTED_ONLY}
-                        label={SITE_SCOPE_MODE_LABEL[SITE_SCOPE_MODE.SELECTED_ONLY]}
-                        description={"Run only on hostnames in "
-                            + `${SITE_SCOPE_LIST_LABEL[SITE_SCOPE_MODE.SELECTED_ONLY]}.`}
+                        label={t(SCOPE_MODE_KEY[SITE_SCOPE_MODE.SELECTED_ONLY])}
+                        description={t("sites_mode_selected_description")}
                         aria-busy={scopeBusy}
                     />
                 </Stack>
@@ -338,13 +332,18 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
             />
             <Box>
                 <Group justify="space-between" align="flex-end">
-                    <Title order={3}>{copy.title}</Title>
+                    <Group gap="xs" align="baseline">
+                        <Title order={3}>{t(copy.title)}</Title>
+                        <Text size="xs" c="dimmed">
+                            {tPlural("sites_count", hosts.length)}
+                        </Text>
+                    </Group>
                     <Text size="xs" c="dimmed">
-                        {copy.description}
+                        {t(copy.description)}
                     </Text>
                 </Group>
                 <Text size="xs" c="dimmed" mt={4}>
-                    {copy.removalEffect}
+                    {t(copy.removalEffect)}
                 </Text>
                 {hosts.length === 0 ? (
                     <Alert
@@ -354,12 +353,12 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                             : "gray"}
                         mt="sm"
                     >
-                        {copy.emptyState}
+                        {t(copy.emptyState)}
                     </Alert>
                 ) : (
                     <SiteList
                         hosts={hosts}
-                        title={copy.title}
+                        removeAriaKey={copy.removeAria}
                         busyHostname={busy?.kind === SITES_BUSY_KIND.SITE
                             ? busy.hostname
                             : undefined}
@@ -372,9 +371,9 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                     </Text>
                 ) : null}
             </Box>
-            {noticeMessage ? (
+            {noticeKey ? (
                 <Alert role="alert" color="red">
-                    {noticeMessage}
+                    {t(noticeKey)}
                 </Alert>
             ) : null}
         </Stack>

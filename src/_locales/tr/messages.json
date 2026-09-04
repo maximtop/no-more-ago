@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Güvenilir göreli zaman damgalarını tam tarihlerle değiştirir.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago ayarları",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Uzantı etkin",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Ayarlar başka bir pencerede güncellendi.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Gösterim ayarları başka bir pencerede güncellendi. Burada kaydetmek onları değiştirir.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Geçerli işleme durumu bilinmiyor.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Ayarlar okundu, ancak önceki işleme durumu temizlenemedi; bu nedenle bazı sayfalar değiştirilmiş kalabilir.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Ayarlar okunamadı, bu nedenle işleme devre dışı bırakıldı.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Hiçbir sayfa değiştirilmiyor.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Sorunu bildirin, saklanan günlükleri indirin veya varsayılan ayarları geri yükleyip açılır pencereyi yeniden açın.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Sorunu bildirin, saklanan günlükleri indirin veya varsayılan ayarları geri yükleyin.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Bu değişiklik kaydedilemedi. Yeniden deneyin.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Bu ana bilgisayar adı geçersiz. Şema, bağlantı noktası, yol veya joker karakter içermeyen tam bir ana bilgisayar adı kullanın.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Bu liste dolu. Yenisini eklemeden önce bir ana bilgisayar adı kaldırın.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Çalışma modu başka bir pencerede değiştirildi, bu nedenle bu değişiklik uygulanmadı. Geçerli listeler yeniden yüklendi.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Yanıt kesildi. Geçerli durum yeniden yüklendi.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Değişikliğin kaydedilip kaydedilmediği doğrulanamadı. Açılır pencereyi yeniden açıp tekrar deneyin.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Değişikliğin kaydedilip kaydedilmediği doğrulanamadı. Ayarları yeniden açıp tekrar deneyin.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Tüm ayarları sıfırla",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Sıfırlamayı onayla",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Tüm ayarlar varsayılan değerlerine döndürülsün mü?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Her iki site listesi, çalışma modu, gösterim ayarları, görünüm ve saklanan hata ayıklama günlükleri kaldırılacak. Bu işlem geri alınamaz.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Tümünü sıfırla",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Ayarları koru",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Desteklenen tüm siteler",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Yalnızca seçili siteler",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Hariç tutulan siteler",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "İzin verilen siteler",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Geçerli site yükleniyor…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Geçerli sayfa",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Çalışma modu",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Tüm site kurallarını duraklatın veya sürdürün.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Bu sitede etkin",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "%hostname% sitesinde etkin",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Bu siteyi bildir",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Ayarlar",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Etkin",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Uzantı kapalı",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Bu sitede hariç tutuldu",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Bu site için seçilmedi",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Bu sayfada çalışamaz",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Bu sayfa işlenemedi",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Geçerli işleme durumu bilinmiyor",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Ayarlar kullanılamıyor",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Kapatmak bu ana bilgisayar adını hariç tutulan sitelere ekler.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Açmak bu ana bilgisayar adını hariç tutulan sitelerden kaldırır.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Kapatmak bu ana bilgisayar adını izin verilen sitelerden kaldırır.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Açmak bu ana bilgisayar adını izin verilen sitelere ekler.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Geçerli site bulunamadı. Açılır pencereyi yeniden açıp tekrar deneyin.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Bu sayfa bildirilemez. Bir HTTP veya HTTPS sitesi açın.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Geçerli site değişti. Açılır pencereyi yeniden açıp tekrar deneyin.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Bildirim bu gizli pencerede güvenle açılamadı.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Site bildirimi bu tarayıcıda kullanılamıyor.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Bu site veya uzantı tanımlanamadı. Açılır pencereyi yeniden açıp tekrar deneyin.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Bir site bildirimi zaten açılıyor.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub bildirimi açılamadı. Yeniden deneyin.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Bir GitHub bildirimi zaten açılıyor.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "GitHub bildirimi bu tarayıcıda açılamadı.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub bildirimi açılamadı. Tarayıcı bağlamını denetleyip yeniden deneyin.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Ayarlar yükleniyor…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Ayarlar",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Ayar bölümleri",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Görünüm",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Sistem",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Açık",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Koyu",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Görünüm kaydedilemedi. Yeniden deneyin.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Siteler",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Uzantının nerede çalışacağını seçin, ardından bu kural için tam ana bilgisayar adlarını yönetin.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "İşleme, aşağıdaki çalışma moduna göre desteklenen sitelerde etkin.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "İşleme duraklatıldı. Çalışma modu ve her iki site listesi korunur ve işleme etkinleştirilir etkinleştirilmez uygulanır.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Şurada çalıştır",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Her modun kendi listesi vardır. Mod değiştirmek bir ana bilgisayar adını asla taşımaz.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Hariç tutulan sitelerdeki ana bilgisayar adları dışında her yerde çalışır.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Yalnızca izin verilen sitelerdeki ana bilgisayar adlarında çalışır.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Site ayarları kullanılamıyor. İşleme devre dışı.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% site|%count% site",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Kaldır",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "%hostname% adını hariç tutulan sitelerden kaldır",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "%hostname% adını izin verilen sitelerden kaldır",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% hariç tutulan sitelere eklendi.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% izin verilen sitelere eklendi.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Uzantı tam olarak bu ana bilgisayar adlarında kapalı kalır.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Ana bilgisayar adını hariç tut",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Siteyi hariç tut",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Bir ana bilgisayar adını kaldırmak uzantının orada yeniden çalışmasını sağlar.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Hariç tutulan site yok.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Uzantı yalnızca tam olarak bu ana bilgisayar adlarında çalışır.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Ana bilgisayar adına izin ver",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Siteye izin ver",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Bir ana bilgisayar adını kaldırmak uzantıyı orada yeniden kapatır.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Henüz izin verilen site yok. Biri eklenene kadar uzantı tüm sitelerde kapalı kalır.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Bir ana bilgisayar adı girin.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Şema, bağlantı noktası veya yol içermeyen tam bir ana bilgisayar adı kullanın.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Bu ana bilgisayar adı zaten listede.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "https:// veya yol olmadan tam bir ana bilgisayar adı girin.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Gösterim",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Tam tarihlerin nasıl gösterileceğini seçin.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Gösterim ayarları yükleniyor…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Tarih biçimi",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Sistem",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Özel biçim",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Biçim deseni",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Örnekler: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Saat dilimi",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Sistem",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA saat dilimi tanımlayıcısı",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Bir IANA saat dilimi tanımlayıcısı girin, örneğin America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Önizleme",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Önizleme için deseni düzeltin",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Önizleme için saat dilimini düzeltin",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Gösterim ayarlarını kaydet",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "İşleme durumu kurtarılırken geçerli gösterim ayarları kullanılamıyor.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Gösterim ayarları kullanılamıyor. İşleme devre dışı.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Yol geçişi içermeyen geçerli bir IANA saat dilimi tanımlayıcısı kullanın.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Geçerli bir IANA saat dilimi tanımlayıcısı kullanın, örneğin America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Bu saat dilimi geçerli tarayıcıda kullanılamıyor. Başka bir tanımlayıcı seçin.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Bu saat dilimi geçersiz veya kullanılamıyor. Desteklenen bir IANA tanımlayıcısı girip yeniden deneyin.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Tarih biçimi geçersiz. Deseni düzeltip yeniden deneyin.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Kaydedilen saat dilimi bu tarayıcıda kullanılamıyor. Sistem'i veya desteklenen başka bir saat dilimini seçip kaydedin.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Gösterim ayarları kaydedilemedi. Önceki biçiminiz etkin kalır. Yeniden deneyin.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Yanıt kesildi. Gösterim ayarları yeniden okundu.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Gösterim ayarları kaydedildi, ancak bir veya daha fazla açık sayfa yenilenemedi. Yeni tarihler kaydedilen ayarı kullanacak.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Gösterim ayarları kaydedildi.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Gösterim ayarlarının kaydedilip kaydedilmediği doğrulanamadı. Ayarları yeniden açıp tekrar deneyin.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Bir tarih biçimi deseni girin.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "En fazla %max% karakterlik bir tarih biçimi deseni kullanın.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Tarih biçimi deseninden denetim karakterlerini kaldırın.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Tarih biçimi desenindeki tırnaklı metni kapatın.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "En az bir tarih veya saat belirteci ekleyin, örneğin yyyy veya HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Unicode tarih belirteçleri kullanın, örneğin YYYY veya DD yerine yyyy.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Desende desteklenen Unicode tarih ve saat belirteçlerini kullanın.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Tarih biçimi görünür metin üretmelidir.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Tanılama",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Günlükler bu cihazda kalır ve asla otomatik olarak gönderilmez. İndirilen bir arşivi bir bildirime yalnızca kendiniz istediğinizde ekleyin.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Hata ayıklama ayarları yükleniyor…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Hata ayıklama günlükleri kullanılamıyor. İşleme değişmeden kalır.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Hata ayıklama günlükleri",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Uzantının her sayfada ne yaptığına dair sınırlı yerel bir kayıt tutar.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Günlükleri indir",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Günlükleri temizle",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub'da sorun kaydı aç",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Tanılama günlükleri indirildi.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Tanılama günlükleri temizlendi.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Hata ayıklama günlükleri kapalı. Kayıtlı tanılamayı kullanmak için açın.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Henüz indirilecek tanılama günlüğü yok.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Kaydedilen tanılama günlükleri geçersiz. Günlükleri temizleyip yeniden deneyin.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Kaydedilen tanılama günlükleri okunamadı. Daha sonra yeniden deneyin.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Tanılama günlükleri kullanılamıyor. Daha sonra yeniden deneyin.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Yerel indirmeler bu bağlamda kullanılamıyor.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "İndirilecek tanılama kaydı yok.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Tanılama arşivi oluşturulamadı. Daha sonra yeniden deneyin.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Tanılama arşivi indirilemedi. Daha sonra yeniden deneyin.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Tanılama arşivi hazırlanamadı. Daha sonra yeniden deneyin.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Hata ayıklama günlükleri ayarı kaydedilemedi. Yeniden deneyin.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Hata ayıklama günlüklerine ilişkin yanıt kesildi. Geçerli durum yeniden yüklendi.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Hata ayıklama günlükleri ayarı doğrulanamadı. Ayarları yeniden açıp tekrar deneyin.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Sıfırlama",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Çalışma modunu, her iki site listesini, gösterim ayarlarını, görünümü ve tanılamayı varsayılan değerlere döndürür. Saklanan hata ayıklama günlükleri kaldırılır.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Ayarlar sıfırlanamadı. Geçerli ayarlarınız etkin kalır. Yeniden deneyin.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Ayarların sıfırlanıp sıfırlanmadığı doğrulanamadı. Geçerli durumlarını denetlemek için ayarları yeniden açın.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Ayarlar sıfırlanamadı. İşleme devre dışı kalır. Yeniden deneyin.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Sıfırlama yanıtı doğrulanamadı. İşleme devre dışı kalır. Yeniden deneyin.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

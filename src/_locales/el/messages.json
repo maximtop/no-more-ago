@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Αντικαθιστά τις αξιόπιστες σχετικές χρονικές ενδείξεις με ακριβείς ημερομηνίες.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Ρυθμίσεις No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Η επέκταση είναι ενεργή",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Οι ρυθμίσεις ενημερώθηκαν σε άλλο παράθυρο.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Οι ρυθμίσεις προβολής ενημερώθηκαν σε άλλο παράθυρο. Η αποθήκευση εδώ θα τις αντικαταστήσει.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Η τρέχουσα κατάσταση επεξεργασίας είναι άγνωστη.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Οι ρυθμίσεις διαβάστηκαν, αλλά η προηγούμενη κατάσταση επεξεργασίας δεν καθαρίστηκε, οπότε ορισμένες σελίδες μπορεί να παραμείνουν τροποποιημένες.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Οι ρυθμίσεις δεν ήταν δυνατό να διαβαστούν, οπότε η επεξεργασία είναι απενεργοποιημένη.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Καμία σελίδα δεν τροποποιείται.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Αναφέρετε το πρόβλημα, κατεβάστε τα αποθηκευμένα αρχεία καταγραφής ή επαναφέρετε τις προεπιλεγμένες ρυθμίσεις και ανοίξτε ξανά το αναδυόμενο παράθυρο.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Αναφέρετε το πρόβλημα, κατεβάστε τα αποθηκευμένα αρχεία καταγραφής ή επαναφέρετε τις προεπιλεγμένες ρυθμίσεις.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Αυτή η αλλαγή δεν αποθηκεύτηκε. Δοκιμάστε ξανά.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Αυτό το όνομα κεντρικού υπολογιστή δεν είναι έγκυρο. Χρησιμοποιήστε ακριβές όνομα χωρίς σχήμα, θύρα, διαδρομή ή χαρακτήρα μπαλαντέρ.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Αυτή η λίστα είναι πλήρης. Αφαιρέστε ένα όνομα κεντρικού υπολογιστή πριν προσθέσετε άλλο.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Η λειτουργία εκτέλεσης άλλαξε σε άλλο παράθυρο, οπότε αυτή η αλλαγή δεν εφαρμόστηκε. Οι τρέχουσες λίστες φορτώθηκαν ξανά.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Η απόκριση διακόπηκε. Η τρέχουσα κατάσταση φορτώθηκε ξανά.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Δεν επιβεβαιώθηκε αν η αλλαγή αποθηκεύτηκε. Ανοίξτε ξανά το αναδυόμενο παράθυρο και δοκιμάστε πάλι.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Δεν επιβεβαιώθηκε αν η αλλαγή αποθηκεύτηκε. Ανοίξτε ξανά τις ρυθμίσεις και δοκιμάστε πάλι.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Επαναφορά όλων των ρυθμίσεων",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Επιβεβαίωση επαναφοράς",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Επαναφορά όλων των ρυθμίσεων στις προεπιλεγμένες τιμές;",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Και οι δύο λίστες ιστοτόπων, η λειτουργία εκτέλεσης, οι ρυθμίσεις προβολής, η εμφάνιση και τα αποθηκευμένα αρχεία καταγραφής εντοπισμού σφαλμάτων θα καταργηθούν. Η ενέργεια δεν αναιρείται.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Επαναφορά όλων",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Διατήρηση ρυθμίσεων",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Όλοι οι υποστηριζόμενοι ιστότοποι",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Μόνο οι επιλεγμένοι ιστότοποι",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Εξαιρεμένοι ιστότοποι",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Επιτρεπόμενοι ιστότοποι",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Φόρτωση τρέχοντος ιστοτόπου…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Τρέχουσα σελίδα",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Λειτουργία εκτέλεσης",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Παύση ή συνέχιση όλων των κανόνων ιστοτόπων.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Ενεργό σε αυτόν τον ιστότοπο",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Ενεργό στο %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Αναφορά αυτού του ιστοτόπου",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Ρυθμίσεις",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Ενεργό",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Η επέκταση είναι ανενεργή",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Εξαιρεμένο σε αυτόν τον ιστότοπο",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Δεν έχει επιλεγεί για αυτόν τον ιστότοπο",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Δεν μπορεί να εκτελεστεί σε αυτήν τη σελίδα",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Δεν ήταν δυνατή η επεξεργασία αυτής της σελίδας",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Η τρέχουσα κατάσταση επεξεργασίας είναι άγνωστη",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Οι ρυθμίσεις δεν είναι διαθέσιμες",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Η απενεργοποίηση προσθέτει αυτό το όνομα στους εξαιρεμένους ιστοτόπους.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Η ενεργοποίηση αφαιρεί αυτό το όνομα από τους εξαιρεμένους ιστοτόπους.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Η απενεργοποίηση αφαιρεί αυτό το όνομα από τους επιτρεπόμενους ιστοτόπους.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Η ενεργοποίηση προσθέτει αυτό το όνομα στους επιτρεπόμενους ιστοτόπους.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Ο τρέχων ιστότοπος δεν βρέθηκε. Ανοίξτε ξανά το αναδυόμενο παράθυρο και δοκιμάστε πάλι.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Αυτή η σελίδα δεν μπορεί να αναφερθεί. Ανοίξτε έναν ιστότοπο HTTP ή HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Ο τρέχων ιστότοπος άλλαξε. Ανοίξτε ξανά το αναδυόμενο παράθυρο και δοκιμάστε πάλι.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Δεν ήταν δυνατό το ασφαλές άνοιγμα της αναφοράς σε αυτό το ιδιωτικό παράθυρο.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Η αναφορά ιστοτόπων δεν είναι διαθέσιμη σε αυτό το πρόγραμμα περιήγησης.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Δεν ήταν δυνατή η αναγνώριση αυτού του ιστοτόπου ή της επέκτασης. Ανοίξτε ξανά το αναδυόμενο παράθυρο και δοκιμάστε πάλι.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Μια αναφορά ιστοτόπου ανοίγει ήδη.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Η αναφορά στο GitHub δεν άνοιξε. Δοκιμάστε ξανά.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Μια αναφορά στο GitHub ανοίγει ήδη.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Η αναφορά στο GitHub δεν άνοιξε σε αυτό το πρόγραμμα περιήγησης.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Η αναφορά στο GitHub δεν άνοιξε. Ελέγξτε το περιβάλλον του προγράμματος περιήγησης και δοκιμάστε ξανά.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Φόρτωση ρυθμίσεων…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Ρυθμίσεις",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Ενότητες ρυθμίσεων",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Εμφάνιση",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Σύστημα",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Ανοιχτό",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Σκούρο",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Η εμφάνιση δεν αποθηκεύτηκε. Δοκιμάστε ξανά.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Ιστότοποι",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Επιλέξτε πού εκτελείται η επέκταση και έπειτα διαχειριστείτε τα ακριβή ονόματα κεντρικών υπολογιστών για αυτόν τον κανόνα.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Η επεξεργασία είναι ενεργή στους υποστηριζόμενους ιστοτόπους σύμφωνα με τη λειτουργία εκτέλεσης παρακάτω.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Η επεξεργασία είναι σε παύση. Η λειτουργία εκτέλεσης και οι δύο λίστες ιστοτόπων διατηρούνται και εφαρμόζονται μόλις ενεργοποιηθεί η επεξεργασία.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Πού εκτελείται",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Κάθε λειτουργία διατηρεί τη δική της λίστα. Η εναλλαγή λειτουργίας δεν μετακινεί ποτέ ένα όνομα.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Εκτέλεση παντού εκτός από τα ονόματα κεντρικού υπολογιστή στους εξαιρεμένους ιστοτόπους.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Εκτέλεση μόνο στα ονόματα κεντρικού υπολογιστή στους επιτρεπόμενους ιστοτόπους.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Οι ρυθμίσεις ιστοτόπων δεν είναι διαθέσιμες. Η επεξεργασία είναι απενεργοποιημένη.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% ιστότοποι|%count% ιστότοπος|%count% ιστότοποι",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Αφαίρεση",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Αφαίρεση του %hostname% από τους εξαιρεμένους ιστοτόπους",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Αφαίρεση του %hostname% από τους επιτρεπόμενους ιστοτόπους",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "Το %hostname% προστέθηκε στους εξαιρεμένους ιστοτόπους.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "Το %hostname% προστέθηκε στους επιτρεπόμενους ιστοτόπους.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Η επέκταση παραμένει ανενεργή σε αυτά ακριβώς τα ονόματα.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Εξαίρεση ονόματος κεντρικού υπολογιστή",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Εξαίρεση ιστοτόπου",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Η αφαίρεση ενός ονόματος επιτρέπει στην επέκταση να εκτελεστεί ξανά εκεί.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Δεν υπάρχουν εξαιρεμένοι ιστότοποι.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Η επέκταση εκτελείται μόνο σε αυτά ακριβώς τα ονόματα.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Να επιτραπεί όνομα κεντρικού υπολογιστή",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Να επιτραπεί ο ιστότοπος",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Η αφαίρεση ενός ονόματος απενεργοποιεί ξανά την επέκταση εκεί.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Δεν υπάρχουν ακόμη επιτρεπόμενοι ιστότοποι. Η επέκταση θα παραμείνει ανενεργή σε όλους τους ιστοτόπους μέχρι να προστεθεί κάποιος.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Εισαγάγετε ένα όνομα κεντρικού υπολογιστή.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Χρησιμοποιήστε ακριβές όνομα κεντρικού υπολογιστή χωρίς σχήμα, θύρα ή διαδρομή.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Αυτό το όνομα κεντρικού υπολογιστή υπάρχει ήδη στη λίστα.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Εισαγάγετε ακριβές όνομα κεντρικού υπολογιστή χωρίς https:// ή διαδρομή.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Προβολή",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Επιλέξτε πώς εμφανίζονται οι ακριβείς ημερομηνίες.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Φόρτωση ρυθμίσεων προβολής…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Μορφή ημερομηνίας",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Σύστημα",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Προσαρμοσμένη μορφή",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Μοτίβο μορφής",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Παραδείγματα: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Ζώνη ώρας",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Σύστημα",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Αναγνωριστικό ζώνης ώρας IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Εισαγάγετε ένα αναγνωριστικό ζώνης ώρας IANA, για παράδειγμα America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Προεπισκόπηση",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Διορθώστε το μοτίβο για προεπισκόπηση",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Διορθώστε τη ζώνη ώρας για προεπισκόπηση",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Αποθήκευση ρυθμίσεων προβολής",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Οι τρέχουσες ρυθμίσεις προβολής δεν είναι διαθέσιμες όσο ανακτάται η κατάσταση επεξεργασίας.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Οι ρυθμίσεις προβολής δεν είναι διαθέσιμες. Η επεξεργασία είναι απενεργοποιημένη.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Χρησιμοποιήστε έγκυρο αναγνωριστικό ζώνης ώρας IANA χωρίς διάσχιση διαδρομών.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Χρησιμοποιήστε έγκυρο αναγνωριστικό ζώνης ώρας IANA, για παράδειγμα America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Αυτή η ζώνη ώρας δεν είναι διαθέσιμη στο τρέχον πρόγραμμα περιήγησης. Επιλέξτε άλλο αναγνωριστικό.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Αυτή η ζώνη ώρας δεν είναι έγκυρη ή διαθέσιμη. Εισαγάγετε υποστηριζόμενο αναγνωριστικό IANA και δοκιμάστε ξανά.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Η μορφή ημερομηνίας δεν είναι έγκυρη. Διορθώστε το μοτίβο και δοκιμάστε ξανά.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Η αποθηκευμένη ζώνη ώρας δεν είναι διαθέσιμη σε αυτό το πρόγραμμα περιήγησης. Επιλέξτε Σύστημα ή άλλη υποστηριζόμενη ζώνη και αποθηκεύστε.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Οι ρυθμίσεις προβολής δεν αποθηκεύτηκαν. Η προηγούμενη μορφή σας παραμένει ενεργή. Δοκιμάστε ξανά.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Η απόκριση διακόπηκε. Οι ρυθμίσεις προβολής διαβάστηκαν ξανά.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Οι ρυθμίσεις προβολής αποθηκεύτηκαν, αλλά μία ή περισσότερες ανοιχτές σελίδες δεν ανανεώθηκαν. Οι νέες ημερομηνίες θα χρησιμοποιούν την αποθηκευμένη ρύθμιση.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Οι ρυθμίσεις προβολής αποθηκεύτηκαν.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Δεν επιβεβαιώθηκε αν οι ρυθμίσεις προβολής αποθηκεύτηκαν. Ανοίξτε ξανά τις ρυθμίσεις και δοκιμάστε πάλι.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Εισαγάγετε ένα μοτίβο μορφής ημερομηνίας.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Χρησιμοποιήστε μοτίβο μορφής ημερομηνίας με έως %max% χαρακτήρες.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Αφαιρέστε τους χαρακτήρες ελέγχου από το μοτίβο μορφής ημερομηνίας.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Κλείστε το κείμενο σε εισαγωγικά μέσα στο μοτίβο μορφής ημερομηνίας.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Συμπεριλάβετε τουλάχιστον ένα διακριτικό ημερομηνίας ή ώρας, για παράδειγμα yyyy ή HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Χρησιμοποιήστε διακριτικά ημερομηνίας Unicode, για παράδειγμα yyyy αντί για YYYY ή DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Χρησιμοποιήστε υποστηριζόμενα διακριτικά ημερομηνίας και ώρας Unicode στο μοτίβο.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Η μορφή ημερομηνίας πρέπει να παράγει ορατό κείμενο.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Διαγνωστικά",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Τα αρχεία καταγραφής παραμένουν σε αυτήν τη συσκευή και δεν υποβάλλονται ποτέ αυτόματα. Επισυνάψτε ένα ληφθέν αρχείο σε μια αναφορά μόνο αν το επιλέξετε εσείς.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Φόρτωση ρυθμίσεων εντοπισμού σφαλμάτων…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Τα αρχεία καταγραφής εντοπισμού σφαλμάτων δεν είναι διαθέσιμα. Η επεξεργασία παραμένει αμετάβλητη.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Αρχεία καταγραφής εντοπισμού σφαλμάτων",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Διατηρεί περιορισμένη τοπική καταγραφή του τι έκανε η επέκταση σε κάθε σελίδα.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Λήψη αρχείων καταγραφής",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Εκκαθάριση αρχείων καταγραφής",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Άνοιγμα ζητήματος στο GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Έγινε λήψη των διαγνωστικών αρχείων καταγραφής.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Τα διαγνωστικά αρχεία καταγραφής εκκαθαρίστηκαν.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Τα αρχεία καταγραφής εντοπισμού σφαλμάτων είναι ανενεργά. Ενεργοποιήστε τα για να χρησιμοποιήσετε τα αποθηκευμένα διαγνωστικά.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Δεν υπάρχουν ακόμη διαγνωστικά αρχεία καταγραφής για λήψη.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Τα αποθηκευμένα διαγνωστικά αρχεία καταγραφής δεν είναι έγκυρα. Εκκαθαρίστε τα και δοκιμάστε ξανά.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Δεν ήταν δυνατή η ανάγνωση των αποθηκευμένων διαγνωστικών αρχείων καταγραφής. Δοκιμάστε αργότερα.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Τα διαγνωστικά αρχεία καταγραφής δεν είναι διαθέσιμα. Δοκιμάστε αργότερα.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Οι τοπικές λήψεις δεν είναι διαθέσιμες σε αυτό το περιβάλλον.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Δεν υπάρχουν διαγνωστικές καταχωρίσεις για λήψη.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Δεν ήταν δυνατή η δημιουργία του διαγνωστικού αρχείου. Δοκιμάστε αργότερα.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Δεν ήταν δυνατή η λήψη του διαγνωστικού αρχείου. Δοκιμάστε αργότερα.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Δεν ήταν δυνατή η προετοιμασία του διαγνωστικού αρχείου. Δοκιμάστε αργότερα.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Η ρύθμιση των αρχείων καταγραφής εντοπισμού σφαλμάτων δεν αποθηκεύτηκε. Δοκιμάστε ξανά.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Η απόκριση για τα αρχεία καταγραφής εντοπισμού σφαλμάτων διακόπηκε. Η τρέχουσα κατάσταση φορτώθηκε ξανά.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Η ρύθμιση των αρχείων καταγραφής εντοπισμού σφαλμάτων δεν επιβεβαιώθηκε. Ανοίξτε ξανά τις ρυθμίσεις και δοκιμάστε πάλι.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Επαναφορά",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Επαναφέρει τη λειτουργία εκτέλεσης, και τις δύο λίστες ιστοτόπων, τις ρυθμίσεις προβολής, την εμφάνιση και τα διαγνωστικά στις προεπιλεγμένες τιμές. Τα αποθηκευμένα αρχεία καταγραφής εντοπισμού σφαλμάτων καταργούνται.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Οι ρυθμίσεις δεν επαναφέρθηκαν. Οι τρέχουσες ρυθμίσεις σας παραμένουν ενεργές. Δοκιμάστε ξανά.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Δεν επιβεβαιώθηκε αν οι ρυθμίσεις επαναφέρθηκαν. Ανοίξτε ξανά τις ρυθμίσεις και ελέγξτε την τρέχουσα κατάστασή τους.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Οι ρυθμίσεις δεν επαναφέρθηκαν. Η επεξεργασία παραμένει απενεργοποιημένη. Δοκιμάστε ξανά.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Η απόκριση στην επαναφορά δεν επιβεβαιώθηκε. Η επεξεργασία παραμένει απενεργοποιημένη. Δοκιμάστε ξανά.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

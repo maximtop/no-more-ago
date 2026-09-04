@@ -5,8 +5,9 @@
 import { Alert, Box, Button, Group, Stack, Switch, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import { t } from "../shared/i18n/translator";
 import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
-import { debugNoticeText, type DiagnosticsController } from "./diagnostics-controller";
+import { debugNoticeKey, type DiagnosticsController } from "./diagnostics-controller";
 
 /**
  * Properties for the diagnostics section.
@@ -27,38 +28,37 @@ export interface DiagnosticsSectionProps {
  */
 export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): ReactElement {
     const { state, diagnosticsNotice } = controller;
-    const debugNotice = debugNoticeText(controller.notice);
+    const debugNotice = debugNoticeKey(controller.notice);
     const ready = !controller.loading && state?.availability === STATE_AVAILABILITY.READY;
     const enabled = ready && state.enabled;
     return (
         <Stack gap="lg" component="section" aria-labelledby="diagnostics-heading">
             <Box>
                 <Title order={2} id="diagnostics-heading">
-                    Diagnostics
+                    {t("diagnostics_heading")}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    Logs stay on this device and are never submitted automatically. Attach a
-                    downloaded archive to a report only if you choose to.
+                    {t("diagnostics_intro")}
                 </Text>
             </Box>
-            {controller.loading ? <Text role="status">Loading debug settings…</Text> : null}
+            {controller.loading ? <Text role="status">{t("diagnostics_loading")}</Text> : null}
             {!controller.loading && state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                 <Text role="status">
-                    Debug logs are unavailable. Processing remains unchanged.
+                    {t("diagnostics_unavailable")}
                 </Text>
             ) : null}
             {ready ? (
                 <Group justify="space-between" wrap="nowrap" className="nma-row">
                     <Box>
                         <Text size="sm" fw={600}>
-                            Debug logs
+                            {t("debug_logs_label")}
                         </Text>
                         <Text size="xs" c="dimmed">
-                            Keep a bounded local record of what the extension did on each page.
+                            {t("debug_logs_hint")}
                         </Text>
                     </Box>
                     <Switch
-                        aria-label="Debug logs"
+                        aria-label={t("debug_logs_label")}
                         checked={state.enabled}
                         aria-busy={controller.saving}
                         onChange={(event) => {
@@ -77,7 +77,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.diagnosticsBusy}
                     disabled={!enabled || controller.diagnosticsBusy}
                 >
-                    Download logs
+                    {t("diagnostics_download")}
                 </Button>
                 <Button
                     type="button"
@@ -88,7 +88,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.diagnosticsBusy}
                     disabled={!enabled || controller.diagnosticsBusy}
                 >
-                    Clear logs
+                    {t("diagnostics_clear")}
                 </Button>
                 <Button
                     type="button"
@@ -99,12 +99,12 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.reporting}
                     disabled={controller.reporting}
                 >
-                    Open GitHub issue
+                    {t("diagnostics_open_issue")}
                 </Button>
             </Group>
             {debugNotice ? (
                 <Alert role="alert" color="red">
-                    {debugNotice}
+                    {t(debugNotice)}
                 </Alert>
             ) : null}
             {diagnosticsNotice ? (
@@ -112,12 +112,12 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     role="status"
                     color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? "signal" : "red"}
                 >
-                    {diagnosticsNotice}
+                    {t(diagnosticsNotice)}
                 </Alert>
             ) : null}
             {controller.reportNotice ? (
                 <Alert role="alert" color="red">
-                    {controller.reportNotice}
+                    {t(controller.reportNotice)}
                 </Alert>
             ) : null}
         </Stack>

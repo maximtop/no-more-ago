@@ -23,6 +23,7 @@
     - [Store Configuration](#store-configuration)
     - [Local Store Commands](#local-store-commands)
   - [Common Tasks](#common-tasks)
+    - [Add or Change a Message](#add-or-change-a-message)
     - [Run a Focused Test](#run-a-focused-test)
     - [Verify the Settings Surfaces](#verify-the-settings-surfaces)
     - [Add or Update a Site Adapter](#add-or-update-a-site-adapter)
@@ -172,8 +173,10 @@ together with the SVG; watch mode does not re-export them.
 | --- | --- |
 | `pnpm lint` | Check TypeScript, style, and required JSDoc. |
 | `pnpm typecheck` | Run strict TypeScript checking without output. |
+| `pnpm locales:validate` | Check the 40 message catalogs against the English source. |
 | `pnpm test` | Run all Vitest tests in JSDOM. |
-| `pnpm check` | Run lint, type checking, and the full test suite. |
+| `pnpm check` | Run lint, type checking, catalog validation, and the full test suite. |
+| `pnpm locales:audit` | Find hardcoded UI copy and orphaned catalog keys. Not part of `pnpm check`. |
 
 Tests live under `tests/src` and `tests/scripts`, mirroring `src` and
 `scripts`. Site fixtures live under
@@ -576,6 +579,22 @@ GitHub Release, while the local upload ships a fresh build of the working
 tree, including uncommitted changes.
 
 ## Common Tasks
+
+### Add or Change a Message
+
+1. Add or edit the key in `src/_locales/en/messages.json`, with both `message`
+   and an English `description` note.
+2. Use it from the UI through `t("key")`, or `tPlural("key", count)` for a
+   counted message. Pass only untranslated values as placeholders: a hostname,
+   a number, a format pattern — never another translated string.
+3. Mirror the key into the other 39 catalogs. Keep the English `description`
+   note byte-identical, and give a plural message the exact number of
+   `|`-separated forms its language needs, zero form first.
+4. Run `pnpm locales:validate` to check registry, key, placeholder, plural and
+   length parity. It is part of `pnpm check`.
+5. Run `pnpm locales:audit` before a release to find hardcoded copy and keys no
+   source references. It reads `src/`, so it is deliberately not part of
+   `pnpm check`.
 
 ### Run a Focused Test
 

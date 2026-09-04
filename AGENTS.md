@@ -42,7 +42,8 @@ classification, semantic validation, presentation, and rendering.
 The extension provides a global switch, a run mode (`All supported sites` or
 `Selected sites only`) with independent Excluded sites and Allowed sites
 lists, date format and time-zone settings, an Appearance choice (`System`,
-`Light`, or `Dark`), and opt-in diagnostic logs. The UI is English-only.
+`Light`, or `Dark`), and opt-in diagnostic logs. The UI ships 40 translated
+locale catalogs and follows the browser UI language, falling back to English.
 Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 
 ## Technical Context
@@ -68,6 +69,14 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Relative labels:** A conservative shared classifier covers 40 confirmed
   locales using current page language and browser locale evidence. Unknown,
   absolute, clock, and absent labels fail closed.
+- **Interface language:** `src/shared/i18n/locales.ts` holds the 40-entry UI
+  registry and the browser-language resolver; `src/shared/i18n/translator.ts`
+  wraps `@adguard/translate` and exposes `t`, `tPlural` and
+  `applyDocumentLocale`. Catalogs live in `src/_locales/<code>/messages.json`.
+  This registry is deliberately independent of
+  `CANONICAL_RELATIVE_TIME_LOCALES`; neither module imports the other, and the
+  two 40-language sets differ. Placeholders carry only untranslated values —
+  hostnames, numbers, format patterns — never another translated string.
 - **Testing:** Vitest with JSDOM and offline HTML fixtures.
 - **Static checks:** ESLint with type-aware TypeScript and JSDoc rules.
 - **Browser targets:** Chrome, Firefox, and Edge.
@@ -105,6 +114,7 @@ has an obvious, simpler standard-library replacement.
 │   │   ├── projection/         # UI read models
 │   │   ├── runtime/            # Script and tab integration
 │   │   └── settings/           # Settings persistence
+│   ├── _locales/               # WebExtension message catalogs, one per UI locale
 │   ├── content-script/         # Page-side timestamp processing
 │   │   ├── adapters/           # Generic and specialized site sources
 │   │   ├── facebook/           # Story payload parser, bridge, and record store
@@ -114,10 +124,13 @@ has an obvious, simpler standard-library replacement.
 │   ├── popup/                  # Toolbar popup
 │   └── shared/                 # Cross-context schemas and contracts
 │       ├── diagnostics/        # Diagnostic contracts, events, archive, and download helper
+│       ├── i18n/               # UI locale registry, resolver, and translation runtime
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
 │       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
 │   ├── build.ts                # Build command entry point
+│   ├── validate-locales.ts     # Catalog integrity check run by pnpm check
+│   ├── audit-locales.ts        # Release-time hardcoded-copy and orphan-key audit
 │   ├── build/                  # Build pipeline and artifacts
 │   └── icons.ts                # Icon PNG export from the SVG master
 ├── tests/

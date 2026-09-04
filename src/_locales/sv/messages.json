@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Ersätter tillförlitliga relativa tidsangivelser med exakta datum.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Inställningar för No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Tillägget aktiverat",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Inställningarna uppdaterades i ett annat fönster.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Visningsinställningarna uppdaterades i ett annat fönster. Om du sparar här ersätts de.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Aktuell bearbetningsstatus är okänd.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Inställningarna lästes, men den tidigare bearbetningsstatusen kunde inte rensas, så vissa sidor kan fortfarande vara ändrade.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Inställningarna kunde inte läsas, så bearbetningen är avstängd.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Ingen sida ändras.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Rapportera problemet, ladda ned sparade loggar eller återställ standardinställningarna och öppna popupfönstret igen.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Rapportera problemet, ladda ned sparade loggar eller återställ standardinställningarna.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Den här ändringen kunde inte sparas. Försök igen.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Det här värdnamnet är ogiltigt. Använd ett exakt värdnamn utan schema, port, sökväg eller jokertecken.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Listan är full. Ta bort ett värdnamn innan du lägger till ett nytt.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Körläget ändrades i ett annat fönster, så den här ändringen tillämpades inte. De aktuella listorna laddades om.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Svaret avbröts. Aktuell status laddades om.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Kunde inte bekräfta om ändringen sparades. Öppna popupfönstret igen och försök på nytt.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Kunde inte bekräfta om ändringen sparades. Öppna inställningarna igen och försök på nytt.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Återställ alla inställningar",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Bekräfta återställning",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Återställa alla inställningar till standardvärdena?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Båda webbplatslistorna, körläget, visningsinställningarna, utseendet och sparade felsökningsloggar tas bort. Detta går inte att ångra.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Återställ allt",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Behåll inställningarna",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Alla webbplatser som stöds",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Endast valda webbplatser",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Undantagna webbplatser",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Tillåtna webbplatser",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Läser in aktuell webbplats…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Aktuell sida",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Körläge",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Pausa eller återuppta alla webbplatsregler.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Aktiverat på den här webbplatsen",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Aktiverat på %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Rapportera webbplatsen",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Inställningar",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktivt",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Tillägget är avstängt",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Undantaget på den här webbplatsen",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Inte valt för den här webbplatsen",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Kan inte köras på den här sidan",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Kunde inte bearbeta den här sidan",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Aktuell bearbetningsstatus är okänd",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Inställningarna är inte tillgängliga",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Om du stänger av den, läggs värdnamnet till bland undantagna webbplatser.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Om du slår på den, tas värdnamnet bort från undantagna webbplatser.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Om du stänger av den, tas värdnamnet bort från tillåtna webbplatser.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Om du slår på den, läggs värdnamnet till bland tillåtna webbplatser.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Den aktuella webbplatsen kunde inte hittas. Öppna popupfönstret igen och försök på nytt.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Den här sidan kan inte rapporteras. Öppna en HTTP- eller HTTPS-webbplats.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Den aktuella webbplatsen ändrades. Öppna popupfönstret igen och försök på nytt.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Rapporten kunde inte öppnas säkert i det här privata fönstret.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Att rapportera webbplatser är inte tillgängligt i den här webbläsaren.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Den här webbplatsen eller tillägget kunde inte identifieras. Öppna popupfönstret igen och försök på nytt.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "En webbplatsrapport öppnas redan.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub-rapporten kunde inte öppnas. Försök igen.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "En GitHub-rapport öppnas redan.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "GitHub-rapporten kunde inte öppnas i den här webbläsaren.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub-rapporten kunde inte öppnas. Kontrollera webbläsarens kontext och försök igen.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Läser in inställningar…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Inställningar",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Inställningsavsnitt",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Utseende",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "System",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Ljust",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Mörkt",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Utseendet kunde inte sparas. Försök igen.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Webbplatser",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Välj var tillägget körs och hantera sedan de exakta värdnamnen för den regeln.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Bearbetning är aktiverad på webbplatser som stöds enligt körläget nedan.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Bearbetningen är pausad. Körläget och båda webbplatslistorna behålls och gäller så snart bearbetningen aktiveras.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Kör på",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Varje läge har en egen lista. Att byta läge flyttar aldrig ett värdnamn.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Kör överallt utom på värdnamn i listan Undantagna webbplatser.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Kör endast på värdnamn i listan Tillåtna webbplatser.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Webbplatsinställningarna är inte tillgängliga. Bearbetningen är avstängd.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% webbplatser|%count% webbplats|%count% webbplatser",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Ta bort",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Ta bort %hostname% från undantagna webbplatser",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Ta bort %hostname% från tillåtna webbplatser",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% lades till bland undantagna webbplatser.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% lades till bland tillåtna webbplatser.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Tillägget förblir avstängt på exakt dessa värdnamn.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Undanta värdnamn",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Undanta webbplats",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Om ett värdnamn tas bort körs tillägget där igen.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Inga webbplatser är undantagna.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Tillägget körs endast på exakt dessa värdnamn.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Tillåt värdnamn",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Tillåt webbplats",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Om ett värdnamn tas bort stängs tillägget av där igen.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Inga webbplatser är tillåtna ännu. Tillägget förblir avstängt på alla webbplatser tills en läggs till.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Ange ett värdnamn.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Använd ett exakt värdnamn utan schema, port eller sökväg.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Värdnamnet finns redan i listan.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Ange ett exakt värdnamn utan https:// eller sökväg.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Visning",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Välj hur exakta datum visas.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Läser in visningsinställningar…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Datumformat",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "System",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Anpassat format",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Formatmönster",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Exempel: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Tidszon",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "System",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA-tidszonsidentifierare",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Ange en IANA-tidszonsidentifierare, till exempel America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Förhandsgranskning",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Rätta mönstret för att förhandsgranska",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Rätta tidszonen för att förhandsgranska",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Spara visningsinställningar",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "De aktuella visningsinställningarna är inte tillgängliga medan bearbetningsstatusen återställs.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Visningsinställningarna är inte tillgängliga. Bearbetningen är avstängd.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Använd en giltig IANA-tidszonsidentifierare utan sökvägstraversering.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Använd en giltig IANA-tidszonsidentifierare, till exempel America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Den här tidszonen är inte tillgänglig i den aktuella webbläsaren. Välj en annan identifierare.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Den här tidszonen är ogiltig eller otillgänglig. Ange en IANA-identifierare som stöds och försök igen.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Datumformatet är ogiltigt. Rätta mönstret och försök igen.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Den sparade tidszonen är inte tillgänglig i den här webbläsaren. Välj System eller en annan tidszon som stöds och spara sedan.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Visningsinställningarna kunde inte sparas. Ditt tidigare format är fortfarande aktivt. Försök igen.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Svaret avbröts. Visningsinställningarna lästes om.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Visningsinställningarna sparades, men en eller flera öppna sidor kunde inte uppdateras. Nya datum använder den sparade inställningen.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Visningsinställningarna sparades.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Kunde inte bekräfta om visningsinställningarna sparades. Öppna inställningarna igen och försök på nytt.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Ange ett datumformatmönster.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Använd ett datumformatmönster med högst %max% tecken.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Ta bort styrtecken från datumformatmönstret.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Avsluta citattecknen i datumformatmönstret.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Inkludera minst en datum- eller tidstoken, till exempel yyyy eller HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Använd Unicode-datumtoken, till exempel yyyy i stället för YYYY eller DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Använd Unicode-datum- och tidstoken som stöds i mönstret.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Datumformatet måste ge synlig text.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostik",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Loggar stannar på den här enheten och skickas aldrig automatiskt. Bifoga ett nedladdat arkiv till en rapport endast om du själv väljer det.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Läser in felsökningsinställningar…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Felsökningsloggarna är inte tillgängliga. Bearbetningen är oförändrad.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Felsökningsloggar",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Behåll en begränsad lokal logg över vad tillägget gjorde på varje sida.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Ladda ned loggar",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Rensa loggar",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Öppna GitHub-issue",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostikloggarna laddades ned.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostikloggarna rensades.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Felsökningsloggarna är avstängda. Slå på dem för att använda sparad diagnostik.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Det finns inga diagnostikloggar att ladda ned ännu.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "De sparade diagnostikloggarna är ogiltiga. Rensa loggarna och försök igen.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "De sparade diagnostikloggarna kunde inte läsas. Försök senare.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostikloggarna är inte tillgängliga. Försök senare.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Lokala nedladdningar är inte tillgängliga i det här sammanhanget.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Det finns inga diagnostikposter att ladda ned.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Diagnostikarkivet kunde inte skapas. Försök senare.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Diagnostikarkivet kunde inte laddas ned. Försök senare.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Diagnostikarkivet kunde inte förberedas. Försök senare.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Inställningen för felsökningsloggar kunde inte sparas. Försök igen.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Svaret om felsökningsloggarna avbröts. Aktuell status laddades om.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Inställningen för felsökningsloggar kunde inte bekräftas. Öppna inställningarna igen och försök på nytt.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Återställning",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Återställ körläget, båda webbplatslistorna, visningsinställningarna, utseendet och diagnostiken till standardvärdena. Sparade felsökningsloggar tas bort.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Inställningarna kunde inte återställas. Dina nuvarande inställningar är fortfarande aktiva. Försök igen.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Kunde inte bekräfta om inställningarna återställdes. Öppna inställningarna igen och kontrollera deras aktuella status.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Inställningarna kunde inte återställas. Bearbetningen är fortfarande avstängd. Försök igen.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Svaret på återställningen kunde inte bekräftas. Bearbetningen är fortfarande avstängd. Försök igen.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

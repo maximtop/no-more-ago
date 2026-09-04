@@ -5,7 +5,7 @@
 import { Alert, Button, Stack, Text } from "@mantine/core";
 import type { ReactElement } from "react";
 import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
-import type { UnavailableSettingsCopy } from "../shared/ui/copy";
+import { t, type MessageKey } from "../shared/i18n/translator";
 import { ResetConfirmation } from "../shared/ui/reset-confirmation";
 import type { NoticePresentation } from "./ready-view";
 
@@ -14,9 +14,19 @@ import type { NoticePresentation } from "./ready-view";
  */
 export interface PopupUnavailablePanelProps {
     /**
-     * Status and consequence of the failure.
+     * Status and consequence sentences describing the failure.
      */
-    readonly copy: UnavailableSettingsCopy;
+    readonly copy: {
+        /**
+         * Sentence naming the failure.
+         */
+        readonly status: string;
+
+        /**
+         * Sentence describing what pages are doing meanwhile.
+         */
+        readonly consequence: string;
+    };
 
     /**
      * Whether a recovery action is in flight.
@@ -49,9 +59,9 @@ export interface PopupUnavailablePanelProps {
     readonly downloading: boolean;
 
     /**
-     * Outcome of the latest log download, when any.
+     * Key of the latest log-download outcome, when any.
      */
-    readonly downloadNotice: string | undefined;
+    readonly downloadNotice: MessageKey | undefined;
 
     /**
      * Opens the settings page and its full recovery view.
@@ -91,11 +101,10 @@ export function PopupUnavailablePanel({
                 {copy.status}
             </Text>
             <Text size="xs" c="dimmed">
-                {copy.consequence} Report the problem, download any retained logs, or
-                restore the default settings and reopen the popup.
+                {copy.consequence} {t("unavailable_recovery_hint")}
             </Text>
             <Button type="button" variant="default" onClick={onReport} disabled={busy}>
-                Open GitHub issue
+                {t("diagnostics_open_issue")}
             </Button>
             <Button
                 type="button"
@@ -104,14 +113,14 @@ export function PopupUnavailablePanel({
                 loading={downloading}
                 disabled={busy || downloading}
             >
-                Download logs
+                {t("diagnostics_download")}
             </Button>
             {downloadNotice ? (
                 <Alert
                     role="status"
                     color={isDiagnosticsSuccessNotice(downloadNotice) ? "signal" : "red"}
                 >
-                    {downloadNotice}
+                    {t(downloadNotice)}
                 </Alert>
             ) : null}
             <ResetConfirmation resetting={busy} onConfirm={onReset} />
@@ -121,7 +130,7 @@ export function PopupUnavailablePanel({
                 </Alert>
             ) : null}
             <Button type="button" variant="subtle" onClick={onOpenSettings}>
-                Settings
+                {t("popup_action_settings")}
             </Button>
         </Stack>
     );

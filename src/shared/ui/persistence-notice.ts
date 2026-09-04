@@ -3,6 +3,7 @@
  */
 
 import { CLIENT_RESULT_KIND, type MutationResult } from "../client-result";
+import type { MessageKey } from "../i18n/translator";
 import {
     SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_ERROR,
@@ -81,35 +82,48 @@ export function settleMutation<TState>(
 }
 
 /**
- * Maps a shared mutation notice to its sentence.
+ * Surface whose wording an ambiguous-outcome notice should use.
+ */
+export const NOTICE_SURFACE = {
+    POPUP: "popup",
+    OPTIONS: "options",
+} as const;
+
+/**
+ * Surface selecting the wording of the ambiguous-outcome notice.
+ */
+export type NoticeSurface = (typeof NOTICE_SURFACE)[keyof typeof NOTICE_SURFACE];
+
+/**
+ * Maps a shared mutation notice to the message key describing it.
  *
  * @param notice - Outcome reported after a settings mutation.
- * @param retryHint - Sentence telling the user how to try again on this surface.
- * @returns - Message to display, or undefined when there is nothing to show.
+ * @param surface - Surface whose retry wording applies.
+ * @returns - Message key to render, or undefined when there is nothing to show.
  */
-export function mutationNoticeText(
+export function mutationNoticeKey(
     notice: MutationNotice,
-    retryHint: string,
-): string | undefined {
+    surface: NoticeSurface,
+): MessageKey | undefined {
     if (notice === MUTATION_NOTICE.SAVE_FAILED) {
-        return "Could not save this change. Try again.";
+        return "notice_save_failed";
     }
     if (notice === MUTATION_NOTICE.INVALID_HOSTNAME) {
-        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, "
-            + "or wildcard.";
+        return "notice_invalid_hostname";
     }
     if (notice === MUTATION_NOTICE.LIST_FULL) {
-        return "This list is full. Remove a hostname before adding another.";
+        return "notice_list_full";
     }
     if (notice === MUTATION_NOTICE.SCOPE_CHANGED) {
-        return "The run mode was changed in another window, so this change was not applied. "
-            + "Current lists were reloaded.";
+        return "notice_scope_changed";
     }
     if (notice === MUTATION_NOTICE.INTERRUPTED) {
-        return "The response was interrupted. Current state was reloaded.";
+        return "notice_interrupted";
     }
     if (notice === MUTATION_NOTICE.UNKNOWN) {
-        return `Could not confirm whether the change was saved. ${retryHint}`;
+        return surface === NOTICE_SURFACE.POPUP
+            ? "notice_unknown_popup"
+            : "notice_unknown_options";
     }
     return undefined;
 }

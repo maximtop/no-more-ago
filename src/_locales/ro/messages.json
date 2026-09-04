@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Înlocuiește marcajele de timp relative de încredere cu date exacte.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Setări No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Extensie activată",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Setările au fost actualizate în altă fereastră.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Setările de afișare au fost actualizate în altă fereastră. Salvarea aici le va înlocui.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Starea curentă a procesării este necunoscută.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Setările au fost citite, dar starea anterioară a procesării nu a putut fi curățată, așa că unele pagini pot rămâne modificate.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Setările nu au putut fi citite, așa că procesarea este dezactivată.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Nicio pagină nu este modificată.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Raportează problema, descarcă jurnalele păstrate sau restaurează setările implicite și redeschide fereastra pop-up.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Raportează problema, descarcă jurnalele păstrate sau restaurează setările implicite.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Această modificare nu a putut fi salvată. Încearcă din nou.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Acest nume de gazdă nu este valid. Folosește un nume de gazdă exact, fără schemă, port, cale sau caracter de înlocuire.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Această listă este plină. Elimină un nume de gazdă înainte de a adăuga altul.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Modul de rulare a fost schimbat în altă fereastră, așa că această modificare nu a fost aplicată. Listele curente au fost reîncărcate.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Răspunsul a fost întrerupt. Starea curentă a fost reîncărcată.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Nu s-a putut confirma dacă modificarea a fost salvată. Redeschide fereastra pop-up și încearcă din nou.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Nu s-a putut confirma dacă modificarea a fost salvată. Redeschide setările și încearcă din nou.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Resetează toate setările",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Confirmă resetarea",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Resetezi toate setările la valorile implicite?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Ambele liste de site-uri, modul de rulare, setările de afișare, aspectul și jurnalele de depanare păstrate vor fi eliminate. Acțiunea nu poate fi anulată.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Resetează tot",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Păstrează setările",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Toate site-urile acceptate",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Doar site-urile selectate",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Site-uri excluse",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Site-uri permise",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Se încarcă site-ul curent…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Pagina curentă",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Mod de rulare",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Suspendă sau reia toate regulile pentru site-uri.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Activată pe acest site",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Activată pe %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Raportează acest site",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Setări",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Activă",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Extensia este dezactivată",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Exclusă pe acest site",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Neselectată pentru acest site",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Nu poate rula pe această pagină",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Această pagină nu a putut fi procesată",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Starea curentă a procesării este necunoscută",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Setări indisponibile",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Dezactivarea adaugă acest nume de gazdă la site-urile excluse.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Activarea elimină acest nume de gazdă din site-urile excluse.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Dezactivarea elimină acest nume de gazdă din site-urile permise.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Activarea adaugă acest nume de gazdă la site-urile permise.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Site-ul curent nu a putut fi găsit. Redeschide fereastra pop-up și încearcă din nou.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Această pagină nu poate fi raportată. Deschide un site HTTP sau HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Site-ul curent s-a schimbat. Redeschide fereastra pop-up și încearcă din nou.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Raportul nu a putut fi deschis în siguranță în această fereastră privată.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Raportarea site-urilor nu este disponibilă în acest browser.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Nu s-au putut identifica acest site sau extensia. Redeschide fereastra pop-up și încearcă din nou.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Un raport de site este deja în curs de deschidere.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Raportul pe GitHub nu a putut fi deschis. Încearcă din nou.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Un raport pe GitHub este deja în curs de deschidere.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Raportul pe GitHub nu a putut fi deschis în acest browser.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Raportul pe GitHub nu a putut fi deschis. Verifică contextul browserului și încearcă din nou.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Se încarcă setările…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Setări",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Secțiuni de setări",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Aspect",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Sistem",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Luminos",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Întunecat",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Aspectul nu a putut fi salvat. Încearcă din nou.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Site-uri",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Alege unde rulează extensia, apoi gestionează numele de gazdă exacte pentru acea regulă.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Procesarea este activată pe site-urile acceptate conform modului de rulare de mai jos.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Procesarea este suspendată. Modul de rulare și ambele liste de site-uri sunt păstrate și se aplică imediat ce procesarea este activată.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Rulează pe",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Fiecare mod își păstrează propria listă. Schimbarea modului nu mută niciodată un nume de gazdă.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Rulează peste tot, cu excepția numelor de gazdă din site-urile excluse.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Rulează doar pe numele de gazdă din site-urile permise.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Setările pentru site-uri sunt indisponibile. Procesarea este dezactivată.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% site-uri|%count% site|%count% site-uri|%count% de site-uri",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Elimină",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Elimină %hostname% din site-urile excluse",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Elimină %hostname% din site-urile permise",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% a fost adăugat la site-urile excluse.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% a fost adăugat la site-urile permise.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Extensia rămâne dezactivată pe aceste nume de gazdă exacte.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Exclude numele de gazdă",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Exclude site-ul",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Eliminarea unui nume de gazdă permite extensiei să ruleze din nou pe el.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Niciun site nu este exclus.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Extensia rulează doar pe aceste nume de gazdă exacte.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Permite numele de gazdă",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Permite site-ul",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Eliminarea unui nume de gazdă dezactivează din nou extensia pe el.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Încă nu există site-uri permise. Extensia va rămâne dezactivată pe toate site-urile până când este adăugat unul.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Introdu un nume de gazdă.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Folosește un nume de gazdă exact, fără schemă, port sau cale.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Acest nume de gazdă este deja în listă.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Introdu un nume de gazdă exact, fără https:// și fără cale.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Afișare",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Alege cum sunt afișate datele exacte.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Se încarcă setările de afișare…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Format dată",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Sistem",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Format personalizat",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Șablon de format",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Exemple: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Fus orar",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Sistem",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Identificator de fus orar IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Introdu un identificator de fus orar IANA, de exemplu America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Previzualizare",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Corectează șablonul pentru previzualizare",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Corectează fusul orar pentru previzualizare",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Salvează setările de afișare",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Setările de afișare curente sunt indisponibile în timp ce starea procesării este recuperată.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Setările de afișare sunt indisponibile. Procesarea este dezactivată.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Folosește un identificator de fus orar IANA valid, fără parcurgerea căilor.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Folosește un identificator de fus orar IANA valid, de exemplu America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Acest fus orar nu este disponibil în browserul curent. Alege alt identificator.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Acest fus orar nu este valid sau este indisponibil. Introdu un identificator IANA acceptat și încearcă din nou.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Formatul datei nu este valid. Corectează șablonul și încearcă din nou.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Fusul orar salvat este indisponibil în acest browser. Alege Sistem sau alt fus acceptat, apoi salvează.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Setările de afișare nu au putut fi salvate. Formatul tău anterior rămâne activ. Încearcă din nou.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Răspunsul a fost întrerupt. Setările de afișare au fost recitite.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Setările de afișare au fost salvate, dar una sau mai multe pagini deschise nu au putut fi reîmprospătate. Datele noi vor folosi setarea salvată.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Setările de afișare au fost salvate.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Nu s-a putut confirma dacă setările de afișare au fost salvate. Redeschide setările și încearcă din nou.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Introdu un șablon de format al datei.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Folosește un șablon de format al datei de cel mult %max% caractere.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Elimină caracterele de control din șablonul de format al datei.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Închide textul citat din șablonul de format al datei.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Include cel puțin un element de dată sau oră, de exemplu yyyy sau HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Folosește elemente de dată Unicode, de exemplu yyyy în loc de YYYY sau DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Folosește în șablon elemente de dată și oră Unicode acceptate.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Formatul datei trebuie să producă text vizibil.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnosticare",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Jurnalele rămân pe acest dispozitiv și nu sunt trimise niciodată automat. Atașează o arhivă descărcată la un raport doar dacă alegi să o faci.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Se încarcă setările de depanare…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Jurnalele de depanare sunt indisponibile. Procesarea rămâne neschimbată.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Jurnale de depanare",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Păstrează o înregistrare locală limitată a ceea ce a făcut extensia pe fiecare pagină.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Descarcă jurnalele",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Șterge jurnalele",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Deschide o problemă pe GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Jurnalele de diagnosticare au fost descărcate.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Jurnalele de diagnosticare au fost șterse.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Jurnalele de depanare sunt dezactivate. Activează-le pentru a folosi diagnosticarea salvată.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Încă nu există jurnale de diagnosticare de descărcat.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Jurnalele de diagnosticare salvate nu sunt valide. Șterge jurnalele și încearcă din nou.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Jurnalele de diagnosticare salvate nu au putut fi citite. Încearcă mai târziu.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Jurnalele de diagnosticare sunt indisponibile. Încearcă mai târziu.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Descărcările locale nu sunt disponibile în acest context.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Nu există intrări de diagnosticare de descărcat.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Arhiva de diagnosticare nu a putut fi creată. Încearcă mai târziu.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Arhiva de diagnosticare nu a putut fi descărcată. Încearcă mai târziu.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Arhiva de diagnosticare nu a putut fi pregătită. Încearcă mai târziu.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Setarea pentru jurnalele de depanare nu a putut fi salvată. Încearcă din nou.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Răspunsul privind jurnalele de depanare a fost întrerupt. Starea curentă a fost reîncărcată.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Setarea pentru jurnalele de depanare nu a putut fi confirmată. Redeschide setările și încearcă din nou.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Resetare",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Readuce modul de rulare, ambele liste de site-uri, setările de afișare, aspectul și diagnosticarea la valorile implicite. Jurnalele de depanare păstrate sunt eliminate.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Setările nu au putut fi resetate. Setările tale actuale rămân active. Încearcă din nou.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Nu s-a putut confirma dacă setările au fost resetate. Redeschide setările pentru a verifica starea lor curentă.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Setările nu au putut fi resetate. Procesarea rămâne dezactivată. Încearcă din nou.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Răspunsul la resetare nu a putut fi confirmat. Procesarea rămâne dezactivată. Încearcă din nou.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

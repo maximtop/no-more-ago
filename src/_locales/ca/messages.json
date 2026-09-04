@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Substitueix les marques de temps relatives fiables per dates exactes.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Configuració de No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Extensió activada",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "La configuració s'ha actualitzat en una altra finestra.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "La configuració de visualització s'ha actualitzat en una altra finestra. Desar aquí la substituirà.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "L'estat actual del processament és desconegut.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "La configuració s'ha llegit, però no s'ha pogut netejar l'estat de processament anterior, de manera que algunes pàgines poden continuar modificades.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "No s'ha pogut llegir la configuració, de manera que el processament està desactivat.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "No es modifica cap pàgina.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Informa del problema, baixa els registres conservats o restaura la configuració predeterminada i torna a obrir la finestra emergent.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Informa del problema, baixa els registres conservats o restaura la configuració predeterminada.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "No s'ha pogut desar aquest canvi. Torna-ho a provar.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Aquest nom d'amfitrió no és vàlid. Fes servir un nom d'amfitrió exacte sense esquema, port, camí ni comodí.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Aquesta llista és plena. Elimina un nom d'amfitrió abans d'afegir-ne un altre.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "El mode d'execució s'ha canviat en una altra finestra, per la qual cosa aquest canvi no s'ha aplicat. S'han tornat a carregar les llistes actuals.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "La resposta s'ha interromput. S'ha tornat a carregar l'estat actual.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "No s'ha pogut confirmar si el canvi s'ha desat. Torna a obrir la finestra emergent i prova-ho de nou.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "No s'ha pogut confirmar si el canvi s'ha desat. Torna a obrir la configuració i prova-ho de nou.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Restableix tota la configuració",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Confirma el restabliment",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Vols restablir tota la configuració als valors predeterminats?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "S'eliminaran les dues llistes de llocs, el mode d'execució, la configuració de visualització, l'aparença i els registres de depuració conservats. Aquesta acció no es pot desfer.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Restableix-ho tot",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Mantén la configuració",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Tots els llocs compatibles",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Només els llocs seleccionats",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Llocs exclosos",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Llocs permesos",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "S'està carregant el lloc actual…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Pàgina actual",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Mode d'execució",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Atura o reprèn totes les regles de llocs.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Activada en aquest lloc",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Activada a %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Informa sobre aquest lloc",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Configuració",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Activa",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "L'extensió està desactivada",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Exclosa en aquest lloc",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "No seleccionada per a aquest lloc",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "No es pot executar en aquesta pàgina",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "No s'ha pogut processar aquesta pàgina",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "L'estat actual del processament és desconegut",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "La configuració no està disponible",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "En desactivar-ho, aquest nom d'amfitrió s'afegeix als llocs exclosos.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "En activar-ho, aquest nom d'amfitrió s'elimina dels llocs exclosos.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "En desactivar-ho, aquest nom d'amfitrió s'elimina dels llocs permesos.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "En activar-ho, aquest nom d'amfitrió s'afegeix als llocs permesos.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "No s'ha pogut trobar el lloc actual. Torna a obrir la finestra emergent i prova-ho de nou.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "No es pot informar sobre aquesta pàgina. Obre un lloc HTTP o HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "El lloc actual ha canviat. Torna a obrir la finestra emergent i prova-ho de nou.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "No s'ha pogut obrir l'informe amb seguretat en aquesta finestra privada.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "La funció d'informar sobre llocs no està disponible en aquest navegador.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "No s'ha pogut identificar aquest lloc ni l'extensió. Torna a obrir la finestra emergent i prova-ho de nou.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Ja s'està obrint un informe de lloc.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "No s'ha pogut obrir l'informe de GitHub. Torna-ho a provar.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Ja s'està obrint un informe de GitHub.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "No s'ha pogut obrir l'informe de GitHub en aquest navegador.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "No s'ha pogut obrir l'informe de GitHub. Comprova el context del navegador i torna-ho a provar.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "S'està carregant la configuració…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Configuració",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Seccions de configuració",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Aparença",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Sistema",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Clara",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Fosca",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "No s'ha pogut desar l'aparença. Torna-ho a provar.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Llocs",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Tria on s'executa l'extensió i després gestiona els noms d'amfitrió exactes per a aquesta regla.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "El processament està activat als llocs compatibles segons el mode d'execució de sota.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "El processament està aturat. El mode d'execució i les dues llistes de llocs es conserven i s'aplicaran quan s'activi el processament.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Executa a",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Cada mode manté la seva pròpia llista. Canviar de mode mai no mou un nom d'amfitrió.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Executa a tot arreu excepte als noms d'amfitrió dels llocs exclosos.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Executa només als noms d'amfitrió dels llocs permesos.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "La configuració de llocs no està disponible. El processament està desactivat.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% llocs|%count% lloc|%count% llocs",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Elimina",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Elimina %hostname% dels llocs exclosos",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Elimina %hostname% dels llocs permesos",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% s'ha afegit als llocs exclosos.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% s'ha afegit als llocs permesos.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "L'extensió continua desactivada en aquests noms d'amfitrió exactes.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Exclou un nom d'amfitrió",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Exclou el lloc",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "En eliminar un nom d'amfitrió, l'extensió hi torna a funcionar.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "No hi ha cap lloc exclòs.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "L'extensió només s'executa en aquests noms d'amfitrió exactes.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Permet un nom d'amfitrió",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Permet el lloc",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "En eliminar un nom d'amfitrió, l'extensió hi torna a quedar desactivada.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Encara no hi ha cap lloc permès. L'extensió continuarà desactivada a tots els llocs fins que se n'afegeixi un.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Introdueix un nom d'amfitrió.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Fes servir un nom d'amfitrió exacte sense esquema, port ni camí.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Aquest nom d'amfitrió ja és a la llista.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Introdueix un nom d'amfitrió exacte sense https:// ni camí.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Visualització",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Tria com es mostren les dates exactes.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "S'està carregant la configuració de visualització…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Format de data",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Sistema",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Format personalitzat",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Patró de format",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Exemples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Fus horari",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Sistema",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Identificador de fus horari IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Introdueix un identificador de fus horari IANA, per exemple America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Vista prèvia",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Corregeix el patró per veure la vista prèvia",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Corregeix el fus horari per veure la vista prèvia",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Desa la configuració de visualització",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "La configuració de visualització actual no està disponible mentre es recupera l'estat del processament.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "La configuració de visualització no està disponible. El processament està desactivat.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Fes servir un identificador de fus horari IANA vàlid, sense recorregut de camins.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Fes servir un identificador de fus horari IANA vàlid, per exemple America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Aquest fus horari no està disponible al navegador actual. Tria un altre identificador.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Aquest fus horari no és vàlid o no està disponible. Introdueix un identificador IANA compatible i torna-ho a provar.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "El format de data no és vàlid. Corregeix el patró i torna-ho a provar.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "El fus horari desat no està disponible en aquest navegador. Tria Sistema o un altre fus compatible i desa.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "No s'ha pogut desar la configuració de visualització. El teu format anterior continua actiu. Torna-ho a provar.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "La resposta s'ha interromput. S'ha tornat a llegir la configuració de visualització.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "La configuració de visualització s'ha desat, però no s'han pogut actualitzar una o més pàgines obertes. Les dates noves faran servir la configuració desada.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Configuració de visualització desada.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "No s'ha pogut confirmar si la configuració de visualització s'ha desat. Torna a obrir la configuració i prova-ho de nou.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Introdueix un patró de format de data.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Fes servir un patró de format de data de com a màxim %max% caràcters.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Elimina els caràcters de control del patró de format de data.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Tanca el text entre cometes del patró de format de data.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Inclou almenys un testimoni de data o hora, per exemple yyyy o HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Fes servir testimonis de data Unicode, per exemple yyyy en lloc de YYYY o DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Fes servir testimonis de data i hora Unicode compatibles al patró.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "El format de data ha de produir text visible.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnòstic",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Els registres es queden en aquest dispositiu i mai no s'envien automàticament. Adjunta un arxiu baixat a un informe només si ho decideixes.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "S'està carregant la configuració de depuració…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Els registres de depuració no estan disponibles. El processament no canvia.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Registres de depuració",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Mantén un registre local acotat del que ha fet l'extensió a cada pàgina.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Baixa els registres",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Esborra els registres",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Obre una incidència a GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Registres de diagnòstic baixats.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Registres de diagnòstic esborrats.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Els registres de depuració estan desactivats. Activa'ls per fer servir el diagnòstic desat.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Encara no hi ha registres de diagnòstic per baixar.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Els registres de diagnòstic desats no són vàlids. Esborra'ls i torna-ho a provar.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "No s'han pogut llegir els registres de diagnòstic desats. Torna-ho a provar més tard.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Els registres de diagnòstic no estan disponibles. Torna-ho a provar més tard.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Les baixades locals no estan disponibles en aquest context.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "No hi ha entrades de diagnòstic per baixar.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "No s'ha pogut crear l'arxiu de diagnòstic. Torna-ho a provar més tard.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "No s'ha pogut baixar l'arxiu de diagnòstic. Torna-ho a provar més tard.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "No s'ha pogut preparar l'arxiu de diagnòstic. Torna-ho a provar més tard.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "No s'ha pogut desar la configuració dels registres de depuració. Torna-ho a provar.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "La resposta sobre els registres de depuració s'ha interromput. S'ha tornat a carregar l'estat actual.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "No s'ha pogut confirmar la configuració dels registres de depuració. Torna a obrir la configuració i prova-ho de nou.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Restabliment",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Restaura el mode d'execució, les dues llistes de llocs, la configuració de visualització, l'aparença i el diagnòstic als valors predeterminats. Els registres de depuració conservats s'eliminen.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "No s'ha pogut restablir la configuració. La teva configuració actual continua activa. Torna-ho a provar.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "No s'ha pogut confirmar si la configuració s'ha restablert. Torna a obrir la configuració per comprovar-ne l'estat actual.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "No s'ha pogut restablir la configuració. El processament continua desactivat. Torna-ho a provar.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "No s'ha pogut confirmar la resposta al restabliment. El processament continua desactivat. Torna-ho a provar.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

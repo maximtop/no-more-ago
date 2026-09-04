@@ -4,6 +4,7 @@
 
 import { Tabs } from "@mantine/core";
 import type { ReactElement, ReactNode } from "react";
+import { t } from "../shared/i18n/translator";
 
 /**
  * Named settings sections in navigation order.
@@ -54,12 +55,14 @@ export function SettingsNavigation({ panels, banner }: SettingsNavigationProps):
             unstyled
         >
             <div className="options-nav">
-                <p className="nma-eyebrow options-nav-title">Settings</p>
-                <Tabs.List className="options-nav-list" aria-label="Settings sections">
-                    <Tabs.Tab value={SETTINGS_SECTION.SITES}>Sites</Tabs.Tab>
-                    <Tabs.Tab value={SETTINGS_SECTION.DISPLAY}>Display</Tabs.Tab>
-                    <Tabs.Tab value={SETTINGS_SECTION.DIAGNOSTICS}>Diagnostics</Tabs.Tab>
-                    <Tabs.Tab value={SETTINGS_SECTION.RESET}>Reset</Tabs.Tab>
+                <p className="nma-eyebrow options-nav-title">{t("options_nav_title")}</p>
+                <Tabs.List className="options-nav-list" aria-label={t("options_nav_aria")}>
+                    <Tabs.Tab value={SETTINGS_SECTION.SITES}>{t("sites_heading")}</Tabs.Tab>
+                    <Tabs.Tab value={SETTINGS_SECTION.DISPLAY}>{t("display_heading")}</Tabs.Tab>
+                    <Tabs.Tab value={SETTINGS_SECTION.DIAGNOSTICS}>
+                        {t("diagnostics_heading")}
+                    </Tabs.Tab>
+                    <Tabs.Tab value={SETTINGS_SECTION.RESET}>{t("reset_heading")}</Tabs.Tab>
                 </Tabs.List>
             </div>
             <div className="options-content">

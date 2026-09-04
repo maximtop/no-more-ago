@@ -2,7 +2,7 @@
  * @file React popup UI for extension status, site controls, and reporting.
  */
 
-import { MantineProvider, Stack, Text, Title } from "@mantine/core";
+import { DirectionProvider, MantineProvider, Stack, Text, Title } from "@mantine/core";
 import { useMemo, useState, type ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import { APPEARANCE } from "../shared/settings/snapshot";
@@ -16,7 +16,8 @@ import type { SubscribeSettingsChanged } from "../shared/messaging/settings-noti
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import { BrandMark } from "../shared/ui/brand-mark";
 import { NO_MORE_AGO_THEME, forcedColorScheme } from "../shared/ui/theme";
-import { unavailableSettingsCopy } from "../shared/ui/copy";
+import { unavailableSettingsKeys } from "../shared/ui/copy";
+import { t, uiDirection, type MessageKey } from "../shared/i18n/translator";
 import type { PopupClient } from "./client";
 import type { PopupState } from "../shared/messaging/view-state-schemas";
 import { usePopupController } from "./popup-controller";
@@ -61,34 +62,34 @@ export interface PopupAppProps {
 }
 
 /**
- * Maps a site-report failure to guidance shown in the popup.
+ * Maps a site-report failure to the guidance key shown in the popup.
  *
  * @param error - Failure returned by the site-report service.
- * @returns - The error message displayed to the user.
+ * @returns - Message key displayed to the user.
  */
-function siteReportErrorText(error: SiteReportError): string {
+function siteReportErrorKey(error: SiteReportError): MessageKey {
     if (error === SITE_REPORT_ERROR.MISSING_TAB) {
-        return "Could not find the current site. Reopen the popup and try again.";
+        return "report_error_missing_tab";
     }
     if (error === SITE_REPORT_ERROR.RESTRICTED_PAGE) {
-        return "This page cannot be reported. Open an HTTP or HTTPS site.";
+        return "report_error_restricted_page";
     }
     if (error === SITE_REPORT_ERROR.HOSTNAME_MISMATCH) {
-        return "The current site changed. Reopen the popup and try again.";
+        return "report_error_hostname_mismatch";
     }
     if (error === SITE_REPORT_ERROR.PRIVATE_WINDOW) {
-        return "Could not safely open the report in this private window.";
+        return "report_error_private_window";
     }
     if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
-        return "Site reporting is unavailable in this browser.";
+        return "report_error_browser_unavailable";
     }
     if (error === SITE_REPORT_ERROR.INVALID_CONTEXT) {
-        return "Could not identify this site or extension. Reopen the popup and try again.";
+        return "report_error_invalid_context";
     }
     if (error === SITE_REPORT_ERROR.BUSY) {
-        return "A site report is already being opened.";
+        return "report_error_busy";
     }
-    return "Could not open the GitHub report. Try again.";
+    return "report_error_generic";
 }
 
 /**
@@ -122,7 +123,7 @@ export function PopupApp({
         [suppliedReporter],
     );
     const [reporting, setReporting] = useState(false);
-    const [reportNotice, setReportNotice] = useState<string>();
+    const [reportNotice, setReportNotice] = useState<MessageKey>();
     const { state } = controller;
     const appearance = state?.appearance ?? APPEARANCE.SYSTEM;
 
@@ -145,10 +146,10 @@ export function PopupApp({
         try {
             const result = await reporter.openPopupReport({ hostname: state.hostname });
             if (!result.ok) {
-                setReportNotice(siteReportErrorText(result.error));
+                setReportNotice(siteReportErrorKey(result.error));
             }
         } catch {
-            setReportNotice("Could not open the GitHub report. Try again.");
+            setReportNotice("report_error_generic");
         } finally {
             setReporting(false);
         }
@@ -162,68 +163,75 @@ export function PopupApp({
     };
 
     return (
-        <MantineProvider
-            theme={NO_MORE_AGO_THEME}
-            defaultColorScheme="auto"
-            {...forcedColorScheme(appearance)}
-        >
-            <main className="popup" aria-label="No More Ago">
-                <header className="popup-header">
-                    <BrandMark size={40} />
-                    <div className="popup-identity">
-                        <Title order={1}>No More Ago</Title>
-                        <p className="popup-hostname nma-mono" title={state?.hostname ?? undefined}>
-                            {state?.hostname ?? "Current page"}
-                        </p>
-                    </div>
-                </header>
-                <Stack gap={0}>
-                    {controller.loading || !state ? (
-                        <Text role="status" className="popup-section">
-                            Loading current site…
-                        </Text>
-                    ) : state.availability !== STATE_AVAILABILITY.READY ? (
-                        <PopupUnavailablePanel
-                            copy={{
-                                status: popupStatusModel(state).text,
-                                consequence: unavailableSettingsCopy(state.failure).consequence,
-                            }}
-                            busy={controller.saving}
-                            notice={noticePresentation(controller.notice)}
-                            onReport={() => {
-                                void reporter.openOptionsReport().catch(() => undefined);
-                            }}
-                            onReset={() => {
-                                void controller.resetAll();
-                            }}
-                            onDownloadLogs={() => {
-                                void controller.downloadLogs();
-                            }}
-                            downloading={controller.downloading}
-                            downloadNotice={controller.downloadNotice}
-                            onOpenSettings={onOpenSettings}
-                        />
-                    ) : (
-                        <PopupReadyView
-                            state={state}
-                            saving={controller.saving}
-                            notice={controller.notice}
-                            reporting={reporting}
-                            reportNotice={reportNotice}
-                            onChangeGlobal={(enabled) => {
-                                void controller.changeGlobal(enabled);
-                            }}
-                            onChangeSite={(enabled) => {
-                                void controller.changeSite(enabled);
-                            }}
-                            onReportSite={() => {
-                                void onReportSite();
-                            }}
-                            onOpenSettings={onOpenSettings}
-                        />
-                    )}
-                </Stack>
-            </main>
-        </MantineProvider>
+        <DirectionProvider initialDirection={uiDirection()} detectDirection={false}>
+            <MantineProvider
+                theme={NO_MORE_AGO_THEME}
+                defaultColorScheme="auto"
+                {...forcedColorScheme(appearance)}
+            >
+                <main className="popup" aria-label={t("extension_name")}>
+                    <header className="popup-header">
+                        <BrandMark size={40} />
+                        <div className="popup-identity">
+                            <Title order={1}>{t("extension_name")}</Title>
+                            <p
+                                className="popup-hostname nma-mono"
+                                title={state?.hostname ?? undefined}
+                            >
+                                {state?.hostname ?? t("popup_current_page")}
+                            </p>
+                        </div>
+                    </header>
+                    <Stack gap={0}>
+                        {controller.loading || !state ? (
+                            <Text role="status" className="popup-section">
+                                {t("popup_loading")}
+                            </Text>
+                        ) : state.availability !== STATE_AVAILABILITY.READY ? (
+                            <PopupUnavailablePanel
+                                copy={{
+                                    status: t(popupStatusModel(state).key),
+                                    consequence: t(
+                                        unavailableSettingsKeys(state.failure).consequence,
+                                    ),
+                                }}
+                                busy={controller.saving}
+                                notice={noticePresentation(controller.notice)}
+                                onReport={() => {
+                                    void reporter.openOptionsReport().catch(() => undefined);
+                                }}
+                                onReset={() => {
+                                    void controller.resetAll();
+                                }}
+                                onDownloadLogs={() => {
+                                    void controller.downloadLogs();
+                                }}
+                                downloading={controller.downloading}
+                                downloadNotice={controller.downloadNotice}
+                                onOpenSettings={onOpenSettings}
+                            />
+                        ) : (
+                            <PopupReadyView
+                                state={state}
+                                saving={controller.saving}
+                                notice={controller.notice}
+                                reporting={reporting}
+                                reportNotice={reportNotice}
+                                onChangeGlobal={(enabled) => {
+                                    void controller.changeGlobal(enabled);
+                                }}
+                                onChangeSite={(enabled) => {
+                                    void controller.changeSite(enabled);
+                                }}
+                                onReportSite={() => {
+                                    void onReportSite();
+                                }}
+                                onOpenSettings={onOpenSettings}
+                            />
+                        )}
+                    </Stack>
+                </main>
+            </MantineProvider>
+        </DirectionProvider>
     );
 }

@@ -14,10 +14,11 @@ import {
 import { CLIENT_RESULT_KIND } from "../shared/client-result";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import {
-    DIAGNOSTICS_CLEARED_NOTICE,
-    diagnosticsErrorText,
+    DIAGNOSTICS_CLEARED_KEY,
+    diagnosticsErrorKey,
     downloadDiagnosticsSnapshot,
 } from "../shared/diagnostics/download";
+import type { MessageKey } from "../shared/i18n/translator";
 import {
     SITE_REPORT_ERROR,
     type SiteReportError,
@@ -40,20 +41,20 @@ export const DEBUG_NOTICE = {
 export type DebugNotice = (typeof DEBUG_NOTICE)[keyof typeof DEBUG_NOTICE] | undefined;
 
 /**
- * Maps a Debug logs outcome to its user-visible error message.
+ * Maps a Debug logs outcome to the message key describing it.
  *
  * @param notice - Outcome reported after changing the Debug logs setting.
- * @returns - An error message, or undefined when there is no notice to show.
+ * @returns - Message key, or undefined when there is no notice to show.
  */
-export function debugNoticeText(notice: DebugNotice): string | undefined {
+export function debugNoticeKey(notice: DebugNotice): MessageKey | undefined {
     if (notice === DEBUG_NOTICE.SAVE_FAILED) {
-        return "Could not save the Debug logs setting. Try again.";
+        return "debug_error_save_failed";
     }
     if (notice === DEBUG_NOTICE.INTERRUPTED) {
-        return "The Debug logs response was interrupted. Current state was reloaded.";
+        return "debug_error_interrupted";
     }
     if (notice === DEBUG_NOTICE.UNKNOWN) {
-        return "Could not confirm the Debug logs setting. Reopen Settings to try again.";
+        return "debug_error_unknown";
     }
     return undefined;
 }
@@ -115,7 +116,7 @@ export interface DiagnosticsController {
     /**
      * Latest diagnostic archive or clear result shown to the user.
      */
-    readonly diagnosticsNotice: string | undefined;
+    readonly diagnosticsNotice: MessageKey | undefined;
 
     /**
      * Whether a GitHub report is being opened.
@@ -125,7 +126,7 @@ export interface DiagnosticsController {
     /**
      * Latest failure encountered while opening a GitHub report.
      */
-    readonly reportNotice: string | undefined;
+    readonly reportNotice: MessageKey | undefined;
 
     /**
      * Changes whether bounded diagnostic logging is enabled.
@@ -177,22 +178,22 @@ export interface DiagnosticsController {
 }
 
 /**
- * Maps a site-report failure to guidance shown in settings.
+ * Maps a site-report failure to the guidance key shown in settings.
  *
  * @param error - Failure returned by the site-report service.
- * @returns - The error message displayed to the user.
+ * @returns - Message key displayed to the user.
  */
-function siteReportErrorText(error: SiteReportError): string {
+function siteReportErrorKey(error: SiteReportError): MessageKey {
     if (error === SITE_REPORT_ERROR.BUSY) {
-        return "A GitHub report is already being opened.";
+        return "report_error_busy_options";
     }
     if (error === SITE_REPORT_ERROR.OPEN_FAILED) {
-        return "Could not open the GitHub report. Try again.";
+        return "report_error_generic";
     }
     if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
-        return "Could not open the GitHub report in this browser.";
+        return "report_error_browser";
     }
-    return "Could not open the GitHub report. Check the browser context and try again.";
+    return "report_error_context";
 }
 
 /**
@@ -210,9 +211,9 @@ export function useDiagnosticsController(
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState<DebugNotice>();
     const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
-    const [diagnosticsNotice, setDiagnosticsNotice] = useState<string>();
+    const [diagnosticsNotice, setDiagnosticsNotice] = useState<MessageKey>();
     const [reporting, setReporting] = useState(false);
-    const [reportNotice, setReportNotice] = useState<string>();
+    const [reportNotice, setReportNotice] = useState<MessageKey>();
     const debugInFlight = useRef(false);
     const diagnosticsInFlight = useRef(false);
     const reportInFlight = useRef(false);
@@ -332,8 +333,8 @@ export function useDiagnosticsController(
             const result = await client.clearDiagnostics();
             setDiagnosticsNotice(
                 result.kind === CLIENT_RESULT_KIND.ERROR
-                    ? diagnosticsErrorText(result.error)
-                    : DIAGNOSTICS_CLEARED_NOTICE,
+                    ? diagnosticsErrorKey(result.error)
+                    : DIAGNOSTICS_CLEARED_KEY,
             );
         } finally {
             diagnosticsInFlight.current = false;
@@ -356,10 +357,10 @@ export function useDiagnosticsController(
         try {
             const result = await reporter.openOptionsReport();
             if (!result.ok) {
-                setReportNotice(siteReportErrorText(result.error));
+                setReportNotice(siteReportErrorKey(result.error));
             }
         } catch {
-            setReportNotice("Could not open the GitHub report. Try again.");
+            setReportNotice("report_error_generic");
         } finally {
             reportInFlight.current = false;
             setReporting(false);

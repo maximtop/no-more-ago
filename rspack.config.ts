@@ -12,7 +12,8 @@ import {
     OPTIONS_PAGE_FILE,
     POPUP_PAGE_FILE,
 } from "./src/shared/extension-files.ts";
-import { BUILD_MODE, isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
+import { CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from "./src/shared/i18n/locales.ts";
+import { BROWSER, BUILD_MODE, isBrowser, isBuildMode } from "./scripts/build/contracts.ts";
 
 /**
  * Loads a trusted build-time JSON file and returns its object representation.
@@ -41,6 +42,19 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     );
     const popupHtmlPath = path.join(workspaceRoot, "src/popup", POPUP_PAGE_FILE);
     const optionsHtmlPath = path.join(workspaceRoot, "src/options", OPTIONS_PAGE_FILE);
+
+    /**
+     * Resolves one locale catalog inside the workspace.
+     *
+     * @param code - Locale directory code.
+     * @returns - Absolute path to that catalog.
+     */
+    const catalogPath = (code: string): string =>
+        path.join(workspaceRoot, `src/_locales/${code}/messages.json`);
+    const catalogCodes = UI_LOCALES.map(({ code }) => code);
+    const aliasEntries = browser === BROWSER.FIREFOX
+        ? []
+        : Object.entries(CHROMIUM_LOCALE_ALIAS);
     return {
         apply(compiler: any): void {
             compiler.hooks.thisCompilation.tap("NoMoreAgoMetadata", (compilation: any) => {
@@ -51,6 +65,7 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
                     popupHtmlPath,
                     optionsHtmlPath,
                     ...iconPaths,
+                    ...catalogCodes.map(catalogPath),
                 ]) {
                     compilation.fileDependencies.add(file);
                 }
@@ -85,6 +100,18 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
                             compilation.emitAsset(
                                 `icons/${EXTENSION_ICON_BASENAME}-${size}.png`,
                                 new sources.RawSource(readFileSync(file)),
+                            );
+                        }
+                        for (const code of catalogCodes) {
+                            compilation.emitAsset(
+                                `_locales/${code}/messages.json`,
+                                new sources.RawSource(readFileSync(catalogPath(code))),
+                            );
+                        }
+                        for (const [alias, source] of aliasEntries) {
+                            compilation.emitAsset(
+                                `_locales/${alias}/messages.json`,
+                                new sources.RawSource(readFileSync(catalogPath(source))),
                             );
                         }
                     },

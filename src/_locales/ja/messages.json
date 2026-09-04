@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "信頼できる相対タイムスタンプを正確な日付に置き換えます。",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago の設定",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "拡張機能を有効にする",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "設定が別のウィンドウで更新されました。",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "表示設定が別のウィンドウで更新されました。ここで保存すると上書きされます。",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "現在の処理状態は不明です。",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "設定は読み込めましたが、以前の処理状態をクリーンアップできなかったため、一部のページは変更されたままの可能性があります。",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "設定を読み込めなかったため、処理を無効にしました。",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "変更されているページはありません。",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "問題を報告するか、保持されているログをダウンロードするか、既定の設定に戻してポップアップを開き直してください。",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "問題を報告するか、保持されているログをダウンロードするか、既定の設定に戻してください。",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "この変更を保存できませんでした。もう一度お試しください。",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "このホスト名は無効です。スキーム、ポート、パス、ワイルドカードを含まない正確なホスト名を入力してください。",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "このリストは満杯です。追加する前にホスト名を削除してください。",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "実行モードが別のウィンドウで変更されたため、この変更は適用されませんでした。現在のリストを再読み込みしました。",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "応答が中断されました。現在の状態を再読み込みしました。",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "変更が保存されたかどうか確認できませんでした。ポップアップを開き直してもう一度お試しください。",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "変更が保存されたかどうか確認できませんでした。設定を開き直してもう一度お試しください。",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "すべての設定をリセット",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "リセットの確認",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "すべての設定を既定値に戻しますか？",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "両方のサイトリスト、実行モード、表示設定、外観、保持されているデバッグログが削除されます。この操作は元に戻せません。",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "すべてリセット",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "設定を保持",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "対応しているすべてのサイト",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "選択したサイトのみ",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "除外サイト",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "許可サイト",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "現在のサイトを読み込み中…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "現在のページ",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "実行モード",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "すべてのサイトルールを一時停止または再開します。",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "このサイトで有効",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "%hostname% で有効",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "このサイトを報告",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "設定",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "動作中",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "拡張機能はオフです",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "このサイトでは除外されています",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "このサイトは選択されていません",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "このページでは動作できません",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "このページを処理できませんでした",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "現在の処理状態は不明です",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "設定を利用できません",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "オフにすると、このホスト名が除外サイトに追加されます。",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "オンにすると、このホスト名が除外サイトから削除されます。",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "オフにすると、このホスト名が許可サイトから削除されます。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "オンにすると、このホスト名が許可サイトに追加されます。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "現在のサイトが見つかりませんでした。ポップアップを開き直してもう一度お試しください。",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "このページは報告できません。HTTP または HTTPS のサイトを開いてください。",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "現在のサイトが変わりました。ポップアップを開き直してもう一度お試しください。",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "このプライベートウィンドウでは報告を安全に開けませんでした。",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "このブラウザではサイトの報告を利用できません。",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "このサイトまたは拡張機能を識別できませんでした。ポップアップを開き直してもう一度お試しください。",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "サイトの報告をすでに開いています。",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub の報告を開けませんでした。もう一度お試しください。",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "GitHub の報告をすでに開いています。",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "このブラウザでは GitHub の報告を開けませんでした。",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub の報告を開けませんでした。ブラウザの状態を確認してもう一度お試しください。",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "設定を読み込み中…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "設定",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "設定のセクション",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "外観",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "システム",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "ライト",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "ダーク",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "外観を保存できませんでした。もう一度お試しください。",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "サイト",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "拡張機能を動作させる範囲を選び、そのルールの正確なホスト名を管理します。",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "以下の実行モードに従って、対応しているサイトで処理が有効になっています。",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "処理は一時停止中です。実行モードと両方のサイトリストは保持され、処理を有効にすると適用されます。",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "実行対象",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "各モードは独自のリストを保持します。モードを切り替えてもホスト名は移動しません。",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "除外サイトのホスト名を除き、すべての場所で実行します。",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "許可サイトのホスト名でのみ実行します。",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "サイト設定を利用できません。処理は無効です。",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% 件のサイト|%count% 件のサイト",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "削除",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "%hostname% を除外サイトから削除",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "%hostname% を許可サイトから削除",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% を除外サイトに追加しました。",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% を許可サイトに追加しました。",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "これらの正確なホスト名では拡張機能はオフのままになります。",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "ホスト名を除外",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "サイトを除外",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "ホスト名を削除すると、そのサイトで拡張機能が再び動作します。",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "除外されているサイトはありません。",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "これらの正確なホスト名でのみ拡張機能が動作します。",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "ホスト名を許可",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "サイトを許可",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "ホスト名を削除すると、そのサイトで拡張機能が再びオフになります。",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "許可されたサイトはまだありません。1 件追加するまで、拡張機能はすべてのサイトでオフのままです。",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "ホスト名を入力してください。",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "スキーム、ポート、パスを含まない正確なホスト名を入力してください。",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "このホスト名はすでにリストにあります。",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "https:// やパスを含まない正確なホスト名を入力してください。",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "表示",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "正確な日付の表示方法を選びます。",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "表示設定を読み込み中…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "日付形式",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "システム",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "カスタム形式",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "形式パターン",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "例：yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "タイムゾーン",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "システム",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA タイムゾーン識別子",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "IANA タイムゾーン識別子を入力してください。例：America/New_York。",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "プレビュー",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "プレビューするにはパターンを修正してください",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "プレビューするにはタイムゾーンを修正してください",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "表示設定を保存",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "処理状態の復旧中のため、現在の表示設定を利用できません。",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "表示設定を利用できません。処理は無効です。",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "パストラバーサルを含まない有効な IANA タイムゾーン識別子を入力してください。",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "有効な IANA タイムゾーン識別子を入力してください。例：America/New_York。",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "このタイムゾーンは現在のブラウザでは利用できません。別の識別子を選んでください。",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "このタイムゾーンは無効か利用できません。対応している IANA 識別子を入力してもう一度お試しください。",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "日付形式が無効です。パターンを修正してもう一度お試しください。",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "保存されたタイムゾーンはこのブラウザでは利用できません。システムまたは対応している別のゾーンを選んで保存してください。",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "表示設定を保存できませんでした。以前の形式が引き続き有効です。もう一度お試しください。",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "応答が中断されました。表示設定を読み込み直しました。",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "表示設定を保存しましたが、開いている 1 つ以上のページを更新できませんでした。新しい日付には保存した設定が使われます。",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "表示設定を保存しました。",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "表示設定が保存されたかどうか確認できませんでした。設定を開き直してもう一度お試しください。",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "日付形式パターンを入力してください。",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "%max% 文字以下の日付形式パターンを使用してください。",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "日付形式パターンから制御文字を削除してください。",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "日付形式パターン内の引用符を閉じてください。",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "yyyy や HH:mm など、日付または時刻のトークンを少なくとも 1 つ含めてください。",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "YYYY や DD ではなく yyyy のような Unicode の日付トークンを使用してください。",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "パターンには対応している Unicode の日付・時刻トークンを使用してください。",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "日付形式は表示可能なテキストを生成する必要があります。",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "診断",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "ログはこの端末に保存され、自動的に送信されることはありません。ダウンロードしたアーカイブは、ご自身が選んだ場合にのみ報告に添付してください。",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "デバッグ設定を読み込み中…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "デバッグログを利用できません。処理は変更されません。",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "デバッグログ",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "各ページで拡張機能が行った内容を、上限付きでローカルに記録します。",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "ログをダウンロード",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "ログを消去",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub の Issue を開く",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "診断ログをダウンロードしました。",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "診断ログを消去しました。",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "デバッグログはオフです。保存された診断を使うにはオンにしてください。",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "ダウンロードできる診断ログはまだありません。",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "保存された診断ログが無効です。ログを消去してもう一度お試しください。",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "保存された診断ログを読み取れませんでした。しばらくしてからお試しください。",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "診断ログを利用できません。しばらくしてからお試しください。",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "この環境ではローカルへのダウンロードを利用できません。",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "ダウンロードできる診断エントリがありません。",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "診断アーカイブを作成できませんでした。しばらくしてからお試しください。",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "診断アーカイブをダウンロードできませんでした。しばらくしてからお試しください。",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "診断アーカイブを準備できませんでした。しばらくしてからお試しください。",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "デバッグログの設定を保存できませんでした。もう一度お試しください。",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "デバッグログの応答が中断されました。現在の状態を再読み込みしました。",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "デバッグログの設定を確認できませんでした。設定を開き直してもう一度お試しください。",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "リセット",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "実行モード、両方のサイトリスト、表示設定、外観、診断を既定値に戻します。保持されているデバッグログは削除されます。",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "設定をリセットできませんでした。現在の設定は引き続き有効です。もう一度お試しください。",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "設定がリセットされたかどうか確認できませんでした。設定を開き直して現在の状態を確認してください。",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "設定をリセットできませんでした。処理は無効のままです。もう一度お試しください。",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "リセットの応答を確認できませんでした。処理は無効のままです。もう一度お試しください。",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

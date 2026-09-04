@@ -1,9 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "No More Ago",
-  "description": "Replace trusted relative timestamps with exact dates.",
-  "permissions": ["scripting", "storage", "webNavigation"],
-  "host_permissions": ["<all_urls>"],
+  "default_locale": "en",
+  "name": "__MSG_extension_name__",
+  "description": "__MSG_extension_description__",
+  "permissions": [
+    "scripting",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_popup": "popup.html"
   },

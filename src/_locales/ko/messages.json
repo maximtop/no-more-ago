@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "신뢰할 수 있는 상대 시간 표시를 정확한 날짜로 바꿉니다.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago 설정",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "확장 프로그램 사용",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "다른 창에서 설정이 변경되었습니다.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "다른 창에서 표시 설정이 변경되었습니다. 여기서 저장하면 덮어씁니다.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "현재 처리 상태를 알 수 없습니다.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "설정은 읽었지만 이전 처리 상태를 정리하지 못해 일부 페이지가 변경된 상태로 남아 있을 수 있습니다.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "설정을 읽지 못해 처리를 사용 중지했습니다.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "변경되는 페이지가 없습니다.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "문제를 보고하거나, 보관된 로그를 내려받거나, 기본 설정으로 되돌린 뒤 팝업을 다시 여세요.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "문제를 보고하거나, 보관된 로그를 내려받거나, 기본 설정으로 되돌리세요.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "이 변경 사항을 저장하지 못했습니다. 다시 시도하세요.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "호스트 이름이 올바르지 않습니다. 스킴, 포트, 경로, 와일드카드가 없는 정확한 호스트 이름을 사용하세요.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "이 목록이 가득 찼습니다. 추가하기 전에 호스트 이름을 하나 삭제하세요.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "다른 창에서 실행 모드가 변경되어 이 변경 사항이 적용되지 않았습니다. 현재 목록을 다시 불러왔습니다.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "응답이 중단되었습니다. 현재 상태를 다시 불러왔습니다.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "변경 사항이 저장되었는지 확인할 수 없습니다. 팝업을 다시 열고 시도하세요.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "변경 사항이 저장되었는지 확인할 수 없습니다. 설정을 다시 열고 시도하세요.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "모든 설정 초기화",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "초기화 확인",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "모든 설정을 기본값으로 되돌릴까요?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "두 사이트 목록, 실행 모드, 표시 설정, 테마, 보관된 디버그 로그가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "모두 초기화",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "설정 유지",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "지원되는 모든 사이트",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "선택한 사이트만",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "제외된 사이트",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "허용된 사이트",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "현재 사이트를 불러오는 중…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "현재 페이지",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "실행 모드",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "모든 사이트 규칙을 일시 중지하거나 다시 시작합니다.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "이 사이트에서 사용",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "%hostname%에서 사용",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "이 사이트 문제 보고",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "설정",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "작동 중",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "확장 프로그램이 꺼져 있음",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "이 사이트에서 제외됨",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "이 사이트가 선택되지 않음",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "이 페이지에서는 실행할 수 없음",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "이 페이지를 처리하지 못함",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "현재 처리 상태를 알 수 없음",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "설정을 사용할 수 없음",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "이 옵션을 끄면 해당 호스트 이름이 제외된 사이트에 추가됩니다.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "이 옵션을 켜면 해당 호스트 이름이 제외된 사이트에서 삭제됩니다.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "이 옵션을 끄면 해당 호스트 이름이 허용된 사이트에서 삭제됩니다.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "이 옵션을 켜면 해당 호스트 이름이 허용된 사이트에 추가됩니다.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "현재 사이트를 찾지 못했습니다. 팝업을 다시 열고 시도하세요.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "이 페이지는 보고할 수 없습니다. HTTP 또는 HTTPS 사이트를 여세요.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "현재 사이트가 변경되었습니다. 팝업을 다시 열고 시도하세요.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "이 시크릿 창에서는 보고를 안전하게 열 수 없습니다.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "이 브라우저에서는 사이트 문제 보고를 사용할 수 없습니다.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "이 사이트 또는 확장 프로그램을 식별하지 못했습니다. 팝업을 다시 열고 시도하세요.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "사이트 문제 보고를 이미 여는 중입니다.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub 문제 보고를 열지 못했습니다. 다시 시도하세요.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "GitHub 문제 보고를 이미 여는 중입니다.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "이 브라우저에서는 GitHub 문제 보고를 열 수 없습니다.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub 문제 보고를 열지 못했습니다. 브라우저 환경을 확인하고 다시 시도하세요.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "설정을 불러오는 중…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "설정",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "설정 섹션",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "테마",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "시스템",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "밝게",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "어둡게",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "테마를 저장하지 못했습니다. 다시 시도하세요.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "사이트",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "확장 프로그램이 실행될 범위를 선택한 뒤, 해당 규칙의 정확한 호스트 이름을 관리하세요.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "아래 실행 모드에 따라 지원되는 사이트에서 처리가 사용 설정되어 있습니다.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "처리가 일시 중지되었습니다. 실행 모드와 두 사이트 목록은 유지되며, 처리를 사용 설정하면 적용됩니다.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "실행 대상",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "각 모드는 고유한 목록을 유지합니다. 모드를 전환해도 호스트 이름은 옮겨지지 않습니다.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "제외된 사이트의 호스트 이름을 제외한 모든 곳에서 실행합니다.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "허용된 사이트의 호스트 이름에서만 실행합니다.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "사이트 설정을 사용할 수 없습니다. 처리가 사용 중지되었습니다.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "사이트 %count%개|사이트 %count%개",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "삭제",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "제외된 사이트에서 %hostname% 삭제",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "허용된 사이트에서 %hostname% 삭제",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname%을(를) 제외된 사이트에 추가했습니다.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname%을(를) 허용된 사이트에 추가했습니다.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "이 정확한 호스트 이름에서는 확장 프로그램이 꺼진 상태로 유지됩니다.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "호스트 이름 제외",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "사이트 제외",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "호스트 이름을 삭제하면 해당 사이트에서 확장 프로그램이 다시 실행됩니다.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "제외된 사이트가 없습니다.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "이 정확한 호스트 이름에서만 확장 프로그램이 실행됩니다.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "호스트 이름 허용",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "사이트 허용",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "호스트 이름을 삭제하면 해당 사이트에서 확장 프로그램이 다시 꺼집니다.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "아직 허용된 사이트가 없습니다. 하나를 추가할 때까지 확장 프로그램은 모든 사이트에서 꺼진 상태로 유지됩니다.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "호스트 이름을 입력하세요.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "스킴, 포트, 경로가 없는 정확한 호스트 이름을 사용하세요.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "이 호스트 이름은 이미 목록에 있습니다.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "https:// 또는 경로 없이 정확한 호스트 이름을 입력하세요.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "표시",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "정확한 날짜를 표시하는 방식을 선택하세요.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "표시 설정을 불러오는 중…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "날짜 형식",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "시스템",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "사용자 지정 형식",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "형식 패턴",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "예: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "시간대",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "시스템",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA 시간대 식별자",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "IANA 시간대 식별자를 입력하세요. 예: America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "미리보기",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "미리 보려면 패턴을 수정하세요",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "미리 보려면 시간대를 수정하세요",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "표시 설정 저장",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "처리 상태를 복구하는 동안에는 현재 표시 설정을 사용할 수 없습니다.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "표시 설정을 사용할 수 없습니다. 처리가 사용 중지되었습니다.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "경로 순회가 없는 올바른 IANA 시간대 식별자를 사용하세요.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "올바른 IANA 시간대 식별자를 사용하세요. 예: America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "현재 브라우저에서는 이 시간대를 사용할 수 없습니다. 다른 식별자를 선택하세요.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "이 시간대는 올바르지 않거나 사용할 수 없습니다. 지원되는 IANA 식별자를 입력하고 다시 시도하세요.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "날짜 형식이 올바르지 않습니다. 패턴을 수정하고 다시 시도하세요.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "저장된 시간대를 이 브라우저에서 사용할 수 없습니다. 시스템 또는 지원되는 다른 시간대를 선택한 뒤 저장하세요.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "표시 설정을 저장하지 못했습니다. 이전 형식이 계속 적용됩니다. 다시 시도하세요.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "응답이 중단되었습니다. 표시 설정을 다시 읽었습니다.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "표시 설정을 저장했지만 열려 있는 페이지 중 하나 이상을 새로 고치지 못했습니다. 새 날짜에는 저장된 설정이 적용됩니다.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "표시 설정을 저장했습니다.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "표시 설정이 저장되었는지 확인할 수 없습니다. 설정을 다시 열고 시도하세요.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "날짜 형식 패턴을 입력하세요.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "%max%자 이하의 날짜 형식 패턴을 사용하세요.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "날짜 형식 패턴에서 제어 문자를 삭제하세요.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "날짜 형식 패턴의 따옴표를 닫으세요.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "yyyy 또는 HH:mm 같은 날짜나 시간 토큰을 하나 이상 포함하세요.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "YYYY나 DD 대신 yyyy 같은 유니코드 날짜 토큰을 사용하세요.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "패턴에는 지원되는 유니코드 날짜 및 시간 토큰을 사용하세요.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "날짜 형식은 보이는 텍스트를 만들어야 합니다.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "진단",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "로그는 이 기기에 남으며 자동으로 전송되지 않습니다. 내려받은 아카이브는 직접 선택한 경우에만 문제 보고에 첨부하세요.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "디버그 설정을 불러오는 중…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "디버그 로그를 사용할 수 없습니다. 처리는 그대로 유지됩니다.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "디버그 로그",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "확장 프로그램이 각 페이지에서 수행한 작업을 제한된 범위로 로컬에 기록합니다.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "로그 내려받기",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "로그 지우기",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub 이슈 열기",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "진단 로그를 내려받았습니다.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "진단 로그를 지웠습니다.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "디버그 로그가 꺼져 있습니다. 저장된 진단을 사용하려면 켜세요.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "아직 내려받을 진단 로그가 없습니다.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "저장된 진단 로그가 올바르지 않습니다. 로그를 지우고 다시 시도하세요.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "저장된 진단 로그를 읽지 못했습니다. 나중에 다시 시도하세요.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "진단 로그를 사용할 수 없습니다. 나중에 다시 시도하세요.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "이 환경에서는 로컬 내려받기를 사용할 수 없습니다.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "내려받을 진단 항목이 없습니다.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "진단 아카이브를 만들지 못했습니다. 나중에 다시 시도하세요.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "진단 아카이브를 내려받지 못했습니다. 나중에 다시 시도하세요.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "진단 아카이브를 준비하지 못했습니다. 나중에 다시 시도하세요.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "디버그 로그 설정을 저장하지 못했습니다. 다시 시도하세요.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "디버그 로그 응답이 중단되었습니다. 현재 상태를 다시 불러왔습니다.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "디버그 로그 설정을 확인할 수 없습니다. 설정을 다시 열고 시도하세요.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "초기화",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "실행 모드, 두 사이트 목록, 표시 설정, 테마, 진단을 기본값으로 되돌립니다. 보관된 디버그 로그는 삭제됩니다.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "설정을 초기화하지 못했습니다. 현재 설정이 계속 적용됩니다. 다시 시도하세요.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "설정이 초기화되었는지 확인할 수 없습니다. 설정을 다시 열어 현재 상태를 확인하세요.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "설정을 초기화하지 못했습니다. 처리는 계속 사용 중지 상태입니다. 다시 시도하세요.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "초기화 응답을 확인하지 못했습니다. 처리는 계속 사용 중지 상태입니다. 다시 시도하세요.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

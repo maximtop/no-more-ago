@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Заменяет надёжные относительные отметки времени точными датами.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Настройки No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Расширение включено",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Настройки были изменены в другом окне.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Настройки отображения изменены в другом окне. Сохранение здесь заменит их.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Текущее состояние обработки неизвестно.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Настройки прочитаны, но предыдущее состояние обработки не удалось очистить, поэтому некоторые страницы могут остаться изменёнными.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Не удалось прочитать настройки, поэтому обработка отключена.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Ни одна страница не изменяется.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Сообщите о проблеме, скачайте сохранённые журналы или восстановите настройки по умолчанию и откройте всплывающее окно заново.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Сообщите о проблеме, скачайте сохранённые журналы или восстановите настройки по умолчанию.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Не удалось сохранить изменение. Попробуйте ещё раз.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Некорректное имя хоста. Укажите точное имя хоста без схемы, порта, пути и подстановочных знаков.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Список заполнен. Удалите имя хоста, прежде чем добавлять новое.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Режим запуска был изменён в другом окне, поэтому изменение не применено. Текущие списки перезагружены.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Ответ прерван. Текущее состояние перезагружено.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Не удалось подтвердить сохранение изменения. Откройте всплывающее окно заново и попробуйте ещё раз.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Не удалось подтвердить сохранение изменения. Откройте настройки заново и попробуйте ещё раз.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Сбросить все настройки",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Подтвердить сброс",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Сбросить все настройки к значениям по умолчанию?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Оба списка сайтов, режим запуска, настройки отображения, оформление и сохранённые журналы отладки будут удалены. Отменить это действие нельзя.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Сбросить всё",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Оставить настройки",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Все поддерживаемые сайты",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Только выбранные сайты",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Исключённые сайты",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Разрешённые сайты",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Загрузка текущего сайта…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Текущая страница",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Режим запуска",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Приостановить или возобновить все правила для сайтов.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Включено на этом сайте",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Включено на %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Сообщить об этом сайте",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Настройки",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Активно",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Расширение выключено",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Исключено на этом сайте",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Не выбрано для этого сайта",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Не может работать на этой странице",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Не удалось обработать эту страницу",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Текущее состояние обработки неизвестно",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Настройки недоступны",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Если выключить, это имя хоста будет добавлено в исключённые сайты.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Если включить, это имя хоста будет удалено из исключённых сайтов.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Если выключить, это имя хоста будет удалено из разрешённых сайтов.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Если включить, это имя хоста будет добавлено в разрешённые сайты.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Не удалось определить текущий сайт. Откройте всплывающее окно заново и попробуйте ещё раз.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Об этой странице нельзя сообщить. Откройте сайт по HTTP или HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Текущий сайт изменился. Откройте всплывающее окно заново и попробуйте ещё раз.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Не удалось безопасно открыть отчёт в этом приватном окне.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Сообщение о сайте недоступно в этом браузере.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Не удалось определить этот сайт или расширение. Откройте всплывающее окно заново и попробуйте ещё раз.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Отчёт о сайте уже открывается.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Не удалось открыть отчёт на GitHub. Попробуйте ещё раз.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Отчёт на GitHub уже открывается.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Не удалось открыть отчёт на GitHub в этом браузере.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Не удалось открыть отчёт на GitHub. Проверьте контекст браузера и попробуйте ещё раз.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Загрузка настроек…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Настройки",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Разделы настроек",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Оформление",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Системное",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Светлое",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Тёмное",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Не удалось сохранить оформление. Попробуйте ещё раз.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Сайты",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Выберите, где работает расширение, затем управляйте точными именами хостов для этого правила.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Обработка включена на поддерживаемых сайтах в соответствии с режимом запуска ниже.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Обработка приостановлена. Режим запуска и оба списка сайтов сохранены. Они применятся, как только обработка будет включена.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Где запускать",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "У каждого режима свой список. Переключение режимов никогда не перемещает имена хостов.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Работать везде, кроме имён хостов в исключённых сайтах.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Работать только на именах хостов из разрешённых сайтов.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Настройки сайтов недоступны. Обработка отключена.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% сайтов|%count% сайт|%count% сайта|%count% сайтов",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Удалить",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Удалить %hostname% из исключённых сайтов",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Удалить %hostname% из разрешённых сайтов",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% добавлен в исключённые сайты.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% добавлен в разрешённые сайты.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Расширение не работает на этих точных именах хостов.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Исключить имя хоста",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Исключить сайт",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Удаление имени хоста снова разрешает расширению работать на нём.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Нет исключённых сайтов.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Расширение работает только на этих точных именах хостов.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Разрешить имя хоста",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Разрешить сайт",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Удаление имени хоста снова выключает расширение на нём.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Разрешённых сайтов пока нет. Расширение не будет работать ни на одном сайте, пока не будет добавлен хотя бы один.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Введите имя хоста.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Укажите точное имя хоста без схемы, порта и пути.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Это имя хоста уже есть в списке.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Введите точное имя хоста без https:// и без пути.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Отображение",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Выберите, как показывать точные даты.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Загрузка настроек отображения…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Формат даты",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Системный",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Свой формат",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Шаблон формата",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Примеры: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Часовой пояс",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Системный",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Идентификатор часового пояса IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Введите идентификатор часового пояса IANA, например America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Предпросмотр",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Исправьте шаблон для предпросмотра",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Исправьте часовой пояс для предпросмотра",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Сохранить настройки отображения",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Текущие настройки отображения недоступны, пока восстанавливается состояние обработки.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Настройки отображения недоступны. Обработка отключена.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Укажите корректный идентификатор часового пояса IANA без перехода по каталогам.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Укажите корректный идентификатор часового пояса IANA, например America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Этот часовой пояс недоступен в текущем браузере. Выберите другой идентификатор.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Этот часовой пояс некорректен или недоступен. Введите поддерживаемый идентификатор IANA и попробуйте ещё раз.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Формат даты некорректен. Исправьте шаблон и попробуйте ещё раз.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Сохранённый часовой пояс недоступен в этом браузере. Выберите системный или другой поддерживаемый пояс и сохраните.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Не удалось сохранить настройки отображения. Прежний формат остаётся активным. Попробуйте ещё раз.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Ответ прерван. Настройки отображения перечитаны.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Настройки отображения сохранены, но одну или несколько открытых страниц не удалось обновить. Новые даты будут использовать сохранённую настройку.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Настройки отображения сохранены.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Не удалось подтвердить сохранение настроек отображения. Откройте настройки заново и попробуйте ещё раз.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Введите шаблон формата даты.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Используйте шаблон формата даты длиной не более %max% символов.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Удалите управляющие символы из шаблона формата даты.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Закройте кавычки в шаблоне формата даты.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Добавьте хотя бы один токен даты или времени, например yyyy или HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Используйте токены даты Unicode, например yyyy вместо YYYY или DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Используйте поддерживаемые токены даты и времени Unicode в шаблоне.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Формат даты должен давать видимый текст.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Диагностика",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Журналы остаются на этом устройстве и никогда не отправляются автоматически. Прикрепляйте скачанный архив к отчёту только по своему выбору.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Загрузка настроек отладки…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Журналы отладки недоступны. Обработка не меняется.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Журналы отладки",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Вести ограниченную локальную запись того, что расширение делало на каждой странице.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Скачать журналы",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Очистить журналы",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Открыть issue на GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Журналы диагностики скачаны.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Журналы диагностики очищены.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Журналы отладки выключены. Включите их, чтобы использовать сохранённую диагностику.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Пока нет журналов диагностики для скачивания.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "Сохранённые журналы диагностики некорректны. Очистите журналы и попробуйте ещё раз.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Не удалось прочитать сохранённые журналы диагностики. Попробуйте позже.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Журналы диагностики недоступны. Попробуйте позже.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Локальные загрузки недоступны в этом контексте.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Нет записей диагностики для скачивания.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Не удалось создать архив диагностики. Попробуйте позже.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Не удалось скачать архив диагностики. Попробуйте позже.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Не удалось подготовить архив диагностики. Попробуйте позже.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Не удалось сохранить настройку журналов отладки. Попробуйте ещё раз.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Ответ по журналам отладки прерван. Текущее состояние перезагружено.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Не удалось подтвердить настройку журналов отладки. Откройте настройки заново и попробуйте ещё раз.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Сброс",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Восстановить режим запуска, оба списка сайтов, настройки отображения, оформление и диагностику до значений по умолчанию. Сохранённые журналы отладки будут удалены.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Не удалось сбросить настройки. Текущие настройки остаются активными. Попробуйте ещё раз.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Не удалось подтвердить сброс настроек. Откройте настройки заново и проверьте их текущее состояние.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Не удалось сбросить настройки. Обработка остаётся отключённой. Попробуйте ещё раз.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Ответ на сброс не удалось подтвердить. Обработка остаётся отключённой. Попробуйте ещё раз.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

@@ -26,22 +26,6 @@ export const SITE_SCOPE_MODES = [
 export type SiteScopeMode = (typeof SITE_SCOPE_MODES)[number];
 
 /**
- * User-facing name of each scope mode, shared by the popup and the settings page.
- */
-export const SITE_SCOPE_MODE_LABEL: Readonly<Record<SiteScopeMode, string>> = Object.freeze({
-    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: "All supported sites",
-    [SITE_SCOPE_MODE.SELECTED_ONLY]: "Selected sites only",
-});
-
-/**
- * User-facing name of the hostname list each scope mode owns.
- */
-export const SITE_SCOPE_LIST_LABEL: Readonly<Record<SiteScopeMode, string>> = Object.freeze({
-    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: "Excluded sites",
-    [SITE_SCOPE_MODE.SELECTED_ONLY]: "Allowed sites",
-});
-
-/**
  * Largest number of hostnames either list may hold.
  */
 export const MAX_SITE_LIST_ENTRIES = 1000;

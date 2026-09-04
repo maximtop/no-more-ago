@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Vervangt betrouwbare relatieve tijdsaanduidingen door exacte datums.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago-instellingen",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Extensie ingeschakeld",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "De instellingen zijn in een ander venster bijgewerkt.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "De weergave-instellingen zijn in een ander venster bijgewerkt. Hier opslaan vervangt ze.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "De huidige verwerkingsstatus is onbekend.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "De instellingen zijn gelezen, maar de vorige verwerkingsstatus kon niet worden opgeruimd, dus sommige pagina's zijn mogelijk nog steeds gewijzigd.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "De instellingen konden niet worden gelezen, dus de verwerking is uitgeschakeld.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Er wordt geen pagina gewijzigd.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Meld het probleem, download bewaarde logboeken of herstel de standaardinstellingen en open de pop-up opnieuw.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Meld het probleem, download bewaarde logboeken of herstel de standaardinstellingen.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Deze wijziging kon niet worden opgeslagen. Probeer het opnieuw.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Deze hostnaam is ongeldig. Gebruik een exacte hostnaam zonder schema, poort, pad of jokerteken.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Deze lijst is vol. Verwijder een hostnaam voordat je er een toevoegt.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "De uitvoeringsmodus is in een ander venster gewijzigd, dus deze wijziging is niet toegepast. De huidige lijsten zijn opnieuw geladen.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Het antwoord is onderbroken. De huidige status is opnieuw geladen.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Kon niet bevestigen of de wijziging is opgeslagen. Open de pop-up opnieuw en probeer het nog eens.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Kon niet bevestigen of de wijziging is opgeslagen. Open de instellingen opnieuw en probeer het nog eens.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Alle instellingen resetten",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Resetten bevestigen",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Alle instellingen resetten naar de standaardwaarden?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Beide sitelijsten, de uitvoeringsmodus, de weergave-instellingen, het uiterlijk en bewaarde foutopsporingslogboeken worden verwijderd. Dit kan niet ongedaan worden gemaakt.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Alles resetten",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Instellingen behouden",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Alle ondersteunde sites",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Alleen geselecteerde sites",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Uitgesloten sites",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Toegestane sites",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Huidige site laden…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Huidige pagina",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Uitvoeringsmodus",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Alle siteregels pauzeren of hervatten.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Ingeschakeld op deze site",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Ingeschakeld op %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Deze site melden",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Instellingen",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Actief",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "De extensie staat uit",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Uitgesloten op deze site",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Niet geselecteerd voor deze site",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Kan niet op deze pagina draaien",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Kon deze pagina niet verwerken",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "De huidige verwerkingsstatus is onbekend",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Instellingen niet beschikbaar",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Uitschakelen voegt deze hostnaam toe aan de uitgesloten sites.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Inschakelen verwijdert deze hostnaam uit de uitgesloten sites.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Uitschakelen verwijdert deze hostnaam uit de toegestane sites.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Inschakelen voegt deze hostnaam toe aan de toegestane sites.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Kon de huidige site niet vinden. Open de pop-up opnieuw en probeer het nog eens.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Deze pagina kan niet worden gemeld. Open een HTTP- of HTTPS-site.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "De huidige site is gewijzigd. Open de pop-up opnieuw en probeer het nog eens.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Kon de melding niet veilig openen in dit privévenster.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Sites melden is niet beschikbaar in deze browser.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Kon deze site of extensie niet identificeren. Open de pop-up opnieuw en probeer het nog eens.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Er wordt al een sitemelding geopend.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Kon de GitHub-melding niet openen. Probeer het opnieuw.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Er wordt al een GitHub-melding geopend.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Kon de GitHub-melding niet openen in deze browser.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Kon de GitHub-melding niet openen. Controleer de browsercontext en probeer het opnieuw.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Instellingen laden…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Instellingen",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Instellingssecties",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Uiterlijk",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Systeem",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Licht",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Donker",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Kon het uiterlijk niet opslaan. Probeer het opnieuw.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Sites",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Kies waar de extensie wordt uitgevoerd en beheer daarna de exacte hostnamen voor die regel.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "De verwerking is ingeschakeld op ondersteunde sites volgens de uitvoeringsmodus hieronder.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "De verwerking is gepauzeerd. De uitvoeringsmodus en beide sitelijsten blijven behouden en gelden zodra de verwerking wordt ingeschakeld.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Uitvoeren op",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Elke modus houdt een eigen lijst bij. Van modus wisselen verplaatst nooit een hostnaam.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Overal uitvoeren, behalve op hostnamen in de lijst Uitgesloten sites.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Alleen uitvoeren op hostnamen in de lijst Toegestane sites.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "De site-instellingen zijn niet beschikbaar. De verwerking is uitgeschakeld.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% sites|%count% site|%count% sites",
+    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+  },
+  "sites_remove_action": {
+    "message": "Verwijderen",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "%hostname% verwijderen uit de uitgesloten sites",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "%hostname% verwijderen uit de toegestane sites",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% is toegevoegd aan de uitgesloten sites.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% is toegevoegd aan de toegestane sites.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "De extensie blijft uitgeschakeld op precies deze hostnamen.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Hostnaam uitsluiten",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Site uitsluiten",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Een hostnaam verwijderen laat de extensie er weer op draaien.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Er zijn geen sites uitgesloten.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "De extensie draait alleen op precies deze hostnamen.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Hostnaam toestaan",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Site toestaan",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Een hostnaam verwijderen schakelt de extensie er weer uit.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Er zijn nog geen sites toegestaan. De extensie blijft op elke site uitgeschakeld totdat er een wordt toegevoegd.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Voer een hostnaam in.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Gebruik een exacte hostnaam zonder schema, poort of pad.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Deze hostnaam staat al in de lijst.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Voer een exacte hostnaam in zonder https:// of pad.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Weergave",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Kies hoe exacte datums worden getoond.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Weergave-instellingen laden…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Datumnotatie",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Systeem",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Aangepaste notatie",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Notatiepatroon",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Voorbeelden: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Tijdzone",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Systeem",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA-tijdzone-id",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Voer een IANA-tijdzone-id in, bijvoorbeeld America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Voorbeeld",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Corrigeer het patroon om een voorbeeld te zien",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Corrigeer de tijdzone om een voorbeeld te zien",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Weergave-instellingen opslaan",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "De huidige weergave-instellingen zijn niet beschikbaar terwijl de verwerkingsstatus wordt hersteld.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "De weergave-instellingen zijn niet beschikbaar. De verwerking is uitgeschakeld.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Gebruik een geldige IANA-tijdzone-id zonder padtraversal.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Gebruik een geldige IANA-tijdzone-id, bijvoorbeeld America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Deze tijdzone is niet beschikbaar in de huidige browser. Kies een andere id.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Deze tijdzone is ongeldig of niet beschikbaar. Voer een ondersteunde IANA-id in en probeer het opnieuw.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "De datumnotatie is ongeldig. Corrigeer het patroon en probeer het opnieuw.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "De opgeslagen tijdzone is niet beschikbaar in deze browser. Kies Systeem of een andere ondersteunde zone en sla dan op.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Kon de weergave-instellingen niet opslaan. Je vorige notatie blijft actief. Probeer het opnieuw.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Het antwoord is onderbroken. De weergave-instellingen zijn opnieuw gelezen.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "De weergave-instellingen zijn opgeslagen, maar een of meer geopende pagina's konden niet worden vernieuwd. Nieuwe datums gebruiken de opgeslagen instelling.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Weergave-instellingen opgeslagen.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Kon niet bevestigen of de weergave-instellingen zijn opgeslagen. Open de instellingen opnieuw en probeer het nog eens.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Voer een datumnotatiepatroon in.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Gebruik een datumnotatiepatroon van maximaal %max% tekens.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Verwijder stuurtekens uit het datumnotatiepatroon.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Sluit de aanhalingstekens in het datumnotatiepatroon.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Neem minstens één datum- of tijdtoken op, bijvoorbeeld yyyy of HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Gebruik Unicode-datumtokens, bijvoorbeeld yyyy in plaats van YYYY of DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Gebruik ondersteunde Unicode-datum- en tijdtokens in het patroon.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "De datumnotatie moet zichtbare tekst opleveren.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostiek",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Logboeken blijven op dit apparaat en worden nooit automatisch verzonden. Voeg een gedownload archief alleen aan een melding toe als je dat wilt.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Foutopsporingsinstellingen laden…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "De foutopsporingslogboeken zijn niet beschikbaar. De verwerking blijft ongewijzigd.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Foutopsporingslogboeken",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Houd een begrensd lokaal verslag bij van wat de extensie op elke pagina heeft gedaan.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Logboeken downloaden",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Logboeken wissen",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub-issue openen",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostische logboeken gedownload.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostische logboeken gewist.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "De foutopsporingslogboeken staan uit. Zet ze aan om opgeslagen diagnostiek te gebruiken.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Er zijn nog geen diagnostische logboeken om te downloaden.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_invalid": {
+    "message": "De opgeslagen diagnostische logboeken zijn ongeldig. Wis de logboeken en probeer het opnieuw.",
+    "description": "Stored diagnostics failed to parse"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Kon de opgeslagen diagnostische logboeken niet lezen. Probeer het later opnieuw.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "De diagnostische logboeken zijn niet beschikbaar. Probeer het later opnieuw.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Lokale downloads zijn niet beschikbaar in deze context.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Er zijn geen diagnostische items om te downloaden.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Kon het diagnostische archief niet maken. Probeer het later opnieuw.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Kon het diagnostische archief niet downloaden. Probeer het later opnieuw.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Kon het diagnostische archief niet voorbereiden. Probeer het later opnieuw.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Kon de instelling voor foutopsporingslogboeken niet opslaan. Probeer het opnieuw.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Het antwoord over de foutopsporingslogboeken is onderbroken. De huidige status is opnieuw geladen.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Kon de instelling voor foutopsporingslogboeken niet bevestigen. Open de instellingen opnieuw en probeer het nog eens.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Resetten",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Reset de uitvoeringsmodus, beide sitelijsten, de weergave-instellingen, het uiterlijk en de diagnostiek naar de standaardwaarden. Bewaarde foutopsporingslogboeken worden verwijderd.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Kon de instellingen niet resetten. Je huidige instellingen blijven actief. Probeer het opnieuw.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Kon niet bevestigen of de instellingen zijn gereset. Open de instellingen opnieuw en controleer de huidige status.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Kon de instellingen niet resetten. De verwerking blijft uitgeschakeld. Probeer het opnieuw.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Het antwoord op de reset kon niet worden bevestigd. De verwerking blijft uitgeschakeld. Probeer het opnieuw.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  }
+}

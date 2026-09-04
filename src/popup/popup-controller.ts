@@ -20,6 +20,7 @@ import {
 } from "../shared/ui/persistence-notice";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
 import { downloadDiagnosticsSnapshot } from "../shared/diagnostics/download";
+import type { MessageKey } from "../shared/i18n/translator";
 import { readWithDeadline } from "../shared/ui/read-with-deadline";
 import { createPopupClient, type PopupClient } from "./client";
 
@@ -111,7 +112,7 @@ export interface PopupController {
     /**
      * Latest outcome of a log download from the failure view.
      */
-    readonly downloadNotice: string | undefined;
+    readonly downloadNotice: MessageKey | undefined;
 
     /**
      * Whether a log download is in flight.
@@ -139,7 +140,7 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
     const [loading, setLoading] = useState(options.initialState === undefined);
     const [saving, setSaving] = useState(false);
     const [notice, setNotice] = useState<PopupNotice>();
-    const [downloadNotice, setDownloadNotice] = useState<string>();
+    const [downloadNotice, setDownloadNotice] = useState<MessageKey>();
     const [downloading, setDownloading] = useState(false);
     const inFlight = useRef(false);
     const downloadInFlight = useRef(false);
