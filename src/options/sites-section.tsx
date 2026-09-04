@@ -172,7 +172,7 @@ interface SiteListProps {
  *
  * @param props - Component properties.
  * @param props.hosts - Hostnames in the active list.
- * @param props.title - Title of the active list.
+ * @param props.removeAriaKey - Accessible-name catalog key for the remove action.
  * @param props.busyHostname - Hostname whose removal is in flight.
  * @param props.onRemove - Removes one hostname.
  * @returns - The hostname list.

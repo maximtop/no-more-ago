@@ -4,6 +4,7 @@
 
 import {
     POPUP_STATUS,
+    type ReadyPopupStatus,
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
@@ -12,7 +13,7 @@ import {
     SITE_SCOPE_MODE,
     type SiteScopeMode,
 } from "../shared/settings/site-scope";
-import type { MessageKey } from "../shared/i18n/translator";
+import { t, type MessageKey } from "../shared/i18n/translator";
 
 /**
  * Named semantic tones paired with every status so state is never color alone.
@@ -34,15 +35,57 @@ export type StatusTone = (typeof STATUS_TONE)[keyof typeof STATUS_TONE];
  */
 export interface PopupStatusModel {
     /**
-     * Key of the sentence describing what the extension is doing on this page.
+     * Translated sentence describing what the extension is doing on this page.
      */
-    readonly key: MessageKey;
+    readonly text: string;
 
     /**
      * Semantic tone rendered as a dot and text, never as color alone.
      */
     readonly tone: StatusTone;
 }
+
+/**
+ * Message mapping for every supported outcome.
+ */
+const READY_STATUS_MODELS = {
+    [POPUP_STATUS.ACTIVE]: {
+        get text(): string {
+            return t("popup_status_active");
+        },
+        tone: STATUS_TONE.ACTIVE,
+    },
+    [POPUP_STATUS.GLOBAL_DISABLED]: {
+        get text(): string {
+            return t("popup_status_global_disabled");
+        },
+        tone: STATUS_TONE.NEUTRAL,
+    },
+    [POPUP_STATUS.SITE_EXCLUDED]: {
+        get text(): string {
+            return t("popup_status_site_excluded");
+        },
+        tone: STATUS_TONE.NEUTRAL,
+    },
+    [POPUP_STATUS.SITE_NOT_SELECTED]: {
+        get text(): string {
+            return t("popup_status_site_not_selected");
+        },
+        tone: STATUS_TONE.NEUTRAL,
+    },
+    [POPUP_STATUS.INACCESSIBLE]: {
+        get text(): string {
+            return t("popup_status_inaccessible");
+        },
+        tone: STATUS_TONE.WARNING,
+    },
+    [POPUP_STATUS.RUNTIME_FAILED]: {
+        get text(): string {
+            return t("popup_status_runtime_failed");
+        },
+        tone: STATUS_TONE.DANGER,
+    },
+} as const satisfies Record<ReadyPopupStatus, PopupStatusModel>;
 
 /**
  * Describes the extension's state on the current page.
@@ -53,23 +96,10 @@ export interface PopupStatusModel {
 export function popupStatusModel(state: PopupState): PopupStatusModel {
     if (state.availability === STATE_AVAILABILITY.UNAVAILABLE) {
         return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-            ? { key: "popup_status_unknown", tone: STATUS_TONE.WARNING }
-            : { key: "popup_status_unavailable", tone: STATUS_TONE.DANGER };
+            ? { text: t("popup_status_unknown"), tone: STATUS_TONE.WARNING }
+            : { text: t("popup_status_unavailable"), tone: STATUS_TONE.DANGER };
     }
-    switch (state.status) {
-        case POPUP_STATUS.ACTIVE:
-            return { key: "popup_status_active", tone: STATUS_TONE.ACTIVE };
-        case POPUP_STATUS.GLOBAL_DISABLED:
-            return { key: "popup_status_global_disabled", tone: STATUS_TONE.NEUTRAL };
-        case POPUP_STATUS.SITE_EXCLUDED:
-            return { key: "popup_status_site_excluded", tone: STATUS_TONE.NEUTRAL };
-        case POPUP_STATUS.SITE_NOT_SELECTED:
-            return { key: "popup_status_site_not_selected", tone: STATUS_TONE.NEUTRAL };
-        case POPUP_STATUS.INACCESSIBLE:
-            return { key: "popup_status_inaccessible", tone: STATUS_TONE.WARNING };
-        case POPUP_STATUS.RUNTIME_FAILED:
-            return { key: "popup_status_runtime_failed", tone: STATUS_TONE.DANGER };
-    }
+    return READY_STATUS_MODELS[state.status];
 }
 
 /**

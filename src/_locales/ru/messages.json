@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% сайтов|%count% сайт|%count% сайта|%count% сайтов",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Удалить",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Ответ на сброс не удалось подтвердить. Обработка остаётся отключённой. Попробуйте ещё раз.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "ru",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

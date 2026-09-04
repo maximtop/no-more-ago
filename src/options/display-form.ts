@@ -14,10 +14,11 @@ import {
 } from "../shared/settings/snapshot";
 import {
     CUSTOM_FORMAT_ERROR,
+    type CustomFormatError,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../shared/settings/custom-format";
-import { t, type MessageKey } from "../shared/i18n/translator";
+import type { MessageKey } from "../shared/i18n/translator";
 import { DISPLAY_SETTINGS_ERROR } from "../shared/messaging/view-state-values";
 
 /**
@@ -70,17 +71,29 @@ export interface DisplayDraft {
 /**
  * Preview text and whether it is a rendered value or an instruction.
  */
-export interface DisplayPreview {
-    /**
-     * Whether the text is the rendered fixture rather than a correction hint.
-     */
-    readonly ok: boolean;
+export type DisplayPreview =
+    | {
+        /**
+         * Whether formatting succeeded.
+         */
+        readonly ok: true;
 
-    /**
-     * Rendered fixture, or the sentence naming what must be fixed first.
-     */
-    readonly text: string;
-}
+        /**
+         * Rendered fixture.
+         */
+        readonly text: string;
+    }
+    | {
+        /**
+         * Whether formatting succeeded.
+         */
+        readonly ok: false;
+
+        /**
+         * Correction hint to translate in the view.
+         */
+        readonly key: MessageKey;
+    };
 
 /**
  * Fixed instant previewed by the Display section.
@@ -91,7 +104,7 @@ export const DISPLAY_PREVIEW_INSTANT = new Date("2026-08-27T19:32:28.000Z");
  * Label naming the previewed fixture beside the rendered value.
  */
 export const DISPLAY_PREVIEW_SOURCE =
-    `Fixed fixture · ${DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z")}`;
+    DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z");
 
 /**
  * Converts saved display settings into fields for the editable form.
@@ -154,41 +167,43 @@ export function validateIdentifier(identifier: string): MessageKey | undefined {
 }
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const DISPLAY_NOTICE_KEYS = {
+    [DISPLAY_NOTICE.INVALID_TIME_ZONE]: "display_error_zone_rejected",
+    [DISPLAY_NOTICE.INVALID_FORMAT]: "display_error_format_invalid",
+    [DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE]: "display_error_zone_saved_unavailable",
+    [DISPLAY_NOTICE.SAVE_FAILED]: "display_error_save_failed",
+    [DISPLAY_NOTICE.INTERRUPTED]: "display_notice_interrupted",
+    [DISPLAY_NOTICE.PARTIAL_REFRESH]: "display_notice_partial_refresh",
+    [DISPLAY_NOTICE.SAVED]: "display_notice_saved",
+    [DISPLAY_NOTICE.EXTERNAL_CHANGE]: "display_updated_elsewhere",
+    [DISPLAY_NOTICE.UNKNOWN]: "display_notice_unknown",
+} as const satisfies Record<Exclude<DisplayNotice, undefined>, MessageKey>;
+
+/**
  * Maps a display-settings outcome to the message key describing it.
  *
  * @param notice - Outcome reported after saving display settings.
  * @returns - Message key, or undefined when there is no notice to show.
  */
 export function displayNoticeKey(notice: DisplayNotice): MessageKey | undefined {
-    if (notice === DISPLAY_NOTICE.INVALID_TIME_ZONE) {
-        return "display_error_zone_rejected";
-    }
-    if (notice === DISPLAY_NOTICE.INVALID_FORMAT) {
-        return "display_error_format_invalid";
-    }
-    if (notice === DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE) {
-        return "display_error_zone_saved_unavailable";
-    }
-    if (notice === DISPLAY_NOTICE.SAVE_FAILED) {
-        return "display_error_save_failed";
-    }
-    if (notice === DISPLAY_NOTICE.INTERRUPTED) {
-        return "display_notice_interrupted";
-    }
-    if (notice === DISPLAY_NOTICE.PARTIAL_REFRESH) {
-        return "display_notice_partial_refresh";
-    }
-    if (notice === DISPLAY_NOTICE.SAVED) {
-        return "display_notice_saved";
-    }
-    if (notice === DISPLAY_NOTICE.EXTERNAL_CHANGE) {
-        return "display_updated_elsewhere";
-    }
-    if (notice === DISPLAY_NOTICE.UNKNOWN) {
-        return "display_notice_unknown";
-    }
-    return undefined;
+    return notice === undefined ? undefined : DISPLAY_NOTICE_KEYS[notice];
 }
+
+/**
+ * Message mapping for every supported outcome.
+ */
+const CUSTOM_FORMAT_ERROR_KEYS = {
+    [CUSTOM_FORMAT_ERROR.EMPTY]: "display_pattern_error_empty",
+    [CUSTOM_FORMAT_ERROR.TOO_LONG]: "display_pattern_error_too_long",
+    [CUSTOM_FORMAT_ERROR.CONTROL_CHARACTER]: "display_pattern_error_control_chars",
+    [CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE]: "display_pattern_error_unclosed_quote",
+    [CUSTOM_FORMAT_ERROR.MISSING_DATE_TOKEN]: "display_pattern_error_no_tokens",
+    [CUSTOM_FORMAT_ERROR.LEGACY_TOKEN]: "display_pattern_error_wrong_case",
+    [CUSTOM_FORMAT_ERROR.INVALID_TOKEN]: "display_pattern_error_unsupported",
+    [CUSTOM_FORMAT_ERROR.EMPTY_OUTPUT]: "display_pattern_error_blank_output",
+} as const satisfies Record<CustomFormatError, MessageKey>;
 
 /**
  * Maps custom date-format validation failures to their message keys.
@@ -198,27 +213,7 @@ export function displayNoticeKey(notice: DisplayNotice): MessageKey | undefined 
  */
 export function customPatternError(pattern: string): MessageKey | undefined {
     const result = validateCustomFormatPattern(pattern);
-    if (result.ok) {
-        return undefined;
-    }
-    switch (result.error) {
-        case CUSTOM_FORMAT_ERROR.EMPTY:
-            return "display_pattern_error_empty";
-        case CUSTOM_FORMAT_ERROR.TOO_LONG:
-            return "display_pattern_error_too_long";
-        case CUSTOM_FORMAT_ERROR.CONTROL_CHARACTER:
-            return "display_pattern_error_control_chars";
-        case CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE:
-            return "display_pattern_error_unclosed_quote";
-        case CUSTOM_FORMAT_ERROR.MISSING_DATE_TOKEN:
-            return "display_pattern_error_no_tokens";
-        case CUSTOM_FORMAT_ERROR.LEGACY_TOKEN:
-            return "display_pattern_error_wrong_case";
-        case CUSTOM_FORMAT_ERROR.INVALID_TOKEN:
-            return "display_pattern_error_unsupported";
-        case CUSTOM_FORMAT_ERROR.EMPTY_OUTPUT:
-            return "display_pattern_error_blank_output";
-    }
+    return result.ok ? undefined : CUSTOM_FORMAT_ERROR_KEYS[result.error];
 }
 
 /**
@@ -235,10 +230,10 @@ export function previewDisplayDraft(
         : undefined,
 ): DisplayPreview {
     if (patternError) {
-        return { ok: false, text: t("display_preview_fix_pattern") };
+        return { ok: false, key: "display_preview_fix_pattern" };
     }
     if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
-        return { ok: false, text: t("display_preview_fix_zone") };
+        return { ok: false, key: "display_preview_fix_zone" };
     }
     const result: DatePresentationResult = formatDateWithPresentation(
         DISPLAY_PREVIEW_INSTANT,
@@ -246,7 +241,7 @@ export function previewDisplayDraft(
         displayFromDraft(draft),
     );
     return result.text.length === 0
-        ? { ok: false, text: t("display_preview_fix_pattern") }
+        ? { ok: false, key: "display_preview_fix_pattern" }
         : { ok: true, text: result.text };
 }
 

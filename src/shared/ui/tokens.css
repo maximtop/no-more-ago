@@ -79,6 +79,8 @@ body {
 }
 
 .nma-mono {
+    direction: ltr;
+    unicode-bidi: isolate;
   font-family: var(--nma-font-mono);
 }
 

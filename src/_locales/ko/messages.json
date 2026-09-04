@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "사이트 %count%개|사이트 %count%개",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "삭제",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "초기화 응답을 확인하지 못했습니다. 처리는 계속 사용 중지 상태입니다. 다시 시도하세요.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "ko",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

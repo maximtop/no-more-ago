@@ -178,6 +178,21 @@ export function createRspackConfig({
                         },
                     ],
                 },
+                {
+                    test: /messages\.json$/,
+                    include: path.join(workspaceRoot, "src/_locales"),
+                    type: "json",
+                    parser: {
+                        parse(source: string): Record<string, { message: string }> {
+                            const catalog = JSON.parse(source) as Record<
+                                string, { message: string }
+                            >;
+                            return Object.fromEntries(Object.entries(catalog).map(
+                                ([key, { message }]) => [key, { message }],
+                            ));
+                        },
+                    },
+                },
                 { test: /\.css$/, type: "css" },
             ],
         },

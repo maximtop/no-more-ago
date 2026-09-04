@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% siti|%count% sito|%count% siti",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Rimuovi",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Non è stato possibile confermare la risposta alla reimpostazione. L'elaborazione resta disattivata. Riprova.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "it",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

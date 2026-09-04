@@ -18,14 +18,6 @@ export const SCOPE_MODE_KEY: Readonly<Record<SiteScopeMode, MessageKey>> = Objec
 });
 
 /**
- * Message key naming the hostname list each run mode owns.
- */
-export const SCOPE_LIST_KEY: Readonly<Record<SiteScopeMode, MessageKey>> = Object.freeze({
-    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: "scope_list_excluded",
-    [SITE_SCOPE_MODE.SELECTED_ONLY]: "scope_list_allowed",
-});
-
-/**
  * Status and consequence keys shown while settings cannot be read.
  */
 export interface UnavailableSettingsKeys {

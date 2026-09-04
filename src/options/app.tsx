@@ -228,7 +228,7 @@ export function OptionsApp({
                 <div className="options">
                     <header className="options-header">
                         <BrandMark size={30} />
-                        <span className="options-brand">No More Ago</span>
+                        <span className="options-brand">{t("extension_name")}</span>
                         <span className="options-header-spacer" />
                         <AppearanceControl controller={display} />
                         {version ? <span className="nma-eyebrow">v{version}</span> : null}

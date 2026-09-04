@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% websteder|%count% websted|%count% websteder",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Fjern",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Svaret på nulstillingen kunne ikke bekræftes. Behandlingen er stadig slået fra. Prøv igen.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "da",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

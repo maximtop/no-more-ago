@@ -2,6 +2,8 @@
  * @file Verifies message substitution, plurals, fallback, and document stamping.
  */
 
+import russian from "../../../../src/_locales/ru/messages.json";
+import { resolveUiLocale } from "../../../../src/shared/i18n/locales";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -18,7 +20,8 @@ async function loadTranslator(
     vi.stubGlobal("chrome", {
         i18n: {
             getUILanguage: () => uiLanguage,
-            getMessage: (key: string) => messages[key] ?? "",
+            getMessage: (key: string) => messages[key] ?? (key === "catalog_locale"
+                ? resolveUiLocale(uiLanguage).code.replaceAll("_", "-") : ""),
         },
     });
     vi.resetModules();
@@ -59,6 +62,31 @@ describe("t", () => {
     it("throws for a key absent from every catalog", async () => {
         const { t } = await loadTranslator("en");
         expect(() => t("not_a_real_key" as never)).toThrow(/Was unable to find message/);
+    });
+});
+
+describe("selected browser catalog", () => {
+    it("uses the selected secondary language for plurals and document metadata", async () => {
+        const messages = Object.fromEntries(Object.entries(russian).map(
+            ([key, entry]) => [key, entry.message],
+        ));
+        const { tPlural, applyDocumentLocale, currentUiLocale } =
+            await loadTranslator("lt", messages);
+        expect(tPlural("sites_count", 0)).toBe("0 сайтов");
+        expect(tPlural("sites_count", 2)).toBe("2 сайта");
+        applyDocumentLocale("options_document_title");
+        expect(currentUiLocale().code).toBe("ru");
+        expect(document.documentElement.lang).toBe("ru");
+        expect(document.documentElement.dir).toBe("ltr");
+        expect(document.title).toBe(russian.options_document_title.message);
+    });
+
+    it("isolates dynamic technical substitutions in a right-to-left sentence", async () => {
+        const { t } = await loadTranslator("ar", {
+            popup_site_switch_aria: "مفعّل على %hostname%",
+        });
+        expect(t("popup_site_switch_aria", { hostname: "docs.example.com" }))
+            .toBe("مفعّل على \u2066docs.example.com\u2069");
     });
 });
 

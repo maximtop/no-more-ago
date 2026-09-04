@@ -83,6 +83,19 @@ describe("locale audit", () => {
         expect(result.output).toContain("This heading was never translated");
     }, 60_000);
 
+    it.each([
+        ['const label = `Fixed fixture · ${instant}`;', "Fixed fixture"],
+        ['const view = <input placeholder="Enter your hostname here" />;', "Enter your hostname"],
+        ["const view = <input placeholder='Hostname' />;", "Hostname"],
+    ])("reports untranslated syntax: %s", async (source, expected) => {
+        const root = scratchProject();
+        writeFileSync(path.join(root, "src/options/audit-fixture.tsx"), source);
+        const result = await run(root, "locales:audit");
+        expect(result.ok).toBe(false);
+        expect(result.output).toContain("audit-fixture.tsx");
+        expect(result.output).toContain(expected);
+    }, 60_000);
+
     it("reports an orphaned catalog key", async () => {
         const root = scratchProject();
         const file = path.join(root, "src/_locales/en/messages.json");

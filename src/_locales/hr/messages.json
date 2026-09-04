@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% web-mjesta|%count% web-mjesto|%count% web-mjesta|%count% web-mjesta",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Ukloni",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Odgovor na vraćanje nije bilo moguće potvrditi. Obrada ostaje isključena. Pokušajte ponovno.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "hr",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

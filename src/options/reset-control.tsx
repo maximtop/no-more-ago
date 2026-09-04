@@ -25,6 +25,20 @@ export interface ResetControlProps {
 }
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const RESET_NOTICE_KEYS = {
+    [RESET_NOTICE.SAVE_FAILED]: {
+        [STATE_AVAILABILITY.READY]: "reset_error_failed",
+        [STATE_AVAILABILITY.UNAVAILABLE]: "reset_error_failed_disabled",
+    },
+    [RESET_NOTICE.AMBIGUOUS]: {
+        [STATE_AVAILABILITY.READY]: "reset_error_unknown",
+        [STATE_AVAILABILITY.UNAVAILABLE]: "reset_error_unknown_disabled",
+    },
+} as const satisfies Record<Exclude<ResetNotice, undefined>, Record<ResetOrigin, MessageKey>>;
+
+/**
  * Maps a reset outcome and its starting availability to a message key.
  *
  * @param notice - Outcome reported after resetting settings.
@@ -32,19 +46,7 @@ export interface ResetControlProps {
  * @returns - Message key, or undefined when there is no notice to show.
  */
 export function resetNoticeKey(notice: ResetNotice, origin: ResetOrigin): MessageKey | undefined {
-    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.SAVE_FAILED) {
-        return "reset_error_failed";
-    }
-    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.AMBIGUOUS) {
-        return "reset_error_unknown";
-    }
-    if (notice === RESET_NOTICE.SAVE_FAILED) {
-        return "reset_error_failed_disabled";
-    }
-    if (notice === RESET_NOTICE.AMBIGUOUS) {
-        return "reset_error_unknown_disabled";
-    }
-    return undefined;
+    return notice === undefined ? undefined : RESET_NOTICE_KEYS[notice][origin];
 }
 
 /**

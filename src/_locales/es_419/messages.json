@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% sitios|%count% sitio|%count% sitios",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Eliminar",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "No se pudo confirmar la respuesta al restablecimiento. El procesamiento sigue desactivado. Inténtalo de nuevo.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "es-419",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% сайта|%count% сайт|%count% сайта",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Премахване",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Отговорът за нулирането не можа да бъде потвърден. Обработката остава изключена. Опитайте отново.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "bg",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

@@ -23,9 +23,8 @@ describe("UI locale registry", () => {
         expect(EXPECTED_CODES).toHaveLength(40);
     });
 
-    it("keeps every code unique and every English name non-empty", () => {
+    it("keeps every code unique", () => {
         expect(new Set(UI_LOCALES.map(({ code }) => code)).size).toBe(40);
-        expect(UI_LOCALES.every(({ englishName }) => englishName.length > 0)).toBe(true);
     });
 
     it("flags exactly the right-to-left languages", () => {
@@ -50,7 +49,6 @@ describe("UI locale registry", () => {
 
     it("aliases only Norwegian for Chromium stores", () => {
         expect(CHROMIUM_LOCALE_ALIAS).toEqual({ no: "nb" });
-        expect(UI_LOCALES.some(({ code }) => code === "no")).toBe(false);
     });
 });
 

@@ -27,14 +27,14 @@ const ready = (overrides: Partial<PopupState> = {}): PopupState => ({
 
 describe("popup status", () => {
     it.each([
-        [POPUP_STATUS.ACTIVE, "popup_status_active", "active"],
-        [POPUP_STATUS.GLOBAL_DISABLED, "popup_status_global_disabled", "neutral"],
-        [POPUP_STATUS.SITE_EXCLUDED, "popup_status_site_excluded", "neutral"],
-        [POPUP_STATUS.SITE_NOT_SELECTED, "popup_status_site_not_selected", "neutral"],
-        [POPUP_STATUS.INACCESSIBLE, "popup_status_inaccessible", "warning"],
-        [POPUP_STATUS.RUNTIME_FAILED, "popup_status_runtime_failed", "danger"],
-    ])("describes %s", (status, key, tone) => {
-        expect(popupStatusModel(ready({ status }))).toEqual({ key, tone });
+        [POPUP_STATUS.ACTIVE, "Active", "active"],
+        [POPUP_STATUS.GLOBAL_DISABLED, "Extension is off", "neutral"],
+        [POPUP_STATUS.SITE_EXCLUDED, "Excluded on this site", "neutral"],
+        [POPUP_STATUS.SITE_NOT_SELECTED, "Not selected for this site", "neutral"],
+        [POPUP_STATUS.INACCESSIBLE, "Cannot run on this page", "warning"],
+        [POPUP_STATUS.RUNTIME_FAILED, "Could not process this page", "danger"],
+    ])("describes %s", (status, text, tone) => {
+        expect(popupStatusModel(ready({ status }))).toEqual({ text, tone });
     });
 
     it("describes an unknown processing state after a fail-closed cleanup", () => {
@@ -48,7 +48,7 @@ describe("popup status", () => {
             appearance: APPEARANCE.SYSTEM,
             status: POPUP_STATUS.RUNTIME_FAILED,
             failure: SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP,
-        })).toEqual({ key: "popup_status_unknown", tone: "warning" });
+        })).toEqual({ text: "Current processing state is unknown", tone: "warning" });
     });
 
     it.each([

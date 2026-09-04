@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count%টি সাইট|%count%টি সাইট|%count%টি সাইট",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "সরান",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "রিসেটের প্রতিক্রিয়া নিশ্চিত করা যায়নি। প্রক্রিয়াকরণ বন্ধ থাকবে। আবার চেষ্টা করুন।",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "bn",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

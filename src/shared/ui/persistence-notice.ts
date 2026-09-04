@@ -95,6 +95,36 @@ export const NOTICE_SURFACE = {
 export type NoticeSurface = (typeof NOTICE_SURFACE)[keyof typeof NOTICE_SURFACE];
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const MUTATION_NOTICE_KEYS = {
+    [MUTATION_NOTICE.SAVE_FAILED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_save_failed",
+        [NOTICE_SURFACE.OPTIONS]: "notice_save_failed",
+    },
+    [MUTATION_NOTICE.INVALID_HOSTNAME]: {
+        [NOTICE_SURFACE.POPUP]: "notice_invalid_hostname",
+        [NOTICE_SURFACE.OPTIONS]: "notice_invalid_hostname",
+    },
+    [MUTATION_NOTICE.LIST_FULL]: {
+        [NOTICE_SURFACE.POPUP]: "notice_list_full",
+        [NOTICE_SURFACE.OPTIONS]: "notice_list_full",
+    },
+    [MUTATION_NOTICE.SCOPE_CHANGED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_scope_changed",
+        [NOTICE_SURFACE.OPTIONS]: "notice_scope_changed",
+    },
+    [MUTATION_NOTICE.INTERRUPTED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_interrupted",
+        [NOTICE_SURFACE.OPTIONS]: "notice_interrupted",
+    },
+    [MUTATION_NOTICE.UNKNOWN]: {
+        [NOTICE_SURFACE.POPUP]: "notice_unknown_popup",
+        [NOTICE_SURFACE.OPTIONS]: "notice_unknown_options",
+    },
+} as const satisfies Record<Exclude<MutationNotice, undefined>, Record<NoticeSurface, MessageKey>>;
+
+/**
  * Maps a shared mutation notice to the message key describing it.
  *
  * @param notice - Outcome reported after a settings mutation.
@@ -105,25 +135,5 @@ export function mutationNoticeKey(
     notice: MutationNotice,
     surface: NoticeSurface,
 ): MessageKey | undefined {
-    if (notice === MUTATION_NOTICE.SAVE_FAILED) {
-        return "notice_save_failed";
-    }
-    if (notice === MUTATION_NOTICE.INVALID_HOSTNAME) {
-        return "notice_invalid_hostname";
-    }
-    if (notice === MUTATION_NOTICE.LIST_FULL) {
-        return "notice_list_full";
-    }
-    if (notice === MUTATION_NOTICE.SCOPE_CHANGED) {
-        return "notice_scope_changed";
-    }
-    if (notice === MUTATION_NOTICE.INTERRUPTED) {
-        return "notice_interrupted";
-    }
-    if (notice === MUTATION_NOTICE.UNKNOWN) {
-        return surface === NOTICE_SURFACE.POPUP
-            ? "notice_unknown_popup"
-            : "notice_unknown_options";
-    }
-    return undefined;
+    return notice === undefined ? undefined : MUTATION_NOTICE_KEYS[notice][surface];
 }

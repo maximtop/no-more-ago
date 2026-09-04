@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% webů|%count% web|%count% weby|%count% webů",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Odebrat",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Odpověď na obnovení se nepodařilo ověřit. Zpracování zůstává vypnuté. Zkuste to znovu.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "cs",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

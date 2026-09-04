@@ -16,12 +16,25 @@ export type MessageKey = keyof typeof baseMessages;
  */
 export type MessageValues = Readonly<Record<string, string | number>>;
 
+/**
+ * Text directions shared by the document and UI providers.
+ */
+export const UI_DIRECTION = {
+    LTR: "ltr",
+    RTL: "rtl",
+} as const;
+
+/**
+ * Supported document text direction.
+ */
+export type UiDirection = (typeof UI_DIRECTION)[keyof typeof UI_DIRECTION];
+
 let resolved: UiLocale | undefined;
 
 /**
  * Reads the extension i18n API, which is absent outside an extension context.
  *
- * @returns - The extension i18n API, or undefined under a test runner.
+ * @returns - The extension i18n API, or undefined when chrome is unavailable.
  */
 function extensionI18n(): typeof chrome.i18n | undefined {
     return typeof chrome === "undefined" ? undefined : chrome.i18n;
@@ -30,13 +43,13 @@ function extensionI18n(): typeof chrome.i18n | undefined {
 /**
  * Resolves the registry entry for this document, once per document.
  *
- * The browser UI language cannot change while a popup or Settings document is
- * open, so the result is cached rather than recomputed per translated message.
+ * The catalog identifies itself because Firefox can select a secondary UI
+ * language. Message lookup, plural rules, and document direction must agree.
  *
  * @returns - Registry entry for the browser UI language; English outside an extension.
  */
 export function currentUiLocale(): UiLocale {
-    resolved ??= resolveUiLocale(extensionI18n()?.getUILanguage() ?? BASE_UI_LOCALE);
+    resolved ??= resolveUiLocale(extensionI18n()?.getMessage("catalog_locale") || BASE_UI_LOCALE);
     return resolved;
 }
 
@@ -45,8 +58,8 @@ export function currentUiLocale(): UiLocale {
  *
  * @returns - `rtl` for Arabic, Persian and Hebrew; `ltr` otherwise.
  */
-export function uiDirection(): "ltr" | "rtl" {
-    return currentUiLocale().rtl ? "rtl" : "ltr";
+export function uiDirection(): UiDirection {
+    return currentUiLocale().rtl ? UI_DIRECTION.RTL : UI_DIRECTION.LTR;
 }
 
 /**
@@ -74,7 +87,13 @@ const translator = translate.createTranslator(i18n);
  * @returns - Translated text for the resolved UI locale.
  */
 export function t(key: MessageKey, values: MessageValues = {}): string {
-    return translator.getMessage(key, values);
+    const substitutions = uiDirection() === UI_DIRECTION.RTL
+        ? Object.fromEntries(Object.entries(values).map(([name, value]) => [
+            name,
+            typeof value === "string" ? `\u2066${value}\u2069` : value,
+        ]))
+        : values;
+    return translator.getMessage(key, substitutions);
 }
 
 /**
@@ -100,6 +119,6 @@ export function tPlural(key: MessageKey, count: number): string {
 export function applyDocumentLocale(titleKey: MessageKey): void {
     const entry = currentUiLocale();
     document.documentElement.lang = entry.code.replaceAll("_", "-");
-    document.documentElement.dir = entry.rtl ? "rtl" : "ltr";
+    document.documentElement.dir = uiDirection();
     document.title = t(titleKey);
 }

@@ -114,26 +114,21 @@ export function validateHostnameEntry(
 }
 
 /**
- * Describes the list the active scope mode owns.
- *
- * @param mode - Active scope mode.
- * @returns - Message keys, empty state, and add semantics for that list.
+ * Message mapping for every supported outcome.
  */
-export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
-    if (mode === SITE_SCOPE_MODE.SELECTED_ONLY) {
-        return {
-            title: "scope_list_allowed",
-            description: "sites_allowed_description",
-            fieldLabel: "sites_allowed_field_label",
-            submitLabel: "sites_allowed_submit",
-            removalEffect: "sites_allowed_removal_effect",
-            emptyState: "sites_allowed_empty",
-            removeAria: "sites_remove_from_allowed_aria",
-            addedConfirmation: "sites_added_to_allowed",
-            addEnables: true,
-        };
-    }
-    return {
+const ACTIVE_LIST_COPY = {
+    [SITE_SCOPE_MODE.SELECTED_ONLY]: {
+        title: "scope_list_allowed",
+        description: "sites_allowed_description",
+        fieldLabel: "sites_allowed_field_label",
+        submitLabel: "sites_allowed_submit",
+        removalEffect: "sites_allowed_removal_effect",
+        emptyState: "sites_allowed_empty",
+        removeAria: "sites_remove_from_allowed_aria",
+        addedConfirmation: "sites_added_to_allowed",
+        addEnables: true,
+    },
+    [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: {
         title: "scope_list_excluded",
         description: "sites_excluded_description",
         fieldLabel: "sites_excluded_field_label",
@@ -143,5 +138,15 @@ export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
         removeAria: "sites_remove_from_excluded_aria",
         addedConfirmation: "sites_added_to_excluded",
         addEnables: false,
-    };
+    },
+} as const satisfies Record<SiteScopeMode, ActiveListCopy>;
+
+/**
+ * Describes the list the active scope mode owns.
+ *
+ * @param mode - Active scope mode.
+ * @returns - Message keys, empty state, and add semantics for that list.
+ */
+export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {
+    return ACTIVE_LIST_COPY[mode];
 }

@@ -5,7 +5,6 @@
 import { describe, expect, it } from "vitest";
 import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
 import {
-    SCOPE_LIST_KEY,
     SCOPE_MODE_KEY,
     unavailableSettingsKeys,
 } from "../../../../src/shared/ui/copy";
@@ -41,11 +40,9 @@ describe("mutationNoticeKey", () => {
 });
 
 describe("scope keys", () => {
-    it("names each run mode and its list", () => {
+    it("names each run mode", () => {
         expect(SCOPE_MODE_KEY[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]).toBe("scope_mode_all");
         expect(SCOPE_MODE_KEY[SITE_SCOPE_MODE.SELECTED_ONLY]).toBe("scope_mode_selected");
-        expect(SCOPE_LIST_KEY[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]).toBe("scope_list_excluded");
-        expect(SCOPE_LIST_KEY[SITE_SCOPE_MODE.SELECTED_ONLY]).toBe("scope_list_allowed");
     });
 });
 

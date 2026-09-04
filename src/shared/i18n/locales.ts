@@ -19,77 +19,77 @@ export interface UiLocale {
     readonly adguardCode: Locale;
 
     /**
-     * English language name used by tooling output and documentation.
-     */
-    readonly englishName: string;
-
-    /**
      * Whether the language is written right to left.
      */
     readonly rtl: boolean;
 }
 
 /**
- * Catalog authored by hand and used whenever a message or locale is missing.
- */
-export const BASE_UI_LOCALE = "en";
-
-/**
- * Extra catalog directory the Chromium store dashboards expect, copied from a
- * registry entry. Chromium's runtime reports Norwegian as `nb`, while the Web
- * Store and Edge Add-ons document `no`; there is no second translation.
- */
-export const CHROMIUM_LOCALE_ALIAS: Readonly<Record<string, string>> = Object.freeze({
-    no: "nb",
-});
-
-/**
  * The 40 supported UI languages. This set is intentionally independent of
  * `CANONICAL_RELATIVE_TIME_LOCALES`, which classifies page-owned relative
  * labels and covers a different 40 languages; neither module imports the other.
  */
-export const UI_LOCALES: readonly UiLocale[] = [
-    { code: "ar", adguardCode: "ar", englishName: "Arabic", rtl: true },
-    { code: "bg", adguardCode: "bg", englishName: "Bulgarian", rtl: false },
-    { code: "bn", adguardCode: "bn", englishName: "Bengali", rtl: false },
-    { code: "ca", adguardCode: "ca", englishName: "Catalan", rtl: false },
-    { code: "cs", adguardCode: "cs", englishName: "Czech", rtl: false },
-    { code: "da", adguardCode: "da", englishName: "Danish", rtl: false },
-    { code: "de", adguardCode: "de", englishName: "German", rtl: false },
-    { code: "el", adguardCode: "el", englishName: "Greek", rtl: false },
-    { code: "en", adguardCode: "en", englishName: "English", rtl: false },
-    { code: "es", adguardCode: "es", englishName: "Spanish", rtl: false },
-    { code: "es_419", adguardCode: "es", englishName: "Latin American Spanish", rtl: false },
-    { code: "fa", adguardCode: "fa", englishName: "Persian", rtl: true },
-    { code: "fi", adguardCode: "fi", englishName: "Finnish", rtl: false },
-    { code: "fil", adguardCode: "fil", englishName: "Filipino", rtl: false },
-    { code: "fr", adguardCode: "fr", englishName: "French", rtl: false },
-    { code: "he", adguardCode: "he", englishName: "Hebrew", rtl: true },
-    { code: "hi", adguardCode: "hi", englishName: "Hindi", rtl: false },
-    { code: "hr", adguardCode: "hr", englishName: "Croatian", rtl: false },
-    { code: "hu", adguardCode: "hu", englishName: "Hungarian", rtl: false },
-    { code: "id", adguardCode: "id", englishName: "Indonesian", rtl: false },
-    { code: "it", adguardCode: "it", englishName: "Italian", rtl: false },
-    { code: "ja", adguardCode: "ja", englishName: "Japanese", rtl: false },
-    { code: "ko", adguardCode: "ko", englishName: "Korean", rtl: false },
-    { code: "ms", adguardCode: "ms", englishName: "Malay", rtl: false },
-    { code: "nb", adguardCode: "nb", englishName: "Norwegian Bokmal", rtl: false },
-    { code: "nl", adguardCode: "nl", englishName: "Dutch", rtl: false },
-    { code: "pl", adguardCode: "pl", englishName: "Polish", rtl: false },
-    { code: "pt_BR", adguardCode: "pt_br", englishName: "Brazilian Portuguese", rtl: false },
-    { code: "pt_PT", adguardCode: "pt_pt", englishName: "European Portuguese", rtl: false },
-    { code: "ro", adguardCode: "ro", englishName: "Romanian", rtl: false },
-    { code: "ru", adguardCode: "ru", englishName: "Russian", rtl: false },
-    { code: "sk", adguardCode: "sk", englishName: "Slovak", rtl: false },
-    { code: "sr", adguardCode: "sr", englishName: "Serbian", rtl: false },
-    { code: "sv", adguardCode: "sv", englishName: "Swedish", rtl: false },
-    { code: "th", adguardCode: "th", englishName: "Thai", rtl: false },
-    { code: "tr", adguardCode: "tr", englishName: "Turkish", rtl: false },
-    { code: "uk", adguardCode: "uk", englishName: "Ukrainian", rtl: false },
-    { code: "vi", adguardCode: "vi", englishName: "Vietnamese", rtl: false },
-    { code: "zh_CN", adguardCode: "zh_cn", englishName: "Simplified Chinese", rtl: false },
-    { code: "zh_TW", adguardCode: "zh_tw", englishName: "Traditional Chinese", rtl: false },
-];
+export const UI_LOCALES = [
+    { code: "ar", adguardCode: "ar", rtl: true },
+    { code: "bg", adguardCode: "bg", rtl: false },
+    { code: "bn", adguardCode: "bn", rtl: false },
+    { code: "ca", adguardCode: "ca", rtl: false },
+    { code: "cs", adguardCode: "cs", rtl: false },
+    { code: "da", adguardCode: "da", rtl: false },
+    { code: "de", adguardCode: "de", rtl: false },
+    { code: "el", adguardCode: "el", rtl: false },
+    { code: "en", adguardCode: "en", rtl: false },
+    { code: "es", adguardCode: "es", rtl: false },
+    { code: "es_419", adguardCode: "es", rtl: false },
+    { code: "fa", adguardCode: "fa", rtl: true },
+    { code: "fi", adguardCode: "fi", rtl: false },
+    { code: "fil", adguardCode: "fil", rtl: false },
+    { code: "fr", adguardCode: "fr", rtl: false },
+    { code: "he", adguardCode: "he", rtl: true },
+    { code: "hi", adguardCode: "hi", rtl: false },
+    { code: "hr", adguardCode: "hr", rtl: false },
+    { code: "hu", adguardCode: "hu", rtl: false },
+    { code: "id", adguardCode: "id", rtl: false },
+    { code: "it", adguardCode: "it", rtl: false },
+    { code: "ja", adguardCode: "ja", rtl: false },
+    { code: "ko", adguardCode: "ko", rtl: false },
+    { code: "ms", adguardCode: "ms", rtl: false },
+    { code: "nb", adguardCode: "nb", rtl: false },
+    { code: "nl", adguardCode: "nl", rtl: false },
+    { code: "pl", adguardCode: "pl", rtl: false },
+    { code: "pt_BR", adguardCode: "pt_br", rtl: false },
+    { code: "pt_PT", adguardCode: "pt_pt", rtl: false },
+    { code: "ro", adguardCode: "ro", rtl: false },
+    { code: "ru", adguardCode: "ru", rtl: false },
+    { code: "sk", adguardCode: "sk", rtl: false },
+    { code: "sr", adguardCode: "sr", rtl: false },
+    { code: "sv", adguardCode: "sv", rtl: false },
+    { code: "th", adguardCode: "th", rtl: false },
+    { code: "tr", adguardCode: "tr", rtl: false },
+    { code: "uk", adguardCode: "uk", rtl: false },
+    { code: "vi", adguardCode: "vi", rtl: false },
+    { code: "zh_CN", adguardCode: "zh_cn", rtl: false },
+    { code: "zh_TW", adguardCode: "zh_tw", rtl: false },
+] as const satisfies readonly UiLocale[];
+
+/**
+ * Shipped catalog directory code.
+ */
+export type UiLocaleCode = (typeof UI_LOCALES)[number]["code"];
+
+/**
+ * Catalog used when the browser cannot find a supported language.
+ */
+export const BASE_UI_LOCALE = "en" satisfies UiLocaleCode;
+
+/**
+ * Chromium store alias of the Norwegian catalog.
+ */
+export const CHROMIUM_LOCALE_ALIAS = {
+    no: "nb",
+} as const satisfies Record<string, UiLocaleCode>;
+
+const ALIAS_BY_CODE = new Map<string, UiLocaleCode>(Object.entries(CHROMIUM_LOCALE_ALIAS));
 
 const BY_CODE = new Map(UI_LOCALES.map((entry) => [entry.code.toLowerCase(), entry]));
 
@@ -129,7 +129,7 @@ export function resolveUiLocale(uiLanguage: string): UiLocale {
     if (locale.language === "es" && locale.region !== undefined && locale.region !== "ES") {
         return BY_CODE.get("es_419") as UiLocale;
     }
-    const aliased = CHROMIUM_LOCALE_ALIAS[locale.language];
+    const aliased = ALIAS_BY_CODE.get(locale.language);
     if (aliased) {
         return BY_CODE.get(aliased.toLowerCase()) as UiLocale;
     }

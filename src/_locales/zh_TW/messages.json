@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% 個網站|%count% 個網站",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "移除",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "無法確認重設回應。處理仍處於停用狀態。請再試一次。",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "zh-TW",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

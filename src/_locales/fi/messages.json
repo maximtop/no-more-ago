@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "%count% sivustoa|%count% sivusto|%count% sivustoa",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "Poista",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "Palautuksen vastausta ei voitu vahvistaa. Käsittely on yhä poissa käytöstä. Yritä uudelleen.",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "fi",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

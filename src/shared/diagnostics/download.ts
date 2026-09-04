@@ -57,6 +57,16 @@ export type DiagnosticsSnapshotResult =
     };
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const DIAGNOSTICS_ERROR_KEYS = {
+    [DIAGNOSTICS_ERROR.DISABLED]: "diagnostics_error_disabled",
+    [DIAGNOSTICS_ERROR.EMPTY]: "diagnostics_error_empty",
+    [DIAGNOSTICS_ERROR.STORAGE_FAILED]: "diagnostics_error_unreadable",
+    [DIAGNOSTICS_ERROR.UNAVAILABLE]: "diagnostics_error_unavailable",
+} as const satisfies Record<DiagnosticsSnapshotError | DiagnosticsClearError, MessageKey>;
+
+/**
  * Maps a diagnostics service failure to its message key.
  *
  * @param error - Stable service failure returned by the background page.
@@ -65,16 +75,7 @@ export type DiagnosticsSnapshotResult =
 export function diagnosticsErrorKey(
     error: DiagnosticsSnapshotError | DiagnosticsClearError,
 ): MessageKey {
-    if (error === DIAGNOSTICS_ERROR.DISABLED) {
-        return "diagnostics_error_disabled";
-    }
-    if (error === DIAGNOSTICS_ERROR.EMPTY) {
-        return "diagnostics_error_empty";
-    }
-    if (error === DIAGNOSTICS_ERROR.STORAGE_FAILED) {
-        return "diagnostics_error_unreadable";
-    }
-    return "diagnostics_error_unavailable";
+    return DIAGNOSTICS_ERROR_KEYS[error];
 }
 
 /**

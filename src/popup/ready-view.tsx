@@ -4,9 +4,8 @@
 
 import { Alert, Box, Button, Group, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
-import type { MessageKey } from "../shared/i18n/translator";
 import type { ReadyPopupState } from "../shared/messaging/view-state";
-import { t } from "../shared/i18n/translator";
+import { t, type MessageKey } from "../shared/i18n/translator";
 import { SCOPE_MODE_KEY } from "../shared/ui/copy";
 import { NOTICE_SURFACE, mutationNoticeKey } from "../shared/ui/persistence-notice";
 import { POPUP_NOTICE, type PopupNotice } from "./popup-controller";
@@ -130,7 +129,7 @@ export function PopupReadyView({
             <div className="popup-status" data-tone={status.tone}>
                 <span className="popup-status-dot" aria-hidden="true" />
                 <Text role="status" size="sm" fw={600}>
-                    {t(status.key)}
+                    {status.text}
                 </Text>
             </div>
             {presented ? (

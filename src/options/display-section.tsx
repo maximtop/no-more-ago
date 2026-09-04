@@ -224,11 +224,14 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                         <div>
                             <div className="nma-eyebrow">{t("display_preview_label")}</div>
                             <div
-                                className="options-preview-value nma-mono"
+                                className={analysis.preview.ok
+                                    ? "options-preview-value nma-mono"
+                                    : "options-preview-value"}
                                 role="status"
                                 aria-label={t("display_preview_label")}
                             >
-                                {analysis.preview.text}
+                                {analysis.preview.ok
+                                    ? analysis.preview.text : t(analysis.preview.key)}
                             </div>
                         </div>
                         <span className="options-preview-source nma-mono">

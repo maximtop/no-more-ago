@@ -6,7 +6,10 @@ import { execFile } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-import { CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from "../../../src/shared/i18n/locales";
+import {
+    BASE_UI_LOCALE, CHROMIUM_LOCALE_ALIAS, UI_LOCALES,
+} from "../../../src/shared/i18n/locales";
+import { BROWSER, BROWSERS } from "../../../scripts/build/contracts";
 import { createBuildWorkspace } from "./build-workspace";
 
 const execFileAsync = promisify(execFile);
@@ -20,7 +23,7 @@ describe("locale artifacts", () => {
             const codes = UI_LOCALES.map(({ code }) => code).sort();
             const aliases = Object.entries(CHROMIUM_LOCALE_ALIAS);
 
-            for (const browser of ["chrome", "edge"]) {
+            for (const browser of BROWSERS.filter((target) => target !== BROWSER.FIREFOX)) {
                 const root = `${workspace.root}/dist/dev/${browser}/_locales`;
                 expect(readdirSync(root).sort())
                     .toEqual([...codes, ...aliases.map(([alias]) => alias)].sort());
@@ -30,18 +33,18 @@ describe("locale artifacts", () => {
                 }
             }
 
-            const firefoxRoot = `${workspace.root}/dist/dev/firefox/_locales`;
+            const firefoxRoot = `${workspace.root}/dist/dev/${BROWSER.FIREFOX}/_locales`;
             expect(readdirSync(firefoxRoot).sort()).toEqual(codes);
             for (const [alias] of aliases) {
                 expect(existsSync(`${firefoxRoot}/${alias}`)).toBe(false);
             }
 
-            for (const browser of ["chrome", "firefox", "edge"]) {
+            for (const browser of BROWSERS) {
                 const manifest = JSON.parse(readFileSync(
                     `${workspace.root}/dist/dev/${browser}/manifest.json`,
                     "utf8",
                 )) as Record<string, string>;
-                expect(manifest.default_locale).toBe("en");
+                expect(manifest.default_locale).toBe(BASE_UI_LOCALE);
                 expect(manifest.name).toBe("__MSG_extension_name__");
                 expect(manifest.description).toBe("__MSG_extension_description__");
             }

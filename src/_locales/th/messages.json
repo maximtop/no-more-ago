@@ -309,7 +309,7 @@
   },
   "sites_count": {
     "message": "เว็บไซต์ %count% รายการ|เว็บไซต์ %count% รายการ",
-    "description": "Number of hostnames in the active list; three plural forms in the order zero, one, other"
+    "description": "Number of hostnames in the active list"
   },
   "sites_remove_action": {
     "message": "ลบ",
@@ -650,5 +650,9 @@
   "reset_error_unknown_disabled": {
     "message": "ไม่สามารถยืนยันการตอบสนองของการรีเซ็ตได้ การประมวลผลยังคงปิดอยู่ โปรดลองอีกครั้ง",
     "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "th",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
   }
 }

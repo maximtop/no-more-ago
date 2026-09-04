@@ -4,6 +4,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { BASE_UI_LOCALE } from "../src/shared/i18n/locales.ts";
 
 const ROOT = path.join(import.meta.dirname, "..");
@@ -12,124 +13,101 @@ const SCANNED_DIRECTORIES = [
     "src/options",
     "src/shared/ui",
     "src/shared/diagnostics",
+    "src/shared/i18n",
 ];
 
 /**
- * Literals that look like copy but are technical values the UI must not
- * translate. Keep this list short and justified; every entry is a hole in the
- * audit.
+ * Technical values intentionally shown without translation.
  */
 const ALLOWED_LITERALS = new Set([
-    "No More Ago",
-    "America/New_York",
-    "example.com",
-    "UTC",
-    "IANA",
+    "No More Ago", "America/New_York", "example.com", "UTC", "IANA", "v",
 ]);
 
-/**
- * Keys the manifest references through `__MSG_*__` rather than from source.
- */
 const MANIFEST_KEYS = new Set(["extension_name", "extension_description"]);
-
-const PROSE = /^[A-Z][A-Za-z0-9 ,.'’?%:()\u2014-]{8,}$/u;
-const MULTI_WORD = / /u;
-const ATTRIBUTE_NAMES = [
-    "className", "data-[a-z-]+", "role", "color", "variant", "size", "gap",
-    "justify", "align", "wrap", "type", "order", "component", "href", "id",
-    "htmlFor", "value", "placeholder", "name", "rel", "target",
-].join("|");
-const ATTRIBUTE = new RegExp(`(?:${ATTRIBUTE_NAMES})=$`, "u");
+const COPY_ATTRIBUTES = new Set(["placeholder", "label", "title", "aria-label", "description"]);
+const WORDS = /[A-Za-z]{2,}[\s·]+[A-Za-z]{2,}/u;
+const findings: string[] = [];
+const referencedKeys = new Set<string>();
 
 /**
- * Lists every TypeScript source file under one scanned directory.
+ * Lists TypeScript source files recursively beneath a directory.
  *
- * @param directory - Repository-relative directory to walk.
- * @returns - Absolute paths of its `.ts` and `.tsx` files.
+ * @param directory - Absolute directory to walk.
+ * @returns - Absolute TypeScript and TSX source paths.
  */
 function sourceFiles(directory: string): string[] {
-    const root = path.join(ROOT, directory);
-    return readdirSync(root)
-        .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
-        .map((name) => path.join(root, name));
+    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const file = path.join(directory, entry.name);
+        return entry.isDirectory() ? sourceFiles(file) : /\.tsx?$/u.test(file) ? [file] : [];
+    });
 }
 
-const findings: string[] = [];
+/**
+ * Finds a surrounding JSX attribute or a developer-only expression.
+ *
+ * @param node - Literal whose context is inspected.
+ * @returns - Whether the literal is visible copy, technical data, or ordinary code.
+ */
+function copyContext(node: ts.Node): boolean | undefined {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+        if (ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)
+            || ts.isThrowStatement(parent) || ts.isNewExpression(parent)) {
+            return false;
+        }
+        if (ts.isPropertyAssignment(parent)
+            && ["fontFamily", "fontFamilyMonospace"].includes(parent.name.getText())) {
+            return false;
+        }
+        if (ts.isJsxAttribute(parent)) {
+            return COPY_ATTRIBUTES.has(parent.name.getText());
+        }
+        if (ts.isJsxExpression(parent) && ts.isJsxElement(parent.parent)) {
+            return true;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Inspects one parsed source node, including strings, templates, and JSX text.
+ *
+ * @param node - Current syntax node.
+ * @param source - Parsed file used for source locations.
+ */
+function inspect(node: ts.Node, source: ts.SourceFile): void {
+    if (ts.isStringLiteralLike(node)) {
+        referencedKeys.add(node.text);
+    }
+    if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node)
+        || ts.isTemplateMiddle(node) || ts.isTemplateTail(node) || ts.isJsxText(node)) {
+        const value = node.text.trim();
+        const context = ts.isJsxText(node) ? true : copyContext(node);
+        if (context !== false && value && !ALLOWED_LITERALS.has(value)
+            && (WORDS.test(value) || (context === true && /^[A-Za-z]+$/u.test(value)))) {
+            const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+            findings.push(
+                `${path.relative(ROOT, source.fileName)}:${String(line)}: `
+                + `hardcoded copy "${value}"`,
+            );
+        }
+    }
+    ts.forEachChild(node, (child) => inspect(child, source));
+}
 
 for (const directory of SCANNED_DIRECTORIES) {
-    for (const file of sourceFiles(directory)) {
-        const relative = path.relative(ROOT, file);
-        let inBlockComment = false;
-        let inImport = false;
-        let inThrow = false;
-        for (const [index, line] of readFileSync(file, "utf8").split("\n").entries()) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith("/*")) {
-                inBlockComment = true;
-            }
-            if (inBlockComment) {
-                if (trimmed.includes("*/")) {
-                    inBlockComment = false;
-                }
-                continue;
-            }
-            if (trimmed.startsWith("import ")) {
-                inImport = !trimmed.includes(" from ") && !trimmed.endsWith(";");
-                continue;
-            }
-            if (inImport) {
-                // A multi-line import block lists type and value members that
-                // read like prose but name nothing a user sees.
-                if (trimmed.includes(" from ")) {
-                    inImport = false;
-                }
-                continue;
-            }
-            if (/\bthrow new \w+\($/u.test(trimmed)) {
-                inThrow = true;
-                continue;
-            }
-            if (inThrow) {
-                // A thrown Error's message is a developer diagnostic, not UI copy.
-                if (trimmed.startsWith(")")) {
-                    inThrow = false;
-                }
-                continue;
-            }
-            if (trimmed.startsWith("*") || trimmed.startsWith("//")
-                || line.includes("new Error(")) {
-                continue;
-            }
-            for (const match of line.matchAll(/"([^"\\]{9,})"/gu)) {
-                const value = match[1] as string;
-                const before = line.slice(0, match.index);
-                if (ALLOWED_LITERALS.has(value) || !PROSE.test(value)
-                    || !MULTI_WORD.test(value) || ATTRIBUTE.test(before)) {
-                    continue;
-                }
-                findings.push(`${relative}:${String(index + 1)}: hardcoded copy "${value}"`);
-            }
-            if (PROSE.test(trimmed) && MULTI_WORD.test(trimmed)
-                && !ALLOWED_LITERALS.has(trimmed)
-                && !/[;{}=<>]$/u.test(trimmed) && !trimmed.includes("(")) {
-                findings.push(`${relative}:${String(index + 1)}: hardcoded copy "${trimmed}"`);
-            }
-        }
+    for (const file of sourceFiles(path.join(ROOT, directory))) {
+        const source = ts.createSourceFile(
+            file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true,
+        );
+        inspect(source, source);
     }
 }
 
 const catalog = JSON.parse(readFileSync(
-    path.join(ROOT, "src/_locales", BASE_UI_LOCALE, "messages.json"),
-    "utf8",
+    path.join(ROOT, "src/_locales", BASE_UI_LOCALE, "messages.json"), "utf8",
 )) as Record<string, unknown>;
-const sources = SCANNED_DIRECTORIES.flatMap(sourceFiles)
-    .map((file) => readFileSync(file, "utf8"))
-    .join("\n");
 for (const key of Object.keys(catalog)) {
-    if (MANIFEST_KEYS.has(key)) {
-        continue;
-    }
-    if (!sources.includes(`"${key}"`)) {
+    if (!MANIFEST_KEYS.has(key) && !referencedKeys.has(key)) {
         findings.push(`src/_locales/${BASE_UI_LOCALE}/messages.json: orphaned key ${key}`);
     }
 }

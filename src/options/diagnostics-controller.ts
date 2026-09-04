@@ -41,22 +41,22 @@ export const DEBUG_NOTICE = {
 export type DebugNotice = (typeof DEBUG_NOTICE)[keyof typeof DEBUG_NOTICE] | undefined;
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const DEBUG_NOTICE_KEYS = {
+    [DEBUG_NOTICE.SAVE_FAILED]: "debug_error_save_failed",
+    [DEBUG_NOTICE.INTERRUPTED]: "debug_error_interrupted",
+    [DEBUG_NOTICE.UNKNOWN]: "debug_error_unknown",
+} as const satisfies Record<Exclude<DebugNotice, undefined>, MessageKey>;
+
+/**
  * Maps a Debug logs outcome to the message key describing it.
  *
  * @param notice - Outcome reported after changing the Debug logs setting.
  * @returns - Message key, or undefined when there is no notice to show.
  */
 export function debugNoticeKey(notice: DebugNotice): MessageKey | undefined {
-    if (notice === DEBUG_NOTICE.SAVE_FAILED) {
-        return "debug_error_save_failed";
-    }
-    if (notice === DEBUG_NOTICE.INTERRUPTED) {
-        return "debug_error_interrupted";
-    }
-    if (notice === DEBUG_NOTICE.UNKNOWN) {
-        return "debug_error_unknown";
-    }
-    return undefined;
+    return notice === undefined ? undefined : DEBUG_NOTICE_KEYS[notice];
 }
 
 /**
@@ -178,22 +178,27 @@ export interface DiagnosticsController {
 }
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const SITE_REPORT_ERROR_KEYS = {
+    [SITE_REPORT_ERROR.MISSING_TAB]: "report_error_context",
+    [SITE_REPORT_ERROR.RESTRICTED_PAGE]: "report_error_context",
+    [SITE_REPORT_ERROR.HOSTNAME_MISMATCH]: "report_error_context",
+    [SITE_REPORT_ERROR.PRIVATE_WINDOW]: "report_error_context",
+    [SITE_REPORT_ERROR.BROWSER_UNAVAILABLE]: "report_error_browser",
+    [SITE_REPORT_ERROR.INVALID_CONTEXT]: "report_error_context",
+    [SITE_REPORT_ERROR.BUSY]: "report_error_busy_options",
+    [SITE_REPORT_ERROR.OPEN_FAILED]: "report_error_generic",
+} as const satisfies Record<SiteReportError, MessageKey>;
+
+/**
  * Maps a site-report failure to the guidance key shown in settings.
  *
  * @param error - Failure returned by the site-report service.
  * @returns - Message key displayed to the user.
  */
 function siteReportErrorKey(error: SiteReportError): MessageKey {
-    if (error === SITE_REPORT_ERROR.BUSY) {
-        return "report_error_busy_options";
-    }
-    if (error === SITE_REPORT_ERROR.OPEN_FAILED) {
-        return "report_error_generic";
-    }
-    if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
-        return "report_error_browser";
-    }
-    return "report_error_context";
+    return SITE_REPORT_ERROR_KEYS[error];
 }
 
 /**

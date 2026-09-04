@@ -176,7 +176,7 @@ together with the SVG; watch mode does not re-export them.
 | `pnpm locales:validate` | Check the 40 message catalogs against the English source. |
 | `pnpm test` | Run all Vitest tests in JSDOM. |
 | `pnpm check` | Run lint, type checking, catalog validation, and the full test suite. |
-| `pnpm locales:audit` | Find hardcoded UI copy and orphaned catalog keys. Not part of `pnpm check`. |
+| `pnpm locales:audit` | Find hardcoded UI copy and orphaned catalog keys. Also exercised by the audit test in `pnpm check`. |
 
 Tests live under `tests/src` and `tests/scripts`, mirroring `src` and
 `scripts`. Site fixtures live under
@@ -591,10 +591,10 @@ tree, including uncommitted changes.
    note byte-identical, and give a plural message the exact number of
    `|`-separated forms its language needs, zero form first.
 4. Run `pnpm locales:validate` to check registry, key, placeholder, plural and
-   length parity. It is part of `pnpm check`.
+   the 132-character manifest-description limit. It is part of `pnpm check`.
 5. Run `pnpm locales:audit` before a release to find hardcoded copy and keys no
-   source references. It reads `src/`, so it is deliberately not part of
-   `pnpm check`.
+   source references. The audit test also runs it through `pnpm check`, which
+   the release workflow requires.
 
 ### Run a Focused Test
 

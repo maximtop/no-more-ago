@@ -62,34 +62,27 @@ export interface PopupAppProps {
 }
 
 /**
+ * Message mapping for every supported outcome.
+ */
+const SITE_REPORT_ERROR_KEYS = {
+    [SITE_REPORT_ERROR.MISSING_TAB]: "report_error_missing_tab",
+    [SITE_REPORT_ERROR.RESTRICTED_PAGE]: "report_error_restricted_page",
+    [SITE_REPORT_ERROR.HOSTNAME_MISMATCH]: "report_error_hostname_mismatch",
+    [SITE_REPORT_ERROR.PRIVATE_WINDOW]: "report_error_private_window",
+    [SITE_REPORT_ERROR.BROWSER_UNAVAILABLE]: "report_error_browser_unavailable",
+    [SITE_REPORT_ERROR.INVALID_CONTEXT]: "report_error_invalid_context",
+    [SITE_REPORT_ERROR.BUSY]: "report_error_busy",
+    [SITE_REPORT_ERROR.OPEN_FAILED]: "report_error_generic",
+} as const satisfies Record<SiteReportError, MessageKey>;
+
+/**
  * Maps a site-report failure to the guidance key shown in the popup.
  *
  * @param error - Failure returned by the site-report service.
  * @returns - Message key displayed to the user.
  */
 function siteReportErrorKey(error: SiteReportError): MessageKey {
-    if (error === SITE_REPORT_ERROR.MISSING_TAB) {
-        return "report_error_missing_tab";
-    }
-    if (error === SITE_REPORT_ERROR.RESTRICTED_PAGE) {
-        return "report_error_restricted_page";
-    }
-    if (error === SITE_REPORT_ERROR.HOSTNAME_MISMATCH) {
-        return "report_error_hostname_mismatch";
-    }
-    if (error === SITE_REPORT_ERROR.PRIVATE_WINDOW) {
-        return "report_error_private_window";
-    }
-    if (error === SITE_REPORT_ERROR.BROWSER_UNAVAILABLE) {
-        return "report_error_browser_unavailable";
-    }
-    if (error === SITE_REPORT_ERROR.INVALID_CONTEXT) {
-        return "report_error_invalid_context";
-    }
-    if (error === SITE_REPORT_ERROR.BUSY) {
-        return "report_error_busy";
-    }
-    return "report_error_generic";
+    return SITE_REPORT_ERROR_KEYS[error];
 }
 
 /**
@@ -175,7 +168,8 @@ export function PopupApp({
                         <div className="popup-identity">
                             <Title order={1}>{t("extension_name")}</Title>
                             <p
-                                className="popup-hostname nma-mono"
+                                className={state?.hostname
+                                    ? "popup-hostname nma-mono" : "popup-hostname"}
                                 title={state?.hostname ?? undefined}
                             >
                                 {state?.hostname ?? t("popup_current_page")}
@@ -190,7 +184,7 @@ export function PopupApp({
                         ) : state.availability !== STATE_AVAILABILITY.READY ? (
                             <PopupUnavailablePanel
                                 copy={{
-                                    status: t(popupStatusModel(state).key),
+                                    status: popupStatusModel(state).text,
                                     consequence: t(
                                         unavailableSettingsKeys(state.failure).consequence,
                                     ),

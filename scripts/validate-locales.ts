@@ -40,7 +40,7 @@ function readCatalog(code: string): Record<string, CatalogEntry> {
     return JSON.parse(readFileSync(file, "utf8")) as Record<string, CatalogEntry>;
 }
 
-const codes = UI_LOCALES.map(({ code }) => code);
+const codes: readonly string[] = UI_LOCALES.map(({ code }) => code);
 if (codes.length !== EXPECTED_LOCALE_COUNT || new Set(codes).size !== EXPECTED_LOCALE_COUNT) {
     failures.push(
         `The registry must hold exactly ${String(EXPECTED_LOCALE_COUNT)} unique locales.`,
@@ -74,6 +74,9 @@ for (const entry of UI_LOCALES) {
     }
     const catalog = readCatalog(entry.code);
     const keys = Object.keys(catalog).sort();
+    if (catalog.catalog_locale?.message !== entry.code.replaceAll("_", "-")) {
+        failures.push(`${entry.code}: catalog_locale must identify its own catalog.`);
+    }
     for (const key of baseKeys.filter((candidate) => !keys.includes(candidate))) {
         failures.push(`${entry.code}: missing key ${key}.`);
     }

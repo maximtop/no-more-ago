@@ -43,7 +43,7 @@ The extension provides a global switch, a run mode (`All supported sites` or
 `Selected sites only`) with independent Excluded sites and Allowed sites
 lists, date format and time-zone settings, an Appearance choice (`System`,
 `Light`, or `Dark`), and opt-in diagnostic logs. The UI ships 40 translated
-locale catalogs and follows the browser UI language, falling back to English.
+locale catalogs and uses the browser-selected catalog, falling back to English.
 Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 
 ## Technical Context
@@ -73,6 +73,10 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   registry and the browser-language resolver; `src/shared/i18n/translator.ts`
   wraps `@adguard/translate` and exposes `t`, `tPlural` and
   `applyDocumentLocale`. Catalogs live in `src/_locales/<code>/messages.json`.
+  Each catalog identifies its language through `catalog_locale`, so plural
+  rules and document direction follow the browser-selected catalog even when
+  Firefox selects a secondary UI language. Runtime bundles omit translator
+  notes; the packaged catalogs retain them.
   This registry is deliberately independent of
   `CANONICAL_RELATIVE_TIME_LOCALES`; neither module imports the other, and the
   two 40-language sets differ. Placeholders carry only untranslated values —
@@ -514,7 +518,8 @@ Known architectural exclusions to improve when their area changes:
 
 ### Other
 
-- Keep all user-facing extension copy in English.
+- Keep source copy and translator notes in the English catalog; translate
+  user-facing copy through the shipped UI catalogs.
 - Build for Chrome, Firefox, and Edge. Do not add Safari support without an
   explicit requirement.
 - Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and

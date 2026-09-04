@@ -103,6 +103,16 @@ afterEach(() => {
 });
 
 describe("locale validation", () => {
+    it("rejects a catalog that identifies a different language", async () => {
+        const root = scratchProject();
+        editCatalog(root, "ru", (catalog) => {
+            (catalog.catalog_locale as CatalogEntry).message = "en";
+        });
+        const result = await validate(root);
+        expect(result.ok).toBe(false);
+        expect(result.output).toContain("ru: catalog_locale");
+    }, 60_000);
+
     it("passes on the committed catalogs", async () => {
         expect((await validate(scratchProject())).ok).toBe(true);
     }, 60_000);
