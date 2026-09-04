@@ -4,7 +4,7 @@
 import {
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASE,
-    isDocumentStatusResponse,
+    readDocumentStatusPhase,
 } from "../../shared/messaging/document-messages";
 import {
     POPUP_RUNTIME_FAILURE,
@@ -18,7 +18,7 @@ import {
     createUnavailableSitesState,
     type PopupState,
     type SitesState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 import { parseHttpUrl } from "../../shared/url/http";
 import { isFacebookHostname } from "../../shared/url/facebook";
 import {
@@ -285,12 +285,8 @@ export class StateProjection {
                 { frameId: 0 },
             ),
         );
-        if (
-            !status.ok
-            || !isDocumentStatusResponse(status.value)
-            || (status.value.phase !== DOCUMENT_PHASE.WAITING
-                && status.value.phase !== DOCUMENT_PHASE.ACTIVE)
-        ) {
+        const phase = status.ok ? readDocumentStatusPhase(status.value) : undefined;
+        if (phase !== DOCUMENT_PHASE.WAITING && phase !== DOCUMENT_PHASE.ACTIVE) {
             return this.ready(snapshot, url.hostname, true, {
                 status: POPUP_STATUS.RUNTIME_FAILED,
                 failure: POPUP_RUNTIME_FAILURE.DOCUMENT_STATUS,

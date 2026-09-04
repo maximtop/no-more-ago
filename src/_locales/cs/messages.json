@@ -587,10 +587,6 @@
     "message": "Zatím nejsou k dispozici žádné diagnostické protokoly ke stažení.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Uložené diagnostické protokoly jsou neplatné. Vymažte protokoly a zkuste to znovu.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Uložené diagnostické protokoly se nepodařilo přečíst. Zkuste to později.",
     "description": "Storage read failed"

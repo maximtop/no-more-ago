@@ -587,10 +587,6 @@
     "message": "अभी डाउनलोड करने के लिए कोई डायग्नोस्टिक लॉग नहीं है।",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "सहेजे गए डायग्नोस्टिक लॉग अमान्य हैं। लॉग साफ़ करके दोबारा कोशिश करें।",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "सहेजे गए डायग्नोस्टिक लॉग पढ़े नहीं जा सके। बाद में दोबारा कोशिश करें।",
     "description": "Storage read failed"

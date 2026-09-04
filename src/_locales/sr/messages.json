@@ -587,10 +587,6 @@
     "message": "Још нема дијагностичких записа за преузимање.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Сачувани дијагностички записи нису важећи. Обришите записе и покушајте поново.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Сачувани дијагностички записи нису могли да се прочитају. Покушајте касније.",
     "description": "Storage read failed"

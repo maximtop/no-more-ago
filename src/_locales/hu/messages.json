@@ -587,10 +587,6 @@
     "message": "Még nincsenek letölthető diagnosztikai naplók.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "A mentett diagnosztikai naplók érvénytelenek. Törölje a naplókat, és próbálja újra.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "A mentett diagnosztikai naplókat nem sikerült beolvasni. Próbálja később.",
     "description": "Storage read failed"

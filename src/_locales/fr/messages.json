@@ -587,10 +587,6 @@
     "message": "Il n'y a pas encore de journaux de diagnostic à télécharger.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Les journaux de diagnostic enregistrés ne sont pas valides. Effacez-les et réessayez.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Impossible de lire les journaux de diagnostic enregistrés. Réessayez plus tard.",
     "description": "Storage read failed"

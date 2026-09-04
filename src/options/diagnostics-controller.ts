@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
     createUnavailableDebugState,
     type DebugState,
-} from "../shared/messaging/view-state-schemas";
+} from "../shared/messaging/view-state";
 import {
     SETTINGS_PERSISTENCE_ERROR,
     STATE_AVAILABILITY,

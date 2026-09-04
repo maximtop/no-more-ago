@@ -587,10 +587,6 @@
     "message": "Encara no hi ha registres de diagnòstic per baixar.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Els registres de diagnòstic desats no són vàlids. Esborra'ls i torna-ho a provar.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "No s'han pogut llegir els registres de diagnòstic desats. Torna-ho a provar més tard.",
     "description": "Storage read failed"

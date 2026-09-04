@@ -8,7 +8,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { PopupApp } from "../../../src/popup/app";
 import { PopupClient, type PopupTransport } from "../../../src/popup/client";
-import type { PopupState } from "../../../src/shared/messaging/view-state-schemas";
+import type { PopupState } from "../../../src/shared/messaging/view-state";
 import type {
     SubscribeSettingsChanged,
 } from "../../../src/shared/messaging/settings-notifications";

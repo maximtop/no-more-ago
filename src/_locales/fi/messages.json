@@ -587,10 +587,6 @@
     "message": "Ladattavia diagnostiikkalokeja ei ole vielä.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Tallennetut diagnostiikkalokit ovat virheellisiä. Tyhjennä lokit ja yritä uudelleen.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Tallennettuja diagnostiikkalokeja ei voitu lukea. Yritä myöhemmin uudelleen.",
     "description": "Storage read failed"

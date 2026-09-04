@@ -587,10 +587,6 @@
     "message": "Пока нет журналов диагностики для скачивания.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Сохранённые журналы диагностики некорректны. Очистите журналы и попробуйте ещё раз.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Не удалось прочитать сохранённые журналы диагностики. Попробуйте позже.",
     "description": "Storage read failed"

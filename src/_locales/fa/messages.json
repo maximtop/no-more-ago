@@ -587,10 +587,6 @@
     "message": "هنوز گزارش عیب‌یابی برای بارگیری وجود ندارد.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "گزارش‌های عیب‌یابی ذخیره‌شده نامعتبر است. گزارش‌ها را پاک کنید و دوباره تلاش کنید.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "گزارش‌های عیب‌یابی ذخیره‌شده خوانده نشد. بعداً دوباره تلاش کنید.",
     "description": "Storage read failed"

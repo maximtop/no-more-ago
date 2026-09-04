@@ -587,10 +587,6 @@
     "message": "Încă nu există jurnale de diagnosticare de descărcat.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Jurnalele de diagnosticare salvate nu sunt valide. Șterge jurnalele și încearcă din nou.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Jurnalele de diagnosticare salvate nu au putut fi citite. Încearcă mai târziu.",
     "description": "Storage read failed"

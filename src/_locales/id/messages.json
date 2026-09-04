@@ -587,10 +587,6 @@
     "message": "Belum ada log diagnostik untuk diunduh.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Log diagnostik yang tersimpan tidak valid. Bersihkan log lalu coba lagi.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Log diagnostik yang tersimpan tidak dapat dibaca. Coba lagi nanti.",
     "description": "Storage read failed"

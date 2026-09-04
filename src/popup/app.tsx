@@ -19,7 +19,7 @@ import { NO_MORE_AGO_THEME, forcedColorScheme } from "../shared/ui/theme";
 import { unavailableSettingsKeys } from "../shared/ui/copy";
 import { t, uiDirection, type MessageKey } from "../shared/i18n/translator";
 import type { PopupClient } from "./client";
-import type { PopupState } from "../shared/messaging/view-state-schemas";
+import type { PopupState } from "../shared/messaging/view-state";
 import { usePopupController } from "./popup-controller";
 import { popupStatusModel } from "./popup-status";
 import { PopupReadyView, noticePresentation } from "./ready-view";

@@ -587,10 +587,6 @@
     "message": "There are no diagnostic logs to download yet.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Saved diagnostic logs are invalid. Clear logs and try again.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Saved diagnostic logs could not be read. Try again later.",
     "description": "Storage read failed"

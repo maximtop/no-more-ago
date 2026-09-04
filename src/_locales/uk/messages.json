@@ -587,10 +587,6 @@
     "message": "Журналів діагностики для завантаження ще немає.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Збережені журнали діагностики недійсні. Очистіть журнали та спробуйте ще раз.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Не вдалося прочитати збережені журнали діагностики. Спробуйте пізніше.",
     "description": "Storage read failed"

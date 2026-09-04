@@ -587,10 +587,6 @@
     "message": "Wala pang diagnostic log na maaaring i-download.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Hindi wasto ang mga naka-save na diagnostic log. I-clear ang mga log at subukan muli.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Hindi nabasa ang mga naka-save na diagnostic log. Subukan muli mamaya.",
     "description": "Storage read failed"

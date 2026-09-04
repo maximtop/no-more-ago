@@ -587,10 +587,6 @@
     "message": "Henüz indirilecek tanılama günlüğü yok.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Kaydedilen tanılama günlükleri geçersiz. Günlükleri temizleyip yeniden deneyin.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Kaydedilen tanılama günlükleri okunamadı. Daha sonra yeniden deneyin.",
     "description": "Storage read failed"

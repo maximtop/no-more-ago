@@ -2,26 +2,25 @@
  * @file Background-to-page settings change notification and its subscriber.
  */
 
-import * as v from "valibot";
-import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
-
 /**
  * Announces that persisted settings changed and names the committed revision.
  */
 export const SETTINGS_CHANGED_MESSAGE = "no-more-ago:settings-changed" as const;
 
 /**
- * Exact notification sent by the background after a committed settings write.
+ * Notification sent by the background after a committed settings write.
  */
-export const settingsChangedMessageSchema = v.strictObject({
-    type: v.literal(SETTINGS_CHANGED_MESSAGE),
-    revision: nonNegativeSafeIntegerSchema,
-});
+export interface SettingsChangedMessage {
+    /**
+     * Settings-change discriminant.
+     */
+    readonly type: typeof SETTINGS_CHANGED_MESSAGE;
 
-/**
- * Settings change notification inferred from its schema.
- */
-export type SettingsChangedMessage = v.InferOutput<typeof settingsChangedMessageSchema>;
+    /**
+     * Revision committed by the settings write.
+     */
+    readonly revision: number;
+}
 
 /**
  * Receives the revision committed by a settings change.
@@ -84,13 +83,13 @@ export interface SettingsChangedRuntime {
 }
 
 /**
- * Recognizes an exact settings change notification.
+ * Recognizes a settings change notification among the extension's messages.
  *
  * @param value - Runtime message.
- * @returns - Whether the value is a valid settings change notification.
+ * @returns - Whether the message announces a committed settings revision.
  */
-export function isSettingsChangedMessage(value: unknown): value is SettingsChangedMessage {
-    return v.safeParse(settingsChangedMessageSchema, value).success;
+function isSettingsChangedMessage(value: unknown): value is SettingsChangedMessage {
+    return (value as SettingsChangedMessage | undefined)?.type === SETTINGS_CHANGED_MESSAGE;
 }
 
 /**

@@ -587,10 +587,6 @@
     "message": "Ainda não há registos de diagnóstico para transferir.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Os registos de diagnóstico guardados são inválidos. Limpe os registos e tente novamente.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Não foi possível ler os registos de diagnóstico guardados. Tente mais tarde.",
     "description": "Storage read failed"

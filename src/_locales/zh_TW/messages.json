@@ -587,10 +587,6 @@
     "message": "目前沒有可下載的診斷紀錄。",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "已儲存的診斷紀錄無效。請清除紀錄後再試一次。",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "無法讀取已儲存的診斷紀錄。請稍後再試。",
     "description": "Storage read failed"

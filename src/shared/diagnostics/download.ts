@@ -71,9 +71,6 @@ export function diagnosticsErrorKey(
     if (error === DIAGNOSTICS_ERROR.EMPTY) {
         return "diagnostics_error_empty";
     }
-    if (error === DIAGNOSTICS_ERROR.INVALID_JOURNAL) {
-        return "diagnostics_error_invalid";
-    }
     if (error === DIAGNOSTICS_ERROR.STORAGE_FAILED) {
         return "diagnostics_error_unreadable";
     }

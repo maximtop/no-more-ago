@@ -587,10 +587,6 @@
     "message": "Es gibt noch keine Diagnoseprotokolle zum Herunterladen.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Die gespeicherten Diagnoseprotokolle sind ungültig. Lösche die Protokolle und versuche es erneut.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Die gespeicherten Diagnoseprotokolle konnten nicht gelesen werden. Versuche es später erneut.",
     "description": "Storage read failed"

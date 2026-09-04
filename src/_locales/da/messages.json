@@ -587,10 +587,6 @@
     "message": "Der er endnu ingen diagnostiklogfiler at downloade.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "De gemte diagnostiklogfiler er ugyldige. Ryd logfilerne, og prøv igen.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "De gemte diagnostiklogfiler kunne ikke læses. Prøv senere.",
     "description": "Storage read failed"

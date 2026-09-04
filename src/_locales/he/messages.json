@@ -587,10 +587,6 @@
     "message": "עדיין אין יומני אבחון להורדה.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "יומני האבחון השמורים אינם תקינים. נקו את היומנים ונסו שוב.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "לא ניתן היה לקרוא את יומני האבחון השמורים. נסו שוב מאוחר יותר.",
     "description": "Storage read failed"

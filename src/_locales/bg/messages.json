@@ -587,10 +587,6 @@
     "message": "Още няма диагностични дневници за изтегляне.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Запазените диагностични дневници са невалидни. Изчистете дневниците и опитайте отново.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Запазените диагностични дневници не можаха да бъдат прочетени. Опитайте по-късно.",
     "description": "Storage read failed"

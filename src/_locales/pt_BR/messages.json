@@ -587,10 +587,6 @@
     "message": "Ainda não há registros de diagnóstico para baixar.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Os registros de diagnóstico salvos são inválidos. Limpe os registros e tente novamente.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Não foi possível ler os registros de diagnóstico salvos. Tente mais tarde.",
     "description": "Storage read failed"

@@ -2,10 +2,7 @@
  * @file Defines the messages exchanged between background and document runtimes.
  */
 
-import * as v from "valibot";
-import { diagnosticEventInputSchema } from "../diagnostics/events";
 import type { DisplaySettings } from "../settings/snapshot";
-import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 
 /**
  * Reconciles a document runtime with one effective, revisioned activation policy.
@@ -72,279 +69,244 @@ export const DOCUMENT_PHASES = [
     DOCUMENT_PHASE.FAILED,
 ] as const;
 
-const presentationDisplaySchema = v.pipe(
-    v.unknown(),
-    v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
-);
-
 /**
- * Schema for a convergent document-policy command.
+ * Lifecycle state returned by a document runtime.
  */
-const reconcileDocumentPolicyMessageSchema = v.strictObject({
-    type: v.literal(RECONCILE_DOCUMENT_POLICY_MESSAGE),
-    revision: v.nullable(nonNegativeSafeIntegerSchema),
-    enabled: v.boolean(),
-});
-
-/**
- * Schema for a document-policy acknowledgement.
- */
-const documentPolicyReconciledMessageSchema = v.strictObject({
-    type: v.literal(DOCUMENT_POLICY_RECONCILED_MESSAGE),
-    revision: v.nullable(nonNegativeSafeIntegerSchema),
-});
-
-/**
- * Schema for a payload-free command that reconciles the current document route.
- */
-const reconcileDocumentRouteMessageSchema = v.strictObject({
-    type: v.literal(RECONCILE_DOCUMENT_ROUTE_MESSAGE),
-});
-
-/**
- * Schema for a command requesting document runtime status.
- */
-const documentStatusMessageSchema = v.strictObject({
-    type: v.literal(DOCUMENT_STATUS_MESSAGE),
-});
-
-/**
- * Schema for the lifecycle phase returned by a document runtime.
- */
-const documentPhaseSchema = v.picklist(DOCUMENT_PHASES);
-
-/**
- * Schema for a document status response.
- */
-const documentStatusResponseSchema = v.strictObject({
-    type: v.literal(DOCUMENT_STATUS_MESSAGE),
-    phase: documentPhaseSchema,
-});
-
-/**
- * Schema for a display-settings update command.
- */
-const presentationUpdateMessageSchema = v.strictObject({
-    type: v.literal(UPDATE_PRESENTATION_MESSAGE),
-    revision: nonNegativeSafeIntegerSchema,
-    display: presentationDisplaySchema,
-});
-
-/**
- * Schema for a presentation update acknowledgement.
- */
-const presentationUpdateAcknowledgementSchema = v.strictObject({
-    type: v.literal(PRESENTATION_UPDATED_MESSAGE),
-    revision: nonNegativeSafeIntegerSchema,
-});
-
-/**
- * Schema for a diagnostic-policy update command.
- */
-const debugPolicyUpdateMessageSchema = v.strictObject({
-    type: v.literal(UPDATE_DEBUG_POLICY_MESSAGE),
-    revision: nonNegativeSafeIntegerSchema,
-    enabled: v.boolean(),
-});
-
-/**
- * Schema for a diagnostic-policy update acknowledgement.
- */
-const debugPolicyUpdateAcknowledgementSchema = v.strictObject({
-    type: v.literal(DEBUG_POLICY_UPDATED_MESSAGE),
-    revision: nonNegativeSafeIntegerSchema,
-});
-
-/**
- * Schema for a diagnostic event sent by a document runtime.
- */
-const diagnosticEventMessageSchema = v.strictObject({
-    type: v.literal(DIAGNOSTIC_EVENT_MESSAGE),
-    event: diagnosticEventInputSchema,
-});
+export type DocumentPhase = (typeof DOCUMENT_PHASES)[number];
 
 /**
  * Command that reconciles the document's effective top-level policy.
  */
-export type ReconcileDocumentPolicyMessage = v.InferOutput<
-    typeof reconcileDocumentPolicyMessageSchema
->;
+export interface ReconcileDocumentPolicyMessage {
+    /**
+     * Policy-reconciliation discriminant.
+     */
+    readonly type: typeof RECONCILE_DOCUMENT_POLICY_MESSAGE;
 
-/**
- * Reply confirming the document-policy revision retained by the runtime.
- */
-export type DocumentPolicyReconciledMessage = v.InferOutput<
-    typeof documentPolicyReconciledMessageSchema
->;
+    /**
+     * Settings revision carried by the command, or null while unavailable.
+     */
+    readonly revision: number | null;
+
+    /**
+     * Whether the document may process timestamps.
+     */
+    readonly enabled: boolean;
+}
 
 /**
  * Command that asks a document runtime to sample and reconcile its current route.
  */
-type ReconcileDocumentRouteMessage = v.InferOutput<
-    typeof reconcileDocumentRouteMessageSchema
->;
+export interface ReconcileDocumentRouteMessage {
+    /**
+     * Route-reconciliation discriminant.
+     */
+    readonly type: typeof RECONCILE_DOCUMENT_ROUTE_MESSAGE;
+}
 
 /**
  * Command that requests a document runtime's lifecycle state.
  */
-type DocumentStatusMessage = v.InferOutput<typeof documentStatusMessageSchema>;
+export interface DocumentStatusMessage {
+    /**
+     * Status-request discriminant.
+     */
+    readonly type: typeof DOCUMENT_STATUS_MESSAGE;
+}
 
 /**
  * Command that updates display settings in a document runtime.
  */
-export type PresentationUpdateMessage = v.InferOutput<typeof presentationUpdateMessageSchema>;
+export interface PresentationUpdateMessage {
+    /**
+     * Presentation-update discriminant.
+     */
+    readonly type: typeof UPDATE_PRESENTATION_MESSAGE;
 
-/**
- * Reply confirming a presentation update was accepted.
- */
-export type PresentationUpdateAcknowledgement = v.InferOutput<
-    typeof presentationUpdateAcknowledgementSchema
->;
+    /**
+     * Settings revision carried by the command.
+     */
+    readonly revision: number;
+
+    /**
+     * Display settings committed by the background.
+     */
+    readonly display: DisplaySettings;
+}
 
 /**
  * Command that updates diagnostic forwarding in a document runtime.
  */
-export type DebugPolicyUpdateMessage = v.InferOutput<typeof debugPolicyUpdateMessageSchema>;
+export interface DebugPolicyUpdateMessage {
+    /**
+     * Diagnostic-policy discriminant.
+     */
+    readonly type: typeof UPDATE_DEBUG_POLICY_MESSAGE;
+
+    /**
+     * Settings revision carried by the command.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether the document may forward diagnostic events.
+     */
+    readonly enabled: boolean;
+}
 
 /**
- * Reply confirming a diagnostic-policy update was accepted.
+ * Every command a document runtime receives from the background context.
  */
-export type DebugPolicyUpdateAcknowledgement = v.InferOutput<
-    typeof debugPolicyUpdateAcknowledgementSchema
->;
+export type DocumentCommand =
+    | ReconcileDocumentPolicyMessage
+    | ReconcileDocumentRouteMessage
+    | DocumentStatusMessage
+    | PresentationUpdateMessage
+    | DebugPolicyUpdateMessage;
 
 /**
- * Event sent by a document runtime when diagnostic forwarding is enabled.
+ * Reply confirming the document-policy revision retained by the runtime.
  */
-type DiagnosticEventMessage = v.InferOutput<typeof diagnosticEventMessageSchema>;
+export interface DocumentPolicyReconciledMessage {
+    /**
+     * Policy-acknowledgement discriminant.
+     */
+    readonly type: typeof DOCUMENT_POLICY_RECONCILED_MESSAGE;
 
-/**
- * Lifecycle state returned by a document runtime.
- */
-export type DocumentPhase = v.InferOutput<typeof documentPhaseSchema>;
+    /**
+     * Revision retained by the document runtime.
+     */
+    readonly revision: number | null;
+}
 
 /**
  * Reply to a document-status command.
  */
-type DocumentStatusResponse = v.InferOutput<typeof documentStatusResponseSchema>;
+export interface DocumentStatusResponse {
+    /**
+     * Status-response discriminant.
+     */
+    readonly type: typeof DOCUMENT_STATUS_MESSAGE;
 
-/**
- * Recognizes an exact revisioned document-policy command.
- *
- * @param value - Runtime message.
- * @returns - Whether the value is a document-policy reconciliation command.
- */
-export function isReconcileDocumentPolicyMessage(
-    value: unknown,
-): value is ReconcileDocumentPolicyMessage {
-    return v.safeParse(reconcileDocumentPolicyMessageSchema, value).success;
+    /**
+     * Current document runtime lifecycle phase.
+     */
+    readonly phase: DocumentPhase;
 }
 
 /**
- * Recognizes a document-policy acknowledgement for one expected revision.
- *
- * @param value - Runtime response.
- * @param expectedRevision - Revision the acknowledgement must retain.
- * @returns - Whether the value acknowledges the expected document policy.
+ * Reply confirming a presentation update was accepted.
  */
-export function isDocumentPolicyReconciledMessage(
-    value: unknown,
-    expectedRevision: number | null,
-): value is DocumentPolicyReconciledMessage {
-    const parsed = v.safeParse(documentPolicyReconciledMessageSchema, value);
-    return parsed.success && parsed.output.revision === expectedRevision;
+export interface PresentationUpdateAcknowledgement {
+    /**
+     * Presentation-acknowledgement discriminant.
+     */
+    readonly type: typeof PRESENTATION_UPDATED_MESSAGE;
+
+    /**
+     * Revision retained by the document runtime.
+     */
+    readonly revision: number;
 }
 
 /**
- * Recognizes an exact payload-free document-route reconciliation command.
- *
- * @param value - Untrusted runtime message.
- * @returns - Whether the value is an exact route reconciliation command.
+ * Reply confirming a diagnostic-policy update was accepted.
  */
-export function isReconcileDocumentRouteMessage(
-    value: unknown,
-): value is ReconcileDocumentRouteMessage {
-    return v.safeParse(reconcileDocumentRouteMessageSchema, value).success;
+export interface DebugPolicyUpdateAcknowledgement {
+    /**
+     * Diagnostic-acknowledgement discriminant.
+     */
+    readonly type: typeof DEBUG_POLICY_UPDATED_MESSAGE;
+
+    /**
+     * Revision retained by the document runtime.
+     */
+    readonly revision: number;
 }
 
 /**
- * Recognizes an object containing only the document-status command.
- *
- * @param value - Runtime message.
- * @returns - Whether the value is an exact status command.
+ * Event sent by a document runtime when diagnostic forwarding is enabled.
  */
-export function isDocumentStatusMessage(value: unknown): value is DocumentStatusMessage {
-    return v.safeParse(documentStatusMessageSchema, value).success;
+export interface DiagnosticEventMessage {
+    /**
+     * Diagnostic-event discriminant.
+     */
+    readonly type: typeof DIAGNOSTIC_EVENT_MESSAGE;
+
+    /**
+     * Page-derived diagnostic fields, sanitized by the background boundary.
+     */
+    readonly event: unknown;
 }
 
 /**
- * Recognizes a document-status reply with a supported lifecycle phase.
- *
- * @param value - Runtime response.
- * @returns - Whether the value is a valid document status response.
+ * Every reply a document runtime returns to the background context.
  */
-export function isDocumentStatusResponse(value: unknown): value is DocumentStatusResponse {
-    return v.safeParse(documentStatusResponseSchema, value).success;
+type DocumentReply =
+    | DocumentPolicyReconciledMessage
+    | DocumentStatusResponse
+    | PresentationUpdateAcknowledgement
+    | DebugPolicyUpdateAcknowledgement;
+
+/**
+ * Reads the reply of a frame that may hold no document runtime at all.
+ *
+ * A frame without a runtime resolves with no reply, so replies are optional
+ * rather than untrusted: their fields are produced by this extension.
+ *
+ * @param response - Reply returned by the messaged frame.
+ * @returns - Typed reply, or undefined when the frame did not answer.
+ */
+function documentReply(response: unknown): DocumentReply | undefined {
+    return response as DocumentReply | undefined;
 }
 
 /**
- * Recognizes a presentation-update command and its bounded revision.
+ * Reports whether a frame retained the exact document policy revision sent to it.
  *
- * @param value - Runtime message.
- * @returns - Whether the value matches the presentation-update routing contract.
+ * @param response - Reply returned by the messaged frame.
+ * @param revision - Revision the acknowledgement must retain.
+ * @returns - Whether a document runtime acknowledged the exact revision.
  */
-export function isPresentationUpdateMessage(value: unknown): value is PresentationUpdateMessage {
-    return v.safeParse(presentationUpdateMessageSchema, value).success;
+export function isDocumentPolicyAcknowledgement(
+    response: unknown,
+    revision: number | null,
+): boolean {
+    const reply = documentReply(response);
+    return reply?.type === DOCUMENT_POLICY_RECONCILED_MESSAGE && reply.revision === revision;
 }
 
 /**
- * Recognizes a presentation acknowledgement, optionally for one expected revision.
+ * Reports whether a frame accepted the exact presentation revision sent to it.
  *
- * @param value - Runtime response.
- * @param expectedRevision - Revision the acknowledgement must match, when supplied.
- * @returns - Whether the value is a valid presentation acknowledgement.
+ * @param response - Reply returned by the messaged frame.
+ * @param revision - Revision the acknowledgement must match.
+ * @returns - Whether a document runtime acknowledged the exact revision.
  */
-export function isPresentationUpdateAcknowledgement(
-    value: unknown,
-    expectedRevision?: number,
-): value is PresentationUpdateAcknowledgement {
-    const parsed = v.safeParse(presentationUpdateAcknowledgementSchema, value);
-    return parsed.success
-        && (expectedRevision === undefined || parsed.output.revision === expectedRevision);
+export function isPresentationAcknowledgement(response: unknown, revision: number): boolean {
+    const reply = documentReply(response);
+    return reply?.type === PRESENTATION_UPDATED_MESSAGE && reply.revision === revision;
 }
 
 /**
- * Recognizes a complete diagnostic-policy update command with a boolean enabled flag.
+ * Reports whether a frame accepted the exact diagnostic-policy revision sent to it.
  *
- * @param value - Runtime message.
- * @returns - Whether the value is a valid diagnostic-policy update command.
+ * @param response - Reply returned by the messaged frame.
+ * @param revision - Revision the acknowledgement must match.
+ * @returns - Whether a document runtime acknowledged the exact revision.
  */
-export function isDebugPolicyUpdateMessage(value: unknown): value is DebugPolicyUpdateMessage {
-    return v.safeParse(debugPolicyUpdateMessageSchema, value).success;
+export function isDebugPolicyAcknowledgement(response: unknown, revision: number): boolean {
+    const reply = documentReply(response);
+    return reply?.type === DEBUG_POLICY_UPDATED_MESSAGE && reply.revision === revision;
 }
 
 /**
- * Recognizes a diagnostic-policy acknowledgement, optionally for one expected revision.
+ * Reads the lifecycle phase reported by a messaged frame.
  *
- * @param value - Runtime response.
- * @param expectedRevision - Revision the acknowledgement must match, when supplied.
- * @returns - Whether the value is a valid diagnostic-policy acknowledgement.
+ * @param response - Reply returned by the messaged frame.
+ * @returns - Reported phase, or undefined when the frame did not answer.
  */
-export function isDebugPolicyUpdateAcknowledgement(
-    value: unknown,
-    expectedRevision?: number,
-): value is DebugPolicyUpdateAcknowledgement {
-    const parsed = v.safeParse(debugPolicyUpdateAcknowledgementSchema, value);
-    return parsed.success
-        && (expectedRevision === undefined || parsed.output.revision === expectedRevision);
-}
-
-/**
- * Recognizes a diagnostic event with an allowed category and telemetry-field names.
- *
- * @param value - Runtime message.
- * @returns - Whether the value is a valid bounded diagnostic event message.
- */
-export function isDiagnosticEventMessage(value: unknown): value is DiagnosticEventMessage {
-    return v.safeParse(diagnosticEventMessageSchema, value).success;
+export function readDocumentStatusPhase(response: unknown): DocumentPhase | undefined {
+    const reply = documentReply(response);
+    return reply?.type === DOCUMENT_STATUS_MESSAGE ? reply.phase : undefined;
 }

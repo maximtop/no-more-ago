@@ -587,10 +587,6 @@
     "message": "ダウンロードできる診断ログはまだありません。",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "保存された診断ログが無効です。ログを消去してもう一度お試しください。",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "保存された診断ログを読み取れませんでした。しばらくしてからお試しください。",
     "description": "Storage read failed"

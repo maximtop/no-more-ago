@@ -587,10 +587,6 @@
     "message": "لا توجد سجلات تشخيص للتنزيل بعد.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "سجلات التشخيص المحفوظة غير صالحة. امسح السجلات وحاول مرة أخرى.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "تعذّرت قراءة سجلات التشخيص المحفوظة. حاول لاحقًا.",
     "description": "Storage read failed"

@@ -587,10 +587,6 @@
     "message": "Nie ma jeszcze dzienników diagnostycznych do pobrania.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Zapisane dzienniki diagnostyczne są nieprawidłowe. Wyczyść dzienniki i spróbuj ponownie.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Nie udało się odczytać zapisanych dzienników diagnostycznych. Spróbuj później.",
     "description": "Storage read failed"

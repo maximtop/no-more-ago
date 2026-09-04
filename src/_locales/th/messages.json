@@ -587,10 +587,6 @@
     "message": "ยังไม่มีบันทึกการวินิจฉัยให้ดาวน์โหลด",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "บันทึกการวินิจฉัยที่บันทึกไว้ไม่ถูกต้อง โปรดล้างบันทึกแล้วลองอีกครั้ง",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "ไม่สามารถอ่านบันทึกการวินิจฉัยที่บันทึกไว้ได้ โปรดลองใหม่ภายหลัง",
     "description": "Storage read failed"

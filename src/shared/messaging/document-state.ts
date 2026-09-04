@@ -1,57 +1,89 @@
 /**
- * @file Valibot schema and type guard for document runtime state.
+ * @file Document runtime state projected by the background context.
  */
 
-import * as v from "valibot";
-
-import { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
+import type { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
 import type { DisplaySettings } from "../settings/snapshot";
-import { nonNegativeSafeIntegerSchema } from "./view-state-schemas";
 import {
     SETTINGS_STATE_FAILURE,
-    SETTINGS_STATE_FAILURES,
     STATE_AVAILABILITY,
     type SettingsStateFailure,
 } from "./view-state-values";
 
-const readyDocumentStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.READY),
-    revision: nonNegativeSafeIntegerSchema,
-    enabled: v.boolean(),
-    display: v.pipe(
-        v.unknown(),
-        v.transform<unknown, DisplaySettings>((value) => value as DisplaySettings),
-    ),
-    debugEnabled: v.boolean(),
-    error: v.exactOptional(v.literal(UNAVAILABLE_TIME_ZONE_ERROR)),
-});
+/**
+ * Document state projected while settings are readable.
+ */
+interface ReadyDocumentState {
+    /**
+     * Marks a projection built from a loaded settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.READY;
 
-const unavailableDocumentStateSchema = v.strictObject({
-    availability: v.literal(STATE_AVAILABILITY.UNAVAILABLE),
-    revision: v.null(),
-    enabled: v.literal(false),
-    display: v.null(),
-    debugEnabled: v.literal(false),
-    failure: v.picklist(SETTINGS_STATE_FAILURES),
-});
+    /**
+     * Settings revision the projection was built from.
+     */
+    readonly revision: number;
+
+    /**
+     * Whether the document may process timestamps.
+     */
+    readonly enabled: boolean;
+
+    /**
+     * Display settings the document runtime must apply.
+     */
+    readonly display: DisplaySettings;
+
+    /**
+     * Whether the document may forward diagnostic events.
+     */
+    readonly debugEnabled: boolean;
+
+    /**
+     * Presentation error reported when the configured time zone is unavailable.
+     */
+    readonly error?: typeof UNAVAILABLE_TIME_ZONE_ERROR;
+}
+
+/**
+ * Fail-closed document state projected when settings cannot be read safely.
+ */
+export interface UnavailableDocumentState {
+    /**
+     * Marks a projection built without a usable settings snapshot.
+     */
+    readonly availability: typeof STATE_AVAILABILITY.UNAVAILABLE;
+
+    /**
+     * Absent settings revision.
+     */
+    readonly revision: null;
+
+    /**
+     * Processing stays disabled while settings are unavailable.
+     */
+    readonly enabled: false;
+
+    /**
+     * Absent display settings.
+     */
+    readonly display: null;
+
+    /**
+     * Diagnostic forwarding stays disabled while settings are unavailable.
+     */
+    readonly debugEnabled: false;
+
+    /**
+     * Settings failure that made the projection unavailable.
+     */
+    readonly failure: SettingsStateFailure;
+}
 
 /**
  * Complete ready or unavailable document runtime state.
  */
-export const documentStateSchema = v.union([
-    readyDocumentStateSchema,
-    unavailableDocumentStateSchema,
-]);
-
-/**
- * Document runtime state inferred from its validation schema.
- */
-export type DocumentState = v.InferOutput<typeof documentStateSchema>;
-
-/**
- * Document runtime state while settings are unavailable.
- */
-export type UnavailableDocumentState = v.InferOutput<typeof unavailableDocumentStateSchema>;
+export type DocumentState = ReadyDocumentState | UnavailableDocumentState;
 
 /**
  * Builds the fail-closed document state used when settings cannot be read safely.
@@ -70,14 +102,4 @@ export function createUnavailableDocumentState(
         debugEnabled: false,
         failure,
     };
-}
-
-/**
- * Recognizes the routing fields of a document runtime state.
- *
- * @param value - Runtime state value.
- * @returns - Whether the value matches a document runtime state variant.
- */
-export function isDocumentState(value: unknown): value is DocumentState {
-    return v.safeParse(documentStateSchema, value).success;
 }

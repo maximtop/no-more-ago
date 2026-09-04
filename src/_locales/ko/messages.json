@@ -587,10 +587,6 @@
     "message": "아직 내려받을 진단 로그가 없습니다.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "저장된 진단 로그가 올바르지 않습니다. 로그를 지우고 다시 시도하세요.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "저장된 진단 로그를 읽지 못했습니다. 나중에 다시 시도하세요.",
     "description": "Storage read failed"

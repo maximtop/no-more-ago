@@ -2,6 +2,8 @@
  * @file Bounded document-local reader for loaded YouTube player publication data.
  */
 
+import * as v from "valibot";
+
 const PLAYER_RESPONSE_PREFIX = "var ytInitialPlayerResponse = ";
 const PLAYER_RESPONSE_SUFFIX = ";";
 
@@ -70,16 +72,17 @@ export interface YouTubePlayerResponseReader {
 }
 
 /**
- * Narrows one parsed value to a non-array object record.
- *
- * @param value - Untrusted parsed value.
- * @returns - Object record or null for every other value.
+ * Approved fields read from one parsed player response; everything else is dropped.
  */
-function asRecord(value: unknown): Record<string, unknown> | null {
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-        ? value as Record<string, unknown>
-        : null;
-}
+const playerResponseSchema = v.object({
+    videoDetails: v.object({ videoId: v.string() }),
+    microformat: v.object({
+        playerMicroformatRenderer: v.object({
+            externalVideoId: v.string(),
+            publishDate: v.pipe(v.string(), v.nonEmpty()),
+        }),
+    }),
+});
 
 /**
  * Enumerates scripts beginning with the recognized assignment prefix in one bounded root.
@@ -124,29 +127,22 @@ function parseAssignment(
     ) {
         return null;
     }
+    let response: unknown;
     try {
-        const response = asRecord(parseJson(sourceText.slice(
+        response = parseJson(sourceText.slice(
             PLAYER_RESPONSE_PREFIX.length,
             -PLAYER_RESPONSE_SUFFIX.length,
-        )));
-        const videoDetails = asRecord(response?.videoDetails);
-        const microformat = asRecord(response?.microformat);
-        const renderer = asRecord(microformat?.playerMicroformatRenderer);
-        const videoId = videoDetails?.videoId;
-        const externalVideoId = renderer?.externalVideoId;
-        const rawDatetime = renderer?.publishDate;
-        if (
-            typeof videoId !== "string"
-            || typeof externalVideoId !== "string"
-            || typeof rawDatetime !== "string"
-            || rawDatetime.length === 0
-        ) {
-            return null;
-        }
-        return { videoId, externalVideoId, rawDatetime };
+        ));
     } catch {
         return null;
     }
+    const parsed = v.safeParse(playerResponseSchema, response);
+    if (!parsed.success) {
+        return null;
+    }
+    const { videoDetails, microformat } = parsed.output;
+    const { externalVideoId, publishDate } = microformat.playerMicroformatRenderer;
+    return { videoId: videoDetails.videoId, externalVideoId, rawDatetime: publishDate };
 }
 
 /**

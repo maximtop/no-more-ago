@@ -4,25 +4,22 @@
  * @file Typed client for popup requests and ambiguous-response recovery.
  */
 
-import * as v from "valibot";
 import {
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_POPUP_STATE_MESSAGE,
     RESET_ALL_SETTINGS_MESSAGE,
     SET_SITE_ENABLED_MESSAGE,
     SET_GLOBAL_ENABLED_MESSAGE,
-    getDiagnosticsSnapshotResponseSchema,
     DIAGNOSTICS_ERROR,
+    type GetDiagnosticsSnapshotResponse,
     type BackgroundMessage,
 } from "../shared/messaging/contracts";
-import { popupStateSchema, type PopupState } from "../shared/messaging/view-state-schemas";
-import {
-    resetAllSettingsResponseSchema,
-    setGlobalEnabledResponseSchema,
-    setSiteEnabledResponseSchema,
-    type SetGlobalEnabledResponse,
-    type SetSiteEnabledResponse,
-} from "../shared/messaging/response-schemas";
+import type { PopupState } from "../shared/messaging/view-state";
+import type {
+    ResetAllSettingsResponse,
+    SetGlobalEnabledResponse,
+    SetSiteEnabledResponse,
+} from "../shared/messaging/responses";
 import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
 import type { SiteScopeMode } from "../shared/settings/site-scope";
 import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from "../shared/client-result";
@@ -92,10 +89,11 @@ export class PopupClient {
      */
     public async getState(): Promise<PopupState> {
         const response = await this.transport.sendMessage({ type: GET_POPUP_STATE_MESSAGE });
-        if (!v.is(popupStateSchema, response)) {
-            throw new Error("Invalid popup state response");
+        const state = response as PopupState | undefined;
+        if (!state) {
+            throw new Error("Missing popup state response");
         }
-        return response;
+        return state;
     }
 
     /**
@@ -111,9 +109,9 @@ export class PopupClient {
                 enabled,
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
-            setGlobalEnabledResponseSchema,
             () => this.getState(),
-            (response): response is PopupSurfaceResponse<SetGlobalEnabledResponse> =>
+            (response: SetGlobalEnabledResponse):
+                response is PopupSurfaceResponse<SetGlobalEnabledResponse> =>
                 response.surface === SITE_SETTINGS_SURFACE.POPUP,
         );
     }
@@ -139,9 +137,9 @@ export class PopupClient {
                 mode,
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
-            setSiteEnabledResponseSchema,
             () => this.getState(),
-            (response): response is PopupSurfaceResponse<SetSiteEnabledResponse> =>
+            (response: SetSiteEnabledResponse):
+                response is PopupSurfaceResponse<SetSiteEnabledResponse> =>
                 response.surface === SITE_SETTINGS_SURFACE.POPUP,
         );
     }
@@ -157,7 +155,7 @@ export class PopupClient {
             const response = await this.transport.sendMessage({
                 type: RESET_ALL_SETTINGS_MESSAGE,
             });
-            return v.is(resetAllSettingsResponseSchema, response) && response.ok;
+            return (response as ResetAllSettingsResponse | undefined)?.ok === true;
         } catch {
             return false;
         }
@@ -177,12 +175,13 @@ export class PopupClient {
         } catch {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        if (!v.is(getDiagnosticsSnapshotResponseSchema, response)) {
+        const result = response as GetDiagnosticsSnapshotResponse | undefined;
+        if (!result) {
             return { kind: CLIENT_RESULT_KIND.ERROR, error: DIAGNOSTICS_ERROR.UNAVAILABLE };
         }
-        return response.ok
-            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: response.snapshot }
-            : { kind: CLIENT_RESULT_KIND.ERROR, error: response.error };
+        return result.ok
+            ? { kind: CLIENT_RESULT_KIND.RESPONSE, snapshot: result.snapshot }
+            : { kind: CLIENT_RESULT_KIND.ERROR, error: result.error };
     }
 }
 

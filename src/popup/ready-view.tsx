@@ -5,7 +5,7 @@
 import { Alert, Box, Button, Group, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
 import type { MessageKey } from "../shared/i18n/translator";
-import type { ReadyPopupState } from "../shared/messaging/view-state-schemas";
+import type { ReadyPopupState } from "../shared/messaging/view-state";
 import { t } from "../shared/i18n/translator";
 import { SCOPE_MODE_KEY } from "../shared/ui/copy";
 import { NOTICE_SURFACE, mutationNoticeKey } from "../shared/ui/persistence-notice";
@@ -172,17 +172,17 @@ export function PopupReadyView({
                             <Text size="xs" c="dimmed">
                                 {t(siteSwitchDescriptionKey(
                                     state.scopeMode,
-                                    state.siteEnabled ?? false,
+                                    state.siteEnabled,
                                 ))}
                             </Text>
                         </Box>
                         <Switch
-                            checked={state.siteEnabled ?? false}
+                            checked={state.siteEnabled}
                             disabled={!state.globalEnabled}
                             aria-busy={saving}
-                            aria-label={state.hostname === null
-                                ? t("popup_site_switch_label")
-                                : t("popup_site_switch_aria", { hostname: state.hostname })}
+                            aria-label={t("popup_site_switch_aria", {
+                                hostname: state.hostname,
+                            })}
                             onChange={(event) => {
                                 onChangeSite(event.currentTarget.checked);
                             }}

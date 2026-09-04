@@ -587,10 +587,6 @@
     "message": "ডাউনলোড করার মতো কোনও ডায়াগনস্টিক লগ এখনও নেই।",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "সংরক্ষিত ডায়াগনস্টিক লগ অবৈধ। লগ মুছে আবার চেষ্টা করুন।",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "সংরক্ষিত ডায়াগনস্টিক লগ পড়া যায়নি। পরে আবার চেষ্টা করুন।",
     "description": "Storage read failed"

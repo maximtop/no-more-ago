@@ -587,10 +587,6 @@
     "message": "Chưa có nhật ký chẩn đoán nào để tải xuống.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Nhật ký chẩn đoán đã lưu không hợp lệ. Hãy xóa nhật ký rồi thử lại.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Không đọc được nhật ký chẩn đoán đã lưu. Hãy thử lại sau.",
     "description": "Storage read failed"

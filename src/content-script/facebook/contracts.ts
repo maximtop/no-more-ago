@@ -2,6 +2,8 @@
  * @file Minimal cross-world contract for trusted Facebook story timestamps.
  */
 
+import * as v from "valibot";
+
 /**
  * Source marker retained on Facebook bridge messages.
  */
@@ -153,105 +155,84 @@ export interface FacebookPayloadBridgeControlMessage {
     readonly enabled: boolean;
 }
 
+const trackingTokenSchema = v.pipe(
+    v.string(),
+    v.minLength(FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS),
+    v.maxLength(FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS),
+);
+
 /**
- * Narrows an unknown value to an object carrying the shared Facebook message envelope.
- *
- * @param value - Candidate same-window message.
- * @param type - Expected message discriminant.
- * @returns - Whether source and type match the Facebook bridge contract.
+ * Bounded association a page message may transfer into the isolated world.
  */
-function isFacebookMessageEnvelope(
-    value: unknown,
-    type: string,
-): value is Record<string, unknown> {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-        return false;
-    }
-    const candidate = value as Record<string, unknown>;
-    return candidate.source === FACEBOOK_PAYLOAD_MESSAGE_SOURCE
-        && candidate.type === type;
+const timestampRecordSchema = v.object({
+    trackingToken: trackingTokenSchema,
+    rawDatetime: v.pipe(v.string(), v.regex(FACEBOOK_UNIX_SECONDS)),
+});
+
+/**
+ * Complete page-supplied payload message, bounded by the shared transfer limit.
+ */
+const payloadMessageSchema = v.pipe(
+    v.object({
+        source: v.literal(FACEBOOK_PAYLOAD_MESSAGE_SOURCE),
+        type: v.literal(FACEBOOK_PAYLOAD_RECORDS_MESSAGE),
+        records: v.array(timestampRecordSchema),
+        invalidatedTrackingTokens: v.array(trackingTokenSchema),
+        invalidateAll: v.boolean(),
+    }),
+    v.check((update) => update.invalidateAll
+        ? update.records.length === 0 && update.invalidatedTrackingTokens.length === 0
+        : update.records.length + update.invalidatedTrackingTokens.length
+            <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE),
+);
+
+/**
+ * Page-supplied announcement that a main-world bridge is installed.
+ */
+const bridgeReadyMessageSchema = v.object({
+    source: v.literal(FACEBOOK_PAYLOAD_MESSAGE_SOURCE),
+    type: v.literal(FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE),
+});
+
+/**
+ * Page-supplied lifecycle command accepted by the main-world bridge.
+ */
+const bridgeControlMessageSchema = v.object({
+    source: v.literal(FACEBOOK_PAYLOAD_MESSAGE_SOURCE),
+    type: v.literal(FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE),
+    enabled: v.boolean(),
+});
+
+/**
+ * Reads one bounded payload message posted by the page world.
+ *
+ * @param value - Message supplied by the page.
+ * @returns - Message with only contract fields retained, or null when unusable.
+ */
+export function readFacebookPayloadMessage(value: unknown): FacebookPayloadMessage | null {
+    const parsed = v.safeParse(payloadMessageSchema, value);
+    return parsed.success ? parsed.output : null;
 }
 
 /**
- * Validates one page-derived timestamp record at the isolated-world boundary.
+ * Reads one main-world bridge readiness announcement posted by the page world.
  *
- * @param value - Candidate record supplied by a page message.
- * @returns - Whether the record has the bounded bridge shape.
- */
-function isFacebookTimestampRecord(value: unknown): value is FacebookTimestampRecord {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-        return false;
-    }
-    const candidate = value as Record<string, unknown>;
-    return typeof candidate.trackingToken === "string"
-        && candidate.trackingToken.length
-            >= FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS
-        && candidate.trackingToken.length
-            <= FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS
-        && typeof candidate.rawDatetime === "string"
-        && FACEBOOK_UNIX_SECONDS.test(candidate.rawDatetime);
-}
-
-/**
- * Validates one bounded Facebook tracking token.
- *
- * @param value - Candidate token supplied by the page.
- * @returns - Whether the token fits the opaque association-key contract.
- */
-function isTrackingToken(value: unknown): value is string {
-    return typeof value === "string"
-        && value.length >= FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS
-        && value.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS;
-}
-
-/**
- * Validates an untrusted cross-world Facebook payload message.
- *
- * @param value - Candidate message supplied by the page.
- * @returns - Whether the message matches the bounded bridge contract.
- */
-export function isFacebookPayloadMessage(value: unknown): value is FacebookPayloadMessage {
-    if (!isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_RECORDS_MESSAGE)) {
-        return false;
-    }
-    if (
-        !Array.isArray(value.records)
-        || !Array.isArray(value.invalidatedTrackingTokens)
-        || typeof value.invalidateAll !== "boolean"
-        || !value.records.every(isFacebookTimestampRecord)
-        || !value.invalidatedTrackingTokens.every(isTrackingToken)
-    ) {
-        return false;
-    }
-    return value.invalidateAll
-        ? value.records.length === 0 && value.invalidatedTrackingTokens.length === 0
-        : value.records.length + value.invalidatedTrackingTokens.length
-            <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE;
-}
-
-/**
- * Validates an untrusted main-world bridge readiness message.
- *
- * @param value - Candidate message supplied by the page.
+ * @param value - Message supplied by the page.
  * @returns - Whether the message announces the Facebook bridge.
  */
-export function isFacebookPayloadBridgeReadyMessage(
-    value: unknown,
-): value is FacebookPayloadBridgeReadyMessage {
-    return isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE);
+export function isFacebookPayloadBridgeReadyMessage(value: unknown): boolean {
+    return v.is(bridgeReadyMessageSchema, value);
 }
 
 /**
- * Validates an untrusted isolated-world lifecycle command.
+ * Reads the requested inspection state from one page-posted lifecycle command.
  *
- * @param value - Candidate message supplied by the page.
- * @returns - Whether the message carries a boolean bridge state.
+ * @param value - Message supplied by the page.
+ * @returns - Requested state, or null when the message is not a lifecycle command.
  */
-export function isFacebookPayloadBridgeControlMessage(
-    value: unknown,
-): value is FacebookPayloadBridgeControlMessage {
-    return isFacebookMessageEnvelope(value, FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE)
-        && typeof value.enabled === "boolean";
+export function readFacebookBridgeControlEnabled(value: unknown): boolean | null {
+    const parsed = v.safeParse(bridgeControlMessageSchema, value);
+    return parsed.success ? parsed.output.enabled : null;
 }
 
 /**

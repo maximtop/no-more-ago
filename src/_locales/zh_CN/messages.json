@@ -587,10 +587,6 @@
     "message": "目前没有可下载的诊断日志。",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "已保存的诊断日志无效。请清除日志后重试。",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "无法读取已保存的诊断日志。请稍后重试。",
     "description": "Storage read failed"

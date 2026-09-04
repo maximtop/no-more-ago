@@ -587,10 +587,6 @@
     "message": "Det finns inga diagnostikloggar att ladda ned ännu.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "De sparade diagnostikloggarna är ogiltiga. Rensa loggarna och försök igen.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "De sparade diagnostikloggarna kunde inte läsas. Försök senare.",
     "description": "Storage read failed"

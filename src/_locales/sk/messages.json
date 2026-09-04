@@ -587,10 +587,6 @@
     "message": "Zatiaľ nie sú k dispozícii žiadne diagnostické záznamy na stiahnutie.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Uložené diagnostické záznamy sú neplatné. Vymažte záznamy a skúste to znova.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Uložené diagnostické záznamy sa nepodarilo prečítať. Skúste to neskôr.",
     "description": "Storage read failed"

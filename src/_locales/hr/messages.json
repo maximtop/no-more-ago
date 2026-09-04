@@ -587,10 +587,6 @@
     "message": "Još nema dijagnostičkih zapisa za preuzimanje.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Spremljeni dijagnostički zapisi nisu valjani. Očistite zapise i pokušajte ponovno.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Spremljene dijagnostičke zapise nije bilo moguće pročitati. Pokušajte kasnije.",
     "description": "Storage read failed"

@@ -33,7 +33,7 @@ import {
 import {
     createUnavailableDebugState,
     type DebugState,
-} from "../../shared/messaging/view-state-schemas";
+} from "../../shared/messaging/view-state";
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 

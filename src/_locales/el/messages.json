@@ -587,10 +587,6 @@
     "message": "Δεν υπάρχουν ακόμη διαγνωστικά αρχεία καταγραφής για λήψη.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "Τα αποθηκευμένα διαγνωστικά αρχεία καταγραφής δεν είναι έγκυρα. Εκκαθαρίστε τα και δοκιμάστε ξανά.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Δεν ήταν δυνατή η ανάγνωση των αποθηκευμένων διαγνωστικών αρχείων καταγραφής. Δοκιμάστε αργότερα.",
     "description": "Storage read failed"

@@ -587,10 +587,6 @@
     "message": "Er zijn nog geen diagnostische logboeken om te downloaden.",
     "description": "Nothing has been recorded"
   },
-  "diagnostics_error_invalid": {
-    "message": "De opgeslagen diagnostische logboeken zijn ongeldig. Wis de logboeken en probeer het opnieuw.",
-    "description": "Stored diagnostics failed to parse"
-  },
   "diagnostics_error_unreadable": {
     "message": "Kon de opgeslagen diagnostische logboeken niet lezen. Probeer het later opnieuw.",
     "description": "Storage read failed"
