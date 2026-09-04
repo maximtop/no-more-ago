@@ -16,9 +16,12 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "pnpm lint && pnpm typecheck && pnpm test"
+    "locales:validate": "node --experimental-strip-types scripts/validate-locales.ts",
+    "locales:audit": "node --experimental-strip-types scripts/audit-locales.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm locales:validate && pnpm test"
   },
   "dependencies": {
+    "@adguard/translate": "2.0.8",
     "@date-fns/tz": "1.5.0",
     "@mantine/core": "9.5.2",
     "@mantine/hooks": "9.5.2",

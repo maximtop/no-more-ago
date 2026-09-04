@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "নির্ভরযোগ্য আপেক্ষিক সময়চিহ্নকে সঠিক তারিখ দিয়ে প্রতিস্থাপন করে।",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago সেটিংস",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "এক্সটেনশন চালু",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "অন্য একটি উইন্ডোতে সেটিংস আপডেট হয়েছে।",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "অন্য একটি উইন্ডোতে প্রদর্শন সেটিংস আপডেট হয়েছে। এখানে সংরক্ষণ করলে সেগুলি প্রতিস্থাপিত হবে।",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "বর্তমান প্রক্রিয়াকরণের অবস্থা অজানা।",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "সেটিংস পড়া গেছে, কিন্তু আগের প্রক্রিয়াকরণের অবস্থা পরিষ্কার করা যায়নি, তাই কিছু পৃষ্ঠা পরিবর্তিত থাকতে পারে।",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "সেটিংস পড়া যায়নি, তাই প্রক্রিয়াকরণ বন্ধ আছে।",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "কোনও পৃষ্ঠা পরিবর্তন করা হচ্ছে না।",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "সমস্যাটি জানান, সংরক্ষিত লগ ডাউনলোড করুন, অথবা ডিফল্ট সেটিংস ফিরিয়ে এনে পপআপ আবার খুলুন।",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "সমস্যাটি জানান, সংরক্ষিত লগ ডাউনলোড করুন, অথবা ডিফল্ট সেটিংস ফিরিয়ে আনুন।",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "এই পরিবর্তনটি সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "এই হোস্টনামটি বৈধ নয়। স্কিম, পোর্ট, পাথ বা ওয়াইল্ডকার্ড ছাড়া সঠিক হোস্টনাম ব্যবহার করুন।",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "এই তালিকাটি পূর্ণ। নতুন যোগ করার আগে একটি হোস্টনাম সরান।",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "অন্য একটি উইন্ডোতে রান মোড পরিবর্তিত হয়েছে, তাই এই পরিবর্তনটি প্রয়োগ হয়নি। বর্তমান তালিকাগুলি পুনরায় লোড করা হয়েছে।",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "প্রতিক্রিয়া বাধাগ্রস্ত হয়েছে। বর্তমান অবস্থা পুনরায় লোড করা হয়েছে।",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "পরিবর্তনটি সংরক্ষিত হয়েছে কিনা নিশ্চিত করা যায়নি। পপআপ আবার খুলে চেষ্টা করুন।",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "পরিবর্তনটি সংরক্ষিত হয়েছে কিনা নিশ্চিত করা যায়নি। সেটিংস আবার খুলে চেষ্টা করুন।",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "সব সেটিংস রিসেট করুন",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "রিসেট নিশ্চিত করুন",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "সব সেটিংস ডিফল্ট মানে ফিরিয়ে আনবেন?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "দুটি সাইট তালিকা, রান মোড, প্রদর্শন সেটিংস, চেহারা এবং সংরক্ষিত ডিবাগ লগ মুছে যাবে। এটি পূর্বাবস্থায় ফেরানো যাবে না।",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "সব রিসেট করুন",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "সেটিংস রাখুন",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "সমর্থিত সব সাইট",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "শুধু নির্বাচিত সাইট",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "বাদ দেওয়া সাইট",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "অনুমোদিত সাইট",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "বর্তমান সাইট লোড হচ্ছে…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "বর্তমান পৃষ্ঠা",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "রান মোড",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "সব সাইটের নিয়ম থামান বা আবার চালু করুন।",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "এই সাইটে চালু",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "%hostname%-এ চালু",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "এই সাইট সম্পর্কে জানান",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "সেটিংস",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "সক্রিয়",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "এক্সটেনশন বন্ধ",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "এই সাইটে বাদ দেওয়া হয়েছে",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "এই সাইটের জন্য নির্বাচিত নয়",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "এই পৃষ্ঠায় চলতে পারে না",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "এই পৃষ্ঠাটি প্রক্রিয়া করা যায়নি",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "বর্তমান প্রক্রিয়াকরণের অবস্থা অজানা",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "সেটিংস উপলব্ধ নেই",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "এটি বন্ধ করলে এই হোস্টনামটি বাদ দেওয়া সাইটে যুক্ত হবে।",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "এটি চালু করলে এই হোস্টনামটি বাদ দেওয়া সাইট থেকে সরে যাবে।",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "এটি বন্ধ করলে এই হোস্টনামটি অনুমোদিত সাইট থেকে সরে যাবে।",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "এটি চালু করলে এই হোস্টনামটি অনুমোদিত সাইটে যুক্ত হবে।",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "বর্তমান সাইট খুঁজে পাওয়া যায়নি। পপআপ আবার খুলে চেষ্টা করুন।",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "এই পৃষ্ঠাটি সম্পর্কে জানানো যাবে না। একটি HTTP বা HTTPS সাইট খুলুন।",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "বর্তমান সাইট বদলে গেছে। পপআপ আবার খুলে চেষ্টা করুন।",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "এই ব্যক্তিগত উইন্ডোতে রিপোর্টটি নিরাপদে খোলা যায়নি।",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "এই ব্রাউজারে সাইট রিপোর্ট করার সুবিধা নেই।",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "এই সাইট বা এক্সটেনশন শনাক্ত করা যায়নি। পপআপ আবার খুলে চেষ্টা করুন।",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "একটি সাইট রিপোর্ট ইতিমধ্যে খোলা হচ্ছে।",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub রিপোর্ট খোলা যায়নি। আবার চেষ্টা করুন।",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "একটি GitHub রিপোর্ট ইতিমধ্যে খোলা হচ্ছে।",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "এই ব্রাউজারে GitHub রিপোর্ট খোলা যায়নি।",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub রিপোর্ট খোলা যায়নি। ব্রাউজারের প্রসঙ্গ পরীক্ষা করে আবার চেষ্টা করুন।",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "সেটিংস লোড হচ্ছে…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "সেটিংস",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "সেটিংসের বিভাগ",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "চেহারা",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "সিস্টেম",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "হালকা",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "গাঢ়",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "চেহারা সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "সাইট",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "এক্সটেনশন কোথায় চলবে তা বেছে নিন, তারপর সেই নিয়মের জন্য সঠিক হোস্টনামগুলি পরিচালনা করুন।",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "নিচের রান মোড অনুযায়ী সমর্থিত সাইটে প্রক্রিয়াকরণ চালু আছে।",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "প্রক্রিয়াকরণ থামানো আছে। রান মোড এবং দুটি সাইট তালিকাই রাখা হয়েছে এবং প্রক্রিয়াকরণ চালু হলেই কার্যকর হবে।",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "এখানে চালান",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "প্রতিটি মোডের নিজস্ব তালিকা আছে। মোড বদলালে কোনও হোস্টনাম এক তালিকা থেকে অন্য তালিকায় যায় না।",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "বাদ দেওয়া সাইটের হোস্টনাম ছাড়া সব জায়গায় চালান।",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "শুধু অনুমোদিত সাইটের হোস্টনামে চালান।",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "সাইট সেটিংস উপলব্ধ নেই। প্রক্রিয়াকরণ বন্ধ আছে।",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count%টি সাইট|%count%টি সাইট|%count%টি সাইট",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "সরান",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "বাদ দেওয়া সাইট থেকে %hostname% সরান",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "অনুমোদিত সাইট থেকে %hostname% সরান",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% বাদ দেওয়া সাইটে যুক্ত হয়েছে।",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% অনুমোদিত সাইটে যুক্ত হয়েছে।",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "এই নির্দিষ্ট হোস্টনামগুলিতে এক্সটেনশন বন্ধ থাকে।",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "হোস্টনাম বাদ দিন",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "সাইট বাদ দিন",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "হোস্টনাম সরালে এক্সটেনশন সেখানে আবার চলবে।",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "কোনও সাইট বাদ দেওয়া হয়নি।",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "এক্সটেনশন শুধু এই নির্দিষ্ট হোস্টনামগুলিতে চলে।",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "হোস্টনাম অনুমোদন করুন",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "সাইট অনুমোদন করুন",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "হোস্টনাম সরালে এক্সটেনশন সেখানে আবার বন্ধ হবে।",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "এখনও কোনও সাইট অনুমোদিত নয়। একটি যোগ না করা পর্যন্ত এক্সটেনশন সব সাইটে বন্ধ থাকবে।",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "একটি হোস্টনাম লিখুন।",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "স্কিম, পোর্ট বা পাথ ছাড়া সঠিক হোস্টনাম ব্যবহার করুন।",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "এই হোস্টনামটি ইতিমধ্যে তালিকায় আছে।",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "https:// বা পাথ ছাড়া সঠিক হোস্টনাম লিখুন।",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "প্রদর্শন",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "সঠিক তারিখ কীভাবে দেখানো হবে তা বেছে নিন।",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "প্রদর্শন সেটিংস লোড হচ্ছে…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "তারিখের বিন্যাস",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "সিস্টেম",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "কাস্টম বিন্যাস",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "বিন্যাসের প্যাটার্ন",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "উদাহরণ: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "সময় অঞ্চল",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "সিস্টেম",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA সময় অঞ্চল শনাক্তকারী",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "একটি IANA সময় অঞ্চল শনাক্তকারী লিখুন, উদাহরণস্বরূপ America/New_York।",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "প্রিভিউ",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "প্রিভিউ দেখতে প্যাটার্ন ঠিক করুন",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "প্রিভিউ দেখতে সময় অঞ্চল ঠিক করুন",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "প্রদর্শন সেটিংস সংরক্ষণ করুন",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "প্রক্রিয়াকরণের অবস্থা পুনরুদ্ধার হওয়ার সময় বর্তমান প্রদর্শন সেটিংস উপলব্ধ নেই।",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "প্রদর্শন সেটিংস উপলব্ধ নেই। প্রক্রিয়াকরণ বন্ধ আছে।",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "পাথ ট্রাভার্সাল ছাড়া বৈধ IANA সময় অঞ্চল শনাক্তকারী ব্যবহার করুন।",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "বৈধ IANA সময় অঞ্চল শনাক্তকারী ব্যবহার করুন, উদাহরণস্বরূপ America/New_York।",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "এই সময় অঞ্চলটি বর্তমান ব্রাউজারে উপলব্ধ নেই। অন্য একটি শনাক্তকারী বেছে নিন।",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "এই সময় অঞ্চলটি অবৈধ বা অনুপলব্ধ। একটি সমর্থিত IANA শনাক্তকারী লিখে আবার চেষ্টা করুন।",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "তারিখের বিন্যাস অবৈধ। প্যাটার্ন ঠিক করে আবার চেষ্টা করুন।",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "সংরক্ষিত সময় অঞ্চলটি এই ব্রাউজারে উপলব্ধ নেই। সিস্টেম বা অন্য কোনও সমর্থিত অঞ্চল বেছে নিয়ে সংরক্ষণ করুন।",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "প্রদর্শন সেটিংস সংরক্ষণ করা যায়নি। আপনার আগের বিন্যাস সক্রিয় থাকবে। আবার চেষ্টা করুন।",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "প্রতিক্রিয়া বাধাগ্রস্ত হয়েছে। প্রদর্শন সেটিংস আবার পড়া হয়েছে।",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "প্রদর্শন সেটিংস সংরক্ষিত হয়েছে, কিন্তু এক বা একাধিক খোলা পৃষ্ঠা রিফ্রেশ করা যায়নি। নতুন তারিখগুলি সংরক্ষিত সেটিং ব্যবহার করবে।",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "প্রদর্শন সেটিংস সংরক্ষিত হয়েছে।",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "প্রদর্শন সেটিংস সংরক্ষিত হয়েছে কিনা নিশ্চিত করা যায়নি। সেটিংস আবার খুলে চেষ্টা করুন।",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "একটি তারিখ বিন্যাসের প্যাটার্ন লিখুন।",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "সর্বাধিক %max%টি অক্ষরের তারিখ বিন্যাসের প্যাটার্ন ব্যবহার করুন।",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "তারিখ বিন্যাসের প্যাটার্ন থেকে নিয়ন্ত্রণ অক্ষর সরান।",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "তারিখ বিন্যাসের প্যাটার্নে উদ্ধৃত লেখাটি বন্ধ করুন।",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "অন্তত একটি তারিখ বা সময়ের টোকেন রাখুন, যেমন yyyy বা HH:mm।",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "ইউনিকোড তারিখ টোকেন ব্যবহার করুন, যেমন YYYY বা DD-এর বদলে yyyy।",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "প্যাটার্নে সমর্থিত ইউনিকোড তারিখ ও সময়ের টোকেন ব্যবহার করুন।",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "তারিখের বিন্যাস থেকে দৃশ্যমান লেখা তৈরি হতে হবে।",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "ডায়াগনস্টিকস",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "লগ এই ডিভাইসেই থাকে এবং কখনও স্বয়ংক্রিয়ভাবে পাঠানো হয় না। ডাউনলোড করা আর্কাইভ রিপোর্টের সঙ্গে তখনই যুক্ত করুন যখন আপনি নিজে তা চান।",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "ডিবাগ সেটিংস লোড হচ্ছে…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "ডিবাগ লগ উপলব্ধ নেই। প্রক্রিয়াকরণ অপরিবর্তিত থাকে।",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "ডিবাগ লগ",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "প্রতিটি পৃষ্ঠায় এক্সটেনশন কী করেছে তার একটি সীমিত স্থানীয় রেকর্ড রাখুন।",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "লগ ডাউনলোড করুন",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "লগ মুছুন",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "GitHub-এ ইস্যু খুলুন",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "ডায়াগনস্টিক লগ ডাউনলোড হয়েছে।",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "ডায়াগনস্টিক লগ মুছে ফেলা হয়েছে।",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "ডিবাগ লগ বন্ধ আছে। সংরক্ষিত ডায়াগনস্টিকস ব্যবহার করতে সেগুলি চালু করুন।",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "ডাউনলোড করার মতো কোনও ডায়াগনস্টিক লগ এখনও নেই।",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "সংরক্ষিত ডায়াগনস্টিক লগ পড়া যায়নি। পরে আবার চেষ্টা করুন।",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "ডায়াগনস্টিক লগ উপলব্ধ নেই। পরে আবার চেষ্টা করুন।",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "এই প্রসঙ্গে স্থানীয় ডাউনলোড উপলব্ধ নয়।",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "ডাউনলোড করার মতো কোনও ডায়াগনস্টিক এন্ট্রি নেই।",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "ডায়াগনস্টিক আর্কাইভ তৈরি করা যায়নি। পরে আবার চেষ্টা করুন।",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "ডায়াগনস্টিক আর্কাইভ ডাউনলোড করা যায়নি। পরে আবার চেষ্টা করুন।",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "ডায়াগনস্টিক আর্কাইভ প্রস্তুত করা যায়নি। পরে আবার চেষ্টা করুন।",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "ডিবাগ লগ সেটিং সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "ডিবাগ লগ সম্পর্কিত প্রতিক্রিয়া বাধাগ্রস্ত হয়েছে। বর্তমান অবস্থা পুনরায় লোড করা হয়েছে।",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "ডিবাগ লগ সেটিং নিশ্চিত করা যায়নি। সেটিংস আবার খুলে চেষ্টা করুন।",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "রিসেট",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "রান মোড, দুটি সাইট তালিকা, প্রদর্শন সেটিংস, চেহারা ও ডায়াগনস্টিকস ডিফল্ট মানে ফিরিয়ে আনে। সংরক্ষিত ডিবাগ লগ মুছে ফেলা হয়।",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "সেটিংস রিসেট করা যায়নি। আপনার বর্তমান সেটিংস সক্রিয় থাকবে। আবার চেষ্টা করুন।",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "সেটিংস রিসেট হয়েছে কিনা নিশ্চিত করা যায়নি। বর্তমান অবস্থা দেখতে সেটিংস আবার খুলুন।",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "সেটিংস রিসেট করা যায়নি। প্রক্রিয়াকরণ বন্ধ থাকবে। আবার চেষ্টা করুন।",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "রিসেটের প্রতিক্রিয়া নিশ্চিত করা যায়নি। প্রক্রিয়াকরণ বন্ধ থাকবে। আবার চেষ্টা করুন।",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "bn",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

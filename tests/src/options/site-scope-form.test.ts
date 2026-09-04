@@ -18,42 +18,45 @@ describe("hostname entry validation", () => {
     });
 
     it.each([
-        ["", "Enter a hostname."],
-        ["https://example.com", "Use an exact hostname without a scheme, port, or path."],
-        ["example.com/path", "Use an exact hostname without a scheme, port, or path."],
-        ["*.example.com", "Use an exact hostname without a scheme, port, or path."],
-    ])("rejects %s", (input, message) => {
-        expect(validateHostnameEntry(input, [])).toEqual({ ok: false, error: message });
+        ["", "sites_error_empty"],
+        ["https://example.com", "sites_error_invalid"],
+        ["example.com/path", "sites_error_invalid"],
+        ["*.example.com", "sites_error_invalid"],
+    ])("rejects %s", (input, key) => {
+        expect(validateHostnameEntry(input, [])).toEqual({ ok: false, error: key });
     });
 
     it("rejects a hostname already present in the active list", () => {
         expect(validateHostnameEntry("github.com", ["github.com"]))
-            .toEqual({ ok: false, error: "This hostname is already in the list." });
+            .toEqual({ ok: false, error: "sites_error_duplicate" });
     });
 });
 
 describe("active list copy", () => {
     it("names the excluded list and its actions", () => {
         expect(activeListCopy(SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED)).toEqual({
-            title: "Excluded sites",
-            description: "The extension stays off on these exact hostnames.",
-            fieldLabel: "Exclude hostname",
-            submitLabel: "Exclude site",
-            removalEffect: "Removing a hostname lets the extension run on it again.",
-            emptyState: "No sites are excluded.",
+            title: "scope_list_excluded",
+            description: "sites_excluded_description",
+            fieldLabel: "sites_excluded_field_label",
+            submitLabel: "sites_excluded_submit",
+            removalEffect: "sites_excluded_removal_effect",
+            emptyState: "sites_excluded_empty",
+            removeAria: "sites_remove_from_excluded_aria",
+            addedConfirmation: "sites_added_to_excluded",
             addEnables: false,
         });
     });
 
     it("names the allowed list and its actions", () => {
         expect(activeListCopy(SITE_SCOPE_MODE.SELECTED_ONLY)).toEqual({
-            title: "Allowed sites",
-            description: "The extension runs only on these exact hostnames.",
-            fieldLabel: "Allow hostname",
-            submitLabel: "Allow site",
-            removalEffect: "Removing a hostname turns the extension off on it again.",
-            emptyState: "No sites are allowed yet. The extension will stay off on every site "
-                + "until one is added.",
+            title: "scope_list_allowed",
+            description: "sites_allowed_description",
+            fieldLabel: "sites_allowed_field_label",
+            submitLabel: "sites_allowed_submit",
+            removalEffect: "sites_allowed_removal_effect",
+            emptyState: "sites_allowed_empty",
+            removeAria: "sites_remove_from_allowed_aria",
+            addedConfirmation: "sites_added_to_allowed",
             addEnables: true,
         });
     });

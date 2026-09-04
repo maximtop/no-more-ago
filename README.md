@@ -47,7 +47,9 @@ extension.
   Korean, Lithuanian, Norwegian Bokmål, Dutch, Polish, Brazilian Portuguese,
   European Portuguese, Romanian, Russian, Slovak, Slovenian, Serbian, Swedish,
   Thai, Turkish, Ukrainian, Vietnamese, Simplified Chinese, and Traditional
-  Chinese. Unknown wording fails closed and stays unchanged.
+  Chinese. Unknown wording fails closed and stays unchanged. This
+  recognition set is not the interface-language set: it includes
+  Lithuanian and Slovenian, while the interface adds Bengali and Malay.
 - **Global switch:** enables or disables all timestamp processing.
 - **Run mode:** `All supported sites` runs everywhere except hostnames in
   Excluded sites; `Selected sites only` runs only on hostnames in Allowed
@@ -61,6 +63,9 @@ extension.
 - **Display settings:** choose the date format and time zone used for output.
 - **Appearance:** `System`, `Light`, or `Dark`, chosen in the Settings header
   and applied immediately to the popup and Settings.
+- **Interface language:** the popup and Settings follow the browser's UI
+  language preferences across 40 supported languages, using the catalog
+  selected by the browser and falling back to English when none matches. There is no language setting inside the extension.
 - **Debug logs:** optional local diagnostics that can be downloaded for a
   problem report.
 
@@ -581,7 +586,7 @@ source types are deferred.
   adds a time or applies the configured time zone.
 - YouTube support is Watch-only. Home, Search, and Channel list publication
   labels remain unchanged, and no fallback request is made for them.
-- The interface is available in English only.
+- The interface supports 40 languages; the browser selects the catalog.
 - Safari is not a current build target.
 - Browser-internal and other restricted pages cannot run the content script.
 - Frames that are inaccessible or use a non-HTTP(S) scheme remain unchanged.

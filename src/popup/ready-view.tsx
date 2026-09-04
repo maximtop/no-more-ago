@@ -5,11 +5,11 @@
 import { Alert, Box, Button, Group, Switch, Text } from "@mantine/core";
 import type { ReactElement } from "react";
 import type { ReadyPopupState } from "../shared/messaging/view-state";
-import { SITE_SCOPE_MODE_LABEL } from "../shared/settings/site-scope";
-import { GLOBAL_SWITCH_LABEL, updatedInAnotherWindow } from "../shared/ui/copy";
-import { mutationNoticeText } from "../shared/ui/persistence-notice";
+import { t, type MessageKey } from "../shared/i18n/translator";
+import { SCOPE_MODE_KEY } from "../shared/ui/copy";
+import { NOTICE_SURFACE, mutationNoticeKey } from "../shared/ui/persistence-notice";
 import { POPUP_NOTICE, type PopupNotice } from "./popup-controller";
-import { popupStatusModel, siteControlDescription } from "./popup-status";
+import { popupStatusModel, siteSwitchDescriptionKey } from "./popup-status";
 
 /**
  * Properties for the ready popup view.
@@ -36,9 +36,9 @@ export interface PopupReadyViewProps {
     readonly reporting: boolean;
 
     /**
-     * Latest failure encountered while opening a site report.
+     * Key of the latest failure encountered while opening a site report.
      */
-    readonly reportNotice: string | undefined;
+    readonly reportNotice: MessageKey | undefined;
 
     /**
      * Changes global activation.
@@ -60,8 +60,6 @@ export interface PopupReadyViewProps {
      */
     readonly onOpenSettings: () => void;
 }
-
-const RETRY_HINT = "Reopen the popup to try again.";
 
 /**
  * Message, alert color, and live-region role of a popup notice.
@@ -91,10 +89,10 @@ export interface NoticePresentation {
  */
 export function noticePresentation(notice: PopupNotice): NoticePresentation | undefined {
     if (notice === POPUP_NOTICE.EXTERNAL_CHANGE) {
-        return { text: updatedInAnotherWindow("Settings"), color: "gray", role: "status" };
+        return { text: t("settings_updated_elsewhere"), color: "gray", role: "status" };
     }
-    const text = mutationNoticeText(notice, RETRY_HINT);
-    return text === undefined ? undefined : { text, color: "red", role: "alert" };
+    const key = mutationNoticeKey(notice, NOTICE_SURFACE.POPUP);
+    return key === undefined ? undefined : { text: t(key), color: "red", role: "alert" };
 }
 
 /**
@@ -141,24 +139,24 @@ export function PopupReadyView({
             ) : null}
             <div className="popup-section">
                 <Group justify="space-between" className="nma-row popup-row-summary">
-                    <span className="nma-eyebrow">Run mode</span>
+                    <span className="nma-eyebrow">{t("popup_run_mode_label")}</span>
                     <Text size="xs" fw={600}>
-                        {SITE_SCOPE_MODE_LABEL[state.scopeMode]}
+                        {t(SCOPE_MODE_KEY[state.scopeMode])}
                     </Text>
                 </Group>
                 <Group justify="space-between" wrap="nowrap" className="nma-row">
                     <Box>
                         <Text size="sm" fw={600}>
-                            {GLOBAL_SWITCH_LABEL}
+                            {t("global_switch_label")}
                         </Text>
                         <Text size="xs" c="dimmed">
-                            Pause or resume all site rules.
+                            {t("popup_global_switch_hint")}
                         </Text>
                     </Box>
                     <Switch
                         checked={state.globalEnabled}
                         aria-busy={saving}
-                        aria-label={GLOBAL_SWITCH_LABEL}
+                        aria-label={t("global_switch_label")}
                         onChange={(event) => {
                             onChangeGlobal(event.currentTarget.checked);
                         }}
@@ -168,17 +166,22 @@ export function PopupReadyView({
                     <Group justify="space-between" wrap="nowrap" className="nma-row">
                         <Box>
                             <Text size="sm" fw={600}>
-                                Enabled on this site
+                                {t("popup_site_switch_label")}
                             </Text>
                             <Text size="xs" c="dimmed">
-                                {siteControlDescription(state.scopeMode, state.siteEnabled)}
+                                {t(siteSwitchDescriptionKey(
+                                    state.scopeMode,
+                                    state.siteEnabled,
+                                ))}
                             </Text>
                         </Box>
                         <Switch
                             checked={state.siteEnabled}
                             disabled={!state.globalEnabled}
                             aria-busy={saving}
-                            aria-label={`Enabled on ${state.hostname}`}
+                            aria-label={t("popup_site_switch_aria", {
+                                hostname: state.hostname,
+                            })}
                             onChange={(event) => {
                                 onChangeSite(event.currentTarget.checked);
                             }}
@@ -188,7 +191,7 @@ export function PopupReadyView({
             </div>
             {reportNotice ? (
                 <Alert role="alert" color="red" className="popup-section">
-                    {reportNotice}
+                    {t(reportNotice)}
                 </Alert>
             ) : null}
             <Group justify="space-between" className="popup-section">
@@ -200,11 +203,11 @@ export function PopupReadyView({
                         disabled={reporting}
                         onClick={onReportSite}
                     >
-                        Report this site
+                        {t("popup_action_report_site")}
                     </Button>
                 )}
                 <Button type="button" variant="subtle" onClick={onOpenSettings}>
-                    Settings
+                    {t("popup_action_settings")}
                 </Button>
             </Group>
         </>

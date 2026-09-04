@@ -3,6 +3,7 @@
  */
 
 import { CLIENT_RESULT_KIND, type MutationResult } from "../client-result";
+import type { MessageKey } from "../i18n/translator";
 import {
     SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_ERROR,
@@ -81,35 +82,58 @@ export function settleMutation<TState>(
 }
 
 /**
- * Maps a shared mutation notice to its sentence.
+ * Surface whose wording an ambiguous-outcome notice should use.
+ */
+export const NOTICE_SURFACE = {
+    POPUP: "popup",
+    OPTIONS: "options",
+} as const;
+
+/**
+ * Surface selecting the wording of the ambiguous-outcome notice.
+ */
+export type NoticeSurface = (typeof NOTICE_SURFACE)[keyof typeof NOTICE_SURFACE];
+
+/**
+ * Message mapping for every supported outcome.
+ */
+const MUTATION_NOTICE_KEYS = {
+    [MUTATION_NOTICE.SAVE_FAILED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_save_failed",
+        [NOTICE_SURFACE.OPTIONS]: "notice_save_failed",
+    },
+    [MUTATION_NOTICE.INVALID_HOSTNAME]: {
+        [NOTICE_SURFACE.POPUP]: "notice_invalid_hostname",
+        [NOTICE_SURFACE.OPTIONS]: "notice_invalid_hostname",
+    },
+    [MUTATION_NOTICE.LIST_FULL]: {
+        [NOTICE_SURFACE.POPUP]: "notice_list_full",
+        [NOTICE_SURFACE.OPTIONS]: "notice_list_full",
+    },
+    [MUTATION_NOTICE.SCOPE_CHANGED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_scope_changed",
+        [NOTICE_SURFACE.OPTIONS]: "notice_scope_changed",
+    },
+    [MUTATION_NOTICE.INTERRUPTED]: {
+        [NOTICE_SURFACE.POPUP]: "notice_interrupted",
+        [NOTICE_SURFACE.OPTIONS]: "notice_interrupted",
+    },
+    [MUTATION_NOTICE.UNKNOWN]: {
+        [NOTICE_SURFACE.POPUP]: "notice_unknown_popup",
+        [NOTICE_SURFACE.OPTIONS]: "notice_unknown_options",
+    },
+} as const satisfies Record<Exclude<MutationNotice, undefined>, Record<NoticeSurface, MessageKey>>;
+
+/**
+ * Maps a shared mutation notice to the message key describing it.
  *
  * @param notice - Outcome reported after a settings mutation.
- * @param retryHint - Sentence telling the user how to try again on this surface.
- * @returns - Message to display, or undefined when there is nothing to show.
+ * @param surface - Surface whose retry wording applies.
+ * @returns - Message key to render, or undefined when there is nothing to show.
  */
-export function mutationNoticeText(
+export function mutationNoticeKey(
     notice: MutationNotice,
-    retryHint: string,
-): string | undefined {
-    if (notice === MUTATION_NOTICE.SAVE_FAILED) {
-        return "Could not save this change. Try again.";
-    }
-    if (notice === MUTATION_NOTICE.INVALID_HOSTNAME) {
-        return "This hostname is invalid. Use an exact hostname without a scheme, port, path, "
-            + "or wildcard.";
-    }
-    if (notice === MUTATION_NOTICE.LIST_FULL) {
-        return "This list is full. Remove a hostname before adding another.";
-    }
-    if (notice === MUTATION_NOTICE.SCOPE_CHANGED) {
-        return "The run mode was changed in another window, so this change was not applied. "
-            + "Current lists were reloaded.";
-    }
-    if (notice === MUTATION_NOTICE.INTERRUPTED) {
-        return "The response was interrupted. Current state was reloaded.";
-    }
-    if (notice === MUTATION_NOTICE.UNKNOWN) {
-        return `Could not confirm whether the change was saved. ${retryHint}`;
-    }
-    return undefined;
+    surface: NoticeSurface,
+): MessageKey | undefined {
+    return notice === undefined ? undefined : MUTATION_NOTICE_KEYS[notice][surface];
 }

@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Заменя надеждни относителни времеви отметки с точни дати.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Настройки на No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Разширението е включено",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Настройките бяха променени в друг прозорец.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Настройките за показване бяха променени в друг прозорец. Записването тук ще ги замени.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Текущото състояние на обработката е неизвестно.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Настройките бяха прочетени, но предишното състояние на обработката не можа да бъде изчистено, затова някои страници може да останат променени.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Настройките не можаха да бъдат прочетени, затова обработката е изключена.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Никоя страница не се променя.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Съобщете за проблема, изтеглете запазените дневници или възстановете настройките по подразбиране и отворете изскачащия прозорец отново.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Съобщете за проблема, изтеглете запазените дневници или възстановете настройките по подразбиране.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Тази промяна не можа да бъде записана. Опитайте отново.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Това име на хост е невалидно. Използвайте точно име на хост без схема, порт, път и заместващи символи.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Този списък е пълен. Премахнете едно име на хост, преди да добавите ново.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Режимът на работа беше променен в друг прозорец, затова тази промяна не беше приложена. Текущите списъци бяха презаредени.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Отговорът беше прекъснат. Текущото състояние беше презаредено.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Не можа да се потвърди дали промяната е записана. Отворете изскачащия прозорец отново и опитайте пак.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Не можа да се потвърди дали промяната е записана. Отворете настройките отново и опитайте пак.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Нулиране на всички настройки",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Потвърдете нулирането",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Да се върнат ли всички настройки към стойностите по подразбиране?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "И двата списъка със сайтове, режимът на работа, настройките за показване, външният вид и запазените дневници за отстраняване на грешки ще бъдат премахнати. Това действие не може да бъде отменено.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Нулиране на всичко",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Запазване на настройките",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Всички поддържани сайтове",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Само избраните сайтове",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Изключени сайтове",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Разрешени сайтове",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Зареждане на текущия сайт…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Текуща страница",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Режим на работа",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Спрете или възобновете всички правила за сайтове.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Включено на този сайт",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Включено на %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Съобщете за този сайт",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Настройки",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Активно",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Разширението е изключено",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Изключено на този сайт",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Не е избрано за този сайт",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Не може да работи на тази страница",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Тази страница не можа да бъде обработена",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Текущото състояние на обработката е неизвестно",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Настройките не са налични",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Изключването добавя това име на хост към изключените сайтове.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Включването премахва това име на хост от изключените сайтове.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Изключването премахва това име на хост от разрешените сайтове.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Включването добавя това име на хост към разрешените сайтове.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Текущият сайт не беше намерен. Отворете изскачащия прозорец отново и опитайте пак.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "За тази страница не може да се съобщи. Отворете сайт по HTTP или HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Текущият сайт се промени. Отворете изскачащия прозорец отново и опитайте пак.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Сигналът не можа да бъде отворен безопасно в този поверителен прозорец.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Съобщаването за сайтове не е налично в този браузър.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Този сайт или разширението не можаха да бъдат разпознати. Отворете изскачащия прозорец отново и опитайте пак.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Сигнал за сайт вече се отваря.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Сигналът в GitHub не можа да бъде отворен. Опитайте отново.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Сигнал в GitHub вече се отваря.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Сигналът в GitHub не можа да бъде отворен в този браузър.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Сигналът в GitHub не можа да бъде отворен. Проверете контекста на браузъра и опитайте отново.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Зареждане на настройките…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Настройки",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Раздели с настройки",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Външен вид",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Системен",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Светъл",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Тъмен",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Външният вид не можа да бъде записан. Опитайте отново.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Сайтове",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Изберете къде работи разширението, след което управлявайте точните имена на хостове за това правило.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Обработката е включена на поддържаните сайтове според режима на работа по-долу.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Обработката е спряна. Режимът на работа и двата списъка със сайтове се запазват и ще влязат в сила веднага щом обработката бъде включена.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Къде да се изпълнява",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Всеки режим има собствен списък. Смяната на режима никога не премества име на хост.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Работи навсякъде освен на имената на хостове в изключените сайтове.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Работи само на имената на хостове в разрешените сайтове.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Настройките за сайтове не са налични. Обработката е изключена.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% сайта|%count% сайт|%count% сайта",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Премахване",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Премахване на %hostname% от изключените сайтове",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Премахване на %hostname% от разрешените сайтове",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% беше добавен към изключените сайтове.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% беше добавен към разрешените сайтове.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Разширението остава изключено на тези точни имена на хостове.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Изключване на име на хост",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Изключване на сайт",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Премахването на име на хост позволява на разширението отново да работи там.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Няма изключени сайтове.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Разширението работи само на тези точни имена на хостове.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Разрешаване на име на хост",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Разрешаване на сайт",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Премахването на име на хост отново изключва разширението там.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Още няма разрешени сайтове. Разширението ще остане изключено на всички сайтове, докато не бъде добавен поне един.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Въведете име на хост.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Използвайте точно име на хост без схема, порт и път.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Това име на хост вече е в списъка.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Въведете точно име на хост без https:// и без път.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Показване",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Изберете как се показват точните дати.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Зареждане на настройките за показване…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Формат на датата",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Системен",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Персонализиран формат",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Шаблон на формата",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Примери: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Часова зона",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Системна",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA идентификатор на часова зона",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Въведете IANA идентификатор на часова зона, например America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Преглед",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Поправете шаблона, за да видите преглед",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Поправете часовата зона, за да видите преглед",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Запис на настройките за показване",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Текущите настройки за показване не са налични, докато се възстановява състоянието на обработката.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Настройките за показване не са налични. Обработката е изключена.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Използвайте валиден IANA идентификатор на часова зона без обхождане на пътища.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Използвайте валиден IANA идентификатор на часова зона, например America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Тази часова зона не е налична в текущия браузър. Изберете друг идентификатор.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Тази часова зона е невалидна или не е налична. Въведете поддържан IANA идентификатор и опитайте отново.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Форматът на датата е невалиден. Поправете шаблона и опитайте отново.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Записаната часова зона не е налична в този браузър. Изберете системна или друга поддържана зона и запишете.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Настройките за показване не можаха да бъдат записани. Предишният ви формат остава активен. Опитайте отново.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Отговорът беше прекъснат. Настройките за показване бяха прочетени отново.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Настройките за показване бяха записани, но една или повече отворени страници не можаха да бъдат обновени. Новите дати ще използват записаната настройка.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Настройките за показване са записани.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Не можа да се потвърди дали настройките за показване са записани. Отворете настройките отново и опитайте пак.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Въведете шаблон за формат на датата.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Използвайте шаблон за формат на датата с дължина най-много %max% знака.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Премахнете управляващите знаци от шаблона за формат на датата.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Затворете текста в кавички в шаблона за формат на датата.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Включете поне един елемент за дата или час, например yyyy или HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Използвайте Unicode елементи за дата, например yyyy вместо YYYY или DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Използвайте в шаблона поддържани Unicode елементи за дата и час.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Форматът на датата трябва да дава видим текст.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Диагностика",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Дневниците остават на това устройство и никога не се изпращат автоматично. Прикачвайте изтеглен архив към сигнал само ако сами решите.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Зареждане на настройките за отстраняване на грешки…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Дневниците за отстраняване на грешки не са налични. Обработката остава непроменена.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Дневници за отстраняване на грешки",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Води ограничен локален запис какво е направило разширението на всяка страница.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Изтегляне на дневниците",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Изчистване на дневниците",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Отваряне на issue в GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Диагностичните дневници са изтеглени.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Диагностичните дневници са изчистени.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Дневниците за отстраняване на грешки са изключени. Включете ги, за да използвате запазената диагностика.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Още няма диагностични дневници за изтегляне.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Запазените диагностични дневници не можаха да бъдат прочетени. Опитайте по-късно.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Диагностичните дневници не са налични. Опитайте по-късно.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Локалните изтегляния не са налични в този контекст.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Няма диагностични записи за изтегляне.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Диагностичният архив не можа да бъде създаден. Опитайте по-късно.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Диагностичният архив не можа да бъде изтеглен. Опитайте по-късно.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Диагностичният архив не можа да бъде подготвен. Опитайте по-късно.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Настройката за дневниците за отстраняване на грешки не можа да бъде записана. Опитайте отново.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Отговорът за дневниците за отстраняване на грешки беше прекъснат. Текущото състояние беше презаредено.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Настройката за дневниците за отстраняване на грешки не можа да бъде потвърдена. Отворете настройките отново и опитайте пак.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Нулиране",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Връща режима на работа, двата списъка със сайтове, настройките за показване, външния вид и диагностиката към стойностите по подразбиране. Запазените дневници за отстраняване на грешки се премахват.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Настройките не можаха да бъдат нулирани. Текущите ви настройки остават активни. Опитайте отново.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Не можа да се потвърди дали настройките са нулирани. Отворете настройките отново и проверете текущото им състояние.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Настройките не можаха да бъдат нулирани. Обработката остава изключена. Опитайте отново.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Отговорът за нулирането не можа да бъде потвърден. Обработката остава изключена. Опитайте отново.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "bg",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

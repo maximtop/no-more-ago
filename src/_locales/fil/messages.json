@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Pinapalitan ang mapagkakatiwalaang relatibong timestamp ng tumpak na petsa.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Mga setting ng No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Naka-on ang extension",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Na-update ang mga setting sa ibang window.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Na-update ang mga setting ng display sa ibang window. Papalitan ang mga ito ng pag-save dito.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Hindi alam ang kasalukuyang katayuan ng pagproseso.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Nabasa ang mga setting, ngunit hindi nalinis ang naunang katayuan ng pagproseso, kaya maaaring manatiling binago ang ilang pahina.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Hindi nabasa ang mga setting, kaya naka-off ang pagproseso.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Walang pahinang binabago.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Iulat ang problema, i-download ang mga naitagong log, o ibalik ang mga default na setting at buksang muli ang popup.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Iulat ang problema, i-download ang mga naitagong log, o ibalik ang mga default na setting.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Hindi na-save ang pagbabagong ito. Subukan muli.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Hindi wasto ang hostname na ito. Gumamit ng eksaktong hostname na walang scheme, port, path, o wildcard.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Puno na ang listahang ito. Mag-alis ng isang hostname bago magdagdag ng iba.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Binago ang run mode sa ibang window, kaya hindi nailapat ang pagbabagong ito. Muling na-load ang kasalukuyang mga listahan.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Naantala ang tugon. Muling na-load ang kasalukuyang katayuan.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Hindi makumpirma kung na-save ang pagbabago. Buksang muli ang popup at subukan ulit.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Hindi makumpirma kung na-save ang pagbabago. Buksang muli ang mga setting at subukan ulit.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "I-reset ang lahat ng setting",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Kumpirmahin ang pag-reset",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Ibalik ang lahat ng setting sa mga default na halaga?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Aalisin ang parehong listahan ng site, ang run mode, mga setting ng display, ang hitsura, at ang mga naitagong debug log. Hindi ito mababawi.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "I-reset lahat",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Panatilihin ang mga setting",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Lahat ng suportadong site",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Mga napiling site lamang",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Mga hindi kasamang site",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Mga pinapayagang site",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Nilo-load ang kasalukuyang site…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Kasalukuyang pahina",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Run mode",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "I-pause o ipagpatuloy ang lahat ng panuntunan ng site.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Naka-on sa site na ito",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Naka-on sa %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Iulat ang site na ito",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Mga setting",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktibo",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Naka-off ang extension",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Hindi kasama sa site na ito",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Hindi napili para sa site na ito",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Hindi makakatakbo sa pahinang ito",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Hindi naproseso ang pahinang ito",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Hindi alam ang kasalukuyang katayuan ng pagproseso",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Hindi available ang mga setting",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Ang pag-off nito ay magdaragdag ng hostname na ito sa mga hindi kasamang site.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Ang pag-on nito ay mag-aalis ng hostname na ito sa mga hindi kasamang site.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Ang pag-off nito ay mag-aalis ng hostname na ito sa mga pinapayagang site.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Ang pag-on nito ay magdaragdag ng hostname na ito sa mga pinapayagang site.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Hindi mahanap ang kasalukuyang site. Buksang muli ang popup at subukan ulit.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Hindi maiuulat ang pahinang ito. Magbukas ng HTTP o HTTPS na site.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Nagbago ang kasalukuyang site. Buksang muli ang popup at subukan ulit.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Hindi ligtas na mabuksan ang ulat sa private window na ito.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Hindi available ang pag-uulat ng site sa browser na ito.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Hindi natukoy ang site na ito o ang extension. Buksang muli ang popup at subukan ulit.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "May binubuksan nang ulat ng site.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Hindi nabuksan ang ulat sa GitHub. Subukan muli.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "May binubuksan nang ulat sa GitHub.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Hindi nabuksan ang ulat sa GitHub sa browser na ito.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Hindi nabuksan ang ulat sa GitHub. Suriin ang konteksto ng browser at subukan muli.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Nilo-load ang mga setting…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Mga setting",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Mga seksyon ng setting",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Hitsura",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "System",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Maliwanag",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Madilim",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Hindi na-save ang hitsura. Subukan muli.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Mga site",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Piliin kung saan tatakbo ang extension, pagkatapos ay pamahalaan ang eksaktong mga hostname para sa panuntunang iyon.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Naka-on ang pagproseso sa mga suportadong site ayon sa run mode sa ibaba.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Naka-pause ang pagproseso. Nananatili ang run mode at ang parehong listahan ng site, at mailalapat ang mga ito kapag na-on ang pagproseso.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Patakbuhin sa",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "May sariling listahan ang bawat mode. Ang paglipat ng mode ay hindi kailanman naglilipat ng hostname.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Patakbuhin saanman maliban sa mga hostname sa mga hindi kasamang site.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Patakbuhin lamang sa mga hostname sa mga pinapayagang site.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Hindi available ang mga setting ng site. Naka-off ang pagproseso.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% na site|%count% na site",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Alisin",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Alisin ang %hostname% sa mga hindi kasamang site",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Alisin ang %hostname% sa mga pinapayagang site",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "Naidagdag ang %hostname% sa mga hindi kasamang site.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "Naidagdag ang %hostname% sa mga pinapayagang site.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Mananatiling naka-off ang extension sa eksaktong mga hostname na ito.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Huwag isama ang hostname",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Huwag isama ang site",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Ang pag-alis ng hostname ay muling nagpapatakbo ng extension doon.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Walang site na hindi kasama.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Tumatakbo lamang ang extension sa eksaktong mga hostname na ito.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Payagan ang hostname",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Payagan ang site",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Ang pag-alis ng hostname ay muling nag-o-off ng extension doon.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Wala pang pinapayagang site. Mananatiling naka-off ang extension sa lahat ng site hanggang may maidagdag.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Maglagay ng hostname.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Gumamit ng eksaktong hostname na walang scheme, port, o path.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Nasa listahan na ang hostname na ito.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Maglagay ng eksaktong hostname na walang https:// o path.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Display",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Piliin kung paano ipinapakita ang mga tumpak na petsa.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Nilo-load ang mga setting ng display…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Format ng petsa",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "System",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Pasadyang format",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Pattern ng format",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Mga halimbawa: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Time zone",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "System",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA time zone identifier",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Maglagay ng IANA time zone identifier, halimbawa America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Preview",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Ayusin ang pattern para makita ang preview",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Ayusin ang time zone para makita ang preview",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "I-save ang mga setting ng display",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Hindi available ang kasalukuyang mga setting ng display habang ibinabalik ang katayuan ng pagproseso.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Hindi available ang mga setting ng display. Naka-off ang pagproseso.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Gumamit ng wastong IANA time zone identifier na walang path traversal.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Gumamit ng wastong IANA time zone identifier, halimbawa America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Hindi available ang time zone na ito sa kasalukuyang browser. Pumili ng ibang identifier.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Hindi wasto o hindi available ang time zone na ito. Maglagay ng suportadong IANA identifier at subukan muli.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Hindi wasto ang format ng petsa. Ayusin ang pattern at subukan muli.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Hindi available sa browser na ito ang na-save na time zone. Piliin ang System o ibang suportadong zone, pagkatapos ay mag-save.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Hindi na-save ang mga setting ng display. Nananatiling aktibo ang naunang format mo. Subukan muli.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Naantala ang tugon. Muling binasa ang mga setting ng display.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Na-save ang mga setting ng display, ngunit hindi na-refresh ang isa o higit pang bukas na pahina. Gagamitin ng mga bagong petsa ang na-save na setting.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Na-save ang mga setting ng display.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Hindi makumpirma kung na-save ang mga setting ng display. Buksang muli ang mga setting at subukan ulit.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Maglagay ng pattern ng format ng petsa.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Gumamit ng pattern ng format ng petsa na hanggang %max% na character.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Alisin ang mga control character sa pattern ng format ng petsa.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Isara ang naka-quote na teksto sa pattern ng format ng petsa.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Maglagay ng kahit isang token ng petsa o oras, halimbawa yyyy o HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Gumamit ng mga Unicode date token, halimbawa yyyy sa halip na YYYY o DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Gumamit ng mga suportadong Unicode date at time token sa pattern.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Dapat makabuo ng nakikitang teksto ang format ng petsa.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostics",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Nananatili sa device na ito ang mga log at hindi kailanman awtomatikong isinusumite. Maglakip lamang ng na-download na archive sa isang ulat kung pipiliin mo.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Nilo-load ang mga setting ng debug…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Hindi available ang mga debug log. Hindi nagbabago ang pagproseso.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Mga debug log",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Magtago ng limitadong lokal na tala ng ginawa ng extension sa bawat pahina.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "I-download ang mga log",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "I-clear ang mga log",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Magbukas ng issue sa GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Na-download ang mga diagnostic log.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Na-clear ang mga diagnostic log.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Naka-off ang mga debug log. I-on ang mga ito para magamit ang naka-save na diagnostics.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Wala pang diagnostic log na maaaring i-download.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Hindi nabasa ang mga naka-save na diagnostic log. Subukan muli mamaya.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Hindi available ang mga diagnostic log. Subukan muli mamaya.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Hindi available ang mga lokal na download sa kontekstong ito.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Walang diagnostic entry na maaaring i-download.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Hindi nagawa ang diagnostic archive. Subukan muli mamaya.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Hindi na-download ang diagnostic archive. Subukan muli mamaya.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Hindi naihanda ang diagnostic archive. Subukan muli mamaya.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Hindi na-save ang setting ng debug log. Subukan muli.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Naantala ang tugon tungkol sa mga debug log. Muling na-load ang kasalukuyang katayuan.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Hindi makumpirma ang setting ng debug log. Buksang muli ang mga setting at subukan ulit.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "I-reset",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Ibinabalik sa mga default na halaga ang run mode, ang parehong listahan ng site, ang mga setting ng display, ang hitsura, at ang diagnostics. Inaalis ang mga naitagong debug log.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Hindi na-reset ang mga setting. Nananatiling aktibo ang kasalukuyang mga setting mo. Subukan muli.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Hindi makumpirma kung na-reset ang mga setting. Buksang muli ang mga setting para tingnan ang kasalukuyang katayuan.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Hindi na-reset ang mga setting. Nananatiling naka-off ang pagproseso. Subukan muli.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Hindi nakumpirma ang tugon sa pag-reset. Nananatiling naka-off ang pagproseso. Subukan muli.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "fil",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

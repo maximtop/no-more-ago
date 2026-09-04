@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "将可信的相对时间戳替换为精确日期。",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago 设置",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "启用扩展",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "设置已在另一个窗口中更新。",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "显示设置已在另一个窗口中更新。在此保存将覆盖它们。",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "当前处理状态未知。",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "设置已读取，但先前的处理状态无法清理，因此某些页面可能仍处于已修改状态。",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "无法读取设置，因此已停用处理。",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "没有页面被修改。",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "报告该问题、下载已保留的日志，或恢复默认设置并重新打开弹出窗口。",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "报告该问题、下载已保留的日志，或恢复默认设置。",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "无法保存此更改。请重试。",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "此主机名无效。请使用不含协议、端口、路径或通配符的确切主机名。",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "此列表已满。请先删除一个主机名再添加。",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "运行模式已在另一个窗口中更改，因此此更改未应用。当前列表已重新加载。",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "响应被中断。当前状态已重新加载。",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "无法确认更改是否已保存。请重新打开弹出窗口后重试。",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "无法确认更改是否已保存。请重新打开设置后重试。",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "重置所有设置",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "确认重置",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "将所有设置恢复为默认值？",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "两个网站列表、运行模式、显示设置、外观以及已保留的调试日志都将被删除。此操作无法撤销。",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "全部重置",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "保留设置",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "所有支持的网站",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "仅选定的网站",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "已排除的网站",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "已允许的网站",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "正在加载当前网站…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "当前页面",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "运行模式",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "暂停或恢复所有网站规则。",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "在此网站上启用",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "在 %hostname% 上启用",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "报告此网站",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "设置",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "运行中",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "扩展已关闭",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "已在此网站上排除",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "未为此网站选定",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "无法在此页面上运行",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "无法处理此页面",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "当前处理状态未知",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "设置不可用",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "关闭此项会将该主机名添加到已排除的网站。",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "开启此项会将该主机名从已排除的网站中移除。",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "关闭此项会将该主机名从已允许的网站中移除。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "开启此项会将该主机名添加到已允许的网站。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "无法找到当前网站。请重新打开弹出窗口后重试。",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "无法报告此页面。请打开 HTTP 或 HTTPS 网站。",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "当前网站已更改。请重新打开弹出窗口后重试。",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "无法在此隐私窗口中安全地打开报告。",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "此浏览器不支持网站报告。",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "无法识别此网站或扩展。请重新打开弹出窗口后重试。",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "网站报告已在打开中。",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "无法打开 GitHub 报告。请重试。",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "GitHub 报告已在打开中。",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "无法在此浏览器中打开 GitHub 报告。",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "无法打开 GitHub 报告。请检查浏览器环境后重试。",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "正在加载设置…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "设置",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "设置分区",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "外观",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "跟随系统",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "浅色",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "深色",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "无法保存外观设置。请重试。",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "网站",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "选择扩展的运行范围，然后为该规则管理确切的主机名。",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "已按下方的运行模式在支持的网站上启用处理。",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "处理已暂停。运行模式和两个网站列表都会保留，启用处理后即会生效。",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "运行于",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "每种模式都有各自的列表。切换模式绝不会移动主机名。",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "在所有位置运行，已排除的网站中的主机名除外。",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "仅在已允许的网站中的主机名上运行。",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "网站设置不可用。处理已停用。",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% 个网站|%count% 个网站",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "移除",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "从已排除的网站中移除 %hostname%",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "从已允许的网站中移除 %hostname%",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% 已添加到已排除的网站。",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% 已添加到已允许的网站。",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "扩展在这些确切的主机名上保持关闭。",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "排除主机名",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "排除网站",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "移除主机名后，扩展会再次在其上运行。",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "没有已排除的网站。",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "扩展仅在这些确切的主机名上运行。",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "允许主机名",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "允许网站",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "移除主机名后，扩展会再次在其上关闭。",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "尚未允许任何网站。在添加之前，扩展将在所有网站上保持关闭。",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "请输入主机名。",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "请使用不含协议、端口或路径的确切主机名。",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "此主机名已在列表中。",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "请输入不含 https:// 或路径的确切主机名。",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "显示",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "选择精确日期的显示方式。",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "正在加载显示设置…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "日期格式",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "跟随系统",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "自定义格式",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "格式样式",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "示例：yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "时区",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "跟随系统",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA 时区标识符",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "请输入 IANA 时区标识符，例如 America/New_York。",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "预览",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "请修正格式样式以预览",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "请修正时区以预览",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "保存显示设置",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "正在恢复处理状态，当前显示设置不可用。",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "显示设置不可用。处理已停用。",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "请使用有效的 IANA 时区标识符，且不含路径遍历。",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "请使用有效的 IANA 时区标识符，例如 America/New_York。",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "当前浏览器不提供此时区。请另选一个标识符。",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "此时区无效或不可用。请输入受支持的 IANA 标识符后重试。",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "日期格式无效。请更正格式样式后重试。",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "此浏览器不提供已保存的时区。请选择跟随系统或其他受支持的时区，然后保存。",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "无法保存显示设置。您之前的格式仍然有效。请重试。",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "响应被中断。显示设置已重新读取。",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "显示设置已保存，但有一个或多个已打开的页面无法刷新。新的日期将使用已保存的设置。",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "显示设置已保存。",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "无法确认显示设置是否已保存。请重新打开设置后重试。",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "请输入日期格式模式。",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "请使用不超过 %max% 个字符的日期格式模式。",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "请从日期格式模式中移除控制字符。",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "请闭合日期格式模式中的引用文本。",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "请至少包含一个日期或时间标记，例如 yyyy 或 HH:mm。",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "请使用 Unicode 日期标记，例如用 yyyy 而不是 YYYY 或 DD。",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "请在模式中使用受支持的 Unicode 日期和时间标记。",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "日期格式必须生成可见文本。",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "诊断",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "日志保留在本设备上，绝不会自动提交。仅在您选择时，才将下载的归档附加到报告中。",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "正在加载调试设置…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "调试日志不可用。处理保持不变。",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "调试日志",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "保留一份有上限的本地记录，记录扩展在每个页面上的操作。",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "下载日志",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "清除日志",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "打开 GitHub 问题",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "诊断日志已下载。",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "诊断日志已清除。",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "调试日志已关闭。请开启后再使用已保存的诊断数据。",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "目前没有可下载的诊断日志。",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "无法读取已保存的诊断日志。请稍后重试。",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "诊断日志不可用。请稍后重试。",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "此环境中无法使用本地下载。",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "没有可下载的诊断条目。",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "无法创建诊断归档。请稍后重试。",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "无法下载诊断归档。请稍后重试。",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "无法准备诊断归档。请稍后重试。",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "无法保存调试日志设置。请重试。",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "调试日志响应被中断。当前状态已重新加载。",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "无法确认调试日志设置。请重新打开设置后重试。",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "重置",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "将运行模式、两个网站列表、显示设置、外观和诊断恢复为默认值。已保留的调试日志会被删除。",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "无法重置设置。您当前的设置仍然有效。请重试。",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "无法确认设置是否已重置。请重新打开设置以查看其当前状态。",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "无法重置设置。处理仍处于停用状态。请重试。",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "无法确认重置响应。处理仍处于停用状态。请重试。",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "zh-CN",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

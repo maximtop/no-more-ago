@@ -11,7 +11,7 @@ import {
     STATE_AVAILABILITY,
 } from "../../../src/shared/messaging/view-state-values";
 import type { PopupState } from "../../../src/shared/messaging/view-state";
-import { popupStatusModel, siteControlDescription } from "../../../src/popup/popup-status";
+import { popupStatusModel, siteSwitchDescriptionKey } from "../../../src/popup/popup-status";
 
 const ready = (overrides: Partial<PopupState> = {}): PopupState => ({
     availability: STATE_AVAILABILITY.READY,
@@ -52,11 +52,11 @@ describe("popup status", () => {
     });
 
     it.each([
-        [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, true, "adds this hostname to Excluded sites"],
-        [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, false, "removes this hostname from Excluded sites"],
-        [SITE_SCOPE_MODE.SELECTED_ONLY, true, "removes this hostname from Allowed sites"],
-        [SITE_SCOPE_MODE.SELECTED_ONLY, false, "adds this hostname to Allowed sites"],
-    ])("explains the site switch for %s when enabled is %s", (mode, enabled, expected) => {
-        expect(siteControlDescription(mode, enabled)).toContain(expected);
+        [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, true, "popup_site_switch_all_on"],
+        [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, false, "popup_site_switch_all_off"],
+        [SITE_SCOPE_MODE.SELECTED_ONLY, true, "popup_site_switch_selected_on"],
+        [SITE_SCOPE_MODE.SELECTED_ONLY, false, "popup_site_switch_selected_off"],
+    ])("names the site-switch sentence for %s when enabled is %s", (mode, enabled, key) => {
+        expect(siteSwitchDescriptionKey(mode, enabled)).toBe(key);
     });
 });

@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Erstatter pålitelige relative tidsangivelser med nøyaktige datoer.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Innstillinger for No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Utvidelsen er på",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Innstillingene ble oppdatert i et annet vindu.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Visningsinnstillingene ble oppdatert i et annet vindu. Hvis du lagrer her, erstattes de.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Gjeldende behandlingsstatus er ukjent.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Innstillingene ble lest, men den forrige behandlingsstatusen kunne ikke ryddes opp, så noen sider kan fortsatt være endret.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Innstillingene kunne ikke leses, så behandlingen er slått av.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Ingen side blir endret.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Rapporter problemet, last ned lagrede logger, eller gjenopprett standardinnstillingene og åpne popup-vinduet på nytt.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Rapporter problemet, last ned lagrede logger, eller gjenopprett standardinnstillingene.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Denne endringen kunne ikke lagres. Prøv igjen.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Dette vertsnavnet er ugyldig. Bruk et nøyaktig vertsnavn uten skjema, port, sti eller jokertegn.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Denne listen er full. Fjern et vertsnavn før du legger til et nytt.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Kjøremodusen ble endret i et annet vindu, så denne endringen ble ikke tatt i bruk. De gjeldende listene ble lastet inn på nytt.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Svaret ble avbrutt. Gjeldende status ble lastet inn på nytt.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Kunne ikke bekrefte om endringen ble lagret. Åpne popup-vinduet på nytt og prøv igjen.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Kunne ikke bekrefte om endringen ble lagret. Åpne innstillingene på nytt og prøv igjen.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Tilbakestill alle innstillinger",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Bekreft tilbakestilling",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Tilbakestille alle innstillinger til standardverdiene?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Begge nettstedslistene, kjøremodusen, visningsinnstillingene, utseendet og lagrede feilsøkingslogger blir fjernet. Dette kan ikke angres.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Tilbakestill alt",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Behold innstillingene",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Alle støttede nettsteder",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Bare valgte nettsteder",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Ekskluderte nettsteder",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Tillatte nettsteder",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Laster inn gjeldende nettsted…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Gjeldende side",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Kjøremodus",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Sett alle nettstedsregler på pause eller fortsett dem.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "På for dette nettstedet",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "På for %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Rapporter nettstedet",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Innstillinger",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktiv",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Utvidelsen er av",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Ekskludert på dette nettstedet",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Ikke valgt for dette nettstedet",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Kan ikke kjøre på denne siden",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Kunne ikke behandle denne siden",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Gjeldende behandlingsstatus er ukjent",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Innstillingene er ikke tilgjengelige",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Hvis du slår den av, legges dette vertsnavnet til i ekskluderte nettsteder.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Hvis du slår den på, fjernes dette vertsnavnet fra ekskluderte nettsteder.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Hvis du slår den av, fjernes dette vertsnavnet fra tillatte nettsteder.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Hvis du slår den på, legges dette vertsnavnet til i tillatte nettsteder.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Fant ikke gjeldende nettsted. Åpne popup-vinduet på nytt og prøv igjen.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Denne siden kan ikke rapporteres. Åpne et HTTP- eller HTTPS-nettsted.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Gjeldende nettsted er endret. Åpne popup-vinduet på nytt og prøv igjen.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Rapporten kunne ikke åpnes trygt i dette private vinduet.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Rapportering av nettsteder er ikke tilgjengelig i denne nettleseren.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Dette nettstedet eller utvidelsen kunne ikke identifiseres. Åpne popup-vinduet på nytt og prøv igjen.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "En nettstedsrapport åpnes allerede.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub-rapporten kunne ikke åpnes. Prøv igjen.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "En GitHub-rapport åpnes allerede.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "GitHub-rapporten kunne ikke åpnes i denne nettleseren.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub-rapporten kunne ikke åpnes. Kontroller nettleserkonteksten og prøv igjen.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Laster inn innstillinger…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Innstillinger",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Innstillingsseksjoner",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Utseende",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "System",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Lyst",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Mørkt",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Utseendet kunne ikke lagres. Prøv igjen.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Nettsteder",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Velg hvor utvidelsen kjører, og administrer deretter de nøyaktige vertsnavnene for den regelen.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Behandling er på for støttede nettsteder i henhold til kjøremodusen nedenfor.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Behandlingen er satt på pause. Kjøremodusen og begge nettstedslistene beholdes og gjelder så snart behandlingen slås på.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Kjør på",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Hver modus har sin egen liste. Å bytte modus flytter aldri et vertsnavn.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Kjør overalt bortsett fra på vertsnavn i listen Ekskluderte nettsteder.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Kjør bare på vertsnavn i listen Tillatte nettsteder.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Nettstedsinnstillingene er ikke tilgjengelige. Behandlingen er slått av.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% nettsteder|%count% nettsted|%count% nettsteder",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Fjern",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Fjern %hostname% fra ekskluderte nettsteder",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Fjern %hostname% fra tillatte nettsteder",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% ble lagt til i ekskluderte nettsteder.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% ble lagt til i tillatte nettsteder.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Utvidelsen forblir av på nøyaktig disse vertsnavnene.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Ekskluder vertsnavn",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Ekskluder nettsted",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Når et vertsnavn fjernes, kjører utvidelsen der igjen.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Ingen nettsteder er ekskludert.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Utvidelsen kjører bare på nøyaktig disse vertsnavnene.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Tillat vertsnavn",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Tillat nettsted",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Når et vertsnavn fjernes, slås utvidelsen av der igjen.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Ingen nettsteder er tillatt ennå. Utvidelsen forblir av på alle nettsteder til ett legges til.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Skriv inn et vertsnavn.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Bruk et nøyaktig vertsnavn uten skjema, port eller sti.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Dette vertsnavnet er allerede i listen.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Skriv inn et nøyaktig vertsnavn uten https:// eller sti.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Visning",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Velg hvordan nøyaktige datoer vises.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Laster inn visningsinnstillinger…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Datoformat",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "System",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Egendefinert format",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Formatmønster",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Eksempler: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Tidssone",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "System",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA-tidssone-ID",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Skriv inn en IANA-tidssone-ID, for eksempel America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Forhåndsvisning",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Rett mønsteret for å se forhåndsvisning",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Rett tidssonen for å se forhåndsvisning",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Lagre visningsinnstillinger",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "De gjeldende visningsinnstillingene er ikke tilgjengelige mens behandlingsstatusen gjenopprettes.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Visningsinnstillingene er ikke tilgjengelige. Behandlingen er slått av.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Bruk en gyldig IANA-tidssone-ID uten stinavigasjon (..).",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Bruk en gyldig IANA-tidssone-ID, for eksempel America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Denne tidssonen er ikke tilgjengelig i gjeldende nettleser. Velg en annen ID.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Denne tidssonen er ugyldig eller utilgjengelig. Skriv inn en støttet IANA-ID og prøv igjen.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Datoformatet er ugyldig. Rett mønsteret og prøv igjen.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Den lagrede tidssonen er ikke tilgjengelig i denne nettleseren. Velg System eller en annen støttet sone, og lagre.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Visningsinnstillingene kunne ikke lagres. Det forrige formatet ditt er fortsatt aktivt. Prøv igjen.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Svaret ble avbrutt. Visningsinnstillingene ble lest på nytt.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Visningsinnstillingene ble lagret, men én eller flere åpne sider kunne ikke oppdateres. Nye datoer bruker den lagrede innstillingen.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Visningsinnstillingene ble lagret.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Kunne ikke bekrefte om visningsinnstillingene ble lagret. Åpne innstillingene på nytt og prøv igjen.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Skriv inn et datoformatmønster.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Bruk et datoformatmønster på høyst %max% tegn.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Fjern kontrolltegn fra datoformatmønsteret.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Avslutt anførselstegnene i datoformatmønsteret.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Ta med minst ett dato- eller tidstoken, for eksempel yyyy eller HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Bruk Unicode-datotokener, for eksempel yyyy i stedet for YYYY eller DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Bruk støttede Unicode-dato- og tidstokener i mønsteret.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Datoformatet må gi synlig tekst.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostikk",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Logger blir værende på denne enheten og sendes aldri automatisk. Legg bare ved et nedlastet arkiv i en rapport hvis du selv velger det.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Laster inn feilsøkingsinnstillinger…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Feilsøkingsloggene er ikke tilgjengelige. Behandlingen er uendret.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Feilsøkingslogger",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Før en begrenset lokal oversikt over hva utvidelsen gjorde på hver side.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Last ned logger",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Tøm logger",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Åpne GitHub-issue",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostikkloggene ble lastet ned.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostikkloggene ble tømt.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Feilsøkingsloggene er av. Slå dem på for å bruke lagret diagnostikk.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Det finnes ingen diagnostikklogger å laste ned ennå.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "De lagrede diagnostikkloggene kunne ikke leses. Prøv igjen senere.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostikkloggene er ikke tilgjengelige. Prøv igjen senere.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Lokale nedlastinger er ikke tilgjengelige i denne konteksten.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Det finnes ingen diagnostikkoppføringer å laste ned.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Diagnostikkarkivet kunne ikke opprettes. Prøv igjen senere.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Diagnostikkarkivet kunne ikke lastes ned. Prøv igjen senere.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Diagnostikkarkivet kunne ikke forberedes. Prøv igjen senere.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Innstillingen for feilsøkingslogger kunne ikke lagres. Prøv igjen.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Svaret om feilsøkingsloggene ble avbrutt. Gjeldende status ble lastet inn på nytt.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Innstillingen for feilsøkingslogger kunne ikke bekreftes. Åpne innstillingene på nytt og prøv igjen.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Tilbakestilling",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Gjenopprett kjøremodusen, begge nettstedslistene, visningsinnstillingene, utseendet og diagnostikken til standardverdiene. Lagrede feilsøkingslogger fjernes.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Innstillingene kunne ikke tilbakestilles. De nåværende innstillingene dine er fortsatt aktive. Prøv igjen.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Kunne ikke bekrefte om innstillingene ble tilbakestilt. Åpne innstillingene på nytt og kontroller gjeldende status.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Innstillingene kunne ikke tilbakestilles. Behandlingen er fortsatt slått av. Prøv igjen.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Svaret på tilbakestillingen kunne ikke bekreftes. Behandlingen er fortsatt slått av. Prøv igjen.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "nb",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

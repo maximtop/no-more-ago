@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Menggantikan cap masa relatif yang dipercayai dengan tarikh yang tepat.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Tetapan No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Sambungan dihidupkan",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Tetapan telah dikemas kini dalam tetingkap lain.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Tetapan paparan telah dikemas kini dalam tetingkap lain. Menyimpan di sini akan menggantikannya.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Status pemprosesan semasa tidak diketahui.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Tetapan berjaya dibaca, tetapi status pemprosesan sebelumnya tidak dapat dibersihkan, jadi sesetengah halaman mungkin kekal berubah.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Tetapan tidak dapat dibaca, jadi pemprosesan dimatikan.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Tiada halaman yang diubah.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Laporkan masalah ini, muat turun log yang disimpan, atau pulihkan tetapan lalai dan buka semula tetingkap timbul.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Laporkan masalah ini, muat turun log yang disimpan, atau pulihkan tetapan lalai.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Perubahan ini tidak dapat disimpan. Cuba lagi.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Nama hos ini tidak sah. Gunakan nama hos yang tepat tanpa skema, port, laluan atau aksara kad bebas.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Senarai ini penuh. Alih keluar satu nama hos sebelum menambah yang lain.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Mod operasi telah ditukar dalam tetingkap lain, jadi perubahan ini tidak digunakan. Senarai semasa telah dimuat semula.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Respons terganggu. Status semasa telah dimuat semula.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Tidak dapat mengesahkan sama ada perubahan itu disimpan. Buka semula tetingkap timbul dan cuba lagi.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Tidak dapat mengesahkan sama ada perubahan itu disimpan. Buka semula tetapan dan cuba lagi.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Tetapkan semula semua tetapan",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Sahkan penetapan semula",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Kembalikan semua tetapan kepada nilai lalai?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Kedua-dua senarai tapak, mod operasi, tetapan paparan, penampilan dan log nyahpepijat yang disimpan akan dipadamkan. Tindakan ini tidak boleh dibatalkan.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Tetapkan semula semua",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Kekalkan tetapan",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Semua tapak yang disokong",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Tapak terpilih sahaja",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Tapak yang dikecualikan",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Tapak yang dibenarkan",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Memuatkan tapak semasa…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Halaman semasa",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Mod operasi",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Jeda atau sambung semula semua peraturan tapak.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Dihidupkan pada tapak ini",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Dihidupkan pada %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Laporkan tapak ini",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Tetapan",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktif",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Sambungan dimatikan",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Dikecualikan pada tapak ini",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Tidak dipilih untuk tapak ini",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Tidak boleh berjalan pada halaman ini",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Halaman ini tidak dapat diproses",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Status pemprosesan semasa tidak diketahui",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Tetapan tidak tersedia",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Mematikannya akan menambah nama hos ini ke dalam senarai Tapak yang dikecualikan.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Menghidupkannya akan mengalih keluar nama hos ini daripada senarai Tapak yang dikecualikan.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Mematikannya akan mengalih keluar nama hos ini daripada senarai Tapak yang dibenarkan.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Menghidupkannya akan menambah nama hos ini ke dalam senarai Tapak yang dibenarkan.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Tapak semasa tidak ditemui. Buka semula tetingkap timbul dan cuba lagi.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Halaman ini tidak boleh dilaporkan. Buka tapak HTTP atau HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Tapak semasa telah berubah. Buka semula tetingkap timbul dan cuba lagi.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Laporan tidak dapat dibuka dengan selamat dalam tetingkap peribadi ini.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Pelaporan tapak tidak tersedia dalam pelayar ini.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Tapak ini atau sambungan ini tidak dapat dikenal pasti. Buka semula tetingkap timbul dan cuba lagi.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Laporan tapak sedang dibuka.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Laporan GitHub tidak dapat dibuka. Cuba lagi.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Laporan GitHub sedang dibuka.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Laporan GitHub tidak dapat dibuka dalam pelayar ini.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Laporan GitHub tidak dapat dibuka. Semak konteks pelayar dan cuba lagi.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Memuatkan tetapan…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Tetapan",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Bahagian tetapan",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Penampilan",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Sistem",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Cerah",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Gelap",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Penampilan tidak dapat disimpan. Cuba lagi.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Tapak",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Pilih tempat sambungan ini berjalan, kemudian urus nama hos yang tepat bagi peraturan itu.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Pemprosesan dihidupkan pada tapak yang disokong mengikut mod operasi di bawah.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Pemprosesan dijeda. Mod operasi dan kedua-dua senarai tapak dikekalkan, dan akan berkuat kuasa sebaik sahaja pemprosesan dihidupkan.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Jalankan pada",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Setiap mod menyimpan senarainya sendiri. Menukar mod tidak sekali-kali memindahkan nama hos.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Jalankan di mana-mana kecuali nama hos dalam senarai Tapak yang dikecualikan.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Jalankan hanya pada nama hos dalam senarai Tapak yang dibenarkan.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Tetapan tapak tidak tersedia. Pemprosesan dimatikan.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% tapak|%count% tapak",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Alih keluar",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Alih keluar %hostname% daripada senarai Tapak yang dikecualikan",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Alih keluar %hostname% daripada senarai Tapak yang dibenarkan",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% telah ditambah ke dalam senarai Tapak yang dikecualikan.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% telah ditambah ke dalam senarai Tapak yang dibenarkan.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Sambungan ini kekal dimatikan pada nama hos yang tepat ini.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Kecualikan nama hos",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Kecualikan tapak",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Mengalih keluar nama hos membolehkan sambungan ini berjalan padanya semula.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Tiada tapak yang dikecualikan.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Sambungan ini hanya berjalan pada nama hos yang tepat ini.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Benarkan nama hos",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Benarkan tapak",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Mengalih keluar nama hos akan mematikan sambungan ini padanya semula.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Belum ada tapak yang dibenarkan. Sambungan ini akan kekal dimatikan pada semua tapak sehingga satu ditambah.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Masukkan nama hos.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Gunakan nama hos yang tepat tanpa skema, port atau laluan.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Nama hos ini sudah ada dalam senarai.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Masukkan nama hos yang tepat tanpa https:// atau laluan.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Paparan",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Pilih cara tarikh yang tepat dipaparkan.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Memuatkan tetapan paparan…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Format tarikh",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Sistem",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Format tersuai",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Corak format",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Contoh: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Zon masa",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Sistem",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Pengecam zon masa IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Masukkan pengecam zon masa IANA, contohnya America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Pratonton",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Betulkan corak untuk melihat pratonton",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Betulkan zon masa untuk melihat pratonton",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Simpan tetapan paparan",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Tetapan paparan semasa tidak tersedia semasa status pemprosesan dipulihkan.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Tetapan paparan tidak tersedia. Pemprosesan dimatikan.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Gunakan pengecam zon masa IANA yang sah tanpa lintasan laluan.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Gunakan pengecam zon masa IANA yang sah, contohnya America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Zon masa ini tidak tersedia dalam pelayar semasa. Pilih pengecam lain.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Zon masa ini tidak sah atau tidak tersedia. Masukkan pengecam IANA yang disokong dan cuba lagi.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Format tarikh tidak sah. Betulkan corak dan cuba lagi.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Zon masa yang disimpan tidak tersedia dalam pelayar ini. Pilih Sistem atau zon lain yang disokong, kemudian simpan.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Tetapan paparan tidak dapat disimpan. Format anda sebelum ini kekal aktif. Cuba lagi.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Respons terganggu. Tetapan paparan telah dibaca semula.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Tetapan paparan telah disimpan, tetapi satu atau lebih halaman yang terbuka tidak dapat dimuat semula. Tarikh baharu akan menggunakan tetapan yang disimpan.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Tetapan paparan telah disimpan.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Tidak dapat mengesahkan sama ada tetapan paparan telah disimpan. Buka semula tetapan dan cuba lagi.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Masukkan corak format tarikh.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Gunakan corak format tarikh yang tidak melebihi %max% aksara.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Alih keluar aksara kawalan daripada corak format tarikh.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Tutup teks dalam tanda petikan pada corak format tarikh.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Sertakan sekurang-kurangnya satu token tarikh atau masa, contohnya yyyy atau HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Gunakan token tarikh Unicode, contohnya yyyy dan bukan YYYY atau DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Gunakan token tarikh dan masa Unicode yang disokong dalam corak itu.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Format tarikh mesti menghasilkan teks yang kelihatan.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostik",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Log kekal pada peranti ini dan tidak pernah dihantar secara automatik. Lampirkan arkib yang dimuat turun pada laporan hanya jika anda memilih berbuat demikian.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Memuatkan tetapan nyahpepijat…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Log nyahpepijat tidak tersedia. Pemprosesan kekal tidak berubah.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Log nyahpepijat",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Simpan rekod setempat yang terhad tentang perkara yang dilakukan oleh sambungan ini pada setiap halaman.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Muat turun log",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Kosongkan log",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Buka isu di GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Log diagnostik telah dimuat turun.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Log diagnostik telah dikosongkan.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Log nyahpepijat dimatikan. Hidupkannya untuk menggunakan diagnostik yang disimpan.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Belum ada log diagnostik untuk dimuat turun.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Log diagnostik yang disimpan tidak dapat dibaca. Cuba lagi kemudian.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Log diagnostik tidak tersedia. Cuba lagi kemudian.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Muat turun setempat tidak tersedia dalam konteks ini.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Tiada entri diagnostik untuk dimuat turun.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Arkib diagnostik tidak dapat dicipta. Cuba lagi kemudian.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Arkib diagnostik tidak dapat dimuat turun. Cuba lagi kemudian.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Arkib diagnostik tidak dapat disediakan. Cuba lagi kemudian.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Tetapan log nyahpepijat tidak dapat disimpan. Cuba lagi.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Respons tentang log nyahpepijat terganggu. Status semasa telah dimuat semula.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Tetapan log nyahpepijat tidak dapat disahkan. Buka semula tetapan dan cuba lagi.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Tetapkan semula",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Mengembalikan mod operasi, kedua-dua senarai tapak, tetapan paparan, penampilan dan diagnostik kepada nilai lalai. Log nyahpepijat yang disimpan akan dipadamkan.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Tetapan tidak dapat ditetapkan semula. Tetapan semasa anda kekal aktif. Cuba lagi.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Tidak dapat mengesahkan sama ada tetapan telah ditetapkan semula. Buka semula tetapan untuk menyemak status semasanya.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Tetapan tidak dapat ditetapkan semula. Pemprosesan kekal dimatikan. Cuba lagi.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Respons penetapan semula tidak dapat disahkan. Pemprosesan kekal dimatikan. Cuba lagi.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "ms",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

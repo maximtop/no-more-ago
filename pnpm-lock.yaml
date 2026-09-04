@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@adguard/translate':
+        specifier: 2.0.8
+        version: 2.0.8
       '@date-fns/tz':
         specifier: 1.5.0
         version: 1.5.0
@@ -89,6 +92,9 @@ importers:
         version: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(vite@8.2.2(@types/node@24.13.3)(jiti@2.7.0))
 
 packages:
+
+  '@adguard/translate@2.0.8':
+    resolution: {integrity: sha512-9k/JdLhC9PgInN/T10DydfsxcpXO094CBIXiiW97owGlQLnL4Dc0B9Qktg+0+InCMlLoVL5+Le784gjS9/i3Mg==}
 
   '@asamuzakjp/css-color@6.0.7':
     resolution: {integrity: sha512-vC/bk1Lz7Tn/EfU9/apOTBk80/8dyGyWMowPoV1tJ52muDGsDqt2HPT2klrFUiY60MQmQv9q8yIht15JnBgDGw==}
@@ -1496,6 +1502,8 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@adguard/translate@2.0.8': {}
 
   '@asamuzakjp/css-color@6.0.7':
     dependencies:

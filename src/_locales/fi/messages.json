@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Korvaa luotettavat suhteelliset aikaleimat tarkoilla päivämäärillä.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago -asetukset",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Laajennus käytössä",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Asetuksia muutettiin toisessa ikkunassa.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Näyttöasetuksia muutettiin toisessa ikkunassa. Tallentaminen tässä korvaa ne.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Nykyinen käsittelytila on tuntematon.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Asetukset luettiin, mutta aiempaa käsittelytilaa ei voitu siivota, joten jotkin sivut voivat olla yhä muutettuja.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Asetuksia ei voitu lukea, joten käsittely on poissa käytöstä.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Yhtään sivua ei muuteta.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Ilmoita ongelmasta, lataa säilytetyt lokit tai palauta oletusasetukset ja avaa ponnahdusikkuna uudelleen.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Ilmoita ongelmasta, lataa säilytetyt lokit tai palauta oletusasetukset.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Tätä muutosta ei voitu tallentaa. Yritä uudelleen.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Tämä isäntänimi ei kelpaa. Käytä tarkkaa isäntänimeä ilman skeemaa, porttia, polkua tai jokerimerkkiä.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Tämä luettelo on täynnä. Poista yksi isäntänimi ennen uuden lisäämistä.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Suoritustilaa muutettiin toisessa ikkunassa, joten tätä muutosta ei otettu käyttöön. Nykyiset luettelot ladattiin uudelleen.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Vastaus keskeytyi. Nykyinen tila ladattiin uudelleen.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Ei voitu vahvistaa, tallennettiinko muutos. Avaa ponnahdusikkuna uudelleen ja yritä uudestaan.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Ei voitu vahvistaa, tallennettiinko muutos. Avaa asetukset uudelleen ja yritä uudestaan.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Palauta kaikki asetukset",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Vahvista palautus",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Palautetaanko kaikki asetukset oletusarvoihin?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Molemmat sivustoluettelot, suoritustila, näyttöasetukset, ulkoasu ja säilytetyt virheenkorjauslokit poistetaan. Tätä ei voi kumota.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Palauta kaikki",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Säilytä asetukset",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Kaikki tuetut sivustot",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Vain valitut sivustot",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Ohitetut sivustot",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Sallitut sivustot",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Ladataan nykyistä sivustoa…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Nykyinen sivu",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Suoritustila",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Keskeytä tai jatka kaikkia sivustosääntöjä.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Käytössä tällä sivustolla",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Käytössä sivustolla %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Ilmoita tästä sivustosta",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Asetukset",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktiivinen",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Laajennus on pois käytöstä",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Ohitettu tällä sivustolla",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Ei valittu tälle sivustolle",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Ei voi toimia tällä sivulla",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Tätä sivua ei voitu käsitellä",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Nykyinen käsittelytila on tuntematon",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Asetukset eivät ole käytettävissä",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Poistaminen käytöstä lisää tämän isäntänimen ohitettuihin sivustoihin.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Käyttöön ottaminen poistaa tämän isäntänimen ohitetuista sivustoista.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Poistaminen käytöstä poistaa tämän isäntänimen sallituista sivustoista.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Käyttöön ottaminen lisää tämän isäntänimen sallittuihin sivustoihin.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Nykyistä sivustoa ei löytynyt. Avaa ponnahdusikkuna uudelleen ja yritä uudestaan.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Tästä sivusta ei voi ilmoittaa. Avaa HTTP- tai HTTPS-sivusto.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Nykyinen sivusto vaihtui. Avaa ponnahdusikkuna uudelleen ja yritä uudestaan.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Ilmoitusta ei voitu avata turvallisesti tässä yksityisessä ikkunassa.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Sivustoista ilmoittaminen ei ole käytettävissä tässä selaimessa.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Tätä sivustoa tai laajennusta ei voitu tunnistaa. Avaa ponnahdusikkuna uudelleen ja yritä uudestaan.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Sivustoilmoitusta avataan jo.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "GitHub-ilmoitusta ei voitu avata. Yritä uudelleen.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "GitHub-ilmoitusta avataan jo.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "GitHub-ilmoitusta ei voitu avata tässä selaimessa.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "GitHub-ilmoitusta ei voitu avata. Tarkista selaimen konteksti ja yritä uudelleen.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Ladataan asetuksia…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Asetukset",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Asetusten osiot",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Ulkoasu",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Järjestelmä",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Vaalea",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Tumma",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Ulkoasua ei voitu tallentaa. Yritä uudelleen.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Sivustot",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Valitse, missä laajennus toimii, ja hallitse sitten kyseisen säännön tarkkoja isäntänimiä.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Käsittely on käytössä tuetuilla sivustoilla alla olevan suoritustilan mukaisesti.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Käsittely on keskeytetty. Suoritustila ja molemmat sivustoluettelot säilytetään, ja ne otetaan käyttöön heti kun käsittely otetaan käyttöön.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Suorita sivustoilla",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Kullakin tilalla on oma luettelonsa. Tilan vaihtaminen ei koskaan siirrä isäntänimeä.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Suorita kaikkialla paitsi ohitetuissa sivustoissa olevilla isäntänimillä.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Suorita vain sallituissa sivustoissa olevilla isäntänimillä.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Sivustoasetukset eivät ole käytettävissä. Käsittely on poissa käytöstä.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% sivustoa|%count% sivusto|%count% sivustoa",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Poista",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Poista %hostname% ohitetuista sivustoista",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Poista %hostname% sallituista sivustoista",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% lisättiin ohitettuihin sivustoihin.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% lisättiin sallittuihin sivustoihin.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Laajennus pysyy pois käytöstä juuri näillä isäntänimillä.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Ohita isäntänimi",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Ohita sivusto",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Isäntänimen poistaminen antaa laajennuksen toimia siellä taas.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Yhtään sivustoa ei ole ohitettu.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Laajennus toimii vain juuri näillä isäntänimillä.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Salli isäntänimi",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Salli sivusto",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Isäntänimen poistaminen sammuttaa laajennuksen siellä taas.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Yhtään sivustoa ei ole vielä sallittu. Laajennus pysyy pois käytöstä kaikilla sivustoilla, kunnes yksi lisätään.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Anna isäntänimi.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Käytä tarkkaa isäntänimeä ilman skeemaa, porttia tai polkua.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Tämä isäntänimi on jo luettelossa.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Anna tarkka isäntänimi ilman https://-alkuosaa tai polkua.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Näyttö",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Valitse, miten tarkat päivämäärät näytetään.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Ladataan näyttöasetuksia…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Päivämäärän muoto",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Järjestelmä",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Mukautettu muoto",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Muotoilumalli",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Esimerkkejä: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Aikavyöhyke",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Järjestelmä",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA-aikavyöhyketunnus",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Anna IANA-aikavyöhyketunnus, esimerkiksi America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Esikatselu",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Korjaa malli nähdäksesi esikatselun",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Korjaa aikavyöhyke nähdäksesi esikatselun",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Tallenna näyttöasetukset",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Nykyiset näyttöasetukset eivät ole käytettävissä, kun käsittelytilaa palautetaan.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Näyttöasetukset eivät ole käytettävissä. Käsittely on poissa käytöstä.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Käytä kelvollista IANA-aikavyöhyketunnusta ilman polun läpikäyntiä.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Käytä kelvollista IANA-aikavyöhyketunnusta, esimerkiksi America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Tämä aikavyöhyke ei ole käytettävissä nykyisessä selaimessa. Valitse toinen tunnus.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Tämä aikavyöhyke on virheellinen tai ei ole käytettävissä. Anna tuettu IANA-tunnus ja yritä uudelleen.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Päivämäärän muoto on virheellinen. Korjaa malli ja yritä uudelleen.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Tallennettu aikavyöhyke ei ole käytettävissä tässä selaimessa. Valitse Järjestelmä tai toinen tuettu vyöhyke ja tallenna.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Näyttöasetuksia ei voitu tallentaa. Aiempi muotosi on yhä käytössä. Yritä uudelleen.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Vastaus keskeytyi. Näyttöasetukset luettiin uudelleen.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Näyttöasetukset tallennettiin, mutta yhtä tai useampaa avointa sivua ei voitu päivittää. Uudet päivämäärät käyttävät tallennettua asetusta.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Näyttöasetukset tallennettiin.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Ei voitu vahvistaa, tallennettiinko näyttöasetukset. Avaa asetukset uudelleen ja yritä uudestaan.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Anna päivämäärän muotoilumalli.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Käytä päivämäärän muotoilumallia, jossa on enintään %max% merkkiä.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Poista ohjausmerkit päivämäärän muotoilumallista.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Sulje lainattu teksti päivämäärän muotoilumallissa.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Sisällytä vähintään yksi päivämäärä- tai aikamerkintä, esimerkiksi yyyy tai HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Käytä Unicode-päivämäärämerkintöjä, esimerkiksi yyyy eikä YYYY tai DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Käytä mallissa tuettuja Unicode-päivämäärä- ja aikamerkintöjä.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Päivämäärän muodon on tuotettava näkyvää tekstiä.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostiikka",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Lokit pysyvät tällä laitteella eikä niitä lähetetä koskaan automaattisesti. Liitä ladattu arkisto ilmoitukseen vain, jos itse haluat.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Ladataan virheenkorjausasetuksia…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Virheenkorjauslokit eivät ole käytettävissä. Käsittely pysyy ennallaan.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Virheenkorjauslokit",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Pidä rajattua paikallista kirjanpitoa siitä, mitä laajennus teki kullakin sivulla.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Lataa lokit",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Tyhjennä lokit",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Avaa GitHub-ilmoitus",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostiikkalokit ladattiin.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostiikkalokit tyhjennettiin.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Virheenkorjauslokit ovat pois käytöstä. Ota ne käyttöön käyttääksesi tallennettua diagnostiikkaa.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Ladattavia diagnostiikkalokeja ei ole vielä.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Tallennettuja diagnostiikkalokeja ei voitu lukea. Yritä myöhemmin uudelleen.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostiikkalokit eivät ole käytettävissä. Yritä myöhemmin uudelleen.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Paikalliset lataukset eivät ole käytettävissä tässä yhteydessä.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Ladattavia diagnostiikkamerkintöjä ei ole.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Diagnostiikka-arkistoa ei voitu luoda. Yritä myöhemmin uudelleen.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Diagnostiikka-arkistoa ei voitu ladata. Yritä myöhemmin uudelleen.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Diagnostiikka-arkistoa ei voitu valmistella. Yritä myöhemmin uudelleen.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Virheenkorjauslokien asetusta ei voitu tallentaa. Yritä uudelleen.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Virheenkorjauslokeja koskeva vastaus keskeytyi. Nykyinen tila ladattiin uudelleen.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Virheenkorjauslokien asetusta ei voitu vahvistaa. Avaa asetukset uudelleen ja yritä uudestaan.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Palautus",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Palauttaa suoritustilan, molemmat sivustoluettelot, näyttöasetukset, ulkoasun ja diagnostiikan oletusarvoihin. Säilytetyt virheenkorjauslokit poistetaan.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Asetuksia ei voitu palauttaa. Nykyiset asetuksesi ovat yhä käytössä. Yritä uudelleen.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Ei voitu vahvistaa, palautettiinko asetukset. Avaa asetukset uudelleen ja tarkista niiden nykyinen tila.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Asetuksia ei voitu palauttaa. Käsittely on yhä poissa käytöstä. Yritä uudelleen.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Palautuksen vastausta ei voitu vahvistaa. Käsittely on yhä poissa käytöstä. Yritä uudelleen.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "fi",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

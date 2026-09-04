@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Nahrazuje důvěryhodné relativní časové údaje přesnými daty.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Nastavení No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Rozšíření zapnuto",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Nastavení bylo změněno v jiném okně.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Nastavení zobrazení bylo změněno v jiném okně. Uložení zde je nahradí.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Aktuální stav zpracování není známý.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Nastavení bylo načteno, ale předchozí stav zpracování se nepodařilo uklidit, takže některé stránky mohou zůstat změněné.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Nastavení se nepodařilo načíst, proto je zpracování vypnuté.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Žádná stránka se nemění.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Nahlaste problém, stáhněte uchované protokoly nebo obnovte výchozí nastavení a znovu otevřete vyskakovací okno.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Nahlaste problém, stáhněte uchované protokoly nebo obnovte výchozí nastavení.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Tuto změnu se nepodařilo uložit. Zkuste to znovu.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Tento název hostitele je neplatný. Použijte přesný název hostitele bez schématu, portu, cesty a zástupných znaků.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Tento seznam je plný. Než přidáte další, odeberte jeden název hostitele.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Režim spuštění byl změněn v jiném okně, proto se tato změna neuplatnila. Aktuální seznamy byly načteny znovu.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Odpověď byla přerušena. Aktuální stav byl načten znovu.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Nepodařilo se ověřit, zda byla změna uložena. Otevřete vyskakovací okno znovu a zkuste to ještě jednou.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Nepodařilo se ověřit, zda byla změna uložena. Otevřete nastavení znovu a zkuste to ještě jednou.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Obnovit všechna nastavení",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Potvrdit obnovení",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Vrátit všechna nastavení na výchozí hodnoty?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Oba seznamy webů, režim spuštění, nastavení zobrazení, vzhled i uchované ladicí protokoly budou odstraněny. Tuto akci nelze vrátit zpět.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Obnovit vše",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Ponechat nastavení",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Všechny podporované weby",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Pouze vybrané weby",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Vyloučené weby",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Povolené weby",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Načítání aktuálního webu…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Aktuální stránka",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Režim spuštění",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Pozastavit nebo obnovit všechna pravidla webů.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Zapnuto na tomto webu",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Zapnuto na %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Nahlásit tento web",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Nastavení",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktivní",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Rozšíření je vypnuté",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Vyloučeno na tomto webu",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Pro tento web nevybráno",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Na této stránce nelze spustit",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Tuto stránku se nepodařilo zpracovat",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Aktuální stav zpracování není známý",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Nastavení není dostupné",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Vypnutím se tento název hostitele přidá mezi vyloučené weby.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Zapnutím se tento název hostitele odebere z vyloučených webů.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Vypnutím se tento název hostitele odebere z povolených webů.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Zapnutím se tento název hostitele přidá mezi povolené weby.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Aktuální web se nepodařilo najít. Otevřete vyskakovací okno znovu a zkuste to ještě jednou.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Tuto stránku nelze nahlásit. Otevřete web přes HTTP nebo HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Aktuální web se změnil. Otevřete vyskakovací okno znovu a zkuste to ještě jednou.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Hlášení se v tomto anonymním okně nepodařilo bezpečně otevřít.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Hlášení webů není v tomto prohlížeči dostupné.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Tento web ani rozšíření se nepodařilo identifikovat. Otevřete vyskakovací okno znovu a zkuste to ještě jednou.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Hlášení webu se už otevírá.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Hlášení na GitHubu se nepodařilo otevřít. Zkuste to znovu.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Hlášení na GitHubu se už otevírá.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Hlášení na GitHubu se v tomto prohlížeči nepodařilo otevřít.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Hlášení na GitHubu se nepodařilo otevřít. Zkontrolujte kontext prohlížeče a zkuste to znovu.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Načítání nastavení…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Nastavení",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Sekce nastavení",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Vzhled",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Systémový",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Světlý",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Tmavý",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Vzhled se nepodařilo uložit. Zkuste to znovu.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Weby",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Zvolte, kde se rozšíření spouští, a pak spravujte přesné názvy hostitelů pro toto pravidlo.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Zpracování je zapnuté na podporovaných webech podle režimu spuštění níže.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Zpracování je pozastavené. Režim spuštění i oba seznamy webů zůstávají zachovány a uplatní se, jakmile zpracování zapnete.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Spouštět na",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Každý režim má vlastní seznam. Přepnutí režimu nikdy nepřesune název hostitele.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Spouštět všude kromě názvů hostitelů ze seznamu Vyloučené weby.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Spouštět pouze na názvech hostitelů ze seznamu Povolené weby.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Nastavení webů není dostupné. Zpracování je vypnuté.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% webů|%count% web|%count% weby|%count% webů",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Odebrat",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Odebrat %hostname% z vyloučených webů",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Odebrat %hostname% z povolených webů",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% byl přidán mezi vyloučené weby.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% byl přidán mezi povolené weby.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Rozšíření zůstává na těchto přesných názvech hostitelů vypnuté.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Vyloučit název hostitele",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Vyloučit web",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Odebrání názvu hostitele umožní rozšíření na něm znovu běžet.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Žádné weby nejsou vyloučeny.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Rozšíření běží pouze na těchto přesných názvech hostitelů.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Povolit název hostitele",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Povolit web",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Odebrání názvu hostitele rozšíření na něm opět vypne.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Zatím nejsou povoleny žádné weby. Rozšíření zůstane na všech webech vypnuté, dokud nějaký nepřidáte.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Zadejte název hostitele.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Použijte přesný název hostitele bez schématu, portu a cesty.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Tento název hostitele už je v seznamu.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Zadejte přesný název hostitele bez https:// a bez cesty.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Zobrazení",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Zvolte, jak se zobrazují přesná data.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Načítání nastavení zobrazení…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Formát data",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Systémový",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Vlastní formát",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Vzor formátu",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Příklady: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Časové pásmo",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Systémové",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Identifikátor časového pásma IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Zadejte identifikátor časového pásma IANA, například America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Náhled",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Opravte vzor pro náhled",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Opravte časové pásmo pro náhled",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Uložit nastavení zobrazení",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Aktuální nastavení zobrazení není dostupné, dokud se obnovuje stav zpracování.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Nastavení zobrazení není dostupné. Zpracování je vypnuté.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Použijte platný identifikátor časového pásma IANA bez procházení cest.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Použijte platný identifikátor časového pásma IANA, například America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Toto časové pásmo není v aktuálním prohlížeči dostupné. Zvolte jiný identifikátor.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Toto časové pásmo je neplatné nebo nedostupné. Zadejte podporovaný identifikátor IANA a zkuste to znovu.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Formát data je neplatný. Opravte vzor a zkuste to znovu.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Uložené časové pásmo není v tomto prohlížeči dostupné. Zvolte systémové nebo jiné podporované pásmo a uložte.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Nastavení zobrazení se nepodařilo uložit. Předchozí formát zůstává aktivní. Zkuste to znovu.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Odpověď byla přerušena. Nastavení zobrazení bylo znovu načteno.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Nastavení zobrazení bylo uloženo, ale jednu či více otevřených stránek se nepodařilo obnovit. Nově zobrazená data budou používat uložené nastavení.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Nastavení zobrazení uloženo.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Nepodařilo se ověřit, zda bylo nastavení zobrazení uloženo. Otevřete nastavení znovu a zkuste to ještě jednou.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Zadejte vzor formátu data.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Použijte vzor formátu data o délce nejvýše %max% znaků.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Odeberte ze vzoru formátu data řídicí znaky.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Uzavřete citovaný text ve vzoru formátu data.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Uveďte alespoň jeden token data nebo času, například yyyy nebo HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Používejte tokeny data Unicode, například yyyy místo YYYY nebo DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Používejte ve vzoru podporované tokeny data a času Unicode.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Formát data musí vytvořit viditelný text.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostika",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Protokoly zůstávají v tomto zařízení a nikdy se neodesílají automaticky. Stažený archiv připojte k hlášení, jen pokud se tak rozhodnete.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Načítání nastavení ladění…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Ladicí protokoly nejsou dostupné. Zpracování zůstává beze změny.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Ladicí protokoly",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Vést omezený místní záznam o tom, co rozšíření na každé stránce udělalo.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Stáhnout protokoly",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Vymazat protokoly",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Otevřít issue na GitHubu",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostické protokoly staženy.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostické protokoly vymazány.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Ladicí protokoly jsou vypnuté. Zapněte je, abyste mohli použít uloženou diagnostiku.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Zatím nejsou k dispozici žádné diagnostické protokoly ke stažení.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Uložené diagnostické protokoly se nepodařilo přečíst. Zkuste to později.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostické protokoly nejsou dostupné. Zkuste to později.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Místní stahování není v tomto kontextu dostupné.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Nejsou k dispozici žádné diagnostické záznamy ke stažení.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Diagnostický archiv se nepodařilo vytvořit. Zkuste to později.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Diagnostický archiv se nepodařilo stáhnout. Zkuste to později.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Diagnostický archiv se nepodařilo připravit. Zkuste to později.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Nastavení ladicích protokolů se nepodařilo uložit. Zkuste to znovu.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Odpověď k ladicím protokolům byla přerušena. Aktuální stav byl načten znovu.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Nastavení ladicích protokolů se nepodařilo ověřit. Otevřete nastavení znovu a zkuste to ještě jednou.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Obnovení",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Vrátí režim spuštění, oba seznamy webů, nastavení zobrazení, vzhled a diagnostiku na výchozí hodnoty. Uchované ladicí protokoly budou odstraněny.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Nastavení se nepodařilo obnovit. Vaše aktuální nastavení zůstává aktivní. Zkuste to znovu.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Nepodařilo se ověřit, zda bylo nastavení obnoveno. Otevřete nastavení znovu a zkontrolujte jeho aktuální stav.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Nastavení se nepodařilo obnovit. Zpracování zůstává vypnuté. Zkuste to znovu.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Odpověď na obnovení se nepodařilo ověřit. Zpracování zůstává vypnuté. Zkuste to znovu.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "cs",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

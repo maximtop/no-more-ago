@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "แทนที่เวลาแบบสัมพัทธ์ที่เชื่อถือได้ด้วยวันที่ที่แน่นอน",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "การตั้งค่า No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "เปิดใช้งานส่วนขยาย",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "การตั้งค่าถูกอัปเดตในหน้าต่างอื่น",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "การตั้งค่าการแสดงผลถูกอัปเดตในหน้าต่างอื่น การบันทึกที่นี่จะแทนที่ค่าเหล่านั้น",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "ไม่ทราบสถานะการประมวลผลปัจจุบัน",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "อ่านการตั้งค่าได้แล้ว แต่ไม่สามารถล้างสถานะการประมวลผลก่อนหน้าได้ บางหน้าจึงอาจยังคงถูกเปลี่ยนแปลงอยู่",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "ไม่สามารถอ่านการตั้งค่าได้ การประมวลผลจึงถูกปิด",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "ไม่มีหน้าใดถูกเปลี่ยนแปลง",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "รายงานปัญหา ดาวน์โหลดบันทึกที่เก็บไว้ หรือคืนค่าการตั้งค่าเริ่มต้นแล้วเปิดหน้าต่างป๊อปอัปอีกครั้ง",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "รายงานปัญหา ดาวน์โหลดบันทึกที่เก็บไว้ หรือคืนค่าการตั้งค่าเริ่มต้น",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "ไม่สามารถบันทึกการเปลี่ยนแปลงนี้ได้ โปรดลองอีกครั้ง",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "ชื่อโฮสต์นี้ไม่ถูกต้อง โปรดใช้ชื่อโฮสต์ที่แน่นอนโดยไม่มีสคีมา พอร์ต พาธ หรืออักขระตัวแทน",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "รายการนี้เต็มแล้ว โปรดลบชื่อโฮสต์หนึ่งรายการก่อนเพิ่มรายการใหม่",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "โหมดการทำงานถูกเปลี่ยนในหน้าต่างอื่น การเปลี่ยนแปลงนี้จึงไม่ถูกนำไปใช้ รายการปัจจุบันถูกโหลดใหม่แล้ว",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "การตอบสนองถูกขัดจังหวะ สถานะปัจจุบันถูกโหลดใหม่แล้ว",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "ไม่สามารถยืนยันได้ว่าบันทึกการเปลี่ยนแปลงแล้วหรือไม่ โปรดเปิดหน้าต่างป๊อปอัปอีกครั้งแล้วลองใหม่",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "ไม่สามารถยืนยันได้ว่าบันทึกการเปลี่ยนแปลงแล้วหรือไม่ โปรดเปิดการตั้งค่าอีกครั้งแล้วลองใหม่",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "รีเซ็ตการตั้งค่าทั้งหมด",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "ยืนยันการรีเซ็ต",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "คืนค่าการตั้งค่าทั้งหมดเป็นค่าเริ่มต้นหรือไม่",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "รายการเว็บไซต์ทั้งสอง โหมดการทำงาน การตั้งค่าการแสดงผล ธีม และบันทึกการแก้จุดบกพร่องที่เก็บไว้จะถูกลบ การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "รีเซ็ตทั้งหมด",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "เก็บการตั้งค่าไว้",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "เว็บไซต์ที่รองรับทั้งหมด",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "เฉพาะเว็บไซต์ที่เลือก",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "เว็บไซต์ที่ยกเว้น",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "เว็บไซต์ที่อนุญาต",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "กำลังโหลดเว็บไซต์ปัจจุบัน…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "หน้าปัจจุบัน",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "โหมดการทำงาน",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "หยุดชั่วคราวหรือดำเนินกฎของเว็บไซต์ทั้งหมดต่อ",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "เปิดใช้งานบนเว็บไซต์นี้",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "เปิดใช้งานบน %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "รายงานเว็บไซต์นี้",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "การตั้งค่า",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "ทำงานอยู่",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "ส่วนขยายปิดอยู่",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "ยกเว้นบนเว็บไซต์นี้",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "ไม่ได้เลือกสำหรับเว็บไซต์นี้",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "ไม่สามารถทำงานบนหน้านี้ได้",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "ไม่สามารถประมวลผลหน้านี้ได้",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "ไม่ทราบสถานะการประมวลผลปัจจุบัน",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "การตั้งค่าไม่พร้อมใช้งาน",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "การปิดจะเพิ่มชื่อโฮสต์นี้ไปยังเว็บไซต์ที่ยกเว้น",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "การเปิดจะลบชื่อโฮสต์นี้ออกจากเว็บไซต์ที่ยกเว้น",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "การปิดจะลบชื่อโฮสต์นี้ออกจากเว็บไซต์ที่อนุญาต",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "การเปิดจะเพิ่มชื่อโฮสต์นี้ไปยังเว็บไซต์ที่อนุญาต",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "ไม่พบเว็บไซต์ปัจจุบัน โปรดเปิดหน้าต่างป๊อปอัปอีกครั้งแล้วลองใหม่",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "ไม่สามารถรายงานหน้านี้ได้ โปรดเปิดเว็บไซต์แบบ HTTP หรือ HTTPS",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "เว็บไซต์ปัจจุบันเปลี่ยนไปแล้ว โปรดเปิดหน้าต่างป๊อปอัปอีกครั้งแล้วลองใหม่",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "ไม่สามารถเปิดรายงานได้อย่างปลอดภัยในหน้าต่างส่วนตัวนี้",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "การรายงานเว็บไซต์ใช้งานไม่ได้ในเบราว์เซอร์นี้",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "ไม่สามารถระบุเว็บไซต์นี้หรือส่วนขยายได้ โปรดเปิดหน้าต่างป๊อปอัปอีกครั้งแล้วลองใหม่",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "กำลังเปิดรายงานเว็บไซต์อยู่แล้ว",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "ไม่สามารถเปิดรายงานบน GitHub ได้ โปรดลองอีกครั้ง",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "กำลังเปิดรายงาน GitHub อยู่แล้ว",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "ไม่สามารถเปิดรายงาน GitHub ในเบราว์เซอร์นี้ได้",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "ไม่สามารถเปิดรายงาน GitHub ได้ โปรดตรวจสอบบริบทของเบราว์เซอร์แล้วลองอีกครั้ง",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "กำลังโหลดการตั้งค่า…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "การตั้งค่า",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "ส่วนของการตั้งค่า",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "ธีม",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "ระบบ",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "สว่าง",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "มืด",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "ไม่สามารถบันทึกธีมได้ โปรดลองอีกครั้ง",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "เว็บไซต์",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "เลือกว่าส่วนขยายทำงานที่ใด จากนั้นจัดการชื่อโฮสต์ที่แน่นอนสำหรับกฎนั้น",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "การประมวลผลเปิดอยู่บนเว็บไซต์ที่รองรับตามโหมดการทำงานด้านล่าง",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "การประมวลผลหยุดชั่วคราว โหมดการทำงานและรายการเว็บไซต์ทั้งสองยังคงถูกเก็บไว้ และจะมีผลทันทีที่เปิดการประมวลผล",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "ทำงานบน",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "แต่ละโหมดมีรายการของตัวเอง การสลับโหมดจะไม่ย้ายชื่อโฮสต์",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "ทำงานทุกที่ ยกเว้นชื่อโฮสต์ในเว็บไซต์ที่ยกเว้น",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "ทำงานเฉพาะชื่อโฮสต์ในเว็บไซต์ที่อนุญาต",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "การตั้งค่าเว็บไซต์ไม่พร้อมใช้งาน การประมวลผลถูกปิด",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "เว็บไซต์ %count% รายการ|เว็บไซต์ %count% รายการ",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "ลบ",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "ลบ %hostname% ออกจากเว็บไซต์ที่ยกเว้น",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "ลบ %hostname% ออกจากเว็บไซต์ที่อนุญาต",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "เพิ่ม %hostname% ไปยังเว็บไซต์ที่ยกเว้นแล้ว",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "เพิ่ม %hostname% ไปยังเว็บไซต์ที่อนุญาตแล้ว",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "ส่วนขยายจะยังคงปิดอยู่บนชื่อโฮสต์ที่แน่นอนเหล่านี้",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "ยกเว้นชื่อโฮสต์",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "ยกเว้นเว็บไซต์",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "การลบชื่อโฮสต์จะทำให้ส่วนขยายทำงานบนเว็บไซต์นั้นอีกครั้ง",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "ไม่มีเว็บไซต์ที่ถูกยกเว้น",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "ส่วนขยายจะทำงานเฉพาะบนชื่อโฮสต์ที่แน่นอนเหล่านี้เท่านั้น",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "อนุญาตชื่อโฮสต์",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "อนุญาตเว็บไซต์",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "การลบชื่อโฮสต์จะปิดส่วนขยายบนเว็บไซต์นั้นอีกครั้ง",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "ยังไม่มีเว็บไซต์ที่อนุญาต ส่วนขยายจะยังคงปิดอยู่บนทุกเว็บไซต์จนกว่าจะเพิ่มสักรายการ",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "โปรดป้อนชื่อโฮสต์",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "โปรดใช้ชื่อโฮสต์ที่แน่นอนโดยไม่มีสคีมา พอร์ต หรือพาธ",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "ชื่อโฮสต์นี้อยู่ในรายการอยู่แล้ว",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "โปรดป้อนชื่อโฮสต์ที่แน่นอนโดยไม่มี https:// หรือพาธ",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "การแสดงผล",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "เลือกวิธีแสดงวันที่ที่แน่นอน",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "กำลังโหลดการตั้งค่าการแสดงผล…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "รูปแบบวันที่",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "ระบบ",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "รูปแบบกำหนดเอง",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "แพตเทิร์นรูปแบบ",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "ตัวอย่าง: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "เขตเวลา",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "ระบบ",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "ตัวระบุเขตเวลา IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "โปรดป้อนตัวระบุเขตเวลา IANA เช่น America/New_York",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "ตัวอย่างการแสดงผล",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "โปรดแก้แพตเทิร์นเพื่อดูตัวอย่าง",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "โปรดแก้เขตเวลาเพื่อดูตัวอย่าง",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "บันทึกการตั้งค่าการแสดงผล",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "การตั้งค่าการแสดงผลปัจจุบันไม่พร้อมใช้งานขณะกำลังกู้คืนสถานะการประมวลผล",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "การตั้งค่าการแสดงผลไม่พร้อมใช้งาน การประมวลผลถูกปิด",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "โปรดใช้ตัวระบุเขตเวลา IANA ที่ถูกต้อง โดยไม่มีการย้อนพาธ (path traversal)",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "โปรดใช้ตัวระบุเขตเวลา IANA ที่ถูกต้อง เช่น America/New_York",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "เขตเวลานี้ใช้งานไม่ได้ในเบราว์เซอร์ปัจจุบัน โปรดเลือกตัวระบุอื่น",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "เขตเวลานี้ไม่ถูกต้องหรือใช้งานไม่ได้ โปรดป้อนตัวระบุ IANA ที่รองรับแล้วลองอีกครั้ง",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "รูปแบบวันที่ไม่ถูกต้อง โปรดแก้แพตเทิร์นแล้วลองอีกครั้ง",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "เขตเวลาที่บันทึกไว้ใช้งานไม่ได้ในเบราว์เซอร์นี้ โปรดเลือกระบบหรือเขตเวลาอื่นที่รองรับ แล้วบันทึก",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "ไม่สามารถบันทึกการตั้งค่าการแสดงผลได้ รูปแบบเดิมของคุณยังคงใช้งานอยู่ โปรดลองอีกครั้ง",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "การตอบสนองถูกขัดจังหวะ การตั้งค่าการแสดงผลถูกอ่านใหม่แล้ว",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "บันทึกการตั้งค่าการแสดงผลแล้ว แต่ไม่สามารถรีเฟรชหน้าที่เปิดอยู่หนึ่งหน้าหรือมากกว่าได้ วันที่ใหม่จะใช้การตั้งค่าที่บันทึกไว้",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "บันทึกการตั้งค่าการแสดงผลแล้ว",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "ไม่สามารถยืนยันได้ว่าบันทึกการตั้งค่าการแสดงผลแล้วหรือไม่ โปรดเปิดการตั้งค่าอีกครั้งแล้วลองใหม่",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "โปรดป้อนแพตเทิร์นรูปแบบวันที่",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "โปรดใช้แพตเทิร์นรูปแบบวันที่ที่ยาวไม่เกิน %max% อักขระ",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "โปรดลบอักขระควบคุมออกจากแพตเทิร์นรูปแบบวันที่",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "โปรดปิดข้อความในเครื่องหมายอัญประกาศในแพตเทิร์นรูปแบบวันที่",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "โปรดใส่โทเค็นวันที่หรือเวลาอย่างน้อยหนึ่งรายการ เช่น yyyy หรือ HH:mm",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "โปรดใช้โทเค็นวันที่แบบ Unicode เช่น yyyy แทน YYYY หรือ DD",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "โปรดใช้โทเค็นวันที่และเวลาแบบ Unicode ที่รองรับในแพตเทิร์น",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "รูปแบบวันที่ต้องสร้างข้อความที่มองเห็นได้",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "การวินิจฉัย",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "บันทึกจะอยู่บนอุปกรณ์นี้และจะไม่ถูกส่งโดยอัตโนมัติ แนบไฟล์เก็บถาวรที่ดาวน์โหลดไปกับรายงานเฉพาะเมื่อคุณเลือกเองเท่านั้น",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "กำลังโหลดการตั้งค่าการแก้จุดบกพร่อง…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "บันทึกการแก้จุดบกพร่องไม่พร้อมใช้งาน การประมวลผลยังคงเหมือนเดิม",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "บันทึกการแก้จุดบกพร่อง",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "เก็บบันทึกภายในเครื่องแบบจำกัดว่าส่วนขยายทำอะไรบนแต่ละหน้า",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "ดาวน์โหลดบันทึก",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "ล้างบันทึก",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "เปิดปัญหาบน GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "ดาวน์โหลดบันทึกการวินิจฉัยแล้ว",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "ล้างบันทึกการวินิจฉัยแล้ว",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "บันทึกการแก้จุดบกพร่องปิดอยู่ โปรดเปิดเพื่อใช้ข้อมูลวินิจฉัยที่บันทึกไว้",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "ยังไม่มีบันทึกการวินิจฉัยให้ดาวน์โหลด",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "ไม่สามารถอ่านบันทึกการวินิจฉัยที่บันทึกไว้ได้ โปรดลองใหม่ภายหลัง",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "บันทึกการวินิจฉัยไม่พร้อมใช้งาน โปรดลองใหม่ภายหลัง",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "การดาวน์โหลดในเครื่องใช้งานไม่ได้ในบริบทนี้",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "ไม่มีรายการวินิจฉัยให้ดาวน์โหลด",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "ไม่สามารถสร้างไฟล์เก็บถาวรการวินิจฉัยได้ โปรดลองใหม่ภายหลัง",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "ไม่สามารถดาวน์โหลดไฟล์เก็บถาวรการวินิจฉัยได้ โปรดลองใหม่ภายหลัง",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "ไม่สามารถเตรียมไฟล์เก็บถาวรการวินิจฉัยได้ โปรดลองใหม่ภายหลัง",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "ไม่สามารถบันทึกการตั้งค่าบันทึกการแก้จุดบกพร่องได้ โปรดลองอีกครั้ง",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "การตอบสนองเกี่ยวกับบันทึกการแก้จุดบกพร่องถูกขัดจังหวะ สถานะปัจจุบันถูกโหลดใหม่แล้ว",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "ไม่สามารถยืนยันการตั้งค่าบันทึกการแก้จุดบกพร่องได้ โปรดเปิดการตั้งค่าอีกครั้งแล้วลองใหม่",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "รีเซ็ต",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "คืนค่าโหมดการทำงาน รายการเว็บไซต์ทั้งสอง การตั้งค่าการแสดงผล ธีม และการวินิจฉัยเป็นค่าเริ่มต้น บันทึกการแก้จุดบกพร่องที่เก็บไว้จะถูกลบ",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "ไม่สามารถรีเซ็ตการตั้งค่าได้ การตั้งค่าปัจจุบันของคุณยังคงใช้งานอยู่ โปรดลองอีกครั้ง",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "ไม่สามารถยืนยันได้ว่ารีเซ็ตการตั้งค่าแล้วหรือไม่ โปรดเปิดการตั้งค่าอีกครั้งเพื่อตรวจสอบสถานะปัจจุบัน",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "ไม่สามารถรีเซ็ตการตั้งค่าได้ การประมวลผลยังคงปิดอยู่ โปรดลองอีกครั้ง",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "ไม่สามารถยืนยันการตอบสนองของการรีเซ็ตได้ การประมวลผลยังคงปิดอยู่ โปรดลองอีกครั้ง",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "th",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "برچسب‌های زمانی نسبی قابل اعتماد را با تاریخ‌های دقیق جایگزین می‌کند.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "تنظیمات No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "افزونه فعال است",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "تنظیمات در پنجره‌ای دیگر به‌روزرسانی شد.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "تنظیمات نمایش در پنجره‌ای دیگر به‌روزرسانی شد. ذخیره در اینجا آن‌ها را جایگزین می‌کند.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "وضعیت فعلی پردازش نامشخص است.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "تنظیمات خوانده شد، اما وضعیت پردازش پیشین پاک‌سازی نشد، بنابراین ممکن است برخی صفحه‌ها همچنان تغییر یافته بمانند.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "تنظیمات خوانده نشد، بنابراین پردازش غیرفعال است.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "هیچ صفحه‌ای تغییر داده نمی‌شود.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "مشکل را گزارش کنید، لاگ‌های ذخیره‌شده را بارگیری کنید، یا تنظیمات پیش‌فرض را بازگردانید و پنجرهٔ بازشو را دوباره باز کنید.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "مشکل را گزارش کنید، لاگ‌های ذخیره‌شده را بارگیری کنید، یا تنظیمات پیش‌فرض را بازگردانید.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "این تغییر ذخیره نشد. دوباره تلاش کنید.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "این نام میزبان معتبر نیست. نام میزبان دقیق بدون طرح، درگاه، مسیر یا نویسهٔ عام وارد کنید.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "این فهرست پر است. پیش از افزودن مورد جدید، یک نام میزبان را حذف کنید.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "حالت اجرا در پنجره‌ای دیگر تغییر کرد، بنابراین این تغییر اعمال نشد. فهرست‌های فعلی دوباره بارگذاری شدند.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "پاسخ قطع شد. وضعیت فعلی دوباره بارگذاری شد.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "تأیید نشد که تغییر ذخیره شده است یا نه. پنجرهٔ بازشو را دوباره باز کنید و تلاش کنید.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "تأیید نشد که تغییر ذخیره شده است یا نه. تنظیمات را دوباره باز کنید و تلاش کنید.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "بازنشانی همهٔ تنظیمات",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "تأیید بازنشانی",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "همهٔ تنظیمات به مقادیر پیش‌فرض بازگردد؟",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "هر دو فهرست سایت، حالت اجرا، تنظیمات نمایش، ظاهر و گزارش‌های اشکال‌زدایی ذخیره‌شده حذف خواهند شد. این کار قابل بازگشت نیست.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "بازنشانی همه",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "نگه داشتن تنظیمات",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "همهٔ سایت‌های پشتیبانی‌شده",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "فقط سایت‌های انتخاب‌شده",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "سایت‌های مستثنا",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "سایت‌های مجاز",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "در حال بارگذاری سایت فعلی…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "صفحهٔ فعلی",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "حالت اجرا",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "همهٔ قواعد سایت را موقتاً متوقف یا از سر بگیرید.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "فعال در این سایت",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "فعال در %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "گزارش این سایت",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "تنظیمات",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "فعال",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "افزونه خاموش است",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "در این سایت مستثنا شده",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "برای این سایت انتخاب نشده",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "در این صفحه قابل اجرا نیست",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "این صفحه پردازش نشد",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "وضعیت فعلی پردازش نامشخص است",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "تنظیمات در دسترس نیست",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "با خاموش کردن، این نام میزبان به سایت‌های مستثنا افزوده می‌شود.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "با روشن کردن، این نام میزبان از سایت‌های مستثنا حذف می‌شود.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "با خاموش کردن، این نام میزبان از سایت‌های مجاز حذف می‌شود.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "با روشن کردن، این نام میزبان به سایت‌های مجاز افزوده می‌شود.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "سایت فعلی پیدا نشد. پنجرهٔ بازشو را دوباره باز کنید و تلاش کنید.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "این صفحه قابل گزارش نیست. یک سایت HTTP یا HTTPS باز کنید.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "سایت فعلی تغییر کرد. پنجرهٔ بازشو را دوباره باز کنید و تلاش کنید.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "گزارش را نمی‌توان به‌طور ایمن در این پنجرهٔ خصوصی باز کرد.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "گزارش سایت در این مرورگر در دسترس نیست.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "این سایت یا افزونه شناسایی نشد. پنجرهٔ بازشو را دوباره باز کنید و تلاش کنید.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "گزارش سایت هم‌اکنون در حال باز شدن است.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "گزارش GitHub باز نشد. دوباره تلاش کنید.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "گزارش GitHub هم‌اکنون در حال باز شدن است.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "گزارش GitHub در این مرورگر باز نشد.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "گزارش GitHub باز نشد. زمینهٔ مرورگر را بررسی کنید و دوباره تلاش کنید.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "در حال بارگذاری تنظیمات…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "تنظیمات",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "بخش‌های تنظیمات",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "ظاهر",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "سیستم",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "روشن",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "تیره",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "ظاهر ذخیره نشد. دوباره تلاش کنید.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "سایت‌ها",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "انتخاب کنید افزونه کجا اجرا شود، سپس نام‌های میزبان دقیق آن قاعده را مدیریت کنید.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "پردازش بر اساس حالت اجرای زیر در سایت‌های پشتیبانی‌شده فعال است.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "پردازش موقتاً متوقف است. حالت اجرا و هر دو فهرست سایت نگه داشته می‌شوند و به‌محض فعال شدن پردازش اعمال می‌شوند.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "اجرا در",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "هر حالت فهرست خود را دارد. تغییر حالت هرگز نام میزبانی را جابه‌جا نمی‌کند.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "در همه جا اجرا شود، به‌جز نام‌های میزبان موجود در سایت‌های مستثنا.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "فقط روی نام‌های میزبان موجود در سایت‌های مجاز اجرا شود.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "تنظیمات سایت‌ها در دسترس نیست. پردازش غیرفعال است.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% سایت|%count% سایت|%count% سایت",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "حذف",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "حذف %hostname% از سایت‌های مستثنا",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "حذف %hostname% از سایت‌های مجاز",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% به سایت‌های مستثنا افزوده شد.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% به سایت‌های مجاز افزوده شد.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "افزونه دقیقاً در این نام‌های میزبان خاموش می‌ماند.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "مستثنا کردن نام میزبان",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "مستثنا کردن سایت",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "حذف یک نام میزبان اجازه می‌دهد افزونه دوباره در آن اجرا شود.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "هیچ سایتی مستثنا نشده است.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "افزونه فقط دقیقاً در این نام‌های میزبان اجرا می‌شود.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "مجاز کردن نام میزبان",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "مجاز کردن سایت",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "حذف یک نام میزبان دوباره افزونه را در آن خاموش می‌کند.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "هنوز هیچ سایتی مجاز نشده است. تا زمانی که موردی افزوده نشود، افزونه در همهٔ سایت‌ها خاموش می‌ماند.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "یک نام میزبان وارد کنید.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "نام میزبان دقیق بدون طرح، درگاه یا مسیر وارد کنید.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "این نام میزبان از قبل در فهرست است.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "نام میزبان دقیق را بدون ⁦https://⁩ و بدون مسیر وارد کنید.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "نمایش",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "انتخاب کنید تاریخ‌های دقیق چگونه نشان داده شوند.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "در حال بارگذاری تنظیمات نمایش…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "قالب تاریخ",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "سیستم",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "قالب سفارشی",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "الگوی قالب",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "نمونه‌ها: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "منطقهٔ زمانی",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "سیستم",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "شناسهٔ منطقهٔ زمانی IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "یک شناسهٔ منطقهٔ زمانی IANA وارد کنید، برای نمونه America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "پیش‌نمایش",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "برای دیدن پیش‌نمایش، الگو را اصلاح کنید",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "برای دیدن پیش‌نمایش، منطقهٔ زمانی را اصلاح کنید",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "ذخیرهٔ تنظیمات نمایش",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "تا زمانی که وضعیت پردازش بازیابی می‌شود، تنظیمات نمایش فعلی در دسترس نیست.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "تنظیمات نمایش در دسترس نیست. پردازش غیرفعال است.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "شناسهٔ منطقهٔ زمانی IANA معتبر و بدون پیمایش مسیر وارد کنید.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "شناسهٔ منطقهٔ زمانی IANA معتبر وارد کنید، برای نمونه America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "این منطقهٔ زمانی در مرورگر فعلی در دسترس نیست. شناسهٔ دیگری انتخاب کنید.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "این منطقهٔ زمانی نامعتبر یا در دسترس نیست. یک شناسهٔ IANA پشتیبانی‌شده وارد کنید و دوباره تلاش کنید.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "قالب تاریخ نامعتبر است. الگو را اصلاح کنید و دوباره تلاش کنید.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "منطقهٔ زمانی ذخیره‌شده در این مرورگر در دسترس نیست. سیستم یا منطقهٔ پشتیبانی‌شدهٔ دیگری را انتخاب و سپس ذخیره کنید.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "تنظیمات نمایش ذخیره نشد. قالب پیشین شما همچنان فعال است. دوباره تلاش کنید.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "پاسخ قطع شد. تنظیمات نمایش دوباره خوانده شد.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "تنظیمات نمایش ذخیره شد، اما یک یا چند صفحهٔ باز تازه‌سازی نشد. تاریخ‌های جدید از تنظیم ذخیره‌شده استفاده می‌کنند.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "تنظیمات نمایش ذخیره شد.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "تأیید نشد که تنظیمات نمایش ذخیره شده است یا نه. تنظیمات را دوباره باز کنید و تلاش کنید.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "یک الگوی قالب تاریخ وارد کنید.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "از الگوی قالب تاریخ با حداکثر %max% نویسه استفاده کنید.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "نویسه‌های کنترلی را از الگوی قالب تاریخ حذف کنید.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "متن داخل گیومه را در الگوی قالب تاریخ ببندید.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "دست‌کم یک نشانهٔ تاریخ یا زمان بگنجانید، برای نمونه yyyy یا HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "از نشانه‌های تاریخ یونیکد استفاده کنید، برای نمونه yyyy به‌جای YYYY یا DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "در الگو از نشانه‌های تاریخ و زمان یونیکد پشتیبانی‌شده استفاده کنید.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "قالب تاریخ باید متن قابل مشاهده تولید کند.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "عیب‌یابی",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "لاگ‌ها روی همین دستگاه می‌مانند و هرگز به‌طور خودکار ارسال نمی‌شوند. بایگانی بارگیری‌شده را تنها در صورتی به گزارش پیوست کنید که خودتان بخواهید.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "در حال بارگذاری تنظیمات اشکال‌زدایی…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "گزارش‌های اشکال‌زدایی در دسترس نیست. پردازش بدون تغییر می‌ماند.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "گزارش‌های اشکال‌زدایی",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "سابقه‌ای محلی و محدود از کاری که افزونه در هر صفحه انجام داده است نگه دارید.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "بارگیری گزارش‌ها",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "پاک کردن گزارش‌ها",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "باز کردن مسئله در GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "گزارش‌های عیب‌یابی بارگیری شد.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "گزارش‌های عیب‌یابی پاک شد.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "گزارش‌های اشکال‌زدایی خاموش است. برای استفاده از عیب‌یابی ذخیره‌شده آن‌ها را روشن کنید.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "هنوز گزارش عیب‌یابی برای بارگیری وجود ندارد.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "گزارش‌های عیب‌یابی ذخیره‌شده خوانده نشد. بعداً دوباره تلاش کنید.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "گزارش‌های عیب‌یابی در دسترس نیست. بعداً دوباره تلاش کنید.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "بارگیری محلی در این زمینه در دسترس نیست.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "هیچ مدخل عیب‌یابی برای بارگیری وجود ندارد.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "بایگانی عیب‌یابی ساخته نشد. بعداً دوباره تلاش کنید.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "بایگانی عیب‌یابی بارگیری نشد. بعداً دوباره تلاش کنید.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "بایگانی عیب‌یابی آماده نشد. بعداً دوباره تلاش کنید.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "تنظیم گزارش‌های اشکال‌زدایی ذخیره نشد. دوباره تلاش کنید.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "پاسخ مربوط به گزارش‌های اشکال‌زدایی قطع شد. وضعیت فعلی دوباره بارگذاری شد.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "تنظیم گزارش‌های اشکال‌زدایی تأیید نشد. تنظیمات را دوباره باز کنید و تلاش کنید.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "بازنشانی",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "حالت اجرا، هر دو فهرست سایت، تنظیمات نمایش، ظاهر و عیب‌یابی را به مقادیر پیش‌فرض بازگردانید. گزارش‌های اشکال‌زدایی ذخیره‌شده حذف می‌شوند.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "تنظیمات بازنشانی نشد. تنظیمات فعلی شما همچنان فعال است. دوباره تلاش کنید.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "تأیید نشد که تنظیمات بازنشانی شده است یا نه. تنظیمات را دوباره باز کنید و وضعیت فعلی را بررسی کنید.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "تنظیمات بازنشانی نشد. پردازش همچنان غیرفعال است. دوباره تلاش کنید.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "پاسخ بازنشانی تأیید نشد. پردازش همچنان غیرفعال است. دوباره تلاش کنید.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "fa",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

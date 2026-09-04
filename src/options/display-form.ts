@@ -13,12 +13,12 @@ import {
     type TimeZoneMode,
 } from "../shared/settings/snapshot";
 import {
-    CUSTOM_FORMAT_MAX_LENGTH,
     CUSTOM_FORMAT_ERROR,
+    type CustomFormatError,
     DEFAULT_CUSTOM_FORMAT_PATTERN,
     validateCustomFormatPattern,
 } from "../shared/settings/custom-format";
-import { updatedInAnotherWindow } from "../shared/ui/copy";
+import type { MessageKey } from "../shared/i18n/translator";
 import { DISPLAY_SETTINGS_ERROR } from "../shared/messaging/view-state-values";
 
 /**
@@ -71,17 +71,29 @@ export interface DisplayDraft {
 /**
  * Preview text and whether it is a rendered value or an instruction.
  */
-export interface DisplayPreview {
-    /**
-     * Whether the text is the rendered fixture rather than a correction hint.
-     */
-    readonly ok: boolean;
+export type DisplayPreview =
+    | {
+        /**
+         * Whether formatting succeeded.
+         */
+        readonly ok: true;
 
-    /**
-     * Rendered fixture, or the sentence naming what must be fixed first.
-     */
-    readonly text: string;
-}
+        /**
+         * Rendered fixture.
+         */
+        readonly text: string;
+    }
+    | {
+        /**
+         * Whether formatting succeeded.
+         */
+        readonly ok: false;
+
+        /**
+         * Correction hint to translate in the view.
+         */
+        readonly key: MessageKey;
+    };
 
 /**
  * Fixed instant previewed by the Display section.
@@ -92,7 +104,7 @@ export const DISPLAY_PREVIEW_INSTANT = new Date("2026-08-27T19:32:28.000Z");
  * Label naming the previewed fixture beside the rendered value.
  */
 export const DISPLAY_PREVIEW_SOURCE =
-    `Fixed fixture · ${DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z")}`;
+    DISPLAY_PREVIEW_INSTANT.toISOString().replace(".000Z", "Z");
 
 /**
  * Converts saved display settings into fields for the editable form.
@@ -133,99 +145,75 @@ export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
  * Validates an IANA time-zone identifier before settings are saved.
  *
  * @param identifier - Candidate IANA time-zone identifier.
- * @returns - A user-visible validation error, or undefined when the identifier is usable.
+ * @returns - Key of a validation error, or undefined when the identifier is usable.
  */
-export function validateIdentifier(identifier: string): string | undefined {
+export function validateIdentifier(identifier: string): MessageKey | undefined {
     if (identifier.length === 0 || identifier.trim() !== identifier) {
-        return "Enter an IANA time zone identifier, for example America/New_York.";
+        return "display_zone_hint";
     }
     const components = identifier.split("/");
     if (components.some((component) => component === "." || component === "..")) {
-        return "Use a valid IANA time zone identifier without path traversal.";
+        return "display_error_zone_traversal";
     }
     if (!/^[A-Za-z][A-Za-z0-9_.+-]*(?:\/[A-Za-z][A-Za-z0-9_.+-]*)*$/.test(identifier)) {
-        return "Use a valid IANA time zone identifier, such as America/New_York.";
+        return "display_error_zone_invalid";
     }
     try {
         new Intl.DateTimeFormat(undefined, { timeZone: identifier }).resolvedOptions();
     } catch {
-        return "This time zone is not available in the current browser. Choose another identifier.";
+        return "display_error_zone_unavailable";
     }
     return undefined;
 }
 
 /**
- * Maps a display-settings outcome to its user-visible error message.
+ * Message mapping for every supported outcome.
+ */
+const DISPLAY_NOTICE_KEYS = {
+    [DISPLAY_NOTICE.INVALID_TIME_ZONE]: "display_error_zone_rejected",
+    [DISPLAY_NOTICE.INVALID_FORMAT]: "display_error_format_invalid",
+    [DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE]: "display_error_zone_saved_unavailable",
+    [DISPLAY_NOTICE.SAVE_FAILED]: "display_error_save_failed",
+    [DISPLAY_NOTICE.INTERRUPTED]: "display_notice_interrupted",
+    [DISPLAY_NOTICE.PARTIAL_REFRESH]: "display_notice_partial_refresh",
+    [DISPLAY_NOTICE.SAVED]: "display_notice_saved",
+    [DISPLAY_NOTICE.EXTERNAL_CHANGE]: "display_updated_elsewhere",
+    [DISPLAY_NOTICE.UNKNOWN]: "display_notice_unknown",
+} as const satisfies Record<Exclude<DisplayNotice, undefined>, MessageKey>;
+
+/**
+ * Maps a display-settings outcome to the message key describing it.
  *
  * @param notice - Outcome reported after saving display settings.
- * @returns - An error message, or undefined when there is no notice to show.
+ * @returns - Message key, or undefined when there is no notice to show.
  */
-export function displayNoticeText(notice: DisplayNotice): string | undefined {
-    if (notice === DISPLAY_NOTICE.INVALID_TIME_ZONE) {
-        return "This time zone is invalid or unavailable. Enter a supported IANA identifier and "
-            + "try again.";
-    }
-    if (notice === DISPLAY_NOTICE.INVALID_FORMAT) {
-        return "The date format is invalid. Correct the pattern and try again.";
-    }
-    if (notice === DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE) {
-        return "The saved time zone is unavailable in this browser. Choose System or another "
-            + "supported zone, then save.";
-    }
-    if (notice === DISPLAY_NOTICE.SAVE_FAILED) {
-        return "Could not save the display settings. Your previous format remains active. "
-            + "Try again.";
-    }
-    if (notice === DISPLAY_NOTICE.INTERRUPTED) {
-        return "The response was interrupted. Display settings were reread.";
-    }
-    if (notice === DISPLAY_NOTICE.PARTIAL_REFRESH) {
-        return "Display settings were saved, but one or more open pages could not be refreshed. "
-            + "New dates will use the saved setting.";
-    }
-    if (notice === DISPLAY_NOTICE.SAVED) {
-        return "Display settings saved.";
-    }
-    if (notice === DISPLAY_NOTICE.EXTERNAL_CHANGE) {
-        return `${updatedInAnotherWindow("Display settings")} Saving here replaces them.`;
-    }
-    if (notice === DISPLAY_NOTICE.UNKNOWN) {
-        return "Could not confirm whether the display settings were saved. Reopen Settings to "
-            + "try again.";
-    }
-    return undefined;
+export function displayNoticeKey(notice: DisplayNotice): MessageKey | undefined {
+    return notice === undefined ? undefined : DISPLAY_NOTICE_KEYS[notice];
 }
 
 /**
- * Maps custom date-format validation failures to form errors.
+ * Message mapping for every supported outcome.
+ */
+const CUSTOM_FORMAT_ERROR_KEYS = {
+    [CUSTOM_FORMAT_ERROR.EMPTY]: "display_pattern_error_empty",
+    [CUSTOM_FORMAT_ERROR.TOO_LONG]: "display_pattern_error_too_long",
+    [CUSTOM_FORMAT_ERROR.CONTROL_CHARACTER]: "display_pattern_error_control_chars",
+    [CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE]: "display_pattern_error_unclosed_quote",
+    [CUSTOM_FORMAT_ERROR.MISSING_DATE_TOKEN]: "display_pattern_error_no_tokens",
+    [CUSTOM_FORMAT_ERROR.LEGACY_TOKEN]: "display_pattern_error_wrong_case",
+    [CUSTOM_FORMAT_ERROR.INVALID_TOKEN]: "display_pattern_error_unsupported",
+    [CUSTOM_FORMAT_ERROR.EMPTY_OUTPUT]: "display_pattern_error_blank_output",
+} as const satisfies Record<CustomFormatError, MessageKey>;
+
+/**
+ * Maps custom date-format validation failures to their message keys.
  *
  * @param pattern - Candidate custom date-format pattern.
- * @returns - A validation error, or undefined when the pattern is valid.
+ * @returns - Key of a validation error, or undefined when the pattern is valid.
  */
-export function customPatternError(pattern: string): string | undefined {
+export function customPatternError(pattern: string): MessageKey | undefined {
     const result = validateCustomFormatPattern(pattern);
-    if (result.ok) {
-        return undefined;
-    }
-    switch (result.error) {
-        case CUSTOM_FORMAT_ERROR.EMPTY:
-            return "Enter a date format pattern.";
-        case CUSTOM_FORMAT_ERROR.TOO_LONG:
-            return `Use a date format pattern of ${String(CUSTOM_FORMAT_MAX_LENGTH)} `
-                + "characters or fewer.";
-        case CUSTOM_FORMAT_ERROR.CONTROL_CHARACTER:
-            return "Remove control characters from the date format pattern.";
-        case CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE:
-            return "Close the quoted text in the date format pattern.";
-        case CUSTOM_FORMAT_ERROR.MISSING_DATE_TOKEN:
-            return "Include at least one date or time token, such as yyyy or HH:mm.";
-        case CUSTOM_FORMAT_ERROR.LEGACY_TOKEN:
-            return "Use Unicode date tokens, such as yyyy instead of YYYY or DD.";
-        case CUSTOM_FORMAT_ERROR.INVALID_TOKEN:
-            return "Use supported Unicode date and time tokens in the pattern.";
-        case CUSTOM_FORMAT_ERROR.EMPTY_OUTPUT:
-            return "The date format must produce visible text.";
-    }
+    return result.ok ? undefined : CUSTOM_FORMAT_ERROR_KEYS[result.error];
 }
 
 /**
@@ -237,15 +225,15 @@ export function customPatternError(pattern: string): string | undefined {
  */
 export function previewDisplayDraft(
     draft: DisplayDraft,
-    patternError: string | undefined = draft.formatMode === FORMAT_MODE.CUSTOM
+    patternError: MessageKey | undefined = draft.formatMode === FORMAT_MODE.CUSTOM
         ? customPatternError(draft.pattern)
         : undefined,
 ): DisplayPreview {
     if (patternError) {
-        return { ok: false, text: "Fix the pattern to preview" };
+        return { ok: false, key: "display_preview_fix_pattern" };
     }
     if (draft.timeZoneMode === TIME_ZONE_MODE.IANA && validateIdentifier(draft.identifier)) {
-        return { ok: false, text: "Fix the time zone to preview" };
+        return { ok: false, key: "display_preview_fix_zone" };
     }
     const result: DatePresentationResult = formatDateWithPresentation(
         DISPLAY_PREVIEW_INSTANT,
@@ -253,7 +241,7 @@ export function previewDisplayDraft(
         displayFromDraft(draft),
     );
     return result.text.length === 0
-        ? { ok: false, text: "Fix the pattern to preview" }
+        ? { ok: false, key: "display_preview_fix_pattern" }
         : { ok: true, text: result.text };
 }
 

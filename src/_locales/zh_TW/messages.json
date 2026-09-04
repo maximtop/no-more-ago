@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "將可信的相對時間戳記替換為精確日期。",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago 設定",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "啟用擴充功能",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "設定已在另一個視窗中更新。",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "顯示設定已在另一個視窗中更新。在此儲存將覆寫它們。",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "目前的處理狀態不明。",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "設定已讀取，但先前的處理狀態無法清除，因此某些頁面可能仍處於已變更狀態。",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "無法讀取設定，因此已停用處理。",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "沒有頁面被變更。",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "回報問題、下載已保留的紀錄，或還原預設設定並重新開啟彈出視窗。",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "回報問題、下載已保留的紀錄，或還原預設設定。",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "無法儲存這項變更。請再試一次。",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "此主機名稱無效。請使用不含通訊協定、連接埠、路徑或萬用字元的確切主機名稱。",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "此清單已滿。請先移除一個主機名稱再新增。",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "執行模式已在另一個視窗中變更，因此這項變更未套用。目前的清單已重新載入。",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "回應已中斷。目前狀態已重新載入。",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "無法確認變更是否已儲存。請重新開啟彈出視窗後再試一次。",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "無法確認變更是否已儲存。請重新開啟設定後再試一次。",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "重設所有設定",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "確認重設",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "要將所有設定還原為預設值嗎？",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "兩份網站清單、執行模式、顯示設定、外觀以及保留的偵錯紀錄都會被移除。此操作無法復原。",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "全部重設",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "保留設定",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "所有支援的網站",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "僅選定的網站",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "已排除的網站",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "已允許的網站",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "正在載入目前網站…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "目前頁面",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "執行模式",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "暫停或恢復所有網站規則。",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "在此網站上啟用",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "在 %hostname% 上啟用",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "回報此網站",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "設定",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "運作中",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "擴充功能已關閉",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "已在此網站上排除",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "未為此網站選定",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "無法在此頁面上執行",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "無法處理此頁面",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "目前的處理狀態不明",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "設定無法使用",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "關閉此項會將該主機名稱加入已排除的網站。",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "開啟此項會將該主機名稱從已排除的網站中移除。",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "關閉此項會將該主機名稱從已允許的網站中移除。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "開啟此項會將該主機名稱加入已允許的網站。",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "找不到目前的網站。請重新開啟彈出視窗後再試一次。",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "無法回報此頁面。請開啟 HTTP 或 HTTPS 網站。",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "目前的網站已變更。請重新開啟彈出視窗後再試一次。",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "無法在此私密視窗中安全地開啟問題回報。",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "此瀏覽器不支援網站回報。",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "無法辨識此網站或擴充功能。請重新開啟彈出視窗後再試一次。",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "網站問題回報已在開啟中。",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "無法開啟 GitHub 問題回報。請再試一次。",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "GitHub 問題回報已在開啟中。",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "無法在此瀏覽器中開啟 GitHub 問題回報。",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "無法開啟 GitHub 問題回報。請檢查瀏覽器環境後再試一次。",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "正在載入設定…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "設定",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "設定區段",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "外觀",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "跟隨系統",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "淺色",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "深色",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "無法儲存外觀設定。請再試一次。",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "網站",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "選擇擴充功能的執行範圍，然後為該規則管理確切的主機名稱。",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "已依下方的執行模式在支援的網站上啟用處理。",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "處理已暫停。執行模式與兩份網站清單都會保留，啟用處理後即會生效。",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "執行於",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "每種模式都有各自的清單。切換模式絕不會移動主機名稱。",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "在所有位置執行，已排除的網站中的主機名稱除外。",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "僅在已允許的網站中的主機名稱上執行。",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "網站設定無法使用。處理已停用。",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% 個網站|%count% 個網站",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "移除",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "從已排除的網站中移除 %hostname%",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "從已允許的網站中移除 %hostname%",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% 已加入已排除的網站。",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% 已加入已允許的網站。",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "擴充功能在這些確切的主機名稱上維持關閉。",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "排除主機名稱",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "排除網站",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "移除主機名稱後，擴充功能會再次在其上執行。",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "沒有已排除的網站。",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "擴充功能僅在這些確切的主機名稱上執行。",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "允許主機名稱",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "允許網站",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "移除主機名稱後，擴充功能會再次在其上關閉。",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "尚未允許任何網站。在新增之前，擴充功能將在所有網站上維持關閉。",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "請輸入主機名稱。",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "請使用不含通訊協定、連接埠或路徑的確切主機名稱。",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "此主機名稱已在清單中。",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "請輸入不含 https:// 或路徑的確切主機名稱。",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "顯示",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "選擇精確日期的顯示方式。",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "正在載入顯示設定…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "日期格式",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "跟隨系統",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "自訂格式",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "格式樣式",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "範例：yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "時區",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "跟隨系統",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA 時區識別碼",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "請輸入 IANA 時區識別碼，例如 America/New_York。",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "預覽",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "請修正樣式以預覽",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "請修正時區以預覽",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "儲存顯示設定",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "正在復原處理狀態，目前的顯示設定無法使用。",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "顯示設定無法使用。處理已停用。",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "請使用有效的 IANA 時區識別碼，且不含路徑遍歷。",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "請使用有效的 IANA 時區識別碼，例如 America/New_York。",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "目前的瀏覽器不提供此時區。請另選一個識別碼。",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "此時區無效或無法使用。請輸入受支援的 IANA 識別碼後再試一次。",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "日期格式無效。請更正樣式後再試一次。",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "此瀏覽器不提供已儲存的時區。請選擇跟隨系統或其他受支援的時區，然後儲存。",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "無法儲存顯示設定。您先前的格式仍然有效。請再試一次。",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "回應已中斷。顯示設定已重新讀取。",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "顯示設定已儲存，但有一個或多個已開啟的頁面無法重新整理。新的日期將使用已儲存的設定。",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "顯示設定已儲存。",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "無法確認顯示設定是否已儲存。請重新開啟設定後再試一次。",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "請輸入日期格式樣式。",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "請使用不超過 %max% 個字元的日期格式樣式。",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "請從日期格式樣式中移除控制字元。",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "請閉合日期格式樣式中的引用文字。",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "請至少包含一個日期或時間標記，例如 yyyy 或 HH:mm。",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "請使用 Unicode 日期標記，例如以 yyyy 取代 YYYY 或 DD。",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "請在樣式中使用受支援的 Unicode 日期與時間標記。",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "日期格式必須產生可見的文字。",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "診斷",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "紀錄保留在此裝置上，絕不會自動提交。僅在您選擇時，才將下載的封存檔附加到回報中。",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "正在載入偵錯設定…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "偵錯紀錄無法使用。處理維持不變。",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "偵錯紀錄",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "保留一份有上限的本機紀錄，記錄擴充功能在每個頁面上的操作。",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "下載紀錄",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "清除紀錄",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "開啟 GitHub 問題",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "診斷紀錄已下載。",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "診斷紀錄已清除。",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "偵錯紀錄已關閉。請開啟後再使用已儲存的診斷資料。",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "目前沒有可下載的診斷紀錄。",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "無法讀取已儲存的診斷紀錄。請稍後再試。",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "診斷紀錄無法使用。請稍後再試。",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "此環境中無法使用本機下載。",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "沒有可下載的診斷項目。",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "無法建立診斷封存檔。請稍後再試。",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "無法下載診斷封存檔。請稍後再試。",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "無法準備診斷封存檔。請稍後再試。",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "無法儲存偵錯紀錄設定。請再試一次。",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "偵錯紀錄回應已中斷。目前狀態已重新載入。",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "無法確認偵錯紀錄設定。請重新開啟設定後再試一次。",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "重設",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "將執行模式、兩份網站清單、顯示設定、外觀與診斷還原為預設值。保留的偵錯紀錄會被移除。",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "無法重設設定。您目前的設定仍然有效。請再試一次。",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "無法確認設定是否已重設。請重新開啟設定以檢視其目前狀態。",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "無法重設設定。處理仍處於停用狀態。請再試一次。",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "無法確認重設回應。處理仍處於停用狀態。請再試一次。",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "zh-TW",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

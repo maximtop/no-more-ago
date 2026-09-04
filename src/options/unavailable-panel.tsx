@@ -6,7 +6,8 @@ import { Alert, Button, Group, Stack, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
 import type { SettingsStateFailure } from "../shared/messaging/view-state-values";
 import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
-import { unavailableSettingsCopy } from "../shared/ui/copy";
+import { unavailableSettingsKeys } from "../shared/ui/copy";
+import { t, type MessageKey } from "../shared/i18n/translator";
 import type { DiagnosticsController } from "./diagnostics-controller";
 import { ResetConfirmation } from "../shared/ui/reset-confirmation";
 import type { ResetController } from "./reset-controller";
@@ -33,7 +34,7 @@ export interface OptionsUnavailablePanelProps {
     /**
      * Failure guidance produced by the latest reset attempt, when any.
      */
-    readonly resetNotice: string | undefined;
+    readonly resetNotice: MessageKey | undefined;
 }
 
 /**
@@ -43,7 +44,7 @@ export interface OptionsUnavailablePanelProps {
  * @param props.failure - Failure carried by the unavailable projection.
  * @param props.diagnostics - Diagnostics controller.
  * @param props.reset - Reset coordinator.
- * @param props.resetNotice - Failure guidance from the latest reset attempt.
+ * @param props.resetNotice - Key of the failure guidance from the latest reset attempt.
  * @returns - The settings recovery view.
  */
 export function OptionsUnavailablePanel({
@@ -52,15 +53,14 @@ export function OptionsUnavailablePanel({
     reset,
     resetNotice,
 }: OptionsUnavailablePanelProps): ReactElement {
-    const copy = unavailableSettingsCopy(failure);
+    const keys = unavailableSettingsKeys(failure);
     const { diagnosticsNotice } = diagnostics;
     return (
         <Stack gap="md" className="options-content options-unavailable" component="section">
-            <Title order={2}>Settings are unavailable</Title>
-            <Text role="status">{copy.status}</Text>
+            <Title order={2}>{t("popup_status_unavailable")}</Title>
+            <Text role="status">{t(keys.status)}</Text>
             <Text size="sm" c="dimmed">
-                {copy.consequence} Report the problem, download any retained logs, or
-                restore the default settings.
+                {t(keys.consequence)} {t("unavailable_recovery_hint_options")}
             </Text>
             <Group>
                 <Button
@@ -72,7 +72,7 @@ export function OptionsUnavailablePanel({
                         void diagnostics.openGitHubIssue();
                     }}
                 >
-                    Open GitHub issue
+                    {t("diagnostics_open_issue")}
                 </Button>
                 <Button
                     type="button"
@@ -83,7 +83,7 @@ export function OptionsUnavailablePanel({
                         void diagnostics.downloadDiagnostics();
                     }}
                 >
-                    Download logs
+                    {t("diagnostics_download")}
                 </Button>
             </Group>
             <ResetConfirmation
@@ -97,17 +97,17 @@ export function OptionsUnavailablePanel({
                     role="status"
                     color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? "signal" : "red"}
                 >
-                    {diagnosticsNotice}
+                    {t(diagnosticsNotice)}
                 </Alert>
             ) : null}
             {diagnostics.reportNotice ? (
                 <Alert role="alert" color="red">
-                    {diagnostics.reportNotice}
+                    {t(diagnostics.reportNotice)}
                 </Alert>
             ) : null}
             {resetNotice ? (
                 <Alert role="alert" color="red">
-                    {resetNotice}
+                    {t(resetNotice)}
                 </Alert>
             ) : null}
         </Stack>

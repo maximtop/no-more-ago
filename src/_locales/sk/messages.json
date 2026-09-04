@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Nahrádza dôveryhodné relatívne časové údaje presnými dátumami.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Nastavenia No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Rozšírenie zapnuté",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Nastavenia sa zmenili v inom okne.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Nastavenia zobrazenia sa zmenili v inom okne. Uloženie tu ich nahradí.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Aktuálny stav spracovania nie je známy.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Nastavenia sa načítali, ale predchádzajúci stav spracovania sa nepodarilo vyčistiť, takže niektoré stránky môžu zostať zmenené.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Nastavenia sa nepodarilo načítať, preto je spracovanie vypnuté.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Žiadna stránka sa nemení.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Nahláste problém, stiahnite uchované záznamy alebo obnovte predvolené nastavenia a znova otvorte vyskakovacie okno.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Nahláste problém, stiahnite uchované záznamy alebo obnovte predvolené nastavenia.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Túto zmenu sa nepodarilo uložiť. Skúste to znova.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Tento názov hostiteľa je neplatný. Použite presný názov hostiteľa bez schémy, portu, cesty a zástupných znakov.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Tento zoznam je plný. Pred pridaním ďalšieho odstráňte jeden názov hostiteľa.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Režim spustenia sa zmenil v inom okne, preto sa táto zmena neuplatnila. Aktuálne zoznamy sa načítali znova.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Odpoveď bola prerušená. Aktuálny stav sa načítal znova.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Nepodarilo sa overiť, či sa zmena uložila. Otvorte vyskakovacie okno znova a skúste to ešte raz.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Nepodarilo sa overiť, či sa zmena uložila. Otvorte nastavenia znova a skúste to ešte raz.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Obnoviť všetky nastavenia",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Potvrdiť obnovenie",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Vrátiť všetky nastavenia na predvolené hodnoty?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Oba zoznamy stránok, režim spustenia, nastavenia zobrazenia, vzhľad aj uchované ladiace záznamy sa odstránia. Túto akciu nie je možné vrátiť späť.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Obnoviť všetko",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Ponechať nastavenia",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Všetky podporované stránky",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Iba vybrané stránky",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Vylúčené stránky",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Povolené stránky",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Načítava sa aktuálny web…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Aktuálna stránka",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Režim spustenia",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Pozastaviť alebo obnoviť všetky pravidlá stránok.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Zapnuté na tejto stránke",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Zapnuté na %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Nahlásiť túto stránku",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Nastavenia",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Aktívne",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Rozšírenie je vypnuté",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Vylúčené na tejto stránke",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Pre túto stránku nevybrané",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Na tejto stránke sa nedá spustiť",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Túto stránku sa nepodarilo spracovať",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Aktuálny stav spracovania nie je známy",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Nastavenia nie sú dostupné",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Vypnutím sa tento názov hostiteľa pridá medzi vylúčené stránky.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Zapnutím sa tento názov hostiteľa odstráni z vylúčených stránok.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Vypnutím sa tento názov hostiteľa odstráni z povolených stránok.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Zapnutím sa tento názov hostiteľa pridá medzi povolené stránky.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Aktuálnu stránku sa nepodarilo nájsť. Otvorte vyskakovacie okno znova a skúste to ešte raz.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Túto stránku nie je možné nahlásiť. Otvorte stránku cez HTTP alebo HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Aktuálna stránka sa zmenila. Otvorte vyskakovacie okno znova a skúste to ešte raz.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Hlásenie sa v tomto anonymnom okne nepodarilo bezpečne otvoriť.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Hlásenie stránok nie je v tomto prehliadači dostupné.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Túto stránku ani rozšírenie sa nepodarilo identifikovať. Otvorte vyskakovacie okno znova a skúste to ešte raz.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Hlásenie stránky sa už otvára.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Hlásenie na GitHube sa nepodarilo otvoriť. Skúste to znova.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Hlásenie na GitHube sa už otvára.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Hlásenie na GitHube sa v tomto prehliadači nepodarilo otvoriť.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Hlásenie na GitHube sa nepodarilo otvoriť. Skontrolujte kontext prehliadača a skúste to znova.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Načítavajú sa nastavenia…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Nastavenia",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Sekcie nastavení",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Vzhľad",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Systémový",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Svetlý",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Tmavý",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Vzhľad sa nepodarilo uložiť. Skúste to znova.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Stránky",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Vyberte, kde sa rozšírenie spúšťa, a potom spravujte presné názvy hostiteľov pre toto pravidlo.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Spracovanie je zapnuté na podporovaných stránkach podľa režimu spustenia nižšie.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Spracovanie je pozastavené. Režim spustenia aj oba zoznamy stránok zostávajú zachované a uplatnia sa hneď po zapnutí spracovania.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Spúšťať na",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Každý režim má vlastný zoznam. Prepnutie režimu nikdy nepresunie názov hostiteľa.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Spúšťať všade okrem názvov hostiteľov zo zoznamu Vylúčené stránky.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Spúšťať iba na názvoch hostiteľov zo zoznamu Povolené stránky.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Nastavenia stránok nie sú dostupné. Spracovanie je vypnuté.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% stránok|%count% stránka|%count% stránky|%count% stránok",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Odstrániť",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Odstrániť %hostname% z vylúčených stránok",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Odstrániť %hostname% z povolených stránok",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% bol pridaný medzi vylúčené stránky.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% bol pridaný medzi povolené stránky.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Rozšírenie zostáva na týchto presných názvoch hostiteľov vypnuté.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Vylúčiť názov hostiteľa",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Vylúčiť stránku",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Odstránenie názvu hostiteľa umožní rozšíreniu na ňom opäť bežať.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Žiadne stránky nie sú vylúčené.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Rozšírenie beží iba na týchto presných názvoch hostiteľov.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Povoliť názov hostiteľa",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Povoliť stránku",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Odstránenie názvu hostiteľa rozšírenie na ňom opäť vypne.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Zatiaľ nie sú povolené žiadne stránky. Rozšírenie zostane na všetkých stránkach vypnuté, kým nejakú nepridáte.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Zadajte názov hostiteľa.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Použite presný názov hostiteľa bez schémy, portu a cesty.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Tento názov hostiteľa je už v zozname.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Zadajte presný názov hostiteľa bez https:// a bez cesty.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Zobrazenie",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Vyberte, ako sa zobrazujú presné dátumy.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Načítavajú sa nastavenia zobrazenia…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Formát dátumu",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Systémový",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Vlastný formát",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Vzor formátu",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Príklady: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Časové pásmo",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Systémové",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Identifikátor časového pásma IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Zadajte identifikátor časového pásma IANA, napríklad America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Ukážka",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Opravte vzor, aby sa zobrazila ukážka",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Opravte časové pásmo, aby sa zobrazila ukážka",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Uložiť nastavenia zobrazenia",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Aktuálne nastavenia zobrazenia nie sú dostupné, kým sa obnovuje stav spracovania.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Nastavenia zobrazenia nie sú dostupné. Spracovanie je vypnuté.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Použite platný identifikátor časového pásma IANA bez prechádzania ciest.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Použite platný identifikátor časového pásma IANA, napríklad America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Toto časové pásmo nie je v aktuálnom prehliadači dostupné. Vyberte iný identifikátor.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Toto časové pásmo je neplatné alebo nedostupné. Zadajte podporovaný identifikátor IANA a skúste to znova.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Formát dátumu je neplatný. Opravte vzor a skúste to znova.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Uložené časové pásmo nie je v tomto prehliadači dostupné. Vyberte systémové alebo iné podporované pásmo a uložte.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Nastavenia zobrazenia sa nepodarilo uložiť. Predchádzajúci formát zostáva aktívny. Skúste to znova.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Odpoveď bola prerušená. Nastavenia zobrazenia sa načítali znova.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Nastavenia zobrazenia sa uložili, ale jednu či viac otvorených stránok sa nepodarilo obnoviť. Nové dátumy použijú uložené nastavenie.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Nastavenia zobrazenia uložené.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Nepodarilo sa overiť, či sa nastavenia zobrazenia uložili. Otvorte nastavenia znova a skúste to ešte raz.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Zadajte vzor formátu dátumu.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Použite vzor formátu dátumu s dĺžkou najviac %max% znakov.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Odstráňte zo vzoru formátu dátumu riadiace znaky.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Uzavrite citovaný text vo vzore formátu dátumu.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Uveďte aspoň jeden token dátumu alebo času, napríklad yyyy alebo HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Používajte tokeny dátumu Unicode, napríklad yyyy namiesto YYYY alebo DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Používajte vo vzore podporované tokeny dátumu a času Unicode.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Formát dátumu musí vytvoriť viditeľný text.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostika",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Záznamy zostávajú v tomto zariadení a nikdy sa neodosielajú automaticky. Stiahnutý archív pripojte k hláseniu, len ak sa tak rozhodnete.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Načítavajú sa nastavenia ladenia…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Ladiace záznamy nie sú dostupné. Spracovanie zostáva bez zmeny.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Ladiace záznamy",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Viesť obmedzený lokálny záznam o tom, čo rozšírenie na každej stránke urobilo.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Stiahnuť záznamy",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Vymazať záznamy",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Otvoriť issue na GitHube",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostické záznamy stiahnuté.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostické záznamy vymazané.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Ladiace záznamy sú vypnuté. Zapnite ich, aby ste mohli použiť uloženú diagnostiku.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Zatiaľ nie sú k dispozícii žiadne diagnostické záznamy na stiahnutie.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Uložené diagnostické záznamy sa nepodarilo prečítať. Skúste to neskôr.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostické záznamy nie sú dostupné. Skúste to neskôr.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Lokálne sťahovanie nie je v tomto kontexte dostupné.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Nie sú k dispozícii žiadne diagnostické položky na stiahnutie.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Diagnostický archív sa nepodarilo vytvoriť. Skúste to neskôr.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Diagnostický archív sa nepodarilo stiahnuť. Skúste to neskôr.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Diagnostický archív sa nepodarilo pripraviť. Skúste to neskôr.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Nastavenie ladiacich záznamov sa nepodarilo uložiť. Skúste to znova.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Odpoveď k ladiacim záznamom bola prerušená. Aktuálny stav sa načítal znova.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Nastavenie ladiacich záznamov sa nepodarilo overiť. Otvorte nastavenia znova a skúste to ešte raz.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Obnovenie",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Vráti režim spustenia, oba zoznamy stránok, nastavenia zobrazenia, vzhľad a diagnostiku na predvolené hodnoty. Uchované ladiace záznamy sa odstránia.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Nastavenia sa nepodarilo obnoviť. Vaše aktuálne nastavenia zostávajú aktívne. Skúste to znova.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Nepodarilo sa overiť, či sa nastavenia obnovili. Otvorte nastavenia znova a skontrolujte ich aktuálny stav.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Nastavenia sa nepodarilo obnoviť. Spracovanie zostáva vypnuté. Skúste to znova.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Odpoveď na obnovenie sa nepodarilo overiť. Spracovanie zostáva vypnuté. Skúste to znova.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "sk",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

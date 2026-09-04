@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Замінює надійні відносні позначки часу точними датами.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "Налаштування No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Розширення увімкнено",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Налаштування було змінено в іншому вікні.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Налаштування відображення змінено в іншому вікні. Збереження тут замінить їх.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Поточний стан обробки невідомий.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Налаштування прочитано, але попередній стан обробки не вдалося очистити, тому деякі сторінки можуть залишатися зміненими.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Не вдалося прочитати налаштування, тому обробку вимкнено.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "Жодна сторінка не змінюється.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Повідомте про проблему, завантажте збережені журнали або відновіть типові налаштування та відкрийте спливальне вікно знову.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Повідомте про проблему, завантажте збережені журнали або відновіть типові налаштування.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Не вдалося зберегти цю зміну. Спробуйте ще раз.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "Це імʼя хоста недійсне. Використайте точне імʼя хоста без схеми, порту, шляху та символів підстановки.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "Цей список заповнено. Видаліть імʼя хоста, перш ніж додавати нове.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "Режим роботи змінено в іншому вікні, тому цю зміну не застосовано. Поточні списки перезавантажено.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "Відповідь перервано. Поточний стан перезавантажено.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Не вдалося підтвердити, чи збережено зміну. Відкрийте спливальне вікно знову та спробуйте ще раз.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Не вдалося підтвердити, чи збережено зміну. Відкрийте налаштування знову та спробуйте ще раз.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Скинути всі налаштування",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Підтвердити скидання",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Повернути всі налаштування до типових значень?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Обидва списки сайтів, режим роботи, налаштування відображення, оформлення та збережені журнали налагодження буде видалено. Цю дію не можна скасувати.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Скинути все",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Залишити налаштування",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "Усі підтримувані сайти",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Лише вибрані сайти",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Виключені сайти",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Дозволені сайти",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Завантаження поточного сайту…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Поточна сторінка",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Режим роботи",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Призупинити або відновити всі правила для сайтів.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Увімкнено на цьому сайті",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Увімкнено на %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Повідомити про цей сайт",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Налаштування",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Активно",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Розширення вимкнено",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Виключено на цьому сайті",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Не вибрано для цього сайту",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Не може працювати на цій сторінці",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Не вдалося обробити цю сторінку",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Поточний стан обробки невідомий",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Налаштування недоступні",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Якщо вимкнути, це імʼя хоста буде додано до виключених сайтів.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Якщо увімкнути, це імʼя хоста буде видалено з виключених сайтів.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Якщо вимкнути, це імʼя хоста буде видалено з дозволених сайтів.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Якщо увімкнути, це імʼя хоста буде додано до дозволених сайтів.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Не вдалося знайти поточний сайт. Відкрийте спливальне вікно знову та спробуйте ще раз.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "Про цю сторінку неможливо повідомити. Відкрийте сайт за HTTP або HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "Поточний сайт змінився. Відкрийте спливальне вікно знову та спробуйте ще раз.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Не вдалося безпечно відкрити звіт у цьому приватному вікні.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Повідомлення про сайти недоступні в цьому браузері.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Не вдалося визначити цей сайт або розширення. Відкрийте спливальне вікно знову та спробуйте ще раз.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "Звіт про сайт уже відкривається.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Не вдалося відкрити звіт на GitHub. Спробуйте ще раз.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "Звіт на GitHub уже відкривається.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Не вдалося відкрити звіт на GitHub у цьому браузері.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Не вдалося відкрити звіт на GitHub. Перевірте контекст браузера та спробуйте ще раз.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Завантаження налаштувань…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Налаштування",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Розділи налаштувань",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Оформлення",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "Системне",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Світле",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Темне",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Не вдалося зберегти оформлення. Спробуйте ще раз.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Сайти",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Виберіть, де працює розширення, а потім керуйте точними іменами хостів для цього правила.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Обробку ввімкнено на підтримуваних сайтах відповідно до режиму роботи нижче.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Обробку призупинено. Режим роботи та обидва списки сайтів збережено. Вони застосуються, щойно обробку буде ввімкнено.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Де запускати",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Кожен режим має власний список. Перемикання режимів ніколи не переміщує імʼя хоста.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Працювати всюди, окрім імен хостів у виключених сайтах.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Працювати лише на іменах хостів із дозволених сайтів.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Налаштування сайтів недоступні. Обробку вимкнено.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% сайтів|%count% сайт|%count% сайти|%count% сайтів",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Видалити",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Видалити %hostname% з виключених сайтів",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Видалити %hostname% з дозволених сайтів",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% додано до виключених сайтів.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% додано до дозволених сайтів.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "Розширення залишається вимкненим на цих точних іменах хостів.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Виключити імʼя хоста",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Виключити сайт",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Видалення імені хоста знову дозволяє розширенню працювати на ньому.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "Немає виключених сайтів.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "Розширення працює лише на цих точних іменах хостів.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Дозволити імʼя хоста",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Дозволити сайт",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Видалення імені хоста знову вимикає розширення на ньому.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "Дозволених сайтів ще немає. Розширення залишатиметься вимкненим на всіх сайтах, доки не буде додано хоча б один.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Введіть імʼя хоста.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Використайте точне імʼя хоста без схеми, порту та шляху.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "Це імʼя хоста вже є у списку.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Введіть точне імʼя хоста без https:// та без шляху.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Відображення",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Виберіть, як показувати точні дати.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Завантаження налаштувань відображення…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Формат дати",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "Системний",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Власний формат",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Шаблон формату",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Приклади: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Часовий пояс",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "Системний",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "Ідентифікатор часового поясу IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Введіть ідентифікатор часового поясу IANA, наприклад America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Попередній перегляд",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Виправте шаблон для перегляду",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Виправте часовий пояс для перегляду",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Зберегти налаштування відображення",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Поточні налаштування відображення недоступні, доки відновлюється стан обробки.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Налаштування відображення недоступні. Обробку вимкнено.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Використайте дійсний ідентифікатор часового поясу IANA без переходу за шляхами.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Використайте дійсний ідентифікатор часового поясу IANA, наприклад America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "Цей часовий пояс недоступний у поточному браузері. Виберіть інший ідентифікатор.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "Цей часовий пояс недійсний або недоступний. Введіть підтримуваний ідентифікатор IANA та спробуйте ще раз.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "Формат дати недійсний. Виправте шаблон і спробуйте ще раз.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "Збережений часовий пояс недоступний у цьому браузері. Виберіть системний або інший підтримуваний пояс і збережіть.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Не вдалося зберегти налаштування відображення. Попередній формат залишається активним. Спробуйте ще раз.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "Відповідь перервано. Налаштування відображення перечитано.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Налаштування відображення збережено, але одну чи кілька відкритих сторінок не вдалося оновити. Нові дати використовуватимуть збережене налаштування.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Налаштування відображення збережено.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Не вдалося підтвердити, чи збережено налаштування відображення. Відкрийте налаштування знову та спробуйте ще раз.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Введіть шаблон формату дати.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Використайте шаблон формату дати завдовжки щонайбільше %max% символів.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Видаліть керуючі символи із шаблону формату дати.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Закрийте текст у лапках у шаблоні формату дати.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Додайте принаймні один токен дати або часу, наприклад yyyy чи HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Використовуйте токени дати Unicode, наприклад yyyy замість YYYY або DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Використовуйте в шаблоні підтримувані токени дати й часу Unicode.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "Формат дати має давати видимий текст.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Діагностика",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Журнали залишаються на цьому пристрої й ніколи не надсилаються автоматично. Долучайте завантажений архів до звіту лише за власним вибором.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Завантаження налаштувань налагодження…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Журнали налагодження недоступні. Обробка залишається без змін.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Журнали налагодження",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Вести обмежений локальний запис того, що розширення робило на кожній сторінці.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Завантажити журнали",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Очистити журнали",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Відкрити issue на GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Журнали діагностики завантажено.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Журнали діагностики очищено.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Журнали налагодження вимкнено. Увімкніть їх, щоб використовувати збережену діагностику.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "Журналів діагностики для завантаження ще немає.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Не вдалося прочитати збережені журнали діагностики. Спробуйте пізніше.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Журнали діагностики недоступні. Спробуйте пізніше.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Локальні завантаження недоступні в цьому контексті.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "Немає записів діагностики для завантаження.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "Не вдалося створити архів діагностики. Спробуйте пізніше.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "Не вдалося завантажити архів діагностики. Спробуйте пізніше.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "Не вдалося підготувати архів діагностики. Спробуйте пізніше.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Не вдалося зберегти налаштування журналів налагодження. Спробуйте ще раз.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "Відповідь щодо журналів налагодження перервано. Поточний стан перезавантажено.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Не вдалося підтвердити налаштування журналів налагодження. Відкрийте налаштування знову та спробуйте ще раз.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Скидання",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Повертає режим роботи, обидва списки сайтів, налаштування відображення, оформлення та діагностику до типових значень. Збережені журнали налагодження буде видалено.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Не вдалося скинути налаштування. Поточні налаштування залишаються активними. Спробуйте ще раз.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Не вдалося підтвердити, чи скинуто налаштування. Відкрийте налаштування знову та перевірте їхній поточний стан.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Не вдалося скинути налаштування. Обробка залишається вимкненою. Спробуйте ще раз.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "Не вдалося підтвердити відповідь на скидання. Обробка залишається вимкненою. Спробуйте ще раз.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "uk",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

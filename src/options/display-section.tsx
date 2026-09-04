@@ -10,13 +10,15 @@ import {
     STATE_AVAILABILITY,
 } from "../shared/messaging/view-state-values";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
+import { t, type MessageKey } from "../shared/i18n/translator";
+import { CUSTOM_FORMAT_MAX_LENGTH } from "../shared/settings/custom-format";
 import { FORMAT_MODE, TIME_ZONE_MODE } from "../shared/settings/snapshot";
 import type { DisplayController } from "./display-controller";
 import {
     DISPLAY_NOTICE,
     DISPLAY_PREVIEW_SOURCE,
     customPatternError,
-    displayNoticeText,
+    displayNoticeKey,
     previewDisplayDraft,
     type DisplayDraft,
     type DisplayNotice,
@@ -32,7 +34,33 @@ export interface DisplaySectionProps {
     readonly controller: DisplayController;
 }
 
-const CUSTOM_FORMAT_EXAMPLES = "Examples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy";
+/**
+ * Renders the custom-pattern field error, supplying the length limit.
+ *
+ * @param patternError - Key of the draft's pattern error, when any.
+ * @param formatRejected - Whether the background rejected the saved pattern.
+ * @returns - Error text for the field, or undefined when it has none.
+ */
+function patternErrorText(
+    patternError: MessageKey | undefined,
+    formatRejected: boolean,
+): string | undefined {
+    if (patternError !== undefined) {
+        return t(patternError, { max: CUSTOM_FORMAT_MAX_LENGTH });
+    }
+    return formatRejected ? t("display_error_format_invalid") : undefined;
+}
+
+/**
+ * Renders one display notice.
+ *
+ * @param notice - Outcome reported after saving display settings.
+ * @returns - Notice text, or undefined when there is nothing to show.
+ */
+function noticeText(notice: DisplayNotice): string | undefined {
+    const key = displayNoticeKey(notice);
+    return key === undefined ? undefined : t(key);
+}
 
 /**
  * Explains why display settings cannot currently be changed.
@@ -43,9 +71,9 @@ const CUSTOM_FORMAT_EXAMPLES = "Examples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy"
 function unavailableDisplayText(
     state: Extract<DisplayState, { availability: typeof STATE_AVAILABILITY.UNAVAILABLE }>,
 ): string {
-    return state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
-        ? "Current display settings are unavailable while processing state is being recovered."
-        : "Display settings are unavailable. Processing is disabled.";
+    return t(state.failure === SETTINGS_STATE_FAILURE.FAIL_CLOSED_CLEANUP
+        ? "display_unavailable_recovering"
+        : "display_unavailable_disabled");
 }
 
 /**
@@ -74,7 +102,7 @@ function noticePresentation(notice: DisplayNotice): {
  * @returns - Pattern error and preview, or undefined without a draft.
  */
 function useDraftAnalysis(draft: DisplayDraft | undefined): {
-    readonly patternError: string | undefined;
+    readonly patternError: MessageKey | undefined;
     readonly preview: ReturnType<typeof previewDisplayDraft>;
 } | undefined {
     return useMemo(() => {
@@ -104,13 +132,13 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
         <Stack gap="lg" component="section" aria-labelledby="display-heading">
             <Box>
                 <Title order={2} id="display-heading">
-                    Display
+                    {t("display_heading")}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    Choose how exact dates are shown.
+                    {t("display_intro")}
                 </Text>
             </Box>
-            {loading ? <Text role="status">Loading display settings…</Text> : null}
+            {loading ? <Text role="status">{t("display_loading")}</Text> : null}
             {!loading && state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                 <Text role="status">{unavailableDisplayText(state)}</Text>
             ) : null}
@@ -118,13 +146,13 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                 <Stack gap="md">
                     <NativeSelect
                         id="date-format-select"
-                        label="Date format"
-                        aria-label="Date format"
+                        label={t("display_format_label")}
+                        aria-label={t("display_format_label")}
                         className="options-select"
                         value={draft.formatMode}
                         data={[
-                            { value: FORMAT_MODE.SYSTEM, label: "System" },
-                            { value: FORMAT_MODE.CUSTOM, label: "Custom format" },
+                            { value: FORMAT_MODE.SYSTEM, label: t("display_format_system") },
+                            { value: FORMAT_MODE.CUSTOM, label: t("display_format_custom") },
                         ]}
                         onChange={(event) => {
                             const value = event.currentTarget.value;
@@ -136,31 +164,29 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                     />
                     {draft.formatMode === FORMAT_MODE.CUSTOM ? (
                         <TextInput
-                            label="Format pattern"
-                            aria-label="Format pattern"
-                            description={CUSTOM_FORMAT_EXAMPLES}
+                            label={t("display_pattern_label")}
+                            aria-label={t("display_pattern_label")}
+                            description={t("display_pattern_examples")}
                             value={draft.pattern}
                             classNames={{ input: "nma-mono" }}
                             onChange={(event) => {
                                 controller.setPattern(event.currentTarget.value);
                             }}
-                            error={
-                                analysis.patternError
-                                ?? (notice === DISPLAY_NOTICE.INVALID_FORMAT
-                                    ? displayNoticeText(DISPLAY_NOTICE.INVALID_FORMAT)
-                                    : undefined)
-                            }
+                            error={patternErrorText(
+                                analysis.patternError,
+                                notice === DISPLAY_NOTICE.INVALID_FORMAT,
+                            )}
                             disabled={saving}
                         />
                     ) : null}
                     <NativeSelect
                         id="time-zone-select"
-                        label="Time zone"
-                        aria-label="Time zone"
+                        label={t("display_zone_label")}
+                        aria-label={t("display_zone_label")}
                         className="options-select"
                         value={draft.timeZoneMode}
                         data={[
-                            { value: TIME_ZONE_MODE.SYSTEM, label: "System" },
+                            { value: TIME_ZONE_MODE.SYSTEM, label: t("display_zone_system") },
                             { value: TIME_ZONE_MODE.UTC, label: "UTC" },
                             { value: TIME_ZONE_MODE.IANA, label: "IANA" },
                         ]}
@@ -178,8 +204,8 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                     />
                     {draft.timeZoneMode === TIME_ZONE_MODE.IANA ? (
                         <TextInput
-                            label="IANA time zone identifier"
-                            aria-label="IANA time zone identifier"
+                            label={t("display_zone_identifier_label")}
+                            aria-label={t("display_zone_identifier_label")}
                             placeholder="America/New_York"
                             value={draft.identifier}
                             classNames={{ input: "nma-mono" }}
@@ -188,7 +214,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             }}
                             error={
                                 notice === DISPLAY_NOTICE.INVALID_TIME_ZONE
-                                    ? displayNoticeText(notice)
+                                    ? t("display_error_zone_rejected")
                                     : undefined
                             }
                             disabled={saving}
@@ -196,13 +222,16 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                     ) : null}
                     <div className="options-preview" data-ok={analysis.preview.ok}>
                         <div>
-                            <div className="nma-eyebrow">Preview</div>
+                            <div className="nma-eyebrow">{t("display_preview_label")}</div>
                             <div
-                                className="options-preview-value nma-mono"
+                                className={analysis.preview.ok
+                                    ? "options-preview-value nma-mono"
+                                    : "options-preview-value"}
                                 role="status"
-                                aria-label="Preview"
+                                aria-label={t("display_preview_label")}
                             >
-                                {analysis.preview.text}
+                                {analysis.preview.ok
+                                    ? analysis.preview.text : t(analysis.preview.key)}
                             </div>
                         </div>
                         <span className="options-preview-source nma-mono">
@@ -211,7 +240,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                     </div>
                     {state.error === UNAVAILABLE_TIME_ZONE_ERROR ? (
                         <Alert role="alert" color="yellow">
-                            {displayNoticeText(DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE)}
+                            {t("display_error_zone_saved_unavailable")}
                         </Alert>
                     ) : null}
                     {notice && !inlineNotice && state.error !== UNAVAILABLE_TIME_ZONE_ERROR ? (
@@ -219,7 +248,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             role={noticePresentation(notice).role}
                             color={noticePresentation(notice).color}
                         >
-                            {displayNoticeText(notice)}
+                            {noticeText(notice)}
                         </Alert>
                     ) : null}
                     <div>
@@ -230,7 +259,7 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             loading={saving}
                             disabled={saving}
                         >
-                            Save display settings
+                            {t("display_save_action")}
                         </Button>
                     </div>
                 </Stack>

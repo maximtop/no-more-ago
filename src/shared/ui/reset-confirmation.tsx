@@ -4,6 +4,7 @@
 
 import { Button, Group, Text } from "@mantine/core";
 import { useState, type ReactElement } from "react";
+import { t } from "../i18n/translator";
 
 /**
  * Properties for the confirmed reset action.
@@ -41,19 +42,18 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         setConfirming(true);
                     }}
                 >
-                    Reset all settings
+                    {t("reset_trigger")}
                 </Button>
             </div>
         );
     }
     return (
-        <div className="nma-reset-confirmation" role="group" aria-label="Confirm reset">
+        <div className="nma-reset-confirmation" role="group" aria-label={t("reset_confirm_aria")}>
             <Text size="sm" fw={600}>
-                Reset every setting to its default?
+                {t("reset_confirm_question")}
             </Text>
             <Text size="xs" c="dimmed">
-                Both site lists, the run mode, display settings, appearance, and retained debug
-                logs will be removed. This cannot be undone.
+                {t("reset_confirm_detail")}
             </Text>
             <Group mt="sm">
                 <Button
@@ -66,7 +66,7 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         onConfirm();
                     }}
                 >
-                    Reset everything
+                    {t("reset_confirm_yes")}
                 </Button>
                 <Button
                     type="button"
@@ -76,7 +76,7 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         setConfirming(false);
                     }}
                 >
-                    Keep settings
+                    {t("reset_confirm_no")}
                 </Button>
             </Group>
         </div>

@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "Replace trusted relative timestamps with exact dates.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "No More Ago Settings",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "Extension enabled",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "Settings were updated in another window.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "Display settings were updated in another window. Saving here replaces them.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "Current processing state is unknown.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "Settings were read, but the previous processing state could not be cleaned up, so some pages may still be changed.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "Settings could not be read, so processing is disabled.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "No page is being changed.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "Report the problem, download any retained logs, or restore the default settings and reopen the popup.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "Report the problem, download any retained logs, or restore the default settings.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "Could not save this change. Try again.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "This hostname is invalid. Use an exact hostname without a scheme, port, path, or wildcard.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "This list is full. Remove a hostname before adding another.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "The run mode was changed in another window, so this change was not applied. Current lists were reloaded.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "The response was interrupted. Current state was reloaded.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "Could not confirm whether the change was saved. Reopen the popup to try again.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "Could not confirm whether the change was saved. Reopen Settings to try again.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "Reset all settings",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "Confirm reset",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "Reset every setting to its default?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "Both site lists, the run mode, display settings, appearance, and retained debug logs will be removed. This cannot be undone.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "Reset everything",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "Keep settings",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "All supported sites",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "Selected sites only",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "Excluded sites",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "Allowed sites",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "Loading current site…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "Current page",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "Run mode",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "Pause or resume all site rules.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "Enabled on this site",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "Enabled on %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "Report this site",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "Settings",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "Active",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "Extension is off",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "Excluded on this site",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "Not selected for this site",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "Cannot run on this page",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "Could not process this page",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "Current processing state is unknown",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "Settings are unavailable",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "Turning this off adds this hostname to Excluded sites.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "Turning this on removes this hostname from Excluded sites.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "Turning this off removes this hostname from Allowed sites.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "Turning this on adds this hostname to Allowed sites.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "Could not find the current site. Reopen the popup and try again.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "This page cannot be reported. Open an HTTP or HTTPS site.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "The current site changed. Reopen the popup and try again.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "Could not safely open the report in this private window.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "Site reporting is unavailable in this browser.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "Could not identify this site or extension. Reopen the popup and try again.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "A site report is already being opened.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "Could not open the GitHub report. Try again.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "A GitHub report is already being opened.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "Could not open the GitHub report in this browser.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "Could not open the GitHub report. Check the browser context and try again.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "Loading settings…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "Settings",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "Settings sections",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "Appearance",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "System",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "Light",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "Dark",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "Could not save the appearance. Try again.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "Sites",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "Choose where the extension runs, then manage exact hostnames for that rule.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "Processing is enabled on supported sites under the run mode below.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "Processing is paused. The run mode and both site lists are kept. They apply once processing is enabled.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "Run on",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "Each mode keeps its own list. Switching modes never moves a hostname.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "Run everywhere except hostnames in Excluded sites.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "Run only on hostnames in Allowed sites.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "Sites settings are unavailable. Processing is disabled.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% sites|%count% site|%count% sites",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "Remove",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "Remove %hostname% from Excluded sites",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "Remove %hostname% from Allowed sites",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% was added to Excluded sites.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% was added to Allowed sites.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "The extension stays off on these exact hostnames.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "Exclude hostname",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "Exclude site",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "Removing a hostname lets the extension run on it again.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "No sites are excluded.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "The extension runs only on these exact hostnames.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "Allow hostname",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "Allow site",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "Removing a hostname turns the extension off on it again.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "No sites are allowed yet. The extension will stay off on every site until one is added.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "Enter a hostname.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "Use an exact hostname without a scheme, port, or path.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "This hostname is already in the list.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "Enter an exact hostname without https:// or a path.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "Display",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "Choose how exact dates are shown.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "Loading display settings…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "Date format",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "System",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "Custom format",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "Format pattern",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "Examples: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "Time zone",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "System",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "IANA time zone identifier",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "Enter an IANA time zone identifier, for example America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "Preview",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "Fix the pattern to preview",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "Fix the time zone to preview",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "Save display settings",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "Current display settings are unavailable while processing state is being recovered.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "Display settings are unavailable. Processing is disabled.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "Use a valid IANA time zone identifier without path traversal.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "Use a valid IANA time zone identifier, such as America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "This time zone is not available in the current browser. Choose another identifier.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "This time zone is invalid or unavailable. Enter a supported IANA identifier and try again.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "The date format is invalid. Correct the pattern and try again.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "The saved time zone is unavailable in this browser. Choose System or another supported zone, then save.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "Could not save the display settings. Your previous format remains active. Try again.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "The response was interrupted. Display settings were reread.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "Display settings were saved, but one or more open pages could not be refreshed. New dates will use the saved setting.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "Display settings saved.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "Could not confirm whether the display settings were saved. Reopen Settings to try again.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "Enter a date format pattern.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "Use a date format pattern of %max% characters or fewer.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "Remove control characters from the date format pattern.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "Close the quoted text in the date format pattern.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "Include at least one date or time token, such as yyyy or HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "Use Unicode date tokens, such as yyyy instead of YYYY or DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "Use supported Unicode date and time tokens in the pattern.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "The date format must produce visible text.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "Diagnostics",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "Logs stay on this device and are never submitted automatically. Attach a downloaded archive to a report only if you choose to.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "Loading debug settings…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "Debug logs are unavailable. Processing remains unchanged.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "Debug logs",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "Keep a bounded local record of what the extension did on each page.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "Download logs",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "Clear logs",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "Open GitHub issue",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "Diagnostic logs downloaded.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "Diagnostic logs cleared.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "Debug logs are off. Turn them on to use saved diagnostics.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "There are no diagnostic logs to download yet.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "Saved diagnostic logs could not be read. Try again later.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "Diagnostic logs are unavailable. Try again later.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "Local downloads are unavailable in this context.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "There are no diagnostic entries to download.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "The diagnostic archive could not be created. Try again later.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "The diagnostic archive could not be downloaded. Try again later.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "The diagnostic archive could not be prepared. Try again later.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "Could not save the Debug logs setting. Try again.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "The Debug logs response was interrupted. Current state was reloaded.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "Could not confirm the Debug logs setting. Reopen Settings to try again.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "Reset",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "Restore the run mode, both site lists, display settings, appearance, and diagnostics to their defaults. Retained debug logs are removed.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "Could not reset settings. Your current settings remain active. Try again.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "Could not confirm whether settings were reset. Reopen Settings to check their current state.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "Could not reset settings. Processing remains disabled. Try again.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "The reset response could not be confirmed. Processing remains disabled. Try again.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "en",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}

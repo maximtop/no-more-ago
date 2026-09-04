@@ -4,6 +4,7 @@
 
 import { Alert, Box, Stack, Text, Title } from "@mantine/core";
 import type { ReactElement } from "react";
+import { t, type MessageKey } from "../shared/i18n/translator";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import { ResetConfirmation } from "../shared/ui/reset-confirmation";
 import {
@@ -24,27 +25,28 @@ export interface ResetControlProps {
 }
 
 /**
- * Maps a reset outcome and its starting availability to an error message.
+ * Message mapping for every supported outcome.
+ */
+const RESET_NOTICE_KEYS = {
+    [RESET_NOTICE.SAVE_FAILED]: {
+        [STATE_AVAILABILITY.READY]: "reset_error_failed",
+        [STATE_AVAILABILITY.UNAVAILABLE]: "reset_error_failed_disabled",
+    },
+    [RESET_NOTICE.AMBIGUOUS]: {
+        [STATE_AVAILABILITY.READY]: "reset_error_unknown",
+        [STATE_AVAILABILITY.UNAVAILABLE]: "reset_error_unknown_disabled",
+    },
+} as const satisfies Record<Exclude<ResetNotice, undefined>, Record<ResetOrigin, MessageKey>>;
+
+/**
+ * Maps a reset outcome and its starting availability to a message key.
  *
  * @param notice - Outcome reported after resetting settings.
  * @param origin - Availability state before the reset was requested.
- * @returns - An error message, or undefined when there is no notice to show.
+ * @returns - Message key, or undefined when there is no notice to show.
  */
-export function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): string | undefined {
-    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.SAVE_FAILED) {
-        return "Could not reset settings. Your current settings remain active. Try again.";
-    }
-    if (origin === STATE_AVAILABILITY.READY && notice === RESET_NOTICE.AMBIGUOUS) {
-        return "Could not confirm whether settings were reset. Reopen Settings to check their "
-            + "current state.";
-    }
-    if (notice === RESET_NOTICE.SAVE_FAILED) {
-        return "Could not reset settings. Processing remains disabled. Try again.";
-    }
-    if (notice === RESET_NOTICE.AMBIGUOUS) {
-        return "The reset response could not be confirmed. Processing remains disabled. Try again.";
-    }
-    return undefined;
+export function resetNoticeKey(notice: ResetNotice, origin: ResetOrigin): MessageKey | undefined {
+    return notice === undefined ? undefined : RESET_NOTICE_KEYS[notice][origin];
 }
 
 /**
@@ -55,15 +57,15 @@ export function resetNoticeText(notice: ResetNotice, origin: ResetOrigin): strin
  * @returns - The reset action and any current failure guidance.
  */
 export function ResetControl({ controller }: ResetControlProps): ReactElement {
+    const noticeKey = resetNoticeKey(controller.notice, controller.origin);
     return (
         <Stack gap="lg" component="section" aria-labelledby="reset-heading">
             <Box>
                 <Title order={2} id="reset-heading">
-                    Reset
+                    {t("reset_heading")}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    Restore the run mode, both site lists, display settings, appearance, and
-                    diagnostics to their defaults. Retained debug logs are removed.
+                    {t("reset_intro")}
                 </Text>
             </Box>
             <ResetConfirmation
@@ -72,9 +74,9 @@ export function ResetControl({ controller }: ResetControlProps): ReactElement {
                     void controller.reset();
                 }}
             />
-            {controller.notice ? (
+            {noticeKey ? (
                 <Alert role="alert" color="red">
-                    {resetNoticeText(controller.notice, controller.origin)}
+                    {t(noticeKey)}
                 </Alert>
             ) : null}
         </Stack>

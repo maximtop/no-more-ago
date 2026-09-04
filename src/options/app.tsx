@@ -2,7 +2,7 @@
  * @file Composes the settings shell, navigation, and feature sections of the options page.
  */
 
-import { Alert, MantineProvider, Text } from "@mantine/core";
+import { Alert, DirectionProvider, MantineProvider, Text } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import type {
@@ -16,7 +16,7 @@ import {
 } from "../shared/messaging/settings-notifications";
 import { APPEARANCE } from "../shared/settings/snapshot";
 import { BrandMark } from "../shared/ui/brand-mark";
-import { updatedInAnotherWindow } from "../shared/ui/copy";
+import { t, uiDirection } from "../shared/i18n/translator";
 import { NO_MORE_AGO_THEME, forcedColorScheme } from "../shared/ui/theme";
 import { useSettingsChanged } from "../shared/ui/use-settings-changed";
 import type { DownloadRuntime } from "../shared/diagnostics/archive";
@@ -30,7 +30,7 @@ import { useDiagnosticsController } from "./diagnostics-controller";
 import { DiagnosticsSection } from "./diagnostics-section";
 import { useDisplayController } from "./display-controller";
 import { DisplaySection } from "./display-section";
-import { ResetControl, resetNoticeText } from "./reset-control";
+import { ResetControl, resetNoticeKey } from "./reset-control";
 import { useResetController } from "./reset-controller";
 import { SETTINGS_SECTION, SettingsNavigation } from "./settings-navigation";
 import { useSitesController } from "./sites-controller";
@@ -219,52 +219,54 @@ export function OptionsApp({
     }, [ownWriteInFlight]);
     const appearance = display.state?.appearance ?? APPEARANCE.SYSTEM;
     return (
-        <MantineProvider
-            theme={NO_MORE_AGO_THEME}
-            defaultColorScheme="auto"
-            {...forcedColorScheme(appearance)}
-        >
-            <div className="options">
-                <header className="options-header">
-                    <BrandMark size={30} />
-                    <span className="options-brand">No More Ago</span>
-                    <span className="options-header-spacer" />
-                    <AppearanceControl controller={display} />
-                    {version ? <span className="nma-eyebrow">v{version}</span> : null}
-                </header>
-                <main aria-label="No More Ago Settings">
-                    {sites.loading || !sites.state ? (
-                        <Text role="status" className="options-content">
-                            Loading settings…
-                        </Text>
-                    ) : sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
-                        <OptionsUnavailablePanel
-                            failure={sites.state.failure}
-                            diagnostics={diagnostics}
-                            reset={reset}
-                            resetNotice={resetNoticeText(reset.notice, reset.origin)}
-                        />
-                    ) : (
-                        <SettingsNavigation
-                            banner={externalChange ? (
-                                <Alert role="status" color="gray" mb="md">
-                                    {updatedInAnotherWindow("Settings")}
-                                </Alert>
-                            ) : null}
-                            panels={{
-                                [SETTINGS_SECTION.SITES]: <SitesSection controller={sites} />,
-                                [SETTINGS_SECTION.DISPLAY]: (
-                                    <DisplaySection controller={display} />
-                                ),
-                                [SETTINGS_SECTION.DIAGNOSTICS]: (
-                                    <DiagnosticsSection controller={diagnostics} />
-                                ),
-                                [SETTINGS_SECTION.RESET]: <ResetControl controller={reset} />,
-                            }}
-                        />
-                    )}
-                </main>
-            </div>
-        </MantineProvider>
+        <DirectionProvider initialDirection={uiDirection()} detectDirection={false}>
+            <MantineProvider
+                theme={NO_MORE_AGO_THEME}
+                defaultColorScheme="auto"
+                {...forcedColorScheme(appearance)}
+            >
+                <div className="options">
+                    <header className="options-header">
+                        <BrandMark size={30} />
+                        <span className="options-brand">{t("extension_name")}</span>
+                        <span className="options-header-spacer" />
+                        <AppearanceControl controller={display} />
+                        {version ? <span className="nma-eyebrow">v{version}</span> : null}
+                    </header>
+                    <main aria-label={t("options_document_title")}>
+                        {sites.loading || !sites.state ? (
+                            <Text role="status" className="options-content">
+                                {t("options_loading")}
+                            </Text>
+                        ) : sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
+                            <OptionsUnavailablePanel
+                                failure={sites.state.failure}
+                                diagnostics={diagnostics}
+                                reset={reset}
+                                resetNotice={resetNoticeKey(reset.notice, reset.origin)}
+                            />
+                        ) : (
+                            <SettingsNavigation
+                                banner={externalChange ? (
+                                    <Alert role="status" color="gray" mb="md">
+                                        {t("settings_updated_elsewhere")}
+                                    </Alert>
+                                ) : null}
+                                panels={{
+                                    [SETTINGS_SECTION.SITES]: <SitesSection controller={sites} />,
+                                    [SETTINGS_SECTION.DISPLAY]: (
+                                        <DisplaySection controller={display} />
+                                    ),
+                                    [SETTINGS_SECTION.DIAGNOSTICS]: (
+                                        <DiagnosticsSection controller={diagnostics} />
+                                    ),
+                                    [SETTINGS_SECTION.RESET]: <ResetControl controller={reset} />,
+                                }}
+                            />
+                        )}
+                    </main>
+                </div>
+            </MantineProvider>
+        </DirectionProvider>
     );
 }

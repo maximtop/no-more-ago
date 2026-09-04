@@ -1,0 +1,658 @@
+{
+  "extension_name": {
+    "message": "No More Ago",
+    "description": "Extension name; a brand literal that is never translated"
+  },
+  "extension_description": {
+    "message": "מחליף חותמות זמן יחסיות אמינות בתאריכים מדויקים.",
+    "description": "Extension description shown by browsers and stores; at most 132 characters in every locale"
+  },
+  "options_document_title": {
+    "message": "הגדרות No More Ago",
+    "description": "Settings browser-tab title and the name of its main landmark"
+  },
+  "global_switch_label": {
+    "message": "ההרחבה מופעלת",
+    "description": "Label of the global on/off switch on both surfaces"
+  },
+  "settings_updated_elsewhere": {
+    "message": "ההגדרות עודכנו בחלון אחר.",
+    "description": "Banner shown after another window changed settings"
+  },
+  "display_updated_elsewhere": {
+    "message": "הגדרות התצוגה עודכנו בחלון אחר. שמירה כאן תחליף אותן.",
+    "description": "Notice in the Display section after an external change"
+  },
+  "unavailable_status_cleanup": {
+    "message": "מצב העיבוד הנוכחי אינו ידוע.",
+    "description": "Status line when fail-closed cleanup did not finish"
+  },
+  "unavailable_consequence_cleanup": {
+    "message": "ההגדרות נקראו, אך לא ניתן היה לנקות את מצב העיבוד הקודם, ולכן ייתכן שבחלק מהדפים השינויים עדיין מוצגים.",
+    "description": "Consequence line paired with the cleanup failure"
+  },
+  "unavailable_status_default": {
+    "message": "לא ניתן היה לקרוא את ההגדרות, ולכן העיבוד מושבת.",
+    "description": "Status line when settings cannot be read at all"
+  },
+  "unavailable_consequence_default": {
+    "message": "אף דף אינו משתנה.",
+    "description": "Consequence line paired with disabled processing"
+  },
+  "unavailable_recovery_hint": {
+    "message": "דווחו על הבעיה, הורידו יומנים שנשמרו, או שחזרו את הגדרות ברירת המחדל ופתחו שוב את החלון הקופץ.",
+    "description": "Guidance under the failure explanation in the popup recovery panel"
+  },
+  "unavailable_recovery_hint_options": {
+    "message": "דווחו על הבעיה, הורידו יומנים שנשמרו, או שחזרו את הגדרות ברירת המחדל.",
+    "description": "Guidance under the failure explanation in the Settings recovery panel"
+  },
+  "notice_save_failed": {
+    "message": "לא ניתן היה לשמור את השינוי. נסו שוב.",
+    "description": "Shown when a settings write failed"
+  },
+  "notice_invalid_hostname": {
+    "message": "שם המארח אינו תקין. השתמשו בשם מארח מדויק ללא סכימה, פורט, נתיב או תו כללי.",
+    "description": "Shown when the background rejected a hostname"
+  },
+  "notice_list_full": {
+    "message": "הרשימה מלאה. הסירו שם מארח לפני הוספת שם נוסף.",
+    "description": "Shown when a site list already holds 1000 entries"
+  },
+  "notice_scope_changed": {
+    "message": "מצב ההרצה שונה בחלון אחר, ולכן השינוי לא הוחל. הרשימות הנוכחיות נטענו מחדש.",
+    "description": "Shown when a concurrent run-mode change discarded the write"
+  },
+  "notice_interrupted": {
+    "message": "התגובה נקטעה. המצב הנוכחי נטען מחדש.",
+    "description": "Shown when the background reply never arrived"
+  },
+  "notice_unknown_popup": {
+    "message": "לא ניתן היה לאשר אם השינוי נשמר. פתחו שוב את החלון הקופץ ונסו שנית.",
+    "description": "Ambiguous write outcome, popup wording"
+  },
+  "notice_unknown_options": {
+    "message": "לא ניתן היה לאשר אם השינוי נשמר. פתחו שוב את ההגדרות ונסו שנית.",
+    "description": "Ambiguous write outcome, Settings wording"
+  },
+  "reset_trigger": {
+    "message": "איפוס כל ההגדרות",
+    "description": "Button that starts the two-step reset"
+  },
+  "reset_confirm_aria": {
+    "message": "אישור האיפוס",
+    "description": "Accessible name of the confirmation group"
+  },
+  "reset_confirm_question": {
+    "message": "לאפס את כל ההגדרות לערכי ברירת המחדל?",
+    "description": "Confirmation question"
+  },
+  "reset_confirm_detail": {
+    "message": "שתי רשימות האתרים, מצב ההרצה, הגדרות התצוגה, המראה ויומני ניפוי השגיאות שנשמרו יימחקו. לא ניתן לבטל פעולה זו.",
+    "description": "What a reset removes"
+  },
+  "reset_confirm_yes": {
+    "message": "לאפס הכול",
+    "description": "Confirms the reset"
+  },
+  "reset_confirm_no": {
+    "message": "לשמור את ההגדרות",
+    "description": "Cancels the reset"
+  },
+  "scope_mode_all": {
+    "message": "כל האתרים הנתמכים",
+    "description": "Run mode that processes everywhere except excluded hostnames"
+  },
+  "scope_mode_selected": {
+    "message": "רק האתרים שנבחרו",
+    "description": "Run mode that processes only allowed hostnames"
+  },
+  "scope_list_excluded": {
+    "message": "אתרים מוחרגים",
+    "description": "Name of the list the all-sites mode owns"
+  },
+  "scope_list_allowed": {
+    "message": "אתרים מורשים",
+    "description": "Name of the list the selected-sites mode owns"
+  },
+  "popup_loading": {
+    "message": "טוען את האתר הנוכחי…",
+    "description": "Popup placeholder while state loads"
+  },
+  "popup_current_page": {
+    "message": "הדף הנוכחי",
+    "description": "Popup subtitle when no hostname is known"
+  },
+  "popup_run_mode_label": {
+    "message": "מצב הרצה",
+    "description": "Eyebrow above the active run mode"
+  },
+  "popup_global_switch_hint": {
+    "message": "השהו או המשיכו את כל כללי האתרים.",
+    "description": "Hint under the global switch"
+  },
+  "popup_site_switch_label": {
+    "message": "מופעל באתר הזה",
+    "description": "Label of the per-site switch"
+  },
+  "popup_site_switch_aria": {
+    "message": "מופעל באתר %hostname%",
+    "description": "Accessible name of the per-site switch; %hostname% is a domain and is never translated"
+  },
+  "popup_action_report_site": {
+    "message": "דיווח על האתר הזה",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "popup_action_settings": {
+    "message": "הגדרות",
+    "description": "Opens the Settings page"
+  },
+  "popup_status_active": {
+    "message": "פעיל",
+    "description": "Status when the extension is processing this page"
+  },
+  "popup_status_global_disabled": {
+    "message": "ההרחבה כבויה",
+    "description": "Status when the global switch is off"
+  },
+  "popup_status_site_excluded": {
+    "message": "מוחרג באתר הזה",
+    "description": "Status when the hostname is in Excluded sites"
+  },
+  "popup_status_site_not_selected": {
+    "message": "לא נבחר עבור האתר הזה",
+    "description": "Status when the hostname is absent from Allowed sites"
+  },
+  "popup_status_inaccessible": {
+    "message": "לא ניתן לפעול בדף הזה",
+    "description": "Status on a browser-restricted or non-HTTP(S) page"
+  },
+  "popup_status_runtime_failed": {
+    "message": "לא ניתן היה לעבד את הדף הזה",
+    "description": "Status when page processing failed"
+  },
+  "popup_status_unknown": {
+    "message": "מצב העיבוד הנוכחי אינו ידוע",
+    "description": "Status after a fail-closed cleanup, without a trailing period"
+  },
+  "popup_status_unavailable": {
+    "message": "ההגדרות אינן זמינות",
+    "description": "Status when settings could not be read"
+  },
+  "popup_site_switch_all_on": {
+    "message": "כיבוי יוסיף את שם המארח הזה לאתרים המוחרגים.",
+    "description": "Effect of the per-site switch: all-sites mode, currently enabled"
+  },
+  "popup_site_switch_all_off": {
+    "message": "הפעלה תסיר את שם המארח הזה מהאתרים המוחרגים.",
+    "description": "Effect of the per-site switch: all-sites mode, currently disabled"
+  },
+  "popup_site_switch_selected_on": {
+    "message": "כיבוי יסיר את שם המארח הזה מהאתרים המורשים.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently enabled"
+  },
+  "popup_site_switch_selected_off": {
+    "message": "הפעלה תוסיף את שם המארח הזה לאתרים המורשים.",
+    "description": "Effect of the per-site switch: selected-sites mode, currently disabled"
+  },
+  "report_error_missing_tab": {
+    "message": "לא נמצא האתר הנוכחי. פתחו שוב את החלון הקופץ ונסו שנית.",
+    "description": "No active tab was available"
+  },
+  "report_error_restricted_page": {
+    "message": "לא ניתן לדווח על הדף הזה. פתחו אתר HTTP או HTTPS.",
+    "description": "The page is browser-restricted"
+  },
+  "report_error_hostname_mismatch": {
+    "message": "האתר הנוכחי השתנה. פתחו שוב את החלון הקופץ ונסו שנית.",
+    "description": "The tab navigated while the report was prepared"
+  },
+  "report_error_private_window": {
+    "message": "לא ניתן היה לפתוח את הדיווח בבטחה בחלון הפרטי הזה.",
+    "description": "Reporting is refused in incognito"
+  },
+  "report_error_browser_unavailable": {
+    "message": "דיווח על אתרים אינו זמין בדפדפן הזה.",
+    "description": "The browser lacks the needed API"
+  },
+  "report_error_invalid_context": {
+    "message": "לא ניתן היה לזהות את האתר או את ההרחבה. פתחו שוב את החלון הקופץ ונסו שנית.",
+    "description": "Site or extension identity was missing"
+  },
+  "report_error_busy": {
+    "message": "דיווח על אתר כבר בתהליך פתיחה.",
+    "description": "A report is already in flight, popup wording"
+  },
+  "report_error_generic": {
+    "message": "לא ניתן היה לפתוח את הדיווח ב-GitHub. נסו שוב.",
+    "description": "Unclassified report failure"
+  },
+  "report_error_busy_options": {
+    "message": "דיווח ב-GitHub כבר בתהליך פתיחה.",
+    "description": "A report is already in flight, Settings wording"
+  },
+  "report_error_browser": {
+    "message": "לא ניתן היה לפתוח את הדיווח ב-GitHub בדפדפן הזה.",
+    "description": "The browser refused to open the report"
+  },
+  "report_error_context": {
+    "message": "לא ניתן היה לפתוח את הדיווח ב-GitHub. בדקו את הקשר הדפדפן ונסו שוב.",
+    "description": "The report context was rejected"
+  },
+  "options_loading": {
+    "message": "טוען הגדרות…",
+    "description": "Placeholder while Settings state loads"
+  },
+  "options_nav_title": {
+    "message": "הגדרות",
+    "description": "Title above the section navigation"
+  },
+  "options_nav_aria": {
+    "message": "מקטעי ההגדרות",
+    "description": "Accessible name of the section tab list"
+  },
+  "appearance_label": {
+    "message": "מראה",
+    "description": "Label of the appearance selector"
+  },
+  "appearance_system": {
+    "message": "מערכת",
+    "description": "Appearance follows the browser"
+  },
+  "appearance_light": {
+    "message": "בהיר",
+    "description": "Forced light appearance"
+  },
+  "appearance_dark": {
+    "message": "כהה",
+    "description": "Forced dark appearance"
+  },
+  "appearance_save_failed": {
+    "message": "לא ניתן היה לשמור את המראה. נסו שוב.",
+    "description": "Appearance write failed"
+  },
+  "sites_heading": {
+    "message": "אתרים",
+    "description": "Sites section heading"
+  },
+  "sites_intro": {
+    "message": "בחרו היכן ההרחבה פועלת, ולאחר מכן נהלו את שמות המארחים המדויקים עבור הכלל הזה.",
+    "description": "Sites section introduction"
+  },
+  "sites_status_enabled": {
+    "message": "העיבוד מופעל באתרים הנתמכים בהתאם למצב ההרצה שלהלן.",
+    "description": "Global switch is on"
+  },
+  "sites_status_paused": {
+    "message": "העיבוד מושהה. מצב ההרצה ושתי רשימות האתרים נשמרים ויחולו ברגע שהעיבוד יופעל.",
+    "description": "Global switch is off"
+  },
+  "sites_run_on_label": {
+    "message": "הרצה על",
+    "description": "Label of the run-mode radio group"
+  },
+  "sites_run_on_hint": {
+    "message": "לכל מצב יש רשימה משלו. מעבר בין מצבים לעולם אינו מעביר שם מארח.",
+    "description": "Hint under the run-mode radio group"
+  },
+  "sites_mode_all_description": {
+    "message": "להריץ בכל מקום פרט לשמות המארחים שברשימת האתרים המוחרגים.",
+    "description": "Description of the all-sites run mode"
+  },
+  "sites_mode_selected_description": {
+    "message": "להריץ רק על שמות המארחים שברשימת האתרים המורשים.",
+    "description": "Description of the selected-sites run mode"
+  },
+  "sites_unavailable": {
+    "message": "הגדרות האתרים אינן זמינות. העיבוד מושבת.",
+    "description": "Sites state could not be read"
+  },
+  "sites_count": {
+    "message": "%count% אתרים|%count% אתר|%count% אתרים",
+    "description": "Number of hostnames in the active list"
+  },
+  "sites_remove_action": {
+    "message": "הסרה",
+    "description": "Removes one hostname from the active list"
+  },
+  "sites_remove_from_excluded_aria": {
+    "message": "הסרת %hostname% מהאתרים המוחרגים",
+    "description": "Accessible name of the remove button in the excluded list"
+  },
+  "sites_remove_from_allowed_aria": {
+    "message": "הסרת %hostname% מהאתרים המורשים",
+    "description": "Accessible name of the remove button in the allowed list"
+  },
+  "sites_added_to_excluded": {
+    "message": "%hostname% נוסף לאתרים המוחרגים.",
+    "description": "Live-region confirmation after adding to the excluded list"
+  },
+  "sites_added_to_allowed": {
+    "message": "%hostname% נוסף לאתרים המורשים.",
+    "description": "Live-region confirmation after adding to the allowed list"
+  },
+  "sites_excluded_description": {
+    "message": "ההרחבה נשארת כבויה בשמות המארחים המדויקים האלה.",
+    "description": "What the excluded list does"
+  },
+  "sites_excluded_field_label": {
+    "message": "החרגת שם מארח",
+    "description": "Label of the add field for the excluded list"
+  },
+  "sites_excluded_submit": {
+    "message": "החרגת אתר",
+    "description": "Submit action for the excluded list"
+  },
+  "sites_excluded_removal_effect": {
+    "message": "הסרת שם מארח מאפשרת להרחבה לפעול בו שוב.",
+    "description": "Effect of removing from the excluded list"
+  },
+  "sites_excluded_empty": {
+    "message": "אין אתרים מוחרגים.",
+    "description": "Empty excluded list"
+  },
+  "sites_allowed_description": {
+    "message": "ההרחבה פועלת רק בשמות המארחים המדויקים האלה.",
+    "description": "What the allowed list does"
+  },
+  "sites_allowed_field_label": {
+    "message": "הרשאת שם מארח",
+    "description": "Label of the add field for the allowed list"
+  },
+  "sites_allowed_submit": {
+    "message": "הרשאת אתר",
+    "description": "Submit action for the allowed list"
+  },
+  "sites_allowed_removal_effect": {
+    "message": "הסרת שם מארח מכבה את ההרחבה בו שוב.",
+    "description": "Effect of removing from the allowed list"
+  },
+  "sites_allowed_empty": {
+    "message": "אין עדיין אתרים מורשים. ההרחבה תישאר כבויה בכל האתרים עד שיתווסף אחד.",
+    "description": "Empty allowed list"
+  },
+  "sites_error_empty": {
+    "message": "הזינו שם מארח.",
+    "description": "The field was submitted empty"
+  },
+  "sites_error_invalid": {
+    "message": "השתמשו בשם מארח מדויק ללא סכימה, פורט או נתיב.",
+    "description": "The typed value is not a bare hostname"
+  },
+  "sites_error_duplicate": {
+    "message": "שם המארח הזה כבר נמצא ברשימה.",
+    "description": "The hostname is already present"
+  },
+  "sites_hostname_hint": {
+    "message": "הזינו שם מארח מדויק ללא ⁦https://⁩ וללא נתיב.",
+    "description": "Hint under the add-hostname field; https:// is a literal"
+  },
+  "display_heading": {
+    "message": "תצוגה",
+    "description": "Display section heading"
+  },
+  "display_intro": {
+    "message": "בחרו כיצד יוצגו התאריכים המדויקים.",
+    "description": "Display section introduction"
+  },
+  "display_loading": {
+    "message": "טוען הגדרות תצוגה…",
+    "description": "Placeholder while display state loads"
+  },
+  "display_format_label": {
+    "message": "תבנית תאריך",
+    "description": "Label of the date-format selector"
+  },
+  "display_format_system": {
+    "message": "מערכת",
+    "description": "Use the browser locale's medium formats"
+  },
+  "display_format_custom": {
+    "message": "תבנית מותאמת אישית",
+    "description": "Use a user-authored Unicode pattern"
+  },
+  "display_pattern_label": {
+    "message": "תבנית עיצוב",
+    "description": "Label of the custom-pattern field"
+  },
+  "display_pattern_examples": {
+    "message": "דוגמאות: yyyy-MM-dd HH:mm · EEEE, d MMMM yyyy",
+    "description": "Example patterns; the Unicode tokens are literals and must not be translated"
+  },
+  "display_zone_label": {
+    "message": "אזור זמן",
+    "description": "Label of the time-zone selector"
+  },
+  "display_zone_system": {
+    "message": "מערכת",
+    "description": "Use the browser's current time zone"
+  },
+  "display_zone_identifier_label": {
+    "message": "מזהה אזור זמן IANA",
+    "description": "Label of the IANA identifier field"
+  },
+  "display_zone_hint": {
+    "message": "הזינו מזהה אזור זמן IANA, לדוגמה America/New_York.",
+    "description": "Hint under the IANA field; the identifier is a literal"
+  },
+  "display_preview_label": {
+    "message": "תצוגה מקדימה",
+    "description": "Accessible name of the formatted preview"
+  },
+  "display_preview_fix_pattern": {
+    "message": "תקנו את התבנית כדי לראות תצוגה מקדימה",
+    "description": "Preview placeholder while the pattern is invalid"
+  },
+  "display_preview_fix_zone": {
+    "message": "תקנו את אזור הזמן כדי לראות תצוגה מקדימה",
+    "description": "Preview placeholder while the zone is invalid"
+  },
+  "display_save_action": {
+    "message": "שמירת הגדרות התצוגה",
+    "description": "Submits the display form"
+  },
+  "display_unavailable_recovering": {
+    "message": "הגדרות התצוגה הנוכחיות אינן זמינות בזמן שחזור מצב העיבוד.",
+    "description": "Display state unavailable after a fail-closed cleanup"
+  },
+  "display_unavailable_disabled": {
+    "message": "הגדרות התצוגה אינן זמינות. העיבוד מושבת.",
+    "description": "Display state unavailable and processing disabled"
+  },
+  "display_error_zone_traversal": {
+    "message": "השתמשו במזהה אזור זמן IANA תקין ללא מעבר בנתיבים.",
+    "description": "The typed zone contained path traversal"
+  },
+  "display_error_zone_invalid": {
+    "message": "השתמשו במזהה אזור זמן IANA תקין, לדוגמה America/New_York.",
+    "description": "The typed zone is malformed"
+  },
+  "display_error_zone_unavailable": {
+    "message": "אזור הזמן הזה אינו זמין בדפדפן הנוכחי. בחרו מזהה אחר.",
+    "description": "The browser does not know the typed zone"
+  },
+  "display_error_zone_rejected": {
+    "message": "אזור הזמן הזה אינו תקין או אינו זמין. הזינו מזהה IANA נתמך ונסו שוב.",
+    "description": "The background rejected the zone"
+  },
+  "display_error_format_invalid": {
+    "message": "תבנית התאריך אינה תקינה. תקנו את התבנית ונסו שוב.",
+    "description": "The background rejected the pattern"
+  },
+  "display_error_zone_saved_unavailable": {
+    "message": "אזור הזמן השמור אינו זמין בדפדפן הזה. בחרו מערכת או אזור נתמך אחר ולאחר מכן שמרו.",
+    "description": "The stored zone no longer resolves"
+  },
+  "display_error_save_failed": {
+    "message": "לא ניתן היה לשמור את הגדרות התצוגה. התבנית הקודמת שלכם נשארת פעילה. נסו שוב.",
+    "description": "The display write failed"
+  },
+  "display_notice_interrupted": {
+    "message": "התגובה נקטעה. הגדרות התצוגה נקראו מחדש.",
+    "description": "The display reply never arrived"
+  },
+  "display_notice_partial_refresh": {
+    "message": "הגדרות התצוגה נשמרו, אך לא ניתן היה לרענן דף פתוח אחד או יותר. תאריכים חדשים ישתמשו בהגדרה שנשמרה.",
+    "description": "Saved, but some pages kept old output"
+  },
+  "display_notice_saved": {
+    "message": "הגדרות התצוגה נשמרו.",
+    "description": "The display write succeeded"
+  },
+  "display_notice_unknown": {
+    "message": "לא ניתן היה לאשר אם הגדרות התצוגה נשמרו. פתחו שוב את ההגדרות ונסו שנית.",
+    "description": "Ambiguous display write outcome"
+  },
+  "display_pattern_error_empty": {
+    "message": "הזינו תבנית לעיצוב תאריך.",
+    "description": "The pattern field was submitted empty"
+  },
+  "display_pattern_error_too_long": {
+    "message": "השתמשו בתבנית תאריך באורך %max% תווים לכל היותר.",
+    "description": "The pattern exceeds the length cap; %max% is a number"
+  },
+  "display_pattern_error_control_chars": {
+    "message": "הסירו תווי בקרה מתבנית התאריך.",
+    "description": "The pattern contains control characters"
+  },
+  "display_pattern_error_unclosed_quote": {
+    "message": "סגרו את הטקסט במרכאות בתבנית התאריך.",
+    "description": "The pattern has an unterminated quote"
+  },
+  "display_pattern_error_no_tokens": {
+    "message": "כללו לפחות אסימון תאריך או שעה אחד, לדוגמה yyyy או HH:mm.",
+    "description": "The pattern has no date or time token; the tokens are literals"
+  },
+  "display_pattern_error_wrong_case": {
+    "message": "השתמשו באסימוני תאריך של Unicode, לדוגמה yyyy במקום YYYY או DD.",
+    "description": "The pattern uses the wrong token case; the tokens are literals"
+  },
+  "display_pattern_error_unsupported": {
+    "message": "השתמשו באסימוני תאריך ושעה נתמכים של Unicode בתבנית.",
+    "description": "The pattern uses an unsupported token"
+  },
+  "display_pattern_error_blank_output": {
+    "message": "תבנית התאריך חייבת להפיק טקסט גלוי.",
+    "description": "The pattern formats to an empty string"
+  },
+  "diagnostics_heading": {
+    "message": "אבחון",
+    "description": "Diagnostics section heading"
+  },
+  "diagnostics_intro": {
+    "message": "היומנים נשארים במכשיר הזה ולעולם אינם נשלחים אוטומטית. צרפו ארכיון שהורדתם לדיווח רק אם תבחרו בכך.",
+    "description": "Diagnostics section introduction"
+  },
+  "diagnostics_loading": {
+    "message": "טוען הגדרות ניפוי שגיאות…",
+    "description": "Placeholder while diagnostics state loads"
+  },
+  "diagnostics_unavailable": {
+    "message": "יומני ניפוי השגיאות אינם זמינים. העיבוד נשאר ללא שינוי.",
+    "description": "Diagnostics state could not be read"
+  },
+  "debug_logs_label": {
+    "message": "יומני ניפוי שגיאות",
+    "description": "Label of the diagnostics switch"
+  },
+  "debug_logs_hint": {
+    "message": "שמרו רישום מקומי מוגבל של מה שההרחבה עשתה בכל דף.",
+    "description": "Hint under the diagnostics switch"
+  },
+  "diagnostics_download": {
+    "message": "הורדת יומנים",
+    "description": "Downloads the diagnostics archive"
+  },
+  "diagnostics_clear": {
+    "message": "ניקוי יומנים",
+    "description": "Deletes retained diagnostics"
+  },
+  "diagnostics_open_issue": {
+    "message": "פתיחת דיווח ב-GitHub",
+    "description": "Opens a prefilled GitHub issue"
+  },
+  "diagnostics_downloaded": {
+    "message": "יומני האבחון הורדו.",
+    "description": "The archive download succeeded"
+  },
+  "diagnostics_cleared": {
+    "message": "יומני האבחון נוקו.",
+    "description": "Retained diagnostics were deleted"
+  },
+  "diagnostics_error_disabled": {
+    "message": "יומני ניפוי השגיאות כבויים. הפעילו אותם כדי להשתמש באבחון השמור.",
+    "description": "Diagnostics are disabled"
+  },
+  "diagnostics_error_empty": {
+    "message": "עדיין אין יומני אבחון להורדה.",
+    "description": "Nothing has been recorded"
+  },
+  "diagnostics_error_unreadable": {
+    "message": "לא ניתן היה לקרוא את יומני האבחון השמורים. נסו שוב מאוחר יותר.",
+    "description": "Storage read failed"
+  },
+  "diagnostics_error_unavailable": {
+    "message": "יומני האבחון אינם זמינים. נסו שוב מאוחר יותר.",
+    "description": "Unclassified diagnostics failure"
+  },
+  "diagnostics_error_no_downloads": {
+    "message": "הורדות מקומיות אינן זמינות בהקשר הזה.",
+    "description": "The context cannot start a download"
+  },
+  "diagnostics_error_archive_empty": {
+    "message": "אין רשומות אבחון להורדה.",
+    "description": "The snapshot held no entries to compress"
+  },
+  "diagnostics_error_archive_create": {
+    "message": "לא ניתן היה ליצור את ארכיון האבחון. נסו שוב מאוחר יותר.",
+    "description": "Compression failed"
+  },
+  "diagnostics_error_archive_download": {
+    "message": "לא ניתן היה להוריד את ארכיון האבחון. נסו שוב מאוחר יותר.",
+    "description": "The browser refused the download"
+  },
+  "diagnostics_error_archive": {
+    "message": "לא ניתן היה להכין את ארכיון האבחון. נסו שוב מאוחר יותר.",
+    "description": "Unclassified archive failure"
+  },
+  "debug_error_save_failed": {
+    "message": "לא ניתן היה לשמור את הגדרת יומני ניפוי השגיאות. נסו שוב.",
+    "description": "The diagnostics write failed"
+  },
+  "debug_error_interrupted": {
+    "message": "התגובה בנוגע ליומני ניפוי השגיאות נקטעה. המצב הנוכחי נטען מחדש.",
+    "description": "The diagnostics reply never arrived"
+  },
+  "debug_error_unknown": {
+    "message": "לא ניתן היה לאשר את הגדרת יומני ניפוי השגיאות. פתחו שוב את ההגדרות ונסו שנית.",
+    "description": "Ambiguous diagnostics write outcome"
+  },
+  "reset_heading": {
+    "message": "איפוס",
+    "description": "Reset section heading"
+  },
+  "reset_intro": {
+    "message": "שחזרו את מצב ההרצה, שתי רשימות האתרים, הגדרות התצוגה, המראה והאבחון לערכי ברירת המחדל. יומני ניפוי השגיאות שנשמרו יימחקו.",
+    "description": "Reset section introduction"
+  },
+  "reset_error_failed": {
+    "message": "לא ניתן היה לאפס את ההגדרות. ההגדרות הנוכחיות שלכם נשארות פעילות. נסו שוב.",
+    "description": "Reset failed while settings were readable"
+  },
+  "reset_error_unknown": {
+    "message": "לא ניתן היה לאשר אם ההגדרות אופסו. פתחו שוב את ההגדרות ובדקו את מצבן הנוכחי.",
+    "description": "Ambiguous reset outcome while settings were readable"
+  },
+  "reset_error_failed_disabled": {
+    "message": "לא ניתן היה לאפס את ההגדרות. העיבוד נשאר מושבת. נסו שוב.",
+    "description": "Reset failed from the recovery panel"
+  },
+  "reset_error_unknown_disabled": {
+    "message": "לא ניתן היה לאשר את התגובה לאיפוס. העיבוד נשאר מושבת. נסו שוב.",
+    "description": "Ambiguous reset outcome from the recovery panel"
+  },
+  "catalog_locale": {
+    "message": "he",
+    "description": "Language tag of this catalog; keep aligned with its directory code"
+  }
+}
