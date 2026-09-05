@@ -1,0 +1,27 @@
+{
+    "locale": "id",
+    "description": {
+        "intro": "No More Ago mengganti label relatif seperti “3 bulan lalu” dengan tanggal yang tepat saat stempel waktu tepercaya tersedia. Tanggal absolut yang sudah ada dan label yang tidak dikenali tetap tidak berubah.",
+        "controls": "Pilih format tanggal dan zona waktu. Aktifkan ekstensi secara global, kecualikan situs tertentu, atau gunakan hanya di situs yang dipilih. Pilih tema sistem, terang, atau gelap.",
+        "compatibility": "Bekerja dengan stempel waktu standar yang didukung dan integrasi situs web tertentu. Kompatibilitas tidak dijamin: perubahan situs dapat memengaruhi dukungan. Tanggal tanpa waktu tetap menjadi tanggal kalender.",
+        "privacy": "Pengaturan tetap berada di browser Anda. Log diagnostik opsional disimpan secara lokal. Fitur Bluesky mengirim permintaan anonim ke API publiknya untuk stempel waktu postingan publik. Tanpa akun atau telemetri."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Rilis pertama: tanggal yang tepat untuk stempel waktu relatif yang didukung, pengaturan tanggal dan zona waktu, kontrol situs, tampilan terang dan gelap, serta antarmuka dalam 40 bahasa."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Lihat kapan itu terjadi",
+            "body": "Ubah stempel waktu relatif yang didukung menjadi tanggal yang tepat."
+        },
+        "control": {
+            "heading": "Tanggal Anda. Pengaturan Anda.",
+            "body": "Pilih format tanggal, zona waktu, dan situs yang sesuai untuk Anda."
+        },
+        "appearance": {
+            "heading": "Nyaman dalam terang dan gelap",
+            "body": "Gunakan tema sistem atau pilih tema favorit Anda."
+        }
+    }
+}

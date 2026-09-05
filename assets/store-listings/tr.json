@@ -1,0 +1,27 @@
+{
+    "locale": "tr",
+    "description": {
+        "intro": "No More Ago, güvenilir bir zaman damgası bulunduğunda “3 ay önce” gibi göreli etiketleri tam tarihlerle değiştirir. Mevcut mutlak tarihler ve tanınmayan etiketler değişmeden kalır.",
+        "controls": "Tarih biçimini ve saat dilimini seçin. Uzantıyı genel olarak etkinleştirin, belirli siteleri hariç tutun veya yalnızca seçili sitelerde kullanın. Sistem, açık veya koyu görünümü seçin.",
+        "compatibility": "Desteklenen standart zaman damgaları ve belirli web sitesi entegrasyonlarıyla çalışır. Uyumluluk garanti edilmez: web sitelerindeki değişiklikler desteği etkileyebilir. Saat içermeyen tarihler takvim tarihi olarak kalır.",
+        "privacy": "Ayarlar tarayıcınızda kalır. İsteğe bağlı tanılama günlükleri yerel olarak saklanır. Bluesky desteği, herkese açık gönderilerin zaman damgalarını almak için hizmetin herkese açık API'sine anonim istekler gönderir. Hesap veya telemetri yoktur."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "İlk sürüm: desteklenen göreli zaman damgaları için tam tarihler, tarih ve saat dilimi ayarları, site denetimleri, açık ve koyu görünüm ve 40 dilde arayüz."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Ne zaman olduğunu görün",
+            "body": "Desteklenen göreli zaman damgalarını tam tarihlere dönüştürün."
+        },
+        "control": {
+            "heading": "Sizin tarihleriniz. Sizin ayarlarınız.",
+            "body": "Size uygun tarih biçimini, saat dilimini ve siteleri seçin."
+        },
+        "appearance": {
+            "heading": "Açık ve koyu temada rahatlık",
+            "body": "Sistem görünümünü kullanın veya tercih ettiğiniz temayı seçin."
+        }
+    }
+}

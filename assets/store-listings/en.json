@@ -1,0 +1,27 @@
+{
+    "locale": "en",
+    "description": {
+        "intro": "No More Ago replaces relative labels such as “3 months ago” with exact dates when a trustworthy timestamp is available. Existing absolute dates and unrecognized labels stay unchanged.",
+        "controls": "Choose your date format and time zone. Enable the extension globally, exclude individual sites, or run it only on selected sites. Switch between system, light and dark appearance.",
+        "compatibility": "Works with supported standard timestamps and selected website integrations. Compatibility is best-effort: website changes can affect support. Dates without a time remain calendar dates.",
+        "privacy": "Settings stay in your browser. Optional diagnostic logs are stored locally. Bluesky support makes anonymous requests to its public API for public post timestamps. No accounts or telemetry."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "First release: exact dates for supported relative timestamps, date and time-zone settings, site controls, light and dark appearance, and an interface in 40 languages."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "See when it happened",
+            "body": "Turn supported relative timestamps into exact dates."
+        },
+        "control": {
+            "heading": "Your dates. Your settings.",
+            "body": "Choose the date format, time zone and sites that work for you."
+        },
+        "appearance": {
+            "heading": "At home in light and dark",
+            "body": "Use the system appearance or choose your preferred theme."
+        }
+    }
+}

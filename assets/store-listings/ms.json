@@ -1,0 +1,27 @@
+{
+    "locale": "ms",
+    "description": {
+        "intro": "No More Ago menggantikan label relatif seperti “3 bulan lalu” dengan tarikh tepat apabila cap masa yang boleh dipercayai tersedia. Tarikh mutlak sedia ada dan label yang tidak dikenali kekal tidak berubah.",
+        "controls": "Pilih format tarikh dan zon waktu. Aktifkan sambungan secara menyeluruh, kecualikan laman tertentu atau gunakannya hanya pada laman yang dipilih. Pilih penampilan sistem, cerah atau gelap.",
+        "compatibility": "Berfungsi dengan cap masa standard yang disokong dan integrasi laman web tertentu. Keserasian tidak dijamin: perubahan laman web boleh menjejaskan sokongan. Tarikh tanpa waktu kekal sebagai tarikh kalendar.",
+        "privacy": "Tetapan kekal dalam pelayar anda. Log diagnostik pilihan disimpan secara setempat. Ciri sokongan Bluesky menghantar permintaan tanpa nama kepada API awamnya untuk cap masa siaran awam. Tiada akaun atau telemetri."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Keluaran pertama: tarikh tepat untuk cap masa relatif yang disokong, tetapan tarikh dan zon waktu, kawalan laman, penampilan cerah dan gelap serta antara muka dalam 40 bahasa."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Lihat bila ia berlaku",
+            "body": "Tukar cap masa relatif yang disokong kepada tarikh tepat."
+        },
+        "control": {
+            "heading": "Tarikh anda. Tetapan anda.",
+            "body": "Pilih format tarikh, zon waktu dan laman yang sesuai untuk anda."
+        },
+        "appearance": {
+            "heading": "Selesa dengan penampilan cerah dan gelap",
+            "body": "Gunakan penampilan sistem atau pilih tema kegemaran anda."
+        }
+    }
+}

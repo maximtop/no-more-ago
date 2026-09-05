@@ -1,0 +1,27 @@
+{
+    "locale": "ro",
+    "description": {
+        "intro": "No More Ago înlocuiește etichetele relative precum „acum 3 luni” cu date exacte atunci când este disponibil un marcaj de timp de încredere. Datele absolute existente și etichetele nerecunoscute rămân neschimbate.",
+        "controls": "Alegeți formatul datei și fusul orar. Activați extensia global, excludeți anumite site-uri sau folosiți-o doar pe site-urile selectate. Alegeți aspectul sistemului, luminos sau întunecat.",
+        "compatibility": "Funcționează cu marcaje de timp standard acceptate și anumite integrări cu site-uri. Compatibilitatea nu este garantată: modificările site-urilor pot afecta funcționarea. Datele fără oră rămân date calendaristice.",
+        "privacy": "Setările rămân în browser. Jurnalele de diagnosticare opționale sunt stocate local. Suportul pentru Bluesky trimite cereri anonime către API-ul său public pentru marcajele de timp ale postărilor publice. Fără conturi sau telemetrie."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Prima versiune: date exacte pentru marcajele de timp relative acceptate, setări pentru dată și fus orar, controlul site-urilor, aspect luminos și întunecat și interfață în 40 de limbi."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Vedeți când s-a întâmplat",
+            "body": "Transformați marcajele de timp relative acceptate în date exacte."
+        },
+        "control": {
+            "heading": "Datele dvs. Setările dvs.",
+            "body": "Alegeți formatul datei, fusul orar și site-urile potrivite."
+        },
+        "appearance": {
+            "heading": "Confort atât cu tema luminoasă, cât și cu cea întunecată",
+            "body": "Folosiți aspectul sistemului sau alegeți tema preferată."
+        }
+    }
+}

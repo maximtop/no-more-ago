@@ -1,0 +1,27 @@
+{
+    "locale": "hr",
+    "description": {
+        "intro": "No More Ago zamjenjuje relativne oznake poput „prije 3 mjeseca” točnim datumima kada je dostupna pouzdana vremenska oznaka. Postojeći apsolutni datumi i neprepoznate oznake ostaju nepromijenjeni.",
+        "controls": "Odaberite format datuma i vremensku zonu. Uključite proširenje globalno, izuzmite pojedinačna web-mjesta ili ga koristite samo na odabranim web-mjestima. Odaberite izgled sustava, svijetli ili tamni izgled.",
+        "compatibility": "Radi s podržanim standardnim vremenskim oznakama i odabranim integracijama web-mjesta. Kompatibilnost nije zajamčena: promjene web-mjesta mogu utjecati na podršku. Datumi bez vremena ostaju kalendarski datumi.",
+        "privacy": "Postavke ostaju u vašem pregledniku. Neobavezni dijagnostički zapisi pohranjuju se lokalno. Podrška za Bluesky šalje anonimne zahtjeve njegovu javnom API-ju za dohvat vremenskih oznaka javnih objava. Bez računa ili telemetrije."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Prvo izdanje: točni datumi za podržane relativne vremenske oznake, postavke datuma i vremenske zone, upravljanje web-mjestima, svijetli i tamni izgled te sučelje na 40 jezika."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Pogledajte kada se dogodilo",
+            "body": "Pretvorite podržane relativne vremenske oznake u točne datume."
+        },
+        "control": {
+            "heading": "Vaši datumi. Vaše postavke.",
+            "body": "Odaberite format datuma, vremensku zonu i web-mjesta koja vam odgovaraju."
+        },
+        "appearance": {
+            "heading": "Ugodno uz svijetlu i tamnu temu",
+            "body": "Koristite izgled sustava ili odaberite željenu temu."
+        }
+    }
+}

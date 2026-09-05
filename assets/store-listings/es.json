@@ -1,0 +1,27 @@
+{
+    "locale": "es",
+    "description": {
+        "intro": "No More Ago sustituye etiquetas relativas como «hace 3 meses» por fechas exactas cuando hay una marca de tiempo fiable. Las fechas absolutas existentes y las etiquetas no reconocidas no cambian.",
+        "controls": "Elige el formato de fecha y la zona horaria. Activa la extensión globalmente, excluye sitios concretos o úsala solo en los sitios seleccionados. Usa la apariencia del sistema o elige una apariencia clara u oscura.",
+        "compatibility": "Funciona con marcas de tiempo estándar compatibles y determinadas integraciones con sitios web. La compatibilidad no está garantizada: los cambios en los sitios pueden afectarla. Las fechas sin hora siguen siendo fechas de calendario.",
+        "privacy": "Los ajustes permanecen en tu navegador. Los registros de diagnóstico opcionales se guardan localmente. Para obtener las marcas de tiempo de publicaciones públicas de Bluesky, la extensión realiza solicitudes anónimas a la API pública de Bluesky. Sin cuentas ni telemetría."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Primera versión: fechas exactas para marcas de tiempo relativas compatibles, ajustes de fecha y zona horaria, control de sitios, apariencia clara y oscura e interfaz en 40 idiomas."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Descubre cuándo ocurrió",
+            "body": "Convierte las marcas de tiempo relativas compatibles en fechas exactas."
+        },
+        "control": {
+            "heading": "Tus fechas. Tus ajustes.",
+            "body": "Elige el formato de fecha, la zona horaria y los sitios que prefieras."
+        },
+        "appearance": {
+            "heading": "A gusto en claro y en oscuro",
+            "body": "Usa la apariencia del sistema o elige tu tema preferido."
+        }
+    }
+}

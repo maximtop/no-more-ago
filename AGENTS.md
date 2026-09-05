@@ -110,6 +110,10 @@ has an obvious, simpler standard-library replacement.
 ├── .github/
 │   ├── actions/                # Composite toolchain setup shared by workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
+├── assets/
+│   ├── store-listings/         # 40 canonical locale listing catalogs
+│   └── store/                  # Review evidence, captures, Chrome images and Retina masters
+├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
@@ -132,6 +136,7 @@ has an obvious, simpler standard-library replacement.
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
 │       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
+│   ├── store/                  # Offline listing validation, rendering, image export
 │   ├── build.ts                # Build command entry point
 │   ├── validate-locales.ts     # Catalog integrity check run by pnpm check
 │   ├── audit-locales.ts        # Release-time hardcoded-copy and orphan-key audit
@@ -168,7 +173,10 @@ Run commands from the repository root.
 | `pnpm lint` | Run ESLint, formatting rules, and JSDoc checks. |
 | `pnpm typecheck` | Run TypeScript without emitting files. |
 | `pnpm test` | Run the Vitest suite once. |
-| `pnpm check` | Run lint, type checking, and tests. |
+| `pnpm store:validate` | Validate all 40 Chrome listing catalogs; review state is informational. |
+| `pnpm store:render chrome <locale>` | Print paste-ready Chrome listing text. |
+| `pnpm store:assets` | Rebuild English Chrome images from maintained captures and captions. |
+| `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development
 and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
@@ -517,6 +525,13 @@ Known architectural exclusions to improve when their area changes:
   exceed 80 characters when wrapping would make it unreadable.
 
 ### Other
+
+- Keep store-listing tooling under `scripts/store`, outside runtime bundles.
+  Reuse the UI locale registry and manifest copy. Review translations with an
+  independent agent and bind evidence to the source and translated content;
+  missing or stale review status must not block `pnpm check`. Shared URLs and
+  English screenshot captions have one maintained source. Store field limits
+  need dated official evidence; distinguish editorial budgets from store rules.
 
 - Keep source copy and translator notes in the English catalog; translate
   user-facing copy through the shipped UI catalogs.

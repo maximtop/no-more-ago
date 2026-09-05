@@ -1,0 +1,27 @@
+{
+    "locale": "hu",
+    "description": {
+        "intro": "A No More Ago a relatív feliratokat, például a „3 hónapja” szöveget pontos dátumokra cseréli, ha megbízható időbélyeg áll rendelkezésre. A meglévő abszolút dátumok és a fel nem ismert feliratok változatlanok maradnak.",
+        "controls": "Válassza ki a dátumformátumot és az időzónát. Engedélyezze a bővítményt globálisan, zárjon ki egyes webhelyeket, vagy használja csak a kiválasztott webhelyeken. Válasszon rendszer szerinti, világos vagy sötét megjelenést.",
+        "compatibility": "Támogatott szabványos időbélyegekkel és egyes webhely-integrációkkal működik. A kompatibilitás nem garantált: a webhelyek változásai befolyásolhatják a támogatást. Az időpont nélküli dátumok naptári dátumok maradnak.",
+        "privacy": "A beállítások a böngészőben maradnak. Az opcionális diagnosztikai naplók helyben tárolódnak. A Bluesky támogatása névtelen kéréseket küld a szolgáltatás nyilvános API-jának a nyilvános bejegyzések időbélyegeinek lekéréséhez. Fiókok és telemetria nélkül."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Első kiadás: pontos dátumok a támogatott relatív időbélyegekhez, dátum- és időzóna-beállítások, webhelyvezérlés, világos és sötét megjelenés, valamint felület 40 nyelven."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Lássa, mikor történt",
+            "body": "Alakítsa a támogatott relatív időbélyegeket pontos dátumokká."
+        },
+        "control": {
+            "heading": "Az Ön dátumai. Az Ön beállításai.",
+            "body": "Válassza ki a megfelelő dátumformátumot, időzónát és webhelyeket."
+        },
+        "appearance": {
+            "heading": "Otthonosan világosban és sötétben",
+            "body": "Használja a rendszer megjelenését, vagy válassza ki kedvenc témáját."
+        }
+    }
+}

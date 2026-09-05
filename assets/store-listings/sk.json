@@ -1,0 +1,27 @@
+{
+    "locale": "sk",
+    "description": {
+        "intro": "No More Ago nahrádza relatívne popisy ako „pred 3 mesiacmi“ presnými dátumami, keď je k dispozícii dôveryhodný časový údaj. Existujúce absolútne dátumy a nerozpoznané popisy zostávajú nezmenené.",
+        "controls": "Vyberte formát dátumu a časové pásmo. Zapnite rozšírenie globálne, vylúčte jednotlivé weby alebo ho používajte iba na vybraných weboch. Vyberte systémový, svetlý alebo tmavý vzhľad.",
+        "compatibility": "Funguje s podporovanými štandardnými časovými údajmi a vybranými integráciami webov. Kompatibilita nie je zaručená: zmeny webov môžu ovplyvniť podporu. Dátumy bez času zostávajú kalendárnymi dátumami.",
+        "privacy": "Nastavenia zostávajú v prehliadači. Voliteľné diagnostické záznamy sa ukladajú lokálne. Podpora Bluesky odosiela anonymné požiadavky na jeho verejné API na získanie časových údajov verejných príspevkov. Bez účtov a telemetrie."
+    },
+    "release": {
+        "version": "0.1.0",
+        "text": "Prvé vydanie: presné dátumy pre podporované relatívne časové údaje, nastavenia dátumu a časového pásma, ovládanie webov, svetlý a tmavý vzhľad a rozhranie v 40 jazykoch."
+    },
+    "captions": {
+        "replacement": {
+            "heading": "Pozrite sa, kedy sa to stalo",
+            "body": "Premeňte podporované relatívne časové údaje na presné dátumy."
+        },
+        "control": {
+            "heading": "Vaše dátumy. Vaše nastavenia.",
+            "body": "Vyberte si vhodný formát dátumu, časové pásmo a weby."
+        },
+        "appearance": {
+            "heading": "Ako doma vo svetlej aj tmavej téme",
+            "body": "Použite systémový vzhľad alebo si vyberte obľúbenú tému."
+        }
+    }
+}

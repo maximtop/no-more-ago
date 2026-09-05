@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { validator } from "@adguard/translate";
 import { BASE_UI_LOCALE, CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from "../src/shared/i18n/locales.ts";
+import { MANIFEST_DESCRIPTION_LIMIT } from "../src/shared/i18n/catalog-limits.ts";
 
 /**
  * One entry as stored in a WebExtension message catalog.
@@ -23,7 +24,6 @@ interface CatalogEntry {
 }
 
 const EXPECTED_LOCALE_COUNT = 40;
-const MANIFEST_DESCRIPTION_LIMIT = 132;
 const LOCALES_ROOT = path.join(import.meta.dirname, "../src/_locales");
 
 const failures: string[] = [];
