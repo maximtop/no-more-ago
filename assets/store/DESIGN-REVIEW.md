@@ -45,5 +45,4 @@ set consistent in typography, color, spacing and framing, with no required
 changes remaining.
 
 English master captions and the 39 reviewed translations are unchanged. Store
-uploads remain 1280×800; independent 2560×1600 browser-rendered masters are
-provided for Retina inspection. No store publication operation was performed.
+uploads remain 1280×800. No store publication operation was performed.

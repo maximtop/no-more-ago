@@ -112,7 +112,7 @@ has an obvious, simpler standard-library replacement.
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── assets/
 │   ├── store-listings/         # 40 canonical locale listing catalogs
-│   └── store/                  # Review evidence, captures, Chrome images and Retina masters
+│   └── store/                  # Review evidence, captures, Chrome images
 ├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs

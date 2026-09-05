@@ -10,6 +10,3 @@ const output = path.join(STORE_ROOT, "assets/store/chrome");
 const captures = path.join(STORE_ROOT, "assets/store/captures");
 renderStoreArtwork(catalogs.listings.en!, captures, output);
 console.log(`English Chrome images written to ${output}`);
-const masters = path.join(STORE_ROOT, "assets/store/masters");
-renderStoreArtwork(catalogs.listings.en!, path.join(captures, "2x"), masters, 2);
-console.log(`Retina preview masters written to ${masters}`);

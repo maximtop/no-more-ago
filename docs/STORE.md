@@ -48,7 +48,6 @@ structural and domain constraints, not translation quality or store approval.
 | Original icon | `src/assets/icons/icon.svg` |
 | Sanitized capture sources | `assets/store/captures/` |
 | English store-ready images | `assets/store/chrome/` |
-| Retina preview masters (not store uploads) | `assets/store/masters/` |
 
 English defines the product claims. Localized catalogs retain the same
 paragraphs, release notes and caption roles. Product names, domains and other
@@ -107,16 +106,14 @@ promotional tile is global, as specified by Chrome.
 Capture the actual extension using a clean local demonstration after obtaining
 permission for browser work. Save seven raw PNG inputs under
 `assets/store/captures/`: `before.png`, `after.png`, `format.png`, `zone.png`,
-`preview.png`, `popup-light.png` and `popup-dark.png`, plus their Retina
-counterparts in `2x/`. The maintained demonstration is
-`assets/store/demo.html`. Do not use private account content.
+`preview.png`, `popup-light.png` and `popup-dark.png`. The maintained
+demonstration is `assets/store/demo.html`. Do not use private account content.
 
 Run `pnpm store:assets` to combine the seven raw captures directly with English
 catalog captions and the existing icon. Captures retain their native pixel
 size at integer coordinates, with no intermediate raster or resizing. Oversize
 inputs fail with a recapture instruction. Use the pixel dimensions in the
-capture record. The same command produces separate 2560×1600 Retina previews
-in `assets/store/masters/`; upload the 1280×800 files from `chrome/`.
+capture record. Upload the 1280×800 files from `chrome/`.
 Composition uses locally installed Arial and Georgia fonts;
 use the same font environment for identical output. Inspect all
 three final images at full size and at 640×400 for clipping and readability.

@@ -34,12 +34,10 @@ function imageData(file: string): string {
  *
  * @param output - Destination path.
  * @param svg - Complete artwork source.
- * @param pixelRatio - Output pixels per layout unit.
  */
-function writePng(output: string, svg: string, pixelRatio: 1 | 2 = 1): void {
+function writePng(output: string, svg: string): void {
     writeFileSync(output, new Resvg(svg, {
         font: { loadSystemFonts: true, defaultFontFamily: "Arial" },
-        fitTo: { mode: "zoom", value: pixelRatio },
     }).render().asPng());
 }
 
@@ -51,7 +49,6 @@ function writePng(output: string, svg: string, pixelRatio: 1 | 2 = 1): void {
  * @param top - Top edge of the available rectangle in layout units.
  * @param width - Available width in layout units.
  * @param height - Available height in layout units.
- * @param pixelRatio - Capture and output pixels per layout unit.
  * @param alignTop - Whether a detail crop aligns with the top of its card.
  * @returns - SVG image without raster scaling.
  */
@@ -61,14 +58,13 @@ function capturePanel(
     top: number,
     width: number,
     height: number,
-    pixelRatio: 1 | 2,
     alignTop = false,
 ): string {
     const png = readFileSync(file);
-    const captureWidth = png.readUInt32BE(16) / pixelRatio;
-    const captureHeight = png.readUInt32BE(20) / pixelRatio;
+    const captureWidth = png.readUInt32BE(16);
+    const captureHeight = png.readUInt32BE(20);
     if (captureWidth > width || captureHeight > height) {
-        const bounds = `${width * pixelRatio}×${height * pixelRatio}`;
+        const bounds = `${width}×${height}`;
         throw new Error(
             `${file} does not fit at native pixel size; recapture within ${bounds}.`,
         );
@@ -84,23 +80,21 @@ function capturePanel(
  *
  * @param key - Screenshot role.
  * @param captures - Raw browser capture directory.
- * @param pixelRatio - Capture and output pixels per layout unit.
  * @returns - Native-size capture content in the screenshot's inner rectangle.
  */
 function screenshotContent(
     key: (typeof CAPTION_KEYS)[number],
     captures: string,
-    pixelRatio: 1 | 2,
 ): string {
     if (key === "control") {
         const format = capturePanel(
-            path.join(captures, "format.png"), 84, 256, 519, 251, pixelRatio, true,
+            path.join(captures, "format.png"), 84, 256, 519, 251, true,
         );
         const zone = capturePanel(
-            path.join(captures, "zone.png"), 678, 256, 519, 251, pixelRatio, true,
+            path.join(captures, "zone.png"), 678, 256, 519, 251, true,
         );
         const preview = capturePanel(
-            path.join(captures, "preview.png"), 125, 590, 1031, 149, pixelRatio,
+            path.join(captures, "preview.png"), 125, 590, 1031, 149,
         );
         return `<rect x="64" y="236" width="558" height="292" rx="16"
                 fill="#f6f9fc" stroke="#d6e0da" filter="url(#card-shadow)"/>
@@ -112,10 +106,10 @@ function screenshotContent(
     }
     if (key === "replacement") {
         const before = capturePanel(
-            path.join(captures, "before.png"), 96, 298, 470, 239, pixelRatio,
+            path.join(captures, "before.png"), 96, 298, 470, 239,
         );
         const after = capturePanel(
-            path.join(captures, "after.png"), 714, 410, 470, 239, pixelRatio,
+            path.join(captures, "after.png"), 714, 410, 470, 239,
         );
         return `<text x="72" y="253" fill="#b8cabc" font-size="22"
                 font-weight="700">Before</text>
@@ -134,10 +128,10 @@ function screenshotContent(
                 stroke-linejoin="round"/>`;
     }
     const light = capturePanel(
-        path.join(captures, "popup-light.png"), 118, 232, 445, 522, pixelRatio,
+        path.join(captures, "popup-light.png"), 118, 232, 445, 522,
     );
     const dark = capturePanel(
-        path.join(captures, "popup-dark.png"), 718, 232, 445, 522, pixelRatio,
+        path.join(captures, "popup-dark.png"), 718, 232, 445, 522,
     );
     return `<text x="110" y="207" fill="#d9e6dc" font-size="22"
             font-weight="700">Light</text>
@@ -157,19 +151,17 @@ function screenshotContent(
  * @param listing - English source catalog.
  * @param captures - Directory containing the seven raw browser captures.
  * @param output - Output image directory.
- * @param pixelRatio - One for store images; two for separately captured Retina masters.
  */
 export function renderStoreArtwork(
     listing: StoreListing,
     captures: string,
     output: string,
-    pixelRatio: 1 | 2 = 1,
 ): void {
     if (listing.locale !== "en") {
         throw new Error("Store artwork currently supports English only.");
     }
     // Load all captures before writing so missing inputs cannot yield a partial package.
-    const screenshots = CAPTION_KEYS.map((key) => screenshotContent(key, captures, pixelRatio));
+    const screenshots = CAPTION_KEYS.map((key) => screenshotContent(key, captures));
     const iconPath = path.join(STORE_ROOT, "src/assets/icons/icon-128.png");
     const icon = imageData(iconPath);
     mkdirSync(output, { recursive: true });
@@ -198,11 +190,9 @@ export function renderStoreArtwork(
                 font-size="23">${escapeXml(body)}</text>
             ${screenshots[index]}
         </svg>`;
-        writePng(path.join(output, `${key}.png`), svg, pixelRatio);
+        writePng(path.join(output, `${key}.png`), svg);
     });
-    if (pixelRatio === 1) {
-        renderStoreBrandArtwork(output);
-    }
+    renderStoreBrandArtwork(output);
 }
 
 /**
