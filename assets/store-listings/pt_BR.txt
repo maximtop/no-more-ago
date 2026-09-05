@@ -1,0 +1,10 @@
+No More Ago substitui indicações relativas como “há 3 meses” por datas exatas quando há uma marcação de tempo confiável. Datas absolutas existentes e indicações não reconhecidas permanecem inalteradas.
+
+Escolha o formato de data e o fuso horário. Ative a extensão globalmente, exclua sites específicos ou use-a apenas nos sites selecionados. Use a aparência do sistema ou escolha uma aparência clara ou escura.
+
+Funciona com marcações de tempo padrão compatíveis e determinadas integrações com sites. A compatibilidade não é garantida: alterações nos sites podem afetá-la. Datas sem horário continuam sendo datas de calendário.
+
+As configurações ficam no seu navegador. Registros de diagnóstico opcionais são armazenados localmente. O suporte ao Bluesky faz solicitações anônimas à API pública do Bluesky para obter datas e horários de publicações públicas. Sem contas nem telemetria.
+
+0.1.0
+Primeira versão: datas exatas para marcações de tempo relativas compatíveis, configurações de data e fuso horário, controle de sites, aparência clara e escura e interface em 40 idiomas.

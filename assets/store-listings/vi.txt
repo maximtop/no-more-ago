@@ -1,0 +1,10 @@
+No More Ago thay các nhãn tương đối như “3 tháng trước” bằng ngày chính xác khi có dấu thời gian đáng tin cậy. Ngày đã được ghi cụ thể và các nhãn không nhận diện được vẫn giữ nguyên.
+
+Chọn định dạng ngày và múi giờ. Bật tiện ích trên toàn trình duyệt, loại trừ từng trang hoặc chỉ dùng trên các trang đã chọn. Chọn giao diện theo hệ thống, sáng hoặc tối.
+
+Hoạt động với các dấu thời gian tiêu chuẩn được hỗ trợ và một số tích hợp trang web. Khả năng tương thích không được bảo đảm: thay đổi của trang web có thể ảnh hưởng đến hỗ trợ. Ngày không có giờ vẫn là ngày theo lịch.
+
+Cài đặt được giữ trong trình duyệt. Nhật ký chẩn đoán tùy chọn được lưu cục bộ. Tính năng hỗ trợ Bluesky gửi yêu cầu ẩn danh tới API công khai của dịch vụ để lấy dấu thời gian của bài đăng công khai. Không có tài khoản hay dữ liệu đo từ xa.
+
+0.1.0
+Bản phát hành đầu tiên: ngày chính xác cho dấu thời gian tương đối được hỗ trợ, cài đặt ngày và múi giờ, kiểm soát trang web, giao diện sáng và tối, cùng giao diện bằng 40 ngôn ngữ.

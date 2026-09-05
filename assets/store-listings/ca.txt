@@ -1,0 +1,10 @@
+No More Ago substitueix etiquetes relatives com ara «fa 3 mesos» per dates exactes quan hi ha una marca de temps fiable. Les dates absolutes existents i les etiquetes no reconegudes no canvien.
+
+Trieu el format de data i la zona horària. Activeu l’extensió globalment, excloeu llocs concrets o feu-la servir només als llocs seleccionats. Trieu l’aparença del sistema, clara o fosca.
+
+Funciona amb marques de temps estàndard compatibles i determinades integracions amb llocs web. La compatibilitat no està garantida: els canvis als llocs poden afectar-la. Les dates sense hora continuen sent dates de calendari.
+
+La configuració es desa al navegador. Els registres de diagnòstic opcionals es desen localment. La compatibilitat amb Bluesky fa peticions anònimes a la seva API pública per obtenir marques de temps de publicacions públiques. Sense comptes ni telemetria.
+
+0.1.0
+Primera versió: dates exactes per a marques de temps relatives compatibles, configuració de data i zona horària, control de llocs, aparença clara i fosca i interfície en 40 idiomes.

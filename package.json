@@ -18,9 +18,7 @@
     "test": "vitest run",
     "locales:validate": "node --experimental-strip-types scripts/validate-locales.ts",
     "locales:audit": "node --experimental-strip-types scripts/audit-locales.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm locales:validate && pnpm store:validate && pnpm test",
-    "store:validate": "node --experimental-strip-types scripts/store/cli.ts validate",
-    "store:render": "node --experimental-strip-types scripts/store/cli.ts render"
+    "check": "pnpm lint && pnpm typecheck && pnpm locales:validate && pnpm test"
   },
   "dependencies": {
     "@adguard/translate": "2.0.8",

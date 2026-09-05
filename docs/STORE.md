@@ -13,39 +13,28 @@ under `assets/store/chrome/`. Screenshots use actual Chrome release-build
 captures from a clean local demonstration and passed independent designer
 review on 2026-09-05.
 
-## Prepare and inspect
+## Use the descriptions
 
-From the repository root:
-
-```sh
-pnpm store:validate
-pnpm store:render chrome en
-pnpm store:render chrome ru
-pnpm store:render chrome nb
-```
-
-The renderer writes field values with clear headings to stdout. Copy the value
-under the appropriate heading, excluding the heading and operational notes.
-Initial-release notes are appended to the detailed description.
-
-Validation is offline and also runs in `pnpm check`. It checks locale coverage,
-required text, product names, release versions, and field budgets. Translation
-quality is checked by an independent agent when the copy changes.
+Open `assets/store-listings/<locale>.txt` and paste its full contents into the
+Chrome dashboard's detailed-description field. Each file contains the complete
+localized description and initial-release notes, with no processing required.
+The English file is `en.txt`; use `nb.txt` for Chrome's Norwegian locale `no`.
+Name and short description come from the extension manifest's locale messages.
+Review translation changes with an independent agent.
 
 ## Maintained sources
 
 | Material | Source |
 | --- | --- |
-| English master and 39 translations | `assets/store-listings/<locale>.json` |
+| English master and 39 translations | `assets/store-listings/<locale>.txt` |
 | Manifest name and summary | `src/_locales/<locale>/messages.json` |
 | Locale set and Norwegian alias | `src/shared/i18n/locales.ts` |
-| Shared links and budgets | `scripts/store/contracts.ts` |
 | English privacy document | `docs/PRIVACY.md` |
 | English support document | `docs/SUPPORT.md` |
 | Original icon | `src/assets/icons/icon.svg` |
 | English store-ready images | `assets/store/chrome/` |
 
-English defines the product claims. Localized catalogs retain the same
+English defines the product claims. Localized descriptions retain the same
 paragraphs and release notes. Product names, domains and other
 technical literals stay unchanged. There is no independent copy of privacy
 policy prose in each translation. Store content is not shipped in runtime
@@ -62,7 +51,7 @@ Verified against official documentation on 2026-09-05.
 | Detailed description | Four paragraphs plus current release notes | 4,000-character project editorial budget |
 | Language | Canonical registry plus explicit Chromium alias | 39 direct mappings; `nb` → `no` |
 | Category | Select the appropriate current dashboard category | No category identifier fabricated locally |
-| Homepage/support/privacy URLs | Shared link contract | HTTPS; public availability checked separately |
+| Homepage/support/privacy URLs | Links below | Public availability checked separately |
 | Icon | Existing brand export | 128×128 PNG |
 | Screenshots | Three English images | 1280×800 each; within the allowed 1–5 |
 | Small promotional tile | English visual package | 440×280; global, not locale-specific |
@@ -72,8 +61,7 @@ Verified against official documentation on 2026-09-05.
 The 4,000-character long-description budget is an editorial choice, not a
 verified Chrome dashboard maximum. The retrieved official listing guide does
 not state that maximum. Confirm any additional field restrictions when the
-real listing is created. Do not label the offline validator as a complete
-simulation of the dashboard.
+real listing is created.
 
 Official pages differ in their wording about whether video is required. The
 image-specific page identifies the icon, small tile and screenshot as mandatory.
@@ -89,9 +77,8 @@ ar bg bn ca cs da de el en es es_419 fa fi fil fr he hi hr hu id it
 ja ko ms nl pl pt_BR pt_PT ro ru sk sr sv th tr uk vi zh_CN zh_TW
 ```
 
-The remaining canonical code is `nb`, which renders to Chrome's `no` locale.
-There is one Norwegian translation, not separate `nb` and `no` catalogs.
-Unknown locale requests fail rather than silently returning English.
+Use `nb.txt` for Chrome's `no` locale; all other filenames match the locale
+codes above.
 
 Use the English screenshot set and promotional tile as the global images.
 
@@ -113,17 +100,14 @@ Before/After arrow are promotional annotations outside the captured interface.
 
 ## Shared links and publication state
 
-The shared contract uses the project's GitHub repository for the homepage and
-its issue tracker for support. Those destinations match existing project
-references. The intended privacy URL points to `docs/PRIVACY.md` on `master`.
-This change alone does not publish that document. After the documents are
-merged/published, verify all three destinations from a signed-out context and
-confirm that the privacy document is publicly readable before filling a live
-listing. Offline validation checks syntax and consistency, not availability.
+- Homepage: https://github.com/maximtop/no-more-ago
+- Support: https://github.com/maximtop/no-more-ago/issues
+- Intended privacy URL: https://github.com/maximtop/no-more-ago/blob/master/docs/PRIVACY.md
 
-No new website, hosting deployment, store item ID, or verified publisher status
-is assumed. A dedicated public landing page can replace the shared destination
-later without translating its URL in every catalog.
+After these documents are merged, verify all three links from a signed-out
+context before filling the listing. The privacy document must be publicly
+readable. Uploads and submissions use the existing `go-webext` workflow
+in [the development guide](../DEVELOPMENT.md#store-configuration).
 
 ## Chrome privacy and permission copy
 

@@ -46,12 +46,10 @@ function scratchProject(): string {
     created.push(root);
     cpSync(path.join(process.cwd(), "package.json"), path.join(root, "package.json"));
     mkdirSync(path.join(root, "src/shared/i18n"), { recursive: true });
-    for (const file of ["locales.ts", "catalog-limits.ts"]) {
-        cpSync(
-            path.join(process.cwd(), "src/shared/i18n", file),
-            path.join(root, "src/shared/i18n", file),
-        );
-    }
+    cpSync(
+        path.join(process.cwd(), "src/shared/i18n/locales.ts"),
+        path.join(root, "src/shared/i18n/locales.ts"),
+    );
     cpSync(path.join(process.cwd(), "src/_locales"), path.join(root, "src/_locales"), {
         recursive: true,
     });

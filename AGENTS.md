@@ -111,7 +111,7 @@ has an obvious, simpler standard-library replacement.
 │   ├── actions/                # Composite toolchain setup shared by workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── assets/
-│   ├── store-listings/         # 40 canonical locale listing catalogs
+│   ├── store-listings/         # 40 ready-to-paste localized descriptions
 │   └── store/                  # Finished Chrome listing images
 ├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
@@ -136,7 +136,6 @@ has an obvious, simpler standard-library replacement.
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
 │       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
-│   ├── store/                  # Offline listing validation and text rendering
 │   ├── build.ts                # Build command entry point
 │   ├── validate-locales.ts     # Catalog integrity check run by pnpm check
 │   ├── audit-locales.ts        # Release-time hardcoded-copy and orphan-key audit
@@ -173,8 +172,6 @@ Run commands from the repository root.
 | `pnpm lint` | Run ESLint, formatting rules, and JSDoc checks. |
 | `pnpm typecheck` | Run TypeScript without emitting files. |
 | `pnpm test` | Run the Vitest suite once. |
-| `pnpm store:validate` | Validate all 40 Chrome listing catalogs. |
-| `pnpm store:render chrome <locale>` | Print paste-ready Chrome listing text. |
 | `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development
@@ -525,12 +522,11 @@ Known architectural exclusions to improve when their area changes:
 
 ### Other
 
-- Keep store-listing tooling under `scripts/store`, outside runtime bundles.
-  Reuse the UI locale registry and manifest copy. Review translations with an
-  independent agent. Keep only publication materials and their content checks;
-  do not retain one-time generation tooling or review-tracking infrastructure.
-  Shared URLs have one maintained source. Store field limits need dated
-  official evidence; distinguish editorial budgets from store rules.
+- Keep store materials as ready-to-paste text and finished images. Review
+  translations with an independent agent. Do not add generators, dedicated
+  validators, or review-tracking infrastructure for one-time preparation.
+  Store field limits need dated official evidence; distinguish editorial
+  budgets from store rules.
 
 - Keep source copy and translator notes in the English catalog; translate
   user-facing copy through the shipped UI catalogs.

@@ -1,0 +1,10 @@
+Pinapalitan ng No More Ago ang mga relatibong label gaya ng “3 buwan ang nakalipas” ng eksaktong mga petsa kapag may maaasahang timestamp. Hindi binabago ang mga umiiral na tiyak na petsa at hindi nakikilalang label.
+
+Piliin ang format ng petsa at time zone. Paganahin ang extension sa pangkalahatan, ibukod ang ilang site, o gamitin lamang ito sa mga napiling site. Piliin ang hitsura ng system, maliwanag o madilim.
+
+Gumagana sa mga sinusuportahang karaniwang timestamp at piling integrasyon ng website. Hindi garantisado ang pagiging tugma: maaaring makaapekto ang pagbabago ng website sa suporta. Nananatiling mga petsa sa kalendaryo ang mga petsang walang oras.
+
+Nananatili sa browser mo ang mga setting. Lokal na iniimbak ang mga opsyonal na diagnostic log. Nagpapadala ang feature para sa Bluesky ng mga anonymous na request sa pampublikong API nito para sa mga timestamp ng pampublikong post. Walang account o telemetry.
+
+0.1.0
+Unang release: eksaktong mga petsa para sa sinusuportahang relatibong timestamp, mga setting ng petsa at time zone, kontrol sa mga site, maliwanag at madilim na hitsura, at interface sa 40 wika.

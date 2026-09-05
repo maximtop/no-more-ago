@@ -1,0 +1,10 @@
+No More Ago ersätter relativa tidsangivelser som ”för 3 månader sedan” med exakta datum när en tillförlitlig tidsstämpel finns. Befintliga absoluta datum och tidsangivelser som inte känns igen lämnas oförändrade.
+
+Välj datumformat och tidszon. Aktivera tillägget globalt, undanta enskilda webbplatser eller använd det bara på valda webbplatser. Följ systemets utseende eller välj ett ljust eller mörkt tema.
+
+Fungerar med standardtidsstämplar som stöds och utvalda webbplatsintegrationer. Kompatibiliteten kan inte garanteras: ändringar på webbplatser kan påverka stödet. Datum utan tid förblir kalenderdatum.
+
+Inställningarna stannar i webbläsaren. Valfria diagnostikloggar lagras lokalt. Stödet för Bluesky gör anonyma förfrågningar till dess offentliga API för tidsstämplar från offentliga inlägg. Inga konton och ingen telemetri.
+
+0.1.0
+Första versionen: exakta datum för relativa tidsstämplar som stöds, datum- och tidszonsinställningar, webbplatskontroller, ljust och mörkt utseende samt gränssnitt på 40 språk.

@@ -1,0 +1,10 @@
+No More Ago nahrazuje relativní popisky jako „před 3 měsíci“ přesnými daty, pokud je k dispozici důvěryhodný časový údaj. Existující absolutní data a nerozpoznané popisky zůstávají beze změny.
+
+Zvolte formát data a časové pásmo. Zapněte rozšíření globálně, vylučte jednotlivé weby nebo je používejte jen na vybraných webech. Zvolte systémový, světlý nebo tmavý vzhled.
+
+Funguje s podporovanými standardními časovými údaji a vybranými integracemi webů. Kompatibilita není zaručena: změny webů mohou podporu ovlivnit. Data bez času zůstávají kalendářními daty.
+
+Nastavení zůstávají v prohlížeči. Volitelné diagnostické protokoly se ukládají místně. Podpora Bluesky odesílá anonymní požadavky na jeho veřejné API pro získání časových údajů veřejných příspěvků. Bez účtů a telemetrie.
+
+0.1.0
+První vydání: přesná data pro podporované relativní časové údaje, nastavení data a časového pásma, ovládání webů, světlý a tmavý vzhled a rozhraní ve 40 jazycích.

@@ -1,0 +1,10 @@
+No More Ago vervangt relatieve aanduidingen zoals ‘3 maanden geleden’ door exacte datums wanneer een betrouwbare tijdstempel beschikbaar is. Bestaande absolute datums en niet-herkende aanduidingen blijven ongewijzigd.
+
+Kies je datumnotatie en tijdzone. Schakel de extensie overal in, sluit afzonderlijke sites uit of gebruik de extensie alleen op geselecteerde sites. Volg het uiterlijk van het systeem of kies een licht of donker thema.
+
+Werkt met ondersteunde standaardtijdstempels en bepaalde website-integraties. Compatibiliteit is niet gegarandeerd: wijzigingen aan websites kunnen de ondersteuning beïnvloeden. Datums zonder tijd blijven kalenderdatums.
+
+Instellingen blijven in je browser. Optionele diagnoselogboeken worden lokaal opgeslagen. Voor tijdstempels van openbare Bluesky-berichten stuurt de extensie anonieme verzoeken naar de openbare API van Bluesky. Geen accounts of telemetrie.
+
+0.1.0
+Eerste versie: exacte datums voor ondersteunde relatieve tijdstempels, datum- en tijdzone-instellingen, sitebeheer, lichte en donkere weergave en een interface in 40 talen.

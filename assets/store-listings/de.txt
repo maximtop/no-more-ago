@@ -1,0 +1,10 @@
+No More Ago ersetzt relative Angaben wie „vor 3 Monaten“ durch genaue Datumsangaben, wenn ein verlässlicher Zeitstempel verfügbar ist. Vorhandene absolute Datumsangaben und nicht erkannte Beschriftungen bleiben unverändert.
+
+Wähle Datumsformat und Zeitzone. Aktiviere die Erweiterung global, schließe einzelne Websites aus oder nutze sie nur auf ausgewählten Websites. Wähle das Erscheinungsbild des Systems oder ein helles oder dunkles Erscheinungsbild.
+
+Funktioniert mit unterstützten Standardzeitstempeln und ausgewählten Website-Integrationen. Die Kompatibilität kann durch Änderungen an Websites beeinträchtigt werden. Datumsangaben ohne Uhrzeit bleiben Kalenderdaten.
+
+Einstellungen bleiben in deinem Browser. Optionale Diagnoseprotokolle werden lokal gespeichert. Für Zeitstempel öffentlicher Bluesky-Beiträge sendet die Erweiterung anonyme Anfragen an die öffentliche API von Bluesky. Keine Konten oder Telemetrie.
+
+0.1.0
+Erste Veröffentlichung: genaue Datumsangaben für unterstützte relative Zeitstempel, Datums- und Zeitzoneneinstellungen, Website-Steuerung, helles und dunkles Design sowie eine Oberfläche in 40 Sprachen.
