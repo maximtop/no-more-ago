@@ -8,7 +8,7 @@
 export const DESCRIPTION_KEYS = ["intro", "controls", "compatibility", "privacy"] as const;
 
 /**
- * Screenshot order shared by captions and image generation.
+ * Screenshot order used by the listing captions.
  */
 export const CAPTION_KEYS = ["replacement", "control", "appearance"] as const;
 
@@ -83,7 +83,7 @@ export interface StoreListing {
     };
 
     /**
-     * Caption copy, including locales whose images are not generated yet.
+     * Caption copy for each locale; published image files are English only.
      */
     captions: Record<(typeof CAPTION_KEYS)[number], {
         /**

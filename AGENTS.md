@@ -112,7 +112,7 @@ has an obvious, simpler standard-library replacement.
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── assets/
 │   ├── store-listings/         # 40 canonical locale listing catalogs
-│   └── store/                  # Review evidence, captures, Chrome images
+│   └── store/                  # Translation reviews and finished Chrome images
 ├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
@@ -136,7 +136,7 @@ has an obvious, simpler standard-library replacement.
 │       ├── settings/           # Snapshot, hostname, and site-scope contracts
 │       └── ui/                 # Theme, brand mark, cross-surface copy, hooks, and browser download runtime
 ├── scripts/
-│   ├── store/                  # Offline listing validation, rendering, image export
+│   ├── store/                  # Offline listing validation and text rendering
 │   ├── build.ts                # Build command entry point
 │   ├── validate-locales.ts     # Catalog integrity check run by pnpm check
 │   ├── audit-locales.ts        # Release-time hardcoded-copy and orphan-key audit
@@ -175,7 +175,6 @@ Run commands from the repository root.
 | `pnpm test` | Run the Vitest suite once. |
 | `pnpm store:validate` | Validate all 40 Chrome listing catalogs; review state is informational. |
 | `pnpm store:render chrome <locale>` | Print paste-ready Chrome listing text. |
-| `pnpm store:assets` | Rebuild English Chrome images from maintained captures and captions. |
 | `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development

@@ -10,8 +10,8 @@ are outside this increment.
 The text package, independent reviews and English visual package are complete.
 Three 1280×800 screenshots, the icon and small promotional tile are available
 under `assets/store/chrome/`. Screenshots use actual Chrome release-build
-captures from a clean local demonstration. Capture details and reproduction
-steps are in [the capture record](../assets/store/captures/README.md).
+captures from a clean local demonstration and passed independent designer
+review on 2026-09-05.
 
 ## Prepare and inspect
 
@@ -22,7 +22,6 @@ pnpm store:validate
 pnpm store:render chrome en
 pnpm store:render chrome ru
 pnpm store:render chrome nb
-pnpm store:assets
 ```
 
 The renderer writes field values with clear headings to stdout. Copy the value
@@ -46,7 +45,6 @@ structural and domain constraints, not translation quality or store approval.
 | English privacy document | `docs/PRIVACY.md` |
 | English support document | `docs/SUPPORT.md` |
 | Original icon | `src/assets/icons/icon.svg` |
-| Sanitized capture sources | `assets/store/captures/` |
 | English store-ready images | `assets/store/chrome/` |
 
 English defines the product claims. Localized catalogs retain the same
@@ -101,24 +99,21 @@ Use the English screenshot set as the global set. Translated captions are
 maintained source material, but only English image files exist. The small
 promotional tile is global, as specified by Chrome.
 
-## Rebuild English artwork
+## Ready-to-upload images
 
-Capture the actual extension using a clean local demonstration after obtaining
-permission for browser work. Save seven raw PNG inputs under
-`assets/store/captures/`: `before.png`, `after.png`, `format.png`, `zone.png`,
-`preview.png`, `popup-light.png` and `popup-dark.png`. The maintained
-demonstration is `assets/store/demo.html`. Do not use private account content.
+Use the finished files in `assets/store/chrome/`:
 
-Run `pnpm store:assets` to combine the seven raw captures directly with English
-catalog captions and the existing icon. Captures retain their native pixel
-size at integer coordinates, with no intermediate raster or resizing. Oversize
-inputs fail with a recapture instruction. Use the pixel dimensions in the
-capture record. Upload the 1280×800 files from `chrome/`.
-Composition uses locally installed Arial and Georgia fonts;
-use the same font environment for identical output. Inspect all
-three final images at full size and at 640×400 for clipping and readability.
-The generator also writes `promo.png` and `icon.png`. The revised screenshots
-passed an [independent design review](../assets/store/DESIGN-REVIEW.md).
+| File | Purpose | Dimensions |
+| --- | --- | --- |
+| `replacement.png` | Before/after timestamp example | 1280×800 |
+| `control.png` | Date format and time-zone settings | 1280×800 |
+| `appearance.png` | Light and dark popup themes | 1280×800 |
+| `promo.png` | Small promotional tile | 440×280 |
+| `icon.png` | Store icon | 128×128 |
+
+The screenshots show real release-build behavior in a local demonstration.
+The displayed hostname is a local test hostname. Green framing and the
+Before/After arrow are promotional annotations outside the captured interface.
 
 ## Translation review
 

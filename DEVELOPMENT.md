@@ -514,11 +514,9 @@ release archives.
 ### Store Configuration
 
 Prepare local listing copy with `pnpm store:validate` and
-`pnpm store:render chrome <locale>`. Rebuild English images with
-`pnpm store:assets`. These commands do not upload or publish anything.
-See [Chrome store materials](docs/STORE.md) for sources, review records,
-field limits, image inputs, and the handoff to a future dashboard draft.
-
+`pnpm store:render chrome <locale>`. Ready-to-upload English images are in
+`assets/store/chrome/`. See [Chrome store materials](docs/STORE.md) for listing
+copy, translation reviews, field limits, and the dashboard handoff.
 
 The store item must exist before any deployment: the API cannot create the
 listing. One-time setup:
