@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Bản phát hành đầu tiên: ngày chính xác cho dấu thời gian tương đối được hỗ trợ, cài đặt ngày và múi giờ, kiểm soát trang web, giao diện sáng và tối, cùng giao diện bằng 40 ngôn ngữ."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Xem sự việc xảy ra khi nào",
-            "body": "Chuyển dấu thời gian tương đối được hỗ trợ thành ngày chính xác."
-        },
-        "control": {
-            "heading": "Ngày của bạn. Cài đặt của bạn.",
-            "body": "Chọn định dạng ngày, múi giờ và các trang web phù hợp với bạn."
-        },
-        "appearance": {
-            "heading": "Thoải mái với cả sáng và tối",
-            "body": "Dùng giao diện theo hệ thống hoặc chọn giao diện yêu thích."
-        }
     }
 }

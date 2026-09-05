@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Första versionen: exakta datum för relativa tidsstämplar som stöds, datum- och tidszonsinställningar, webbplatskontroller, ljust och mörkt utseende samt gränssnitt på 40 språk."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Se när det hände",
-            "body": "Omvandla relativa tidsstämplar som stöds till exakta datum."
-        },
-        "control": {
-            "heading": "Dina datum. Dina inställningar.",
-            "body": "Välj datumformat, tidszon och webbplatser som passar dig."
-        },
-        "appearance": {
-            "heading": "Hemma i ljust och mörkt",
-            "body": "Använd systemets utseende eller välj ditt favorittema."
-        }
     }
 }

@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "První vydání: přesná data pro podporované relativní časové údaje, nastavení data a časového pásma, ovládání webů, světlý a tmavý vzhled a rozhraní ve 40 jazycích."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Zjistěte, kdy se to stalo",
-            "body": "Převeďte podporované relativní časové údaje na přesná data."
-        },
-        "control": {
-            "heading": "Vaše data. Vaše nastavení.",
-            "body": "Vyberte si vhodný formát data, časové pásmo a weby."
-        },
-        "appearance": {
-            "heading": "Jako doma ve světlém i tmavém motivu",
-            "body": "Použijte systémový vzhled nebo si vyberte oblíbený motiv."
-        }
     }
 }

@@ -8,11 +8,6 @@
 export const DESCRIPTION_KEYS = ["intro", "controls", "compatibility", "privacy"] as const;
 
 /**
- * Screenshot order used by the listing captions.
- */
-export const CAPTION_KEYS = ["replacement", "control", "appearance"] as const;
-
-/**
  * Chrome is the only supported store in this preparation workflow.
  */
 export const STORE_ID = "chrome";
@@ -21,18 +16,6 @@ export const STORE_ID = "chrome";
  * Public store preparation command names.
  */
 export const STORE_COMMAND = { VALIDATE: "validate", RENDER: "render" } as const;
-
-/**
- * Independent review outcomes stored with evidence.
- */
-export const REVIEW_OUTCOME = { PASSED: "passed", FINDINGS: "findings" } as const;
-
-/**
- * Derived states reported by validation and rendering.
- */
-export const REVIEW_STATUS = {
-    UNREVIEWED: "unreviewed", STALE: "stale", REVIEWED: "reviewed", FINDINGS: "findings",
-} as const;
 
 /**
  * Project editorial budget, not a verified Chrome dashboard maximum.
@@ -81,56 +64,6 @@ export interface StoreListing {
          */
         text: string;
     };
-
-    /**
-     * Caption copy for each locale; published image files are English only.
-     */
-    captions: Record<(typeof CAPTION_KEYS)[number], {
-        /**
-         * Short headline.
-         */
-        heading: string;
-
-        /**
-         * Supporting sentence.
-         */
-        body: string;
-    }>;
-}
-
-/**
- * Evidence of an independent semantic review.
- */
-export interface StoreReview {
-    /**
-     * English source revision reviewed.
-     */
-    sourceHash: string;
-
-    /**
-     * Translation revision reviewed.
-     */
-    contentHash: string;
-
-    /**
-     * Reviewer identity or agent task.
-     */
-    reviewer: string;
-
-    /**
-     * ISO calendar date.
-     */
-    date: string;
-
-    /**
-     * Review result; only passed records certify reviewed content.
-     */
-    outcome: (typeof REVIEW_OUTCOME)[keyof typeof REVIEW_OUTCOME];
-
-    /**
-     * Findings and corrections recorded by the reviewer.
-     */
-    notes: string;
 }
 
 /**
@@ -156,11 +89,6 @@ export interface StoreCatalogs {
          */
         summary: string;
     }>;
-
-    /**
-     * Review records, which may be absent during editing.
-     */
-    reviews: Record<string, StoreReview>;
 
     /**
      * Current package version.

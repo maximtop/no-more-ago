@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Primera versió: dates exactes per a marques de temps relatives compatibles, configuració de data i zona horària, control de llocs, aparença clara i fosca i interfície en 40 idiomes."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Descobriu quan va passar",
-            "body": "Convertiu les marques de temps relatives compatibles en dates exactes."
-        },
-        "control": {
-            "heading": "Les vostres dates. La vostra configuració.",
-            "body": "Trieu el format de data, la zona horària i els llocs que preferiu."
-        },
-        "appearance": {
-            "heading": "Com a casa en clar i en fosc",
-            "body": "Feu servir l’aparença del sistema o trieu el tema que preferiu."
-        }
     }
 }

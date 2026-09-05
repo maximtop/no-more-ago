@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Eerste versie: exacte datums voor ondersteunde relatieve tijdstempels, datum- en tijdzone-instellingen, sitebeheer, lichte en donkere weergave en een interface in 40 talen."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Zie wanneer het gebeurde",
-            "body": "Zet ondersteunde relatieve tijdstempels om in exacte datums."
-        },
-        "control": {
-            "heading": "Jouw datums. Jouw instellingen.",
-            "body": "Kies de datumnotatie, tijdzone en sites die bij je passen."
-        },
-        "appearance": {
-            "heading": "Thuis in licht en donker",
-            "body": "Volg het uiterlijk van het systeem of kies je favoriete thema."
-        }
     }
 }

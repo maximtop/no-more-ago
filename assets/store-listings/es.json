@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Primera versión: fechas exactas para marcas de tiempo relativas compatibles, ajustes de fecha y zona horaria, control de sitios, apariencia clara y oscura e interfaz en 40 idiomas."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Descubre cuándo ocurrió",
-            "body": "Convierte las marcas de tiempo relativas compatibles en fechas exactas."
-        },
-        "control": {
-            "heading": "Tus fechas. Tus ajustes.",
-            "body": "Elige el formato de fecha, la zona horaria y los sitios que prefieras."
-        },
-        "appearance": {
-            "heading": "A gusto en claro y en oscuro",
-            "body": "Usa la apariencia del sistema o elige tu tema preferido."
-        }
     }
 }

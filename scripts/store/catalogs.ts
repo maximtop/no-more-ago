@@ -1,12 +1,10 @@
 /**
- * @file Loads owned listing data and compares independent review revisions.
+ * @file Loads owned listing data and manifest metadata.
  */
-import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { UI_LOCALES } from "../../src/shared/i18n/locales.ts";
-import { REVIEW_OUTCOME, REVIEW_STATUS } from "./contracts.ts";
-import type { StoreCatalogs, StoreListing, StoreReview } from "./contracts.ts";
+import type { StoreCatalogs, StoreListing } from "./contracts.ts";
 
 /**
  * Repository root resolved independently of the current working directory.
@@ -37,42 +35,5 @@ export function readStoreCatalogs(root = STORE_ROOT): StoreCatalogs {
     const { version } = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as {
         version: string;
     };
-    const reviews = JSON.parse(readFileSync(
-        path.join(root, "assets/store/reviews.json"), "utf8",
-    )) as Record<string, StoreReview>;
-    return { listings, messages, reviews, version };
-}
-
-/**
- * Identifies the exact owned listing content reviewed, including its locale.
- *
- * @param listing - Source content.
- * @returns - SHA-256 revision.
- */
-export function listingHash(listing: StoreListing): string {
-    return createHash("sha256").update(JSON.stringify(listing)).digest("hex");
-}
-
-/**
- * Reports review freshness without treating unfinished review as invalid content.
- *
- * @param listing - Current translation.
- * @param english - Current source.
- * @param review - Optional independent assessment.
- * @returns - Human-readable review state.
- */
-export function reviewStatus(
-    listing: StoreListing,
-    english: StoreListing,
-    review?: StoreReview,
-): string {
-    if (!review) {
-        return REVIEW_STATUS.UNREVIEWED;
-    }
-    if (review.sourceHash !== listingHash(english)
-        || review.contentHash !== listingHash(listing)) {
-        return REVIEW_STATUS.STALE;
-    }
-    return review.outcome === REVIEW_OUTCOME.PASSED
-        ? REVIEW_STATUS.REVIEWED : REVIEW_STATUS.FINDINGS;
+    return { listings, messages, version };
 }

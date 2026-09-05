@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Erste Veröffentlichung: genaue Datumsangaben für unterstützte relative Zeitstempel, Datums- und Zeitzoneneinstellungen, Website-Steuerung, helles und dunkles Design sowie eine Oberfläche in 40 Sprachen."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Sehen, wann es passiert ist",
-            "body": "Unterstützte relative Zeitstempel in genaue Datumsangaben umwandeln."
-        },
-        "control": {
-            "heading": "Deine Datumsangaben. Deine Einstellungen.",
-            "body": "Wähle das passende Datumsformat, die Zeitzone und die Websites."
-        },
-        "appearance": {
-            "heading": "Im hellen und dunklen Design zu Hause",
-            "body": "Nutze das Erscheinungsbild des Systems oder wähle dein bevorzugtes Design."
-        }
     }
 }

@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Első kiadás: pontos dátumok a támogatott relatív időbélyegekhez, dátum- és időzóna-beállítások, webhelyvezérlés, világos és sötét megjelenés, valamint felület 40 nyelven."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Lássa, mikor történt",
-            "body": "Alakítsa a támogatott relatív időbélyegeket pontos dátumokká."
-        },
-        "control": {
-            "heading": "Az Ön dátumai. Az Ön beállításai.",
-            "body": "Válassza ki a megfelelő dátumformátumot, időzónát és webhelyeket."
-        },
-        "appearance": {
-            "heading": "Otthonosan világosban és sötétben",
-            "body": "Használja a rendszer megjelenését, vagy válassza ki kedvenc témáját."
-        }
     }
 }

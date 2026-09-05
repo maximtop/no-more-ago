@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Première version : dates exactes pour les horodatages relatifs pris en charge, réglages de date et de fuseau horaire, contrôle des sites, apparence claire et sombre et interface en 40 langues."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Voyez quand cela s’est passé",
-            "body": "Transformez les horodatages relatifs pris en charge en dates exactes."
-        },
-        "control": {
-            "heading": "Vos dates. Vos réglages.",
-            "body": "Choisissez le format de date, le fuseau horaire et les sites qui vous conviennent."
-        },
-        "appearance": {
-            "heading": "À l’aise en clair comme en sombre",
-            "body": "Suivez l’apparence du système ou choisissez votre thème préféré."
-        }
     }
 }

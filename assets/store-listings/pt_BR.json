@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Primeira versão: datas exatas para marcações de tempo relativas compatíveis, configurações de data e fuso horário, controle de sites, aparência clara e escura e interface em 40 idiomas."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Veja quando aconteceu",
-            "body": "Transforme marcações de tempo relativas compatíveis em datas exatas."
-        },
-        "control": {
-            "heading": "Suas datas. Suas configurações.",
-            "body": "Escolha o formato de data, o fuso horário e os sites que preferir."
-        },
-        "appearance": {
-            "heading": "À vontade no claro e no escuro",
-            "body": "Use a aparência do sistema ou escolha seu tema preferido."
-        }
     }
 }

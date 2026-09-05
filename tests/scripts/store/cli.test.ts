@@ -8,15 +8,14 @@ import { describe, expect, it } from "vitest";
 const cli = path.resolve(import.meta.dirname, "../../../scripts/store/cli.ts");
 
 describe("store CLI", () => {
-    it("prints paste-ready text and separates review notices", () => {
+    it("prints paste-ready listing fields", () => {
         const result = spawnSync(process.execPath, [cli, "render", "chrome", "ru"], {
             encoding: "utf8",
         });
         expect(result.status).toBe(0);
         expect(result.stdout).toContain("No More Ago");
         expect(result.stdout).toContain("Source locale: ru");
-        expect(result.stdout).not.toContain("Review:");
-        expect(result.stderr).toMatch(/Review: (reviewed|unreviewed|stale|findings)/u);
+        expect(result.stderr).toBe("");
     });
 
     it.each([["firefox", "en"], ["chrome", "xx"], ["chrome"]])(

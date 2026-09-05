@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Første version: præcise datoer for understøttede relative tidsstempler, dato- og tidszoneindstillinger, webstedskontrol, lyst og mørkt udseende samt en brugerflade på 40 sprog."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Se, hvornår det skete",
-            "body": "Omdan understøttede relative tidsstempler til præcise datoer."
-        },
-        "control": {
-            "heading": "Dine datoer. Dine indstillinger.",
-            "body": "Vælg det datoformat, den tidszone og de websteder, der passer dig."
-        },
-        "appearance": {
-            "heading": "Hjemme i lyst og mørkt",
-            "body": "Brug systemets udseende, eller vælg dit foretrukne tema."
-        }
     }
 }

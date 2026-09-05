@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Ensimmäinen julkaisu: tarkat päivämäärät tuetuille suhteellisille aikaleimoille, päivämäärä- ja aikavyöhykeasetukset, sivustovalinnat, vaalea ja tumma ulkoasu sekä käyttöliittymä 40 kielellä."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Näe, milloin se tapahtui",
-            "body": "Muunna tuetut suhteelliset aikaleimat tarkoiksi päivämääriksi."
-        },
-        "control": {
-            "heading": "Sinun päivämääräsi. Sinun asetuksesi.",
-            "body": "Valitse sopiva päivämäärän muoto, aikavyöhyke ja sivustot."
-        },
-        "appearance": {
-            "heading": "Kuin kotonaan vaaleana ja tummana",
-            "body": "Käytä järjestelmän ulkoasua tai valitse haluamasi teema."
-        }
     }
 }

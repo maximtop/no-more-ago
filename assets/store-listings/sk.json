@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Prvé vydanie: presné dátumy pre podporované relatívne časové údaje, nastavenia dátumu a časového pásma, ovládanie webov, svetlý a tmavý vzhľad a rozhranie v 40 jazykoch."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Pozrite sa, kedy sa to stalo",
-            "body": "Premeňte podporované relatívne časové údaje na presné dátumy."
-        },
-        "control": {
-            "heading": "Vaše dátumy. Vaše nastavenia.",
-            "body": "Vyberte si vhodný formát dátumu, časové pásmo a weby."
-        },
-        "appearance": {
-            "heading": "Ako doma vo svetlej aj tmavej téme",
-            "body": "Použite systémový vzhľad alebo si vyberte obľúbenú tému."
-        }
     }
 }

@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Prima versione: date esatte per timestamp relativi supportati, impostazioni di data e fuso orario, controllo dei siti, aspetto chiaro e scuro e interfaccia in 40 lingue."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Scopri quando è successo",
-            "body": "Trasforma i timestamp relativi supportati in date esatte."
-        },
-        "control": {
-            "heading": "Le tue date. Le tue impostazioni.",
-            "body": "Scegli il formato della data, il fuso orario e i siti che preferisci."
-        },
-        "appearance": {
-            "heading": "A tuo agio con i temi chiaro e scuro",
-            "body": "Usa l’aspetto del sistema o scegli il tema che preferisci."
-        }
     }
 }

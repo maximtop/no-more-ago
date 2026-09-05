@@ -1,16 +1,15 @@
 /**
- * @file Exercises listing validation, rendering and review freshness.
+ * @file Exercises listing validation and rendering.
  */
 import { describe, expect, it } from "vitest";
 import { UI_LOCALES } from "../../../src/shared/i18n/locales.ts";
-import { readStoreCatalogs, listingHash, reviewStatus } from "../../../scripts/store/catalogs.ts";
+import { readStoreCatalogs } from "../../../scripts/store/catalogs.ts";
 import { validateStoreCatalogs } from "../../../scripts/store/validate.ts";
 import { renderStoreListing } from "../../../scripts/store/render.ts";
-import { REVIEW_OUTCOME, REVIEW_STATUS } from "../../../scripts/store/contracts.ts";
-import type { StoreCatalogs, StoreListing, StoreReview } from "../../../scripts/store/contracts.ts";
+import type { StoreCatalogs, StoreListing } from "../../../scripts/store/contracts.ts";
 
 /**
- * Creates a complete, unreviewed catalog fixture without needing translations.
+ * Creates a complete catalog fixture without needing translations.
  *
  * @returns - Independent catalogs for mutation tests.
  */
@@ -20,12 +19,11 @@ function fixture(): StoreCatalogs {
     for (const { code } of UI_LOCALES) {
         catalogs.listings[code] = { ...structuredClone(english), locale: code };
     }
-    catalogs.reviews = {};
     return catalogs;
 }
 
 describe("store listings", () => {
-    it("accepts complete unreviewed drafts", () => {
+    it("accepts complete drafts", () => {
         expect(validateStoreCatalogs(fixture())).toEqual([]);
     });
 
@@ -65,26 +63,6 @@ describe("store listings", () => {
         expect(output).toContain("Detailed description");
         expect(() => renderStoreListing(fixture(), "xx")).toThrow("Unknown locale");
     });
-
-    it("distinguishes missing, reviewed and stale translation reviews", () => {
-        const catalogs = fixture();
-        const english = (catalogs.listings.en as StoreListing);
-        const russian = (catalogs.listings.ru as StoreListing);
-        const review: StoreReview = {
-            sourceHash: listingHash(english),
-            contentHash: listingHash(russian),
-            reviewer: "Independent test reviewer",
-            date: "2026-09-05",
-            outcome: REVIEW_OUTCOME.PASSED,
-            notes: "Checked meaning and terminology.",
-        };
-        expect(reviewStatus(russian, english)).toBe(REVIEW_STATUS.UNREVIEWED);
-        expect(reviewStatus(russian, english, review)).toBe(REVIEW_STATUS.REVIEWED);
-        russian.description.controls += " Changed";
-        expect(reviewStatus(russian, english, review)).toBe(REVIEW_STATUS.STALE);
-        catalogs.reviews.ru = review;
-        expect(validateStoreCatalogs(catalogs)).toEqual([]);
-    });
 });
 
 describe("maintained store package", () => {
@@ -93,7 +71,6 @@ describe("maintained store package", () => {
         expect(validateStoreCatalogs(catalogs)).toEqual([]);
         for (const { code } of UI_LOCALES) {
             expect(renderStoreListing(catalogs, code)).toContain(`Source locale: ${code}`);
-
         }
     });
 });

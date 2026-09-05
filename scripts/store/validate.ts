@@ -1,12 +1,12 @@
 /**
- * @file Validates listing domain constraints without blocking on draft reviews.
+ * @file Validates listing content and Chrome field constraints.
  */
 import { MANIFEST_NAME_LIMIT, MANIFEST_DESCRIPTION_LIMIT }
     from "../../src/shared/i18n/catalog-limits.ts";
 import { UI_LOCALES } from "../../src/shared/i18n/locales.ts";
 import {
-    CAPTION_KEYS, DESCRIPTION_KEYS, DESCRIPTION_BUDGET,
-    PROTECTED_TERMS, STORE_LINKS, REVIEW_OUTCOME,
+    DESCRIPTION_KEYS, DESCRIPTION_BUDGET,
+    PROTECTED_TERMS, STORE_LINKS,
 } from "./contracts.ts";
 import type { StoreCatalogs, StoreListing } from "./contracts.ts";
 import { detailedDescription } from "./render.ts";
@@ -23,10 +23,6 @@ function textFields(listing: StoreListing): [string, string][] {
             `description.${key}`, listing.description[key],
         ]),
         ["release.text", listing.release.text],
-        ...CAPTION_KEYS.flatMap((key): [string, string][] => [
-            [`captions.${key}.heading`, listing.captions[key]?.heading],
-            [`captions.${key}.body`, listing.captions[key]?.body],
-        ]),
     ];
 }
 
@@ -45,7 +41,7 @@ function sameKeys(actual: string[], expected: readonly string[]): boolean {
  * Validates data that the project intentionally maintains as reviewable artifacts.
  *
  * @param catalogs - Loaded listing collection.
- * @returns - All actionable content failures; no review-status failures.
+ * @returns - All actionable content failures.
  */
 export function validateStoreCatalogs(catalogs: StoreCatalogs): string[] {
     const errors: string[] = [];
@@ -69,12 +65,9 @@ export function validateStoreCatalogs(catalogs: StoreCatalogs): string[] {
         if (listing.locale !== code) {
             errors.push(`${code}: locale must match filename`);
         }
-        if (!sameKeys(Object.keys(listing), ["locale", "description", "release", "captions"])
+        if (!sameKeys(Object.keys(listing), ["locale", "description", "release"])
             || !sameKeys(Object.keys(listing.description), DESCRIPTION_KEYS)
-            || !sameKeys(Object.keys(listing.release), ["version", "text"])
-            || !sameKeys(Object.keys(listing.captions), CAPTION_KEYS)
-            || CAPTION_KEYS.some((key) => listing.captions[key]
-                && !sameKeys(Object.keys(listing.captions[key]), ["heading", "body"]))) {
+            || !sameKeys(Object.keys(listing.release), ["version", "text"])) {
             errors.push(`${code}: fields must match the English listing contract`);
         }
         for (const [field, value] of textFields(listing)) {
@@ -115,15 +108,6 @@ export function validateStoreCatalogs(catalogs: StoreCatalogs): string[] {
     for (const [key, url] of Object.entries(STORE_LINKS)) {
         if (new URL(url).protocol !== "https:") {
             errors.push(`${key}: shared URL must use HTTPS`);
-        }
-    }
-    for (const [code, review] of Object.entries(catalogs.reviews)) {
-        if (!expected.includes(code) || !review.reviewer.trim() || !review.notes.trim()
-            || !/^\d{4}-\d{2}-\d{2}$/u.test(review.date)
-            || !/^[a-f0-9]{64}$/u.test(review.sourceHash)
-            || !/^[a-f0-9]{64}$/u.test(review.contentHash)
-            || !Object.values(REVIEW_OUTCOME).includes(review.outcome)) {
-            errors.push(`${code}: invalid review evidence`);
         }
     }
     return errors;

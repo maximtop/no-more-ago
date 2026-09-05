@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Første versjon: nøyaktige datoer for støttede relative tidsstempler, dato- og tidssoneinnstillinger, nettstedskontroller, lyst og mørkt utseende og et grensesnitt på 40 språk."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Se når det skjedde",
-            "body": "Gjør støttede relative tidsstempler om til nøyaktige datoer."
-        },
-        "control": {
-            "heading": "Dine datoer. Dine innstillinger.",
-            "body": "Velg datoformatet, tidssonen og nettstedene som passer deg."
-        },
-        "appearance": {
-            "heading": "Hjemme i lyst og mørkt",
-            "body": "Bruk systemets utseende, eller velg favorittemaet ditt."
-        }
     }
 }

@@ -112,7 +112,7 @@ has an obvious, simpler standard-library replacement.
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
 ├── assets/
 │   ├── store-listings/         # 40 canonical locale listing catalogs
-│   └── store/                  # Translation reviews and finished Chrome images
+│   └── store/                  # Finished Chrome listing images
 ├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
@@ -173,7 +173,7 @@ Run commands from the repository root.
 | `pnpm lint` | Run ESLint, formatting rules, and JSDoc checks. |
 | `pnpm typecheck` | Run TypeScript without emitting files. |
 | `pnpm test` | Run the Vitest suite once. |
-| `pnpm store:validate` | Validate all 40 Chrome listing catalogs; review state is informational. |
+| `pnpm store:validate` | Validate all 40 Chrome listing catalogs. |
 | `pnpm store:render chrome <locale>` | Print paste-ready Chrome listing text. |
 | `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
@@ -527,10 +527,10 @@ Known architectural exclusions to improve when their area changes:
 
 - Keep store-listing tooling under `scripts/store`, outside runtime bundles.
   Reuse the UI locale registry and manifest copy. Review translations with an
-  independent agent and bind evidence to the source and translated content;
-  missing or stale review status must not block `pnpm check`. Shared URLs and
-  English screenshot captions have one maintained source. Store field limits
-  need dated official evidence; distinguish editorial budgets from store rules.
+  independent agent. Keep only publication materials and their content checks;
+  do not retain one-time generation tooling or review-tracking infrastructure.
+  Shared URLs have one maintained source. Store field limits need dated
+  official evidence; distinguish editorial budgets from store rules.
 
 - Keep source copy and translator notes in the English catalog; translate
   user-facing copy through the shipped UI catalogs.

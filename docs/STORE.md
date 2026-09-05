@@ -7,7 +7,7 @@ are outside this increment.
 
 ## Current preparation status
 
-The text package, independent reviews and English visual package are complete.
+The listing copy and English visual package are complete.
 Three 1280×800 screenshots, the icon and small promotional tile are available
 under `assets/store/chrome/`. Screenshots use actual Chrome release-build
 captures from a clean local demonstration and passed independent designer
@@ -26,12 +26,11 @@ pnpm store:render chrome nb
 
 The renderer writes field values with clear headings to stdout. Copy the value
 under the appropriate heading, excluding the heading and operational notes.
-Review notices are written to stderr. Initial-release notes are appended to the
-detailed description; they are not an invented separate Chrome field.
+Initial-release notes are appended to the detailed description.
 
-Validation is offline and also runs in `pnpm check`. Invalid content fails;
-unreviewed or stale-review status alone does not. A passing command verifies
-structural and domain constraints, not translation quality or store approval.
+Validation is offline and also runs in `pnpm check`. It checks locale coverage,
+required text, product names, release versions, and field budgets. Translation
+quality is checked by an independent agent when the copy changes.
 
 ## Maintained sources
 
@@ -41,14 +40,13 @@ structural and domain constraints, not translation quality or store approval.
 | Manifest name and summary | `src/_locales/<locale>/messages.json` |
 | Locale set and Norwegian alias | `src/shared/i18n/locales.ts` |
 | Shared links and budgets | `scripts/store/contracts.ts` |
-| Independent review evidence | `assets/store/reviews.json` |
 | English privacy document | `docs/PRIVACY.md` |
 | English support document | `docs/SUPPORT.md` |
 | Original icon | `src/assets/icons/icon.svg` |
 | English store-ready images | `assets/store/chrome/` |
 
 English defines the product claims. Localized catalogs retain the same
-paragraphs, release notes and caption roles. Product names, domains and other
+paragraphs and release notes. Product names, domains and other
 technical literals stay unchanged. There is no independent copy of privacy
 policy prose in each translation. Store content is not shipped in runtime
 bundles.
@@ -95,9 +93,7 @@ The remaining canonical code is `nb`, which renders to Chrome's `no` locale.
 There is one Norwegian translation, not separate `nb` and `no` catalogs.
 Unknown locale requests fail rather than silently returning English.
 
-Use the English screenshot set as the global set. Translated captions are
-maintained source material, but only English image files exist. The small
-promotional tile is global, as specified by Chrome.
+Use the English screenshot set and promotional tile as the global images.
 
 ## Ready-to-upload images
 
@@ -114,20 +110,6 @@ Use the finished files in `assets/store/chrome/`:
 The screenshots show real release-build behavior in a local demonstration.
 The displayed hostname is a local test hostname. Green framing and the
 Before/After arrow are promotional annotations outside the captured interface.
-
-## Translation review
-
-An independent language-capable agent reviews every translation against the
-English master and the corresponding UI terminology. Checks cover omitted or
-added claims, unsupported promises, privacy drift, natural wording, preserved
-names and captions. Russian is reviewed as its own locale.
-
-Each record identifies the reviewer, date, findings and SHA-256 hashes of the
-parsed English and localized listing JSON. Changing either listing makes the
-review stale. `reviewed` means that semantic review passed, not native-speaker
-certification. Review records with findings or stale hashes are reported
-without blocking ordinary editing or CI. Resolve semantic findings and review
-the final text before treating the materials task as complete.
 
 ## Shared links and publication state
 
@@ -195,7 +177,7 @@ telemetry endpoint, account requirement, or sale of user data.
 
 ## Handoff to future listing creation
 
-1. Verify current copy, translation review records and image outputs locally.
+1. Check the current listing copy and finished images.
 2. Publish the supporting documents and verify the shared public URLs.
 3. Use the normal Chrome release artifact to create an unsubmitted dashboard
    draft during a separately authorized store task.

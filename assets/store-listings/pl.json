@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Pierwsze wydanie: dokładne daty dla obsługiwanych względnych znaczników czasu, ustawienia daty i strefy czasowej, kontrola witryn, jasny i ciemny wygląd oraz interfejs w 40 językach."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Zobacz, kiedy to się wydarzyło",
-            "body": "Zamień obsługiwane względne znaczniki czasu na dokładne daty."
-        },
-        "control": {
-            "heading": "Twoje daty. Twoje ustawienia.",
-            "body": "Wybierz odpowiedni format daty, strefę czasową i witryny."
-        },
-        "appearance": {
-            "heading": "Wygodnie w jasnym i ciemnym motywie",
-            "body": "Użyj wyglądu systemowego lub wybierz ulubiony motyw."
-        }
     }
 }

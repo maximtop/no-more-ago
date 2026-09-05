@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "First release: exact dates for supported relative timestamps, date and time-zone settings, site controls, light and dark appearance, and an interface in 40 languages."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "See when it happened",
-            "body": "Turn supported relative timestamps into exact dates."
-        },
-        "control": {
-            "heading": "Your dates. Your settings.",
-            "body": "Choose the date format, time zone and sites that work for you."
-        },
-        "appearance": {
-            "heading": "At home in light and dark",
-            "body": "Use the system appearance or choose your preferred theme."
-        }
     }
 }

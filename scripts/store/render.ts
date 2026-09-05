@@ -2,7 +2,7 @@
  * @file Renders local listing data into clearly separated Chrome field values.
  */
 import { CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from "../../src/shared/i18n/locales.ts";
-import { CAPTION_KEYS, DESCRIPTION_KEYS, STORE_LINKS } from "./contracts.ts";
+import { DESCRIPTION_KEYS, STORE_LINKS } from "./contracts.ts";
 import type { StoreCatalogs, StoreListing } from "./contracts.ts";
 
 /**
@@ -44,11 +44,6 @@ export function renderStoreListing(catalogs: StoreCatalogs, locale: string): str
         `=== Detailed description ===\n${detailedDescription(listing)}`,
         ...Object.entries(STORE_LINKS).map(([key, value]) => `=== ${key} URL ===\n${value}`),
         "Privacy URL is intended; publish docs/PRIVACY.md before using it in a live listing.",
-        "=== Captions (source copy; image files are English only) ===",
-        ...CAPTION_KEYS.map((key) => {
-            const caption = listing.captions[key];
-            return `${key}\n${caption.heading}\n${caption.body}`;
-        }),
         "",
     ].join("\n\n");
 }

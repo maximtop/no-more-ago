@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Prvo izdanje: točni datumi za podržane relativne vremenske oznake, postavke datuma i vremenske zone, upravljanje web-mjestima, svijetli i tamni izgled te sučelje na 40 jezika."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Pogledajte kada se dogodilo",
-            "body": "Pretvorite podržane relativne vremenske oznake u točne datume."
-        },
-        "control": {
-            "heading": "Vaši datumi. Vaše postavke.",
-            "body": "Odaberite format datuma, vremensku zonu i web-mjesta koja vam odgovaraju."
-        },
-        "appearance": {
-            "heading": "Ugodno uz svijetlu i tamnu temu",
-            "body": "Koristite izgled sustava ili odaberite željenu temu."
-        }
     }
 }

@@ -9,19 +9,5 @@
     "release": {
         "version": "0.1.0",
         "text": "Prima versiune: date exacte pentru marcajele de timp relative acceptate, setări pentru dată și fus orar, controlul site-urilor, aspect luminos și întunecat și interfață în 40 de limbi."
-    },
-    "captions": {
-        "replacement": {
-            "heading": "Vedeți când s-a întâmplat",
-            "body": "Transformați marcajele de timp relative acceptate în date exacte."
-        },
-        "control": {
-            "heading": "Datele dvs. Setările dvs.",
-            "body": "Alegeți formatul datei, fusul orar și site-urile potrivite."
-        },
-        "appearance": {
-            "heading": "Confort atât cu tema luminoasă, cât și cu cea întunecată",
-            "body": "Folosiți aspectul sistemului sau alegeți tema preferată."
-        }
     }
 }
