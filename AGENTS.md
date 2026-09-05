@@ -110,6 +110,10 @@ has an obvious, simpler standard-library replacement.
 ├── .github/
 │   ├── actions/                # Composite toolchain setup shared by workflows
 │   └── workflows/              # CI, release, and Chrome Web Store deployment
+├── assets/
+│   ├── store-listings/         # 40 ready-to-paste localized descriptions
+│   └── store/                  # Finished Chrome listing images
+├── docs/                      # Privacy, support, and Chrome materials handoff
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
@@ -168,7 +172,7 @@ Run commands from the repository root.
 | `pnpm lint` | Run ESLint, formatting rules, and JSDoc checks. |
 | `pnpm typecheck` | Run TypeScript without emitting files. |
 | `pnpm test` | Run the Vitest suite once. |
-| `pnpm check` | Run lint, type checking, and tests. |
+| `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
 The Makefile provides optional compatibility wrappers for non-watch development
 and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
@@ -517,6 +521,12 @@ Known architectural exclusions to improve when their area changes:
   exceed 80 characters when wrapping would make it unreadable.
 
 ### Other
+
+- Keep store materials as ready-to-paste text and finished images. Review
+  translations with an independent agent. Do not add generators, dedicated
+  validators, or review-tracking infrastructure for one-time preparation.
+  Store field limits need dated official evidence; distinguish editorial
+  budgets from store rules.
 
 - Keep source copy and translator notes in the English catalog; translate
   user-facing copy through the shipped UI catalogs.

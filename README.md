@@ -598,6 +598,10 @@ source types are deferred.
 
 ## Documentation
 
+- [Privacy information](docs/PRIVACY.md)
+- [Support](docs/SUPPORT.md)
+- [Chrome store materials](docs/STORE.md)
+
 - [Development](DEVELOPMENT.md)
 - [LLM agent rules](AGENTS.md)
 - [Feature specifications](specs/)

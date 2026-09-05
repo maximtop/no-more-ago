@@ -513,6 +513,11 @@ release archives.
 
 ### Store Configuration
 
+Ready-to-paste descriptions are in `assets/store-listings/<locale>.txt` and
+English images are in `assets/store/chrome/`. See
+[Chrome store materials](docs/STORE.md) for field limits and the dashboard
+handoff. Uploads and submissions use the existing `go-webext` workflow.
+
 The store item must exist before any deployment: the API cannot create the
 listing. One-time setup:
 

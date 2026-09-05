@@ -1,0 +1,10 @@
+No More Ago sostituisce indicazioni relative come «3 mesi fa» con date esatte quando è disponibile un timestamp attendibile. Le date assolute esistenti e le indicazioni non riconosciute restano invariate.
+
+Scegli il formato della data e il fuso orario. Attiva l’estensione globalmente, escludi singoli siti o usala solo sui siti selezionati. Segui l’aspetto del sistema oppure scegli un aspetto chiaro o scuro.
+
+Funziona con timestamp standard supportati e alcune integrazioni con siti web. La compatibilità non è garantita: le modifiche ai siti possono influire sul supporto. Le date senza ora restano date di calendario.
+
+Le impostazioni restano nel browser. I registri diagnostici facoltativi sono salvati localmente. Il supporto per Bluesky invia richieste anonime alla sua API pubblica per i timestamp dei post pubblici. Nessun account e nessuna telemetria.
+
+0.1.0
+Prima versione: date esatte per timestamp relativi supportati, impostazioni di data e fuso orario, controllo dei siti, aspetto chiaro e scuro e interfaccia in 40 lingue.
