@@ -34,14 +34,18 @@ override SELECTED_ARGS := $(if $(SELECTED_BROWSER),$(SELECTED_BROWSER),)
 override CHROME_API_VERSION := v2
 export CHROME_API_VERSION
 ifneq ($(STORE_GOALS),)
-  override CHROME_APP_ID := $(strip $(shell \
-    sed -nE 's/^[[:space:]]*(export[[:space:]]+)?CHROME_APP_ID[[:space:]]*=[[:space:]]*//p' \
-      .env 2>/dev/null \
-    | tail -n 1 \
-    | sed -E 's/[[:space:]]+\#.*$$//' \
-    | tr -d "\"'\r"))
+  # An exported CHROME_APP_ID (for example from op run --env-file=.env.1password)
+  # wins over the .env file.
+  ifeq ($(origin CHROME_APP_ID),undefined)
+    override CHROME_APP_ID := $(strip $(shell \
+      sed -nE 's/^[[:space:]]*(export[[:space:]]+)?CHROME_APP_ID[[:space:]]*=[[:space:]]*//p' \
+        .env 2>/dev/null \
+      | tail -n 1 \
+      | sed -E 's/[[:space:]]+\#.*$$//' \
+      | tr -d "\"'\r"))
+  endif
   ifeq ($(CHROME_APP_ID),)
-    $(error CHROME_APP_ID is empty; fill in .env (see .env.example))
+    $(error CHROME_APP_ID is empty; export it or fill in .env (see .env.example))
   endif
 endif
 

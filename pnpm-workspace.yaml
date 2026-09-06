@@ -1,0 +1,4 @@
+saveExact: true
+strictPeerDependencies: true
+allowBuilds:
+  esbuild: true

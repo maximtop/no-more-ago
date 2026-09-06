@@ -4,10 +4,9 @@
   "private": true,
   "description": "Replace trusted relative timestamps with exact dates.",
   "type": "module",
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@11.18.0",
   "engines": {
-    "node": ">=24 <25",
-    "pnpm": "10.34.5"
+    "node": ">=24 <25"
   },
   "scripts": {
     "dev": "node --experimental-strip-types scripts/build.ts dev",
@@ -37,16 +36,19 @@
     "@resvg/resvg-js": "2.6.2",
     "@rspack/core": "2.1.10",
     "@stylistic/eslint-plugin": "5.10.0",
+    "@types/adm-zip": "0.5.8",
     "@types/chrome": "0.2.7",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "adm-zip": "0.6.0",
     "commander": "15.0.0",
     "eslint": "10.9.0",
     "eslint-plugin-jsdoc": "64.2.1",
     "fflate": "0.8.2",
     "jiti": "2.7.0",
     "jsdom": "30.0.1",
+    "tsx": "4.23.13",
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
     "vitest": "4.1.11"
