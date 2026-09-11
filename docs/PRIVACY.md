@@ -1,6 +1,6 @@
 # No More Ago Privacy Information
 
-Last updated: 2026-09-07
+Last updated: 2026-09-11
 
 No More Ago replaces supported relative timestamp labels with exact dates.
 It does not require an account, collect analytics or telemetry, sell data, or
@@ -26,16 +26,22 @@ Bluesky has the specific network behavior described below.
 
 On supported public Bluesky posts, the extension sends public actor identifiers
 and public post identifiers to `https://public.api.bsky.app` to retrieve the
-server-observed timestamp. Requests are anonymous and credential-free: they do
-not include your cookies, account tokens, authorization headers, settings, or
-post text. Like other internet requests, the connection exposes network
-information such as the source IP address to the receiving service.
+server-observed timestamp. Firefox categorizes this limited transmission as
+browsing activity and website content. Requests are anonymous and
+credential-free: they do not include your cookies, account tokens,
+authorization headers, settings, or post text. Like other internet requests,
+the connection exposes network information such as the source IP address to
+the receiving service.
 
 These requests are necessary for this integration; the extension is not
 entirely offline. Successful results are held temporarily in document memory
 while the relevant page elements remain connected. Stopping processing or
 closing the document discards that state. Disable processing on `bsky.app`, or
 disable the extension globally, to stop this functionality.
+
+Firefox 140 and later shows these required data categories in its installation
+consent experience. Declaring them does not broaden what the extension reads or
+transmits.
 
 ## Settings stored locally
 

@@ -41,6 +41,11 @@ inspects selected Story-bearing page responses while processing is enabled.
 These behaviors and all requested permissions are described in
 `docs/PRIVACY.md` and the project `README.md`.
 
+The Firefox manifest declares `browsingActivity` and `websiteContent` as
+required data collection permissions because the Bluesky integration sends
+public actor and post identifiers to the public AppView. It requires Firefox
+140 or later so Firefox provides the built-in installation consent experience.
+
 ## Third-party libraries
 
 Exact versions are pinned in `package.json` and `pnpm-lock.yaml`. The bundled

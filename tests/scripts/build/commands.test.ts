@@ -83,8 +83,11 @@ describe("build commands", () => {
                 if (browser === "firefox") {
                     expect(manifest.browser_specific_settings).toEqual({
                         gecko: {
+                            data_collection_permissions: {
+                                required: ["browsingActivity", "websiteContent"],
+                            },
                             id: "no-more-ago@maximtop.dev",
-                            strict_min_version: "128.0",
+                            strict_min_version: "140.0",
                         },
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
