@@ -82,7 +82,10 @@ describe("build commands", () => {
                     .toBeDefined();
                 if (browser === "firefox") {
                     expect(manifest.browser_specific_settings).toEqual({
-                        gecko: { strict_min_version: "128.0" },
+                        gecko: {
+                            id: "no-more-ago@maximtop.dev",
+                            strict_min_version: "128.0",
+                        },
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
                 } else {

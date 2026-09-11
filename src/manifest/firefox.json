@@ -4,6 +4,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
+      "id": "no-more-ago@maximtop.dev",
       "strict_min_version": "128.0"
     }
   }
