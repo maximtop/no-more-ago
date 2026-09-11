@@ -601,6 +601,7 @@ source types are deferred.
 - [Privacy information](docs/PRIVACY.md)
 - [Support](docs/SUPPORT.md)
 - [Chrome store materials](docs/STORE.md)
+- [Firefox Add-ons submission](docs/FIREFOX_STORE.md)
 
 - [Development](DEVELOPMENT.md)
 - [LLM agent rules](AGENTS.md)
