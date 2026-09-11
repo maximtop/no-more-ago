@@ -1,17 +1,30 @@
 # Chrome Web Store Materials
 
-This is a local preparation package for the first No More Ago Chrome listing.
-No listing has been created or submitted by this workflow. Firefox and Edge
-listings, store publication, translated screenshots, video and marquee artwork
-are outside this increment.
+This document contains the materials and current status of the first No More
+Ago Chrome listing. Firefox and Edge listings, translated screenshots, video
+and marquee artwork are outside this package.
 
-## Current preparation status
+## Current listing status
 
-The listing copy and English visual package are complete.
-Three 1280×800 screenshots, the icon and small promotional tile are available
-under `assets/store/chrome/`. Screenshots use actual Chrome release-build
-captures from a clean local demonstration and passed independent designer
-review on 2026-09-05.
+On 2026-09-08, Chrome Web Store accepted the version 0.1.0 package and created
+draft item `pcaimklimkjljhmbfkhidealekkiopbd`. It has not been submitted for
+review or published.
+
+All 40 localized descriptions were saved, reloaded and compared with their
+source files. The global icon, three screenshots and small promotional tile
+were uploaded. The category is Productivity → Tools; distribution is free,
+public and available in all regions. Permission explanations and reviewer test
+instructions are saved. Data-use declarations still require completion.
+
+The privacy and support documents are maintained at the links below.
+Verify their public availability before submitting the listing.
+
+The accepted Chrome archive has SHA-256
+`5cdc790488a12527db95460edb261b0aba6ef3c092455b5f82cc5c6f2aa02625`.
+It was built from the release source with no runtime changes during listing
+preparation. Finished images are available under `assets/store/chrome/`.
+Screenshots use actual Chrome release-build captures from a clean local
+demonstration and passed independent designer review on 2026-09-05.
 
 ## Use the descriptions
 
@@ -42,15 +55,16 @@ bundles.
 
 ## Chrome field matrix
 
-Verified against official documentation on 2026-09-05.
+Verified against official documentation on 2026-09-05 and the live Chrome
+dashboard on 2026-09-08.
 
 | Field | Source and handling | Limit or disposition |
 | --- | --- | --- |
 | Name | Existing manifest message | 75 characters; `No More Ago` unchanged |
 | Short description | Existing manifest message | 132 characters; plain text |
-| Detailed description | Four paragraphs plus current release notes | 4,000-character project editorial budget |
-| Language | Canonical registry plus explicit Chromium alias | 39 direct mappings; `nb` → `no` |
-| Category | Select the appropriate current dashboard category | No category identifier fabricated locally |
+| Detailed description | Four paragraphs plus current release notes | 16,000 dashboard maximum; 4,000 project editorial budget |
+| Language | Canonical registry plus dashboard mappings | `nb` → `no`; `he` → `iw`; regional separators become hyphens |
+| Category | Current dashboard selection | Productivity → Tools |
 | Homepage/support/privacy URLs | Links below | Public availability checked separately |
 | Icon | Existing brand export | 128×128 PNG |
 | Screenshots | Three English images | 1280×800 each; within the allowed 1–5 |
@@ -58,27 +72,26 @@ Verified against official documentation on 2026-09-05.
 | Video/marquee | Deferred | Not produced in this increment |
 | Search keywords | Not applicable | No Edge/App Store keyword fields |
 
-The 4,000-character long-description budget is an editorial choice, not a
-verified Chrome dashboard maximum. The retrieved official listing guide does
-not state that maximum. Confirm any additional field restrictions when the
-real listing is created.
+The 4,000-character long-description budget is an editorial choice. The live
+official dashboard displayed a 16,000-character maximum on 2026-09-08; the
+retrieved official listing guide does not state that maximum.
 
 Official pages differ in their wording about whether video is required. The
 image-specific page identifies the icon, small tile and screenshot as mandatory.
-No video is part of this package; resolve any actual dashboard requirement at
-listing creation.
+No video is part of this package.
 
 ## Locale mappings and English images
 
-The store uses these source codes directly:
+The description source files use these locale codes:
 
 ```text
 ar bg bn ca cs da de el en es es_419 fa fi fil fr he hi hr hu id it
 ja ko ms nl pl pt_BR pt_PT ro ru sk sr sv th tr uk vi zh_CN zh_TW
 ```
 
-Use `nb.txt` for Chrome's `no` locale; all other filenames match the locale
-codes above.
+Use `nb.txt` for Chrome's `no` locale and `he.txt` for its `iw` locale. The
+dashboard displays regional codes with hyphens, for example `pt-BR` for
+`pt_BR.txt` and `es-419` for `es_419.txt`.
 
 Use the English screenshot set and promotional tile as the global images.
 
@@ -104,14 +117,16 @@ Before/After arrow are promotional annotations outside the captured interface.
 - Support: https://github.com/maximtop/no-more-ago/issues
 - Intended privacy URL: https://github.com/maximtop/no-more-ago/blob/master/docs/PRIVACY.md
 
-After these documents are merged, verify all three links from a signed-out
-context before filling the listing. The privacy document must be publicly
-readable. Uploads and submissions use the existing `go-webext` workflow
-in [the development guide](../DEVELOPMENT.md#store-configuration).
+After publishing the supporting documents, verify all three links from a
+signed-out context before submitting the listing. The privacy document must
+be publicly readable. The first draft was populated through the Chrome
+dashboard. The existing `go-webext` workflow remains available for subsequent
+manual deployments; see
+[the development guide](../DEVELOPMENT.md#store-configuration).
 
 ## Chrome privacy and permission copy
 
-These English explanations are prepared for the future privacy tab. Choose
+These English explanations are saved in the draft privacy tab. Choose
 actual dashboard declarations according to the implementation and the current
 field definitions. Do not blindly mark all data use as absent merely because
 there is no telemetry.
@@ -159,18 +174,13 @@ context, which can include the current URL. Diagnostics remain local unless
 the user chooses to share an exported file. There is no developer-operated
 telemetry endpoint, account requirement, or sale of user data.
 
-## Handoff to future listing creation
+## Remaining submission work
 
-1. Check the current listing copy and finished images.
-2. Publish the supporting documents and verify the shared public URLs.
-3. Use the normal Chrome release artifact to create an unsubmitted dashboard
-   draft during a separately authorized store task.
-4. Add the English master, global English screenshots, icon and small tile.
-5. Add the localized descriptions for the 40 mapped destinations, using the
-   manifest-supplied names and summaries.
-6. Check current field restrictions, category, privacy/data-use declarations,
-   and any other dashboard-only requirements. Keep the item unsubmitted until
-   the separate publication workflow is requested.
+1. Verify the shared URLs anonymously.
+2. Complete the draft's homepage, support and data-use fields.
+3. Resolve any remaining dashboard validation messages and submit for review.
+4. Record the resulting review or publication state; a saved draft does not
+   establish either status.
 
 ## Official references
 

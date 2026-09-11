@@ -1,6 +1,6 @@
 # No More Ago Privacy Information
 
-Last updated: 2026-09-05
+Last updated: 2026-09-07
 
 No More Ago replaces supported relative timestamp labels with exact dates.
 It does not require an account, collect analytics or telemetry, sell data, or
@@ -78,6 +78,14 @@ restore labels when disabled. Script and navigation capabilities manage the
 runtime in reachable frames and apply settings changes. Storage keeps settings
 and optional logs locally. These capabilities do not authorize unrelated data
 collection by the extension.
+
+## Limited use of data
+
+No More Ago's use of information received from browser APIs adheres to the
+Chrome Web Store User Data Policy, including the Limited Use requirements.
+The extension uses page data only to provide its timestamp functionality and
+user-requested support features. It does not use or transfer that data for
+advertising, profiling, or purposes unrelated to those features.
 
 ## Contact and updates
 

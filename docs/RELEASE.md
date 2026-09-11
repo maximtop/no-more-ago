@@ -119,6 +119,8 @@ and the rotation steps. Push a value to a repository without printing it:
 op read op://VAULT_NAME/chrome-web-store-api/CHROME_REFRESH_TOKEN | gh secret set CHROME_REFRESH_TOKEN
 ```
 
+Replace `VAULT_NAME` with the vault holding the shared item.
+
 Always capture a value before piping it into `gh secret set`: a failed `op`
 command otherwise stores an empty secret without any error.
 
