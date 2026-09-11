@@ -6,18 +6,19 @@ and marquee artwork are outside this package.
 
 ## Current listing status
 
-On 2026-09-08, Chrome Web Store accepted the version 0.1.0 package and created
-draft item `pcaimklimkjljhmbfkhidealekkiopbd`. It has not been submitted for
-review or published.
+Chrome Web Store item `pcaimklimkjljhmbfkhidealekkiopbd` was submitted for
+review on 2026-09-11 with version 0.1.0. Its current recorded status is
+`Pending review`; automatic publication is enabled after approval.
 
 All 40 localized descriptions were saved, reloaded and compared with their
 source files. The global icon, three screenshots and small promotional tile
 were uploaded. The category is Productivity → Tools; distribution is free,
 public and available in all regions. Permission explanations and reviewer test
-instructions are saved. Data-use declarations still require completion.
+instructions are saved. The data-use declarations cover personally
+identifiable information, web history, user activity and website content.
 
-The privacy and support documents are maintained at the links below.
-Verify their public availability before submitting the listing.
+The privacy, homepage and support links were verified as publicly accessible
+before submission.
 
 The accepted Chrome archive has SHA-256
 `5cdc790488a12527db95460edb261b0aba6ef3c092455b5f82cc5c6f2aa02625`.
@@ -174,13 +175,12 @@ context, which can include the current URL. Diagnostics remain local unless
 the user chooses to share an exported file. There is no developer-operated
 telemetry endpoint, account requirement, or sale of user data.
 
-## Remaining submission work
+## Review status
 
-1. Verify the shared URLs anonymously.
-2. Complete the draft's homepage, support and data-use fields.
-3. Resolve any remaining dashboard validation messages and submit for review.
-4. Record the resulting review or publication state; a saved draft does not
-   establish either status.
+The submission may receive an in-depth review because it requests broad host
+permissions. Check the Developer Dashboard for the current state. `Pending
+review` does not establish approval or publication; after approval, verify the
+public listing and update this record with the observed publication state.
 
 ## Official references
 
