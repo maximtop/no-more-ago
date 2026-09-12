@@ -33,7 +33,7 @@
 Install these tools before working on the project:
 
 - Node.js 24.x. The supported engine range is `>=24 <25`.
-- pnpm 10.34.5, installed directly. Do not use Corepack.
+- pnpm 11.18.0, installed directly. Do not use Corepack.
 - Git with access to the private
   `git@github.com:maximtop/no-more-ago.git` repository.
 - Chrome or Edge 111+, or Firefox 128+, for manual extension testing.

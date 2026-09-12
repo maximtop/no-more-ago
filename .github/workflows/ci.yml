@@ -1,44 +1,99 @@
 name: CI
 
 on:
-    pull_request:
-    push:
-        branches:
-            - master
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
 
 permissions:
-    contents: read
+  contents: read
+
+# A release reuses this workflow but must not cancel a PR or manual CI run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.workflow == 'CI' }}
 
 jobs:
-    lint:
-        name: Lint
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-            - name: Set up toolchain and dependencies
-              uses: ./.github/actions/setup-toolchain
-            - name: Run lint
-              run: pnpm lint
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - run: pnpm lint
 
-    typecheck:
-        name: Typecheck
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-            - name: Set up toolchain and dependencies
-              uses: ./.github/actions/setup-toolchain
-            - name: Run type checking
-              run: pnpm typecheck
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - run: pnpm typecheck
 
-    test:
-        name: Test
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-            - name: Set up toolchain and dependencies
-              uses: ./.github/actions/setup-toolchain
-            - name: Run tests
-              run: pnpm test
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - run: pnpm test
+
+  locales:
+    name: Locales
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - run: pnpm locales:validate
+
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - run: pnpm release
+      - uses: ./.github/actions/package-extension
+        with:
+          build-dir: dist/release
+          asset-prefix: no-more-ago
+          locale-dir: src/_locales
+
+  check:
+    name: check
+    if: always()
+    needs: [lint, typecheck, test, package, locales]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every applicable check
+        env:
+          PASSED: >-
+            ${{ needs.lint.result == 'success' &&
+            needs.typecheck.result == 'success' &&
+            needs.test.result == 'success' &&
+            needs.package.result == 'success' &&
+            needs.locales.result == 'success' }}
+        run: test "$PASSED" = true
