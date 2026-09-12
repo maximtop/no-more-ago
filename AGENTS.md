@@ -51,7 +51,7 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
 - **Project type:** Client-only Manifest V3 browser extension.
 - **Language:** TypeScript 6 with strict compiler settings and ES modules.
 - **Runtime:** Node.js 24 for builds; browser extension contexts in production.
-- **Package manager:** pnpm 10.34.5, pinned in `package.json`.
+- **Package manager:** pnpm 11.18.0, pinned in `package.json`.
 - **UI:** React 19 and Mantine 9 for popup and options pages; XState 5 with
   `@xstate/react` for stateful UI controllers.
 - **Date handling:** date-fns 4 and `@date-fns/tz`.
@@ -108,7 +108,7 @@ has an obvious, simpler standard-library replacement.
 ~~~text
 .
 ├── .github/
-│   ├── actions/                # Composite toolchain setup shared by workflows
+│   ├── actions/                # Shared toolchain setup and release archive verification
 │   └── workflows/              # CI, release, and Chrome, Edge, and Firefox deployment
 ├── assets/
 │   ├── store-listings/         # 40 ready-to-paste localized descriptions
@@ -492,7 +492,9 @@ Known architectural exclusions to improve when their area changes:
   the Chrome archive by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the
   README installation steps. Change them together. `Please release` prepares a
   requested newer `X.Y.Z` through a release PR; merging it is the checked tag
-  and GitHub Release trigger.
+  and GitHub Release trigger. Release reuses `ci.yml`; the common
+  `package-extension` action verifies the resulting ZIPs. The required
+  `check` job aggregates all applicable CI jobs.
 - Keep settings in one typed, schema-versioned document and persist the current
   and previous snapshots together.
 - Route settings writes through the background settings service so concurrent
