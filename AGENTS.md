@@ -488,9 +488,11 @@ Known architectural exclusions to improve when their area changes:
   `no-more-ago-<version>-source.zip`, and `SHA256SUMS.txt`) and the checksum
   file format (GNU `sha256sum` lines with bare asset names, generated and
   checked inside the directory holding the assets) as one contract shared by
-  `release.yml`, `deploy-chrome-store.yml` (which selects the Chrome archive
-  by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the README installation
-  steps. Change them together.
+  `please-release.yml`, `release.yml`, `deploy-chrome-store.yml` (which selects
+  the Chrome archive by its `-chrome.zip` suffix), `DEVELOPMENT.md`, and the
+  README installation steps. Change them together. `Please release` prepares a
+  requested newer `X.Y.Z` through a release PR; merging it is the checked tag
+  and GitHub Release trigger.
 - Keep settings in one typed, schema-versioned document and persist the current
   and previous snapshots together.
 - Route settings writes through the background settings service so concurrent
