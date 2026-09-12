@@ -109,7 +109,7 @@ has an obvious, simpler standard-library replacement.
 .
 ├── .github/
 │   ├── actions/                # Composite toolchain setup shared by workflows
-│   └── workflows/              # CI, release, and Chrome Web Store deployment
+│   └── workflows/              # CI, release, and Chrome, Edge, and Firefox deployment
 ├── assets/
 │   ├── store-listings/         # 40 ready-to-paste localized descriptions
 │   └── store/                  # Finished Chrome listing images
