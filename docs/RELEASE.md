@@ -3,6 +3,8 @@
 This document has the same structure in every extension repository; only the
 store list, the identifiers, and the repository-specific notes differ.
 
+The cross-repository contract and extraction boundary are documented in [Shared store deployment](STORE_DEPLOYMENT.md).
+
 - [Cut a release](#cut-a-release)
 - [Store deployment](#store-deployment)
   - [Chrome Web Store](#chrome-web-store)
@@ -44,13 +46,13 @@ delete it with `gh release delete vX.Y.Z --yes` before re-running.
 
 ## Store deployment
 
-Nothing is sent to a store automatically. Each store has its own manual
-workflow that takes an already published GitHub Release. Only the Chrome Web
-Store has a workflow here; Edge Add-ons and Firefox Add-ons submissions remain
-manual uploads of the release archives.
+Nothing is sent to a store automatically. Chrome, Edge, and Firefox each
+have a manual workflow that takes an already published GitHub Release.
 
 ```sh
 gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z
+gh workflow run deploy-edge-addons.yml -f tag=vX.Y.Z
+gh workflow run deploy-firefox-amo.yml -f tag=vX.Y.Z
 ```
 
 The `tag` input is optional; blank deploys the latest published release. The
@@ -85,6 +87,11 @@ with the same tag to submit it again. A green run proves a successful
 submission, not approval.
 
 ## Store configuration
+
+The complete Chrome, Edge, and Firefox configuration matrix is in
+[Shared store deployment](STORE_DEPLOYMENT.md#github-configuration).
+
+The Chrome-specific bootstrap details follow.
 
 The store item must exist before any deployment: the API cannot create the
 listing. One-time setup:

@@ -1,6 +1,5 @@
 /**
- * @file Store deployment constants of this repository. Every other file under scripts/deploy
- * and tests/deploy is identical across the extension repositories; only this file differs.
+ * @file Configuration for this repository's shared extension deployment flow.
  */
 
 /**
@@ -10,9 +9,9 @@
 export const RELEASE_ASSET_PREFIX = 'no-more-ago';
 
 /**
- * Stores this extension is deployed to; each one has a deploy-<store>.yml workflow.
+ * Stores this extension is deployed to; each one has a deploy workflow.
  */
-export const STORE_TARGETS = ['chrome'] as const;
+export const STORE_TARGETS = ['chrome', 'edge', 'firefox'] as const;
 
 /**
  * Store this repository can deploy to.
@@ -20,19 +19,34 @@ export const STORE_TARGETS = ['chrome'] as const;
 export type StoreTarget = typeof STORE_TARGETS[number];
 
 /**
- * Firefox add-on ID (`browser_specific_settings.gecko.id`); empty when Firefox is not a target.
+ * Firefox add-on ID from `browser_specific_settings.gecko.id`.
  */
-export const GECKO_ID = '';
+export const GECKO_ID = 'no-more-ago@maximtop.dev';
 
 /**
- * Files the Firefox source archive must contain; unused when Firefox is not a target.
+ * Files the Firefox source archive must contain.
  */
-export const SOURCE_REQUIRED_FILES = ['package.json', 'pnpm-lock.yaml', 'src/manifest.json'];
+export const SOURCE_REQUIRED_FILES = [
+    'package.json',
+    'pnpm-lock.yaml',
+    'pnpm-workspace.yaml',
+    'tsconfig.json',
+    'rspack.config.ts',
+    'src/manifest/common.json',
+    'src/manifest/firefox.json',
+    'scripts/build.ts',
+    'DEVELOPMENT.md',
+];
 
 /**
- * Reviewer notes inside the source archive, submitted to AMO with every new Firefox version.
+ * Reviewer notes submitted to AMO with every new Firefox version.
  */
 export const AMO_REVIEW_NOTES_PATH = 'docs/AMO_REVIEW.md';
+
+/**
+ * Filename of the extracted reviewer notes consumed by preflight and upload.
+ */
+export const AMO_APPROVAL_NOTES_FILENAME = 'approval-notes.txt';
 
 /**
  * Shape of a release tag; the version is the tag without the `v` prefix.
