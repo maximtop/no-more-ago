@@ -33,8 +33,9 @@ The public XPI contains the expected Gecko ID
 catalogs, and Mozilla signature files under `META-INF/`. A clean build from the
 recorded submit commit `89f63e2` reproduced the recorded unsigned Firefox ZIP
 SHA-256 `380ec401ea3ebb5ddd6bed464913f2d5e2ebd543365a10c374d9e8f48e1d8006`.
-All 54 non-signature files in the public XPI match that rebuilt ZIP; AMO removed
-only the final newline from `manifest.json` before signing.
+Of the 54 non-signature files in the public XPI, 53 are byte-identical to the
+rebuilt ZIP. The remaining file, `manifest.json`, differs only because its final
+newline is absent from the public XPI.
 
 A fresh `git archive` from `89f63e2` also reproduced the recorded source ZIP
 SHA-256 `902ac75b95bf6511283f92b5a91c3b22e335127198f4db7d0f7d5039fdd5d8d9`.

@@ -76,9 +76,8 @@ Install the published extension from the store for your browser:
 - [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/pcaimklimkjljhmbfkhidealekkiopbd)
 - [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/no-more-ago/)
 
-The Microsoft Edge Add-ons release is still under review. Do not install an
-unrelated listing that uses the same product name. Developers who need to test
-the Edge target can build it locally by following the
+The Microsoft Edge Add-ons release is still under review. Developers who need
+to test the Edge target can build it locally by following the
 [development guide](DEVELOPMENT.md).
 
 The official product pages are available on maximtop.dev:
