@@ -6,9 +6,8 @@ This document records the first No More Ago submission to Firefox Add-ons
 ## Current status
 
 AMO add-on `no-more-ago`, version 0.1.0, was submitted for review on
-2026-09-11 from commit `89f63e2`. Its current recorded status is
-`Awaiting Review`. This confirms submission only; approval and public
-availability have not yet been established.
+2026-09-11 from commit `89f63e2`. The submission was subsequently approved
+and is publicly available from Firefox Add-ons.
 
 - Product page: https://addons.mozilla.org/firefox/addon/no-more-ago/
 - Version record:
@@ -21,6 +20,28 @@ availability have not yet been established.
 The submitted source archive reproduced the extension archive byte for byte
 when built with the documented commands. Review notes are in
 [AMO_REVIEW.md](AMO_REVIEW.md).
+
+## Public verification — September 15, 2026
+
+The anonymous AMO API reports add-on ID `3070516`, version record `6479158`,
+and public file `5023325` for version 0.1.0. The downloaded XPI has SHA-256
+`1fb8a023dc2308274a4977b4210c2ebef12625d81534187b0a52a5714c917961`,
+matching the API response.
+
+The public XPI contains the expected Gecko ID
+`no-more-ago@maximtop.dev`, minimum Firefox version 140.0, all 40 locale
+catalogs, and Mozilla signature files under `META-INF/`. A clean build from the
+recorded submit commit `89f63e2` reproduced the recorded unsigned Firefox ZIP
+SHA-256 `380ec401ea3ebb5ddd6bed464913f2d5e2ebd543365a10c374d9e8f48e1d8006`.
+Of the 54 non-signature files in the public XPI, 53 are byte-identical to the
+rebuilt ZIP. The remaining file, `manifest.json`, differs only because its final
+newline is absent from the public XPI.
+
+A fresh `git archive` from `89f63e2` also reproduced the recorded source ZIP
+SHA-256 `902ac75b95bf6511283f92b5a91c3b22e335127198f4db7d0f7d5039fdd5d8d9`.
+There is currently no Git tag or GitHub Release for v0.1.0, so these checks
+establish the association through the recorded submission commit and hashes,
+not through a published GitHub Release asset.
 
 ## Product page
 
@@ -67,9 +88,10 @@ at runtime. The limitation applies only to the AMO product-page description.
 
 ## Publication follow-up
 
-After AMO finishes review, verify the product page in a signed-out browser
-before recording the extension as published. Keep upload, review approval and
-public availability as separate release states.
+The product page and anonymous API now confirm public availability. A separate
+native Firefox install and functional smoke test is still required before the
+publication task can be considered complete. Keep upload, review approval,
+public availability, and runtime verification as separate release states.
 
 ## Official references
 
