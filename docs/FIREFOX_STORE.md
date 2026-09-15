@@ -100,7 +100,7 @@ format and UTC setting remained selected after reloading the options page.
 
 Hacker News did not pass. Relative timestamps remained unchanged. Diagnostics
 recorded an adapter match followed by 30 `invalid-timestamp` skips and zero
-successful timings. The live timestamp source was
+transformed timestamps. The live timestamp source was
 `2026-09-15T12:31:10`, which has no explicit time-zone designator and is
 therefore rejected by the adapter's `EXPLICIT_ISO_ZONE` validation rule.
 Current `master` uses the same Hacker News parsing behavior.
