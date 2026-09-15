@@ -1532,7 +1532,7 @@ describe("DocumentTransformationController", () => {
     it.each([
         ["the trusted title is removed", "remove-title"],
         ["the trusted title becomes blank", "blank-title"],
-        ["the trusted title becomes unzoned", "unzone-title"],
+        ["the trusted title becomes an unsupported unzoned shape", "unzone-title"],
         ["the age class is removed", "remove-class"],
     ] as const)("restores an owned in-place source when %s", async (_name, mutation) => {
         document.body.innerHTML = `<span class="age"
@@ -1561,7 +1561,7 @@ describe("DocumentTransformationController", () => {
         } else if (mutation === "blank-title") {
             source.setAttribute("title", "   ");
         } else if (mutation === "unzone-title") {
-            source.setAttribute("title", "2026-08-28T10:09:07");
+            source.setAttribute("title", "2026-08-28T10:09:07.123");
         } else {
             source.classList.remove("age");
         }
@@ -1733,7 +1733,7 @@ describe("DocumentTransformationController", () => {
             document.querySelector("#two")?.replaceChildren();
             await flushMutations();
             expect(replacement.textContent).toBe("4 hours ago");
-            wrapper.title = "2027-08-28T10:09:07";
+            wrapper.title = "2027-08-28T10:09:07.123";
             document.querySelector("#one")?.append(wrapper);
             await flushMutations();
             expect(replacement.textContent).toBe("4 hours ago");

@@ -110,8 +110,8 @@ describe("Hacker News fixtures", () => {
             display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
         });
         const unchangedIds = [
-            "missing-title", "blank", "padded", "local", "impossible", "malformed",
-            "multiple", "complex", "wrong-element",
+            "missing-title", "blank", "padded", "ambiguous-fraction", "impossible",
+            "malformed", "multiple", "complex", "wrong-element",
         ];
         const unchanged = new Map(unchangedIds.map((id) => [
             id, document.getElementById(id)?.textContent,
@@ -123,6 +123,7 @@ describe("Hacker News fixtures", () => {
             throw new Error("Expected eligible labels");
         }
         expect(linked.textContent.trim()).toBe("2026");
+        expect(document.querySelector("#live-unzoned")?.textContent.trim()).toBe("2026");
         expect(absolute.textContent.trim()).toBe("Aug 27, 2026");
         expect(document.querySelector("#no-link")?.textContent).toBe("2026");
         expect(document.querySelector("time")?.nextElementSibling).toBeInstanceOf(HTMLTimeElement);
@@ -130,7 +131,7 @@ describe("Hacker News fixtures", () => {
         for (const [id, text] of unchanged) {
             expect(document.getElementById(id)?.textContent).toBe(text);
         }
-        expect(document.querySelectorAll("span.age")).toHaveLength(11);
+        expect(document.querySelectorAll("span.age")).toHaveLength(12);
         controller2.teardown();
     });
 

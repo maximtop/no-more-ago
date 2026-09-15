@@ -81,6 +81,20 @@ describe("Hacker News source contract", () => {
         });
     });
 
+    it("normalizes the live Hacker News UTC title shape", () => {
+        document.body.innerHTML = `
+            <span id="age" class="age" title="2026-09-15T12:31:10">
+                <a href="item?id=49711544">6 hours ago</a>
+            </span>`;
+        const source = document.getElementById("age");
+        if (!source) {
+            throw new Error("Expected Hacker News age widget");
+        }
+
+        expect(hackerNewsAdapter.extract(source)?.rawDatetime)
+            .toBe("2026-09-15T12:31:10Z");
+    });
+
     it("accepts one simple no-link label and rejects ambiguous content", () => {
         document.body.innerHTML = `
             <span id="simple" class="age" title="2026-08-28T10:09:07Z">52 minutes ago</span>
