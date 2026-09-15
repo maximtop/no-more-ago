@@ -19,6 +19,7 @@ import {
 } from "./relative-presentation";
 
 const AGE_SELECTOR = "span.age[title]" as const;
+const UNZONED_UTC_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 
 /**
  * Stable identifier for the Hacker News source rule.
@@ -85,6 +86,19 @@ function findPresentationTarget(source: Element): Text | null {
 }
 
 /**
+ * Converts Hacker News's page-owned UTC datetime shape to explicit ISO UTC.
+ *
+ * Hacker News emits second-precision UTC values without a zone suffix. Other
+ * unzoned shapes remain ambiguous and fail the shared explicit-zone parser.
+ *
+ * @param value - Datetime copied from the Hacker News age title.
+ * @returns - Explicitly zoned datetime for the evidenced UTC shape.
+ */
+function normalizeHackerNewsDatetime(value: string): string {
+    return UNZONED_UTC_DATETIME.test(value) ? `${value}Z` : value;
+}
+
+/**
  * Specialized Hacker News source using only the page-owned age title.
  */
 export const hackerNewsAdapter = {
@@ -112,7 +126,7 @@ export const hackerNewsAdapter = {
             ruleId: HACKER_NEWS_ADAPTER_ID,
             source: element,
             sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
-            rawDatetime,
+            rawDatetime: normalizeHackerNewsDatetime(rawDatetime),
             presentation: {
                 kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
                 target,
