@@ -58,6 +58,9 @@ describe("build commands", () => {
     it("builds all development targets and one release target", async () => {
         const workspace = createBuildWorkspace();
         try {
+            const packageJson = JSON.parse(
+                readFileSync(`${workspace.root}/package.json`, "utf8"),
+            ) as Record<string, unknown>;
             await execFileAsync(PNPM_COMMAND, ["dev"], {
                 cwd: workspace.root,
                 timeout: 120_000,
@@ -71,7 +74,7 @@ describe("build commands", () => {
                 const manifest = JSON.parse(manifestText) as Record<string, unknown>;
                 const background = manifest.background as Record<string, unknown>;
                 expect(manifest.manifest_version).toBe(3);
-                expect(manifest.version).toBe("0.1.0");
+                expect(manifest.version).toBe(packageJson.version);
                 expect(manifest.permissions).toEqual([
                     "scripting",
                     "storage",
