@@ -71,44 +71,25 @@ extension.
 
 ## Installation
 
-No More Ago is not published in browser stores yet. Installation currently
-requires a browser-specific archive from the repository's GitHub Releases
-page, or a local build made by following the
+Install the published extension from the store for your browser:
+
+- [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/pcaimklimkjljhmbfkhidealekkiopbd)
+- [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/no-more-ago/)
+
+The Microsoft Edge Add-ons release is still under review. Do not install an
+unrelated listing that uses the same product name. Developers who need to test
+the Edge target can build it locally by following the
 [development guide](DEVELOPMENT.md).
 
-1. Download `no-more-ago-<version>-<browser>.zip` and `SHA256SUMS.txt` from
-   the release, or build `dist/release/<browser>.zip` from source.
-2. Verify a downloaded archive in the download directory:
+The official product pages are available on maximtop.dev:
 
-   ~~~sh
-   shasum -a 256 --ignore-missing -c SHA256SUMS.txt
-   ~~~
-
-3. Follow the steps for your browser below. Once installed, the toolbar icon
-   is the Exact Point mark: a ring with a marker at the top.
-
-### Chrome and Edge
-
-Requires Chrome or Edge 111 or later.
-
-1. Extract the Chrome or Edge archive.
-2. Open the browser's extension management page.
-3. Enable Developer mode.
-4. Choose **Load unpacked**.
-5. Select the extracted archive directory.
-
-### Firefox
-
-Requires Firefox 128 or later.
-
-1. Extract the Firefox archive.
-2. Open `about:debugging#/runtime/this-firefox`.
-3. Choose **Load Temporary Add-on**.
-4. Select `manifest.json` from the extracted archive.
+- [No More Ago](https://maximtop.dev/extensions/no-more-ago/)
+- [Privacy](https://maximtop.dev/extensions/no-more-ago/privacy/)
+- [Support](https://maximtop.dev/extensions/no-more-ago/support/)
 
 ## Quick Start
 
-1. Install the archive for your browser.
+1. Install No More Ago from your browser's store.
 2. Open an HTTP(S) page with a relative label backed by a trusted timestamp.
 3. Open the No More Ago toolbar popup.
 4. Leave **Extension enabled** and **Enabled on this site** switched on. By
