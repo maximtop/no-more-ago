@@ -86,12 +86,30 @@ ar bg bn ca da es-419 fa fil hi id ms th
 Those catalogs remain included in the extension and are selected by Firefox
 at runtime. The limitation applies only to the AMO product-page description.
 
-## Publication follow-up
+## Native verification — September 15, 2026
 
-The product page and anonymous API now confirm public availability. A separate
-native Firefox install and functional smoke test is still required before the
-publication task can be considered complete. Keep upload, review approval,
-public availability, and runtime verification as separate release states.
+Native verification is **partial**. The signed AMO version 0.1.0 was installed
+and enabled in Firefox 155.0.1 with access to all websites enabled and private
+window access disabled.
+
+On GitHub, commit `9b1b6d6` changed from `1 hour ago` to `2026-09-15 17:10`
+with the custom `yyyy-MM-dd HH:mm` format and UTC time zone. Turning the global
+switch off and on restored and reapplied the timestamp without a page reload.
+Adding and removing `github.com` from Excluded sites did the same. The custom
+format and UTC setting remained selected after reloading the options page.
+
+Hacker News did not pass. Relative timestamps remained unchanged. Diagnostics
+recorded an adapter match followed by 30 `invalid-timestamp` skips and zero
+successful timings. The live timestamp source was
+`2026-09-15T12:31:10`, which has no explicit time-zone designator and is
+therefore rejected by the adapter's `EXPLICIT_ISO_ZONE` validation rule.
+Current `master` uses the same Hacker News parsing behavior.
+
+Do not assume this unzoned Hacker News value is UTC. Before another release,
+establish its authoritative time-zone semantics, add a regression test for the
+live format, implement the narrowest evidenced fix, publish a new version, and
+repeat the native Firefox test. Keep upload, review approval, public
+availability, and runtime verification as separate release states.
 
 ## Official references
 
