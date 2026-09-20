@@ -19,7 +19,12 @@ describe("locale artifacts", () => {
     it("ships every catalog, the Chromium alias, and a localized manifest", async () => {
         const workspace = createBuildWorkspace();
         try {
-            await execFileAsync(PNPM_COMMAND, ["dev"], { cwd: workspace.root, timeout: 300_000 });
+            for (const browser of BROWSERS) {
+                await execFileAsync(PNPM_COMMAND, ["dev", browser], {
+                    cwd: workspace.root,
+                    timeout: 300_000,
+                });
+            }
             const codes = UI_LOCALES.map(({ code }) => code).sort();
             const aliases = Object.entries(CHROMIUM_LOCALE_ALIAS);
 

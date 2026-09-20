@@ -5,6 +5,7 @@
 import { Argument, Command } from "commander";
 import {
     BROWSERS,
+    BROWSER,
     BUILD_EXIT_CODE,
     BUILD_MODE,
     isBrowser,
@@ -59,7 +60,9 @@ export function createBuildRequest(
     }
     return {
         mode,
-        browsers: browser === undefined ? [...BROWSERS] : [browser],
+        browsers: browser === undefined
+            ? (mode === BUILD_MODE.DEV ? [BROWSER.CHROME] : [...BROWSERS])
+            : [browser],
         watch,
     };
 }
@@ -89,9 +92,6 @@ export function parseBuildCli(): BuildRequest {
         .option("--watch", "watch one browser target for changes")
         .action((browser: string | undefined, options: { readonly watch?: boolean }) => {
             const watch = options.watch === true;
-            if (watch && browser === undefined) {
-                program.error("Watch requires one browser");
-            }
             request = createBuildRequest(BUILD_MODE.DEV, browser, watch);
         });
 
