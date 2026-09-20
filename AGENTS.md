@@ -161,7 +161,7 @@ Run commands from the repository root.
 | Command | Purpose |
 | --- | --- |
 | `pnpm install` | Install the exactly pinned dependency graph. |
-| `pnpm dev` | Build development artifacts for all browser targets. |
+| `pnpm dev` | Build the Chrome development artifact. |
 | `pnpm dev chrome --watch` | Watch and rebuild the Chrome development artifact. |
 | `pnpm dev firefox --watch` | Watch and rebuild the Firefox development artifact. |
 | `pnpm dev edge --watch` | Watch and rebuild the Edge development artifact. |
@@ -174,8 +174,7 @@ Run commands from the repository root.
 | `pnpm test` | Run the Vitest suite once. |
 | `pnpm check` | Run lint, type checking, catalog validation, and tests. |
 
-The Makefile provides optional compatibility wrappers for non-watch development
-and release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
+The Makefile provides wrappers for development, watch, and local release builds, plus `chrome_status`, `chrome_update`, and `chrome_publish`
 fallbacks that drive the Chrome Web Store with `go-webext` and the gitignored
 `.env`. Prefer the direct pnpm commands above, and the tagged release and
 deployment workflows described in `DEVELOPMENT.md` for real releases. There is
