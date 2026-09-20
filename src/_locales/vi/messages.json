@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "vi",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Bổ sung ngày tuyệt đối chưa đầy đủ",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Chỉ bổ sung những nhãn ngày đã nhận diện có dấu thời gian đầy đủ và đáng tin cậy. Nhãn trống hoặc không xác định được giữ nguyên.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Điều chỉnh độ chính xác theo thời gian đã trôi qua",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Các giá trị giới hạn thời gian đã trôi qua được tính vào khoảng. Dấu thời gian trong tương lai dùng khoảng đầu tiên. Độ chính xác được cập nhật khi trang được xử lý.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Giới hạn thời gian đã trôi qua tính bằng giờ",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Độ chính xác",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Dấu thời gian cũ hơn",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Giây",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Phút",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Ngày theo lịch",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Năm",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Thêm khoảng",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Xóa khoảng",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Nhập các giới hạn giờ dương theo thứ tự tăng dần.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Định dạng tùy chỉnh giữ nguyên thứ tự các thành phần ngày và kiểu trình bày. Độ chính xác giới hạn các trường được hiển thị; không thêm trường vào định dạng tùy chỉnh.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

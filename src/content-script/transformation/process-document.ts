@@ -2,6 +2,7 @@
  * @file Transforms eligible timestamps while preserving ownership and diagnostics boundaries.
  */
 
+import { isIncompleteAbsolutePresentation } from "../adapters/absolute-presentation";
 import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
 import {
     getRelativePresentationObservationTarget,
@@ -91,6 +92,7 @@ function getFailureSourceTimestamp(
  * @param display - Current validated presentation settings.
  * @param diagnosticSink - Optional bounded diagnostic sink.
  * @param ownedDomMutations - Optional renderer mutation sink.
+ * @param nowMilliseconds - Shared age snapshot captured before discovery.
  * @returns - Render result, or null when presentation or ownership is unavailable.
  */
 function renderResolvedTimestamp(
@@ -99,6 +101,7 @@ function renderResolvedTimestamp(
     display: DisplaySettings | undefined,
     diagnosticSink: DocumentDiagnosticSink | undefined,
     ownedDomMutations: OwnedDomMutationSink | undefined,
+    nowMilliseconds: number,
 ): TimestampRenderResult | null {
     const source = resolved.source;
     if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
@@ -114,7 +117,9 @@ function renderResolvedTimestamp(
     }
     const presentation = resolved.kind === RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE
         ? { text: formatCalendarDate(resolved.calendarDate, locales, display) }
-        : formatDateWithPresentation(resolved.instant, locales, display);
+        : formatDateWithPresentation(
+            resolved.instant, locales, display, undefined, nowMilliseconds,
+        );
     if (presentation.text.length === 0) {
         restoreTimestampPresentation(source, ownedDomMutations);
         if (diagnosticSink && presentation.error === INVALID_DATE_FORMAT_ERROR) {
@@ -373,6 +378,7 @@ function addCandidate(
  * @param extractionContext - Current route and page-text extraction context.
  * @param presentationContext - Current locale and page-text classification context.
  * @param nowMilliseconds - Current plausibility boundary for timestamp resolution.
+ * @param allowAbsolute - Whether recognized incomplete absolute labels are eligible.
  */
 function evaluateRuleCandidate(
     accumulator: CandidateAccumulator,
@@ -381,6 +387,7 @@ function evaluateRuleCandidate(
     extractionContext: TimestampExtractionContext,
     presentationContext: TimestampPresentationContext,
     nowMilliseconds: number,
+    allowAbsolute: boolean,
 ): void {
     if (accumulator.resolvedBySource.has(source)) {
         return;
@@ -398,7 +405,11 @@ function evaluateRuleCandidate(
     if (observationTarget) {
         accumulator.textObservationTargets.set(source, observationTarget);
     }
-    if (!rule.isRelativePresentation(candidate, presentationContext)) {
+    if (!rule.isRelativePresentation(candidate, presentationContext)
+        && !(allowAbsolute && resolved.kind === RESOLVED_TIMESTAMP_KIND.INSTANT
+            && isIncompleteAbsolutePresentation(
+                candidate, presentationContext, resolved.instant,
+            ))) {
         accumulator.presentationRejectedSources.add(source);
         return;
     }
@@ -443,6 +454,8 @@ function createPresentationContext(
  * @param collection - Ordered sources and their adapter candidates.
  * @param locales - Locale snapshot shared with presentation classification.
  * @param started - Optional start time captured before discovery.
+ * @param nowMilliseconds - Shared age snapshot captured before discovery.
+ * @param display - Shared display settings snapshot captured before discovery.
  * @returns - Generated adjacent time outputs from the processed sources.
  */
 function processCandidateCollection(
@@ -450,8 +463,9 @@ function processCandidateCollection(
     collection: CandidateCollection,
     locales: readonly string[],
     started: number | undefined,
+    nowMilliseconds: number,
+    display: DisplaySettings | undefined,
 ): readonly HTMLTimeElement[] {
-    const display = input.displayProvider?.() ?? input.display;
     const ownedDomMutations = input.ownedDomMutations;
     const diagnosticSink = input.diagnosticSink;
     const {
@@ -518,6 +532,7 @@ function processCandidateCollection(
                 display,
                 diagnosticSink,
                 ownedDomMutations,
+                nowMilliseconds,
             );
             if (result) {
                 renderedCount += 1;
@@ -558,6 +573,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
     const nowMilliseconds = Date.now();
+    const display = input.displayProvider?.() ?? input.display;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
@@ -590,6 +606,7 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
                 extractionContext,
                 presentationContext,
                 nowMilliseconds,
+                display?.precisionPolicy?.absoluteLabels ?? false,
             );
         }
     }
@@ -626,6 +643,8 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
         },
         presentationContext.locales,
         started,
+        nowMilliseconds,
+        display,
     );
 }
 
@@ -645,6 +664,7 @@ export function reconcileDocumentSources(
     }
     const started = input.diagnosticSink ? performance.now() : undefined;
     const nowMilliseconds = Date.now();
+    const display = input.displayProvider?.() ?? input.display;
     const candidatesBySource = new Map<Element, TimestampCandidate[]>();
     const resolvedBySource = new Map<Element, ResolvedTimestamp>();
     const discoveredSources: Element[] = [];
@@ -682,6 +702,7 @@ export function reconcileDocumentSources(
                 extractionContext,
                 presentationContext,
                 nowMilliseconds,
+                display?.precisionPolicy?.absoluteLabels ?? false,
             );
         }
     }
@@ -697,6 +718,8 @@ export function reconcileDocumentSources(
         },
         presentationContext.locales,
         started,
+        nowMilliseconds,
+        display,
     );
 }
 

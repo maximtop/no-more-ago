@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "ar",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "استكمال التواريخ المطلقة الناقصة",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "لا تُستكمل إلا تسميات التاريخ المعروفة التي لها طابع زمني كامل وموثوق. تبقى التسميات الفارغة أو غير المعروفة دون تغيير.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "ضبط الدقة حسب المدة المنقضية",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "تُضمَّن حدود المدة المنقضية في النطاق. تستخدم الطوابع الزمنية المستقبلية النطاق الأول. تُحدَّث الدقة عند معالجة الصفحة.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "حد المدة المنقضية بالساعات",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "الدقة",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "طوابع زمنية أقدم",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "ثوانٍ",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "دقائق",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "يوم تقويمي",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "سنة",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "إضافة نطاق",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "إزالة النطاق",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "أدخل حدودًا موجبة بالساعات بترتيب تصاعدي.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "تحافظ التنسيقات المخصصة على ترتيب أجزاء التاريخ ونمطها. تحدّ الدقة من الحقول المعروضة؛ ولا تضيف حقولًا إلى التنسيق المخصص.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

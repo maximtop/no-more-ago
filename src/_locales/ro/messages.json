@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "ro",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Completează datele absolute incomplete",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Sunt completate doar etichetele de dată recunoscute, cu un marcaj temporal complet și de încredere. Etichetele goale sau necunoscute rămân neschimbate.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Ajustează precizia în funcție de vechime",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Limitele de vechime sunt incluse în interval. Datele viitoare folosesc primul interval. Precizia se actualizează când pagina este procesată.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Limita de vechime în ore",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Precizie",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Date mai vechi",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Secunde",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minute",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Zi calendaristică",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "An",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Adaugă interval",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Elimină intervalul",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Introdu limite pozitive în ore, în ordine crescătoare.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Formatele personalizate păstrează ordinea componentelor datei și stilul. Precizia limitează câmpurile afișate; nu adaugă câmpuri la un format personalizat.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

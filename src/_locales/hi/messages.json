@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "hi",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "अधूरी निरपेक्ष तारीखें पूरी करें",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "केवल पहचाने गए तारीख लेबल ही पूरे किए जाते हैं जिनके लिए भरोसेमंद पूरा टाइमस्टैम्प उपलब्ध है। खाली या अज्ञात लेबल नहीं बदलते।",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "बीते समय के अनुसार सटीकता बदलें",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "बीते समय की सीमाएँ रेंज में शामिल हैं। भविष्य के टाइमस्टैम्प पहली रेंज का उपयोग करते हैं। पेज प्रोसेस होने पर सटीकता अपडेट होती है।",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "बीते समय की सीमा, घंटों में",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "सटीकता",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "पुराने टाइमस्टैम्प",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "सेकंड",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "मिनट",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "कैलेंडर दिन",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "वर्ष",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "रेंज जोड़ें",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "रेंज हटाएँ",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "घंटों में धनात्मक सीमाएँ बढ़ते क्रम में दर्ज करें।",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "कस्टम प्रारूप में तारीख के हिस्सों का क्रम और शैली बनी रहती है। सटीकता केवल दिखाए जाने वाले फ़ील्ड सीमित करती है; कस्टम प्रारूप में नए फ़ील्ड नहीं जोड़ती।",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

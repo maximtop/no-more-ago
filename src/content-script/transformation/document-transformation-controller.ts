@@ -427,16 +427,27 @@ export class DocumentTransformationController {
     }
 
     /**
-     * Reformats only already owned, connected sources after a presentation save.
+     * Refreshes output after a presentation save, discovering skipped sources only when requested.
+     *
+     * @param includeUnowned - Whether an expanded label policy requires one discovery pass.
      *
      * @returns - Time elements updated during the reformat operation.
      */
-    reformatOwned(): readonly HTMLTimeElement[] {
+    reformatOwned(includeUnowned = false): readonly HTMLTimeElement[] {
         if (this.phase !== "active") {
+            return this.outputs;
+        }
+        if (this.synchronizeCurrentRoute()) {
             return this.outputs;
         }
         const scheduler = this.scheduler;
         if (!scheduler) {
+            return this.outputs;
+        }
+        if (includeUnowned) {
+            this.outputs = reconcileDocumentRegion(
+                this.regionProcessInput(this.input.root, scheduler),
+            );
             return this.outputs;
         }
         const sources = getOwnedTimestampSourceEntries(this.input.root)

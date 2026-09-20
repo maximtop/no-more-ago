@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "hr",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Dopuni nepotpune apsolutne datume",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Dopunjuju se samo prepoznate oznake datuma s pouzdanom potpunom vremenskom oznakom. Prazne i nepoznate oznake ostaju nepromijenjene.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Prilagodi preciznost starosti",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Granice starosti uključene su u raspon. Budući datumi koriste prvi raspon. Preciznost se ažurira pri obradi stranice.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Granica starosti u satima",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Preciznost",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Stariji datumi",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Sekunde",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minute",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Kalendarski dan",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Godina",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Dodaj raspon",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Ukloni raspon",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Unesite pozitivne granice u satima u rastućem redoslijedu.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Prilagođeni formati zadržavaju redoslijed dijelova datuma i stil. Preciznost ograničava prikazana polja, ali ne dodaje polja u prilagođeni format.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

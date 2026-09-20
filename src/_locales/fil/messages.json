@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "fil",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Kumpletuhin ang mga hindi kumpletong absolutong petsa",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Mga nakilalang label ng petsa lang na may mapagkakatiwalaang kumpletong timestamp ang kinukumpleto. Hindi binabago ang mga walang laman o hindi kilalang label.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Isaayos ang katumpakan ayon sa lumipas na oras",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Kasama sa saklaw ang mga limitasyon ng lumipas na oras. Ginagamit ng mga timestamp sa hinaharap ang unang saklaw. Ina-update ang katumpakan kapag pinoproseso ang pahina.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Limitasyon ng tagal (oras)",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Katumpakan",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Mas lumang mga timestamp",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Segundo",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minuto",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Araw sa kalendaryo",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Taon",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Magdagdag ng saklaw",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Alisin ang saklaw",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Maglagay ng mga positibong limitasyon sa oras, mula pinakamababa hanggang pinakamataas.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Pinapanatili ng mga pasadyang format ang pagkakasunod-sunod ng mga bahagi ng petsa at ang estilo. Nililimitahan ng katumpakan ang mga field na ipinapakita; hindi ito nagdaragdag ng mga field sa pasadyang format.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

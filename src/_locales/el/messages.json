@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "el",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Συμπλήρωση ελλιπών απόλυτων ημερομηνιών",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Συμπληρώνονται μόνο αναγνωρισμένες ετικέτες ημερομηνίας με αξιόπιστη πλήρη χρονική σήμανση. Οι κενές ή άγνωστες ετικέτες παραμένουν αμετάβλητες.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Προσαρμογή ακρίβειας βάσει παλαιότητας",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Τα όρια παλαιότητας περιλαμβάνονται στο εύρος. Οι μελλοντικές χρονικές σημάνσεις χρησιμοποιούν το πρώτο εύρος. Η ακρίβεια ενημερώνεται κατά την επεξεργασία της σελίδας.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Όριο παλαιότητας σε ώρες",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Ακρίβεια",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Παλαιότερες χρονικές σημάνσεις",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Δευτερόλεπτα",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Λεπτά",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Ημερολογιακή ημέρα",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Έτος",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Προσθήκη εύρους",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Αφαίρεση εύρους",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Εισαγάγετε θετικά όρια σε ώρες, σε αύξουσα σειρά.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Οι προσαρμοσμένες μορφές διατηρούν τη σειρά των στοιχείων της ημερομηνίας και το στιλ. Η ακρίβεια περιορίζει τα εμφανιζόμενα πεδία· δεν προσθέτει πεδία σε μια προσαρμοσμένη μορφή.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

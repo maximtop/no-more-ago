@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "he",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "השלמת תאריכים מוחלטים חלקיים",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "רק תוויות תאריך מזוהות בעלות חותמת זמן מלאה ומהימנה יושלמו. תוויות ריקות או לא מוכרות יישארו ללא שינוי.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "התאמת הדיוק לפי הזמן שחלף",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "גבולות הזמן שחלף נכללים בטווח. חותמות זמן עתידיות משתמשות בטווח הראשון. הדיוק מתעדכן בעת עיבוד הדף.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "גבול הזמן שחלף בשעות",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "דיוק",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "חותמות זמן ישנות יותר",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "שניות",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "דקות",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "יום קלנדרי",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "שנה",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "הוספת טווח",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "הסרת טווח",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "יש להזין גבולות חיוביים בשעות, בסדר עולה.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "פורמטים מותאמים אישית שומרים על סדר רכיבי התאריך והסגנון. הדיוק מגביל את השדות המוצגים; הוא אינו מוסיף שדות לפורמט מותאם אישית.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

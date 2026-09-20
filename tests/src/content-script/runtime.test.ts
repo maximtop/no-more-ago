@@ -29,6 +29,7 @@ import {
     UPDATE_PRESENTATION_MESSAGE,
 } from "../../../src/shared/messaging/document-messages";
 import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
+import { DEFAULT_PRECISION_POLICY } from "../../../src/shared/settings/precision-policy";
 import type { TimeZoneSelection } from "../../../src/shared/settings/snapshot";
 import { classifyYouTubeWatchRouteHandoff } from
     "../../../src/content-script/adapters/youtube-watch-route-handoff";
@@ -309,6 +310,36 @@ describe("installContentRuntime", () => {
     afterEach(() => {
         vi.unstubAllGlobals();
     });
+
+    it.each(["https://example.test/", "https://www.instagram.com/p/example/"])(
+        "discovers absolute labels on enable and restores them on disable at %s", async (url) => {
+            document.body.innerHTML =
+                '<time datetime="2026-08-22T09:19:17Z">Aug 22, 2026</time>';
+            const source = messages();
+            const handle = installContentRuntime({
+                document, url: new URL(url), locales: ["en-US"],
+                loadDocumentState: async () => state(), messages: source,
+            });
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(document.body.textContent).toBe("Aug 22, 2026");
+            const display = {
+                formatMode: "custom", pattern: "yyyy-MM-dd HH:mm:ss", timeZone: { mode: "utc" },
+                precisionPolicy: { ...DEFAULT_PRECISION_POLICY, absoluteLabels: true },
+            };
+            source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 2, display });
+            expect(document.body.textContent).toContain("2026-08-22 09:19:17");
+            source.dispatch({
+                type: UPDATE_PRESENTATION_MESSAGE, revision: 3,
+                display: { ...display, precisionPolicy: DEFAULT_PRECISION_POLICY },
+            });
+            expect(document.body.textContent).toBe("Aug 22, 2026");
+            source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 4, display });
+            expect(document.body.textContent).toContain("2026-08-22 09:19:17");
+            handle.teardown();
+            expect(document.body.textContent).toBe("Aug 22, 2026");
+        },
+    );
 
     it("starts while the document is still loading", async () => {
         const source = messages();

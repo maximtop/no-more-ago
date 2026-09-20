@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "zh-CN",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "补全不完整的绝对日期",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "仅补全具有可信完整时间戳的已识别日期标签。空白或未知标签保持不变。",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "根据时间远近调整精度",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "各时间范围包含其上限值。未来的时间戳使用第一个范围。处理页面时会更新精度。",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "时间范围上限（小时）",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "精度",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "更早的时间戳",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "秒",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "分钟",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "日历日",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "年",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "添加范围",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "移除范围",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "请输入大于零且递增的小时上限。",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "自定义格式保留日期各部分的顺序和样式。精度仅限制显示哪些字段，不会向自定义格式添加字段。",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

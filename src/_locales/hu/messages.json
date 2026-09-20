@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "hu",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Hiányos abszolút dátumok kiegészítése",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Csak a megbízható, teljes időbélyeggel rendelkező, felismert dátumfeliratok egészülnek ki. Az üres és ismeretlen feliratok változatlanok maradnak.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Pontosság igazítása az eltelt időhöz",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Az időhatárok a tartomány részét képezik. A jövőbeli dátumokra az első tartomány vonatkozik. A pontosság az oldal feldolgozásakor frissül.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Eltelt idő határa órában",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Pontosság",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Régebbi dátumok",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Másodperc",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Perc",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Naptári nap",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Év",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Tartomány hozzáadása",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Tartomány eltávolítása",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Adjon meg pozitív óraértékeket növekvő sorrendben.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Az egyéni formátumok megőrzik a dátum részeinek sorrendjét és stílusát. A pontosság korlátozza a megjelenített mezőket; nem ad hozzá mezőket az egyéni formátumhoz.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

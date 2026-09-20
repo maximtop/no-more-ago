@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "ja",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "不完全な絶対日付を補完する",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "信頼できる完全なタイムスタンプがある、認識済みの日付ラベルのみを補完します。空のラベルや不明なラベルは変更しません。",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "経過時間に応じて精度を調整する",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "各範囲には経過時間の上限値が含まれます。未来のタイムスタンプには最初の範囲を使います。精度はページの処理時に更新されます。",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "経過時間の上限（時間）",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "精度",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "それより古いタイムスタンプ",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "秒",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "分",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "暦日",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "年",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "範囲を追加",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "範囲を削除",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "時間の上限を正の値で、昇順に入力してください。",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "カスタム書式の日付要素の順序とスタイルは維持されます。精度は表示するフィールドを制限するだけで、カスタム書式にフィールドを追加しません。",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "nb",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Fyll ut ufullstendige absolutte datoer",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Bare gjenkjente datoetiketter med et pålitelig, fullstendig tidsstempel fylles ut. Tomme eller ukjente etiketter forblir uendret.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Tilpass presisjon etter alder",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Aldersgrensene er inkludert i intervallet. Fremtidige tidsstempler bruker det første intervallet. Presisjonen oppdateres når siden behandles.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Aldersgrense i timer",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Presisjon",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Eldre tidsstempler",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Sekunder",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minutter",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Kalenderdag",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "År",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Legg til intervall",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Fjern intervall",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Angi positive timegrenser i stigende rekkefølge.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Egendefinerte formater beholder rekkefølgen på datodelene og stilen. Presisjonen begrenser hvilke felt som vises; den legger ikke til felt i et egendefinert format.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

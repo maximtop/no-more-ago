@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "ru",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Дополнять неполные абсолютные даты",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Дополняются только распознанные подписи дат с достоверной полной временной меткой. Пустые и неизвестные подписи не меняются.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Настраивать точность по давности",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Границы давности включены в диапазон. Будущие даты относятся к первому диапазону. Точность обновляется при обработке страницы.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Предел давности в часах",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Точность",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Более старые даты",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Секунды",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Минуты",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Календарный день",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Год",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Добавить диапазон",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Удалить диапазон",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Укажите положительные пределы в часах в порядке возрастания.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Пользовательские форматы сохраняют порядок частей даты и стиль. Точность ограничивает отображаемые поля, но не добавляет новые поля в пользовательский формат.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

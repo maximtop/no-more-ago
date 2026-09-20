@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "ms",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Lengkapkan tarikh mutlak yang tidak lengkap",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Hanya label tarikh yang dikenal pasti dengan cap masa penuh dan dipercayai akan dilengkapkan. Label kosong atau tidak diketahui kekal tidak berubah.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Laraskan ketepatan mengikut usia",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Had usia termasuk dalam julat. Cap masa akan datang menggunakan julat pertama. Ketepatan dikemas kini apabila halaman diproses.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Had usia dalam jam",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Ketepatan",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Cap masa yang lebih lama",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Saat",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minit",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Hari kalendar",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Tahun",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Tambah julat",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Alih keluar julat",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Masukkan had jam positif mengikut tertib menaik.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Format tersuai mengekalkan susunan bahagian tarikh dan gaya. Ketepatan mengehadkan medan yang dipaparkan; ia tidak menambah medan pada format tersuai.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

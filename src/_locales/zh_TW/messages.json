@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "zh-TW",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "補全不完整的絕對日期",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "僅補全具有可信完整時間戳記的已識別日期標籤。空白或未知標籤保持不變。",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "依時間遠近調整精確度",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "各時間範圍包含其上限值。未來的時間戳記使用第一個範圍。處理頁面時會更新精確度。",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "時間範圍上限（小時）",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "精確度",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "更早的時間戳記",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "秒",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "分鐘",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "日曆日",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "年",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "新增範圍",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "移除範圍",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "請輸入大於零且遞增的小時上限。",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "自訂格式保留日期各部分的順序與樣式。精確度僅限制顯示哪些欄位，不會在自訂格式中新增欄位。",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

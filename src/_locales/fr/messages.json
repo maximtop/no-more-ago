@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "fr",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Compléter les dates absolues incomplètes",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Seuls les libellés de date reconnus disposant d’un horodatage complet et fiable sont complétés. Les libellés vides ou inconnus restent inchangés.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Adapter la précision à l’ancienneté",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Les limites d’ancienneté sont incluses dans la plage. Les horodatages futurs utilisent la première plage. La précision est actualisée lors du traitement de la page.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Limite d’ancienneté en heures",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Précision",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Horodatages plus anciens",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Secondes",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minutes",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Jour calendaire",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Année",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Ajouter une plage",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Supprimer la plage",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Saisissez des limites positives en heures, dans l’ordre croissant.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Les formats personnalisés conservent l’ordre des éléments de date et le style. La précision limite les champs affichés ; elle n’ajoute pas de champs à un format personnalisé.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

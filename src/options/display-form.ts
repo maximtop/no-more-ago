@@ -2,6 +2,9 @@
  * @file Converts, validates, and previews editable options-page display settings.
  */
 
+import {
+    DEFAULT_PRECISION_POLICY, type PrecisionPolicy,
+} from "../shared/settings/precision-policy";
 import type { DatePresentationResult } from "../shared/date/format-default-date";
 import { formatDateWithPresentation } from "../shared/date/format-default-date";
 import { UNAVAILABLE_TIME_ZONE_ERROR } from "../shared/date/presentation-errors";
@@ -26,6 +29,7 @@ import { DISPLAY_SETTINGS_ERROR } from "../shared/messaging/view-state-values";
  */
 export const DISPLAY_NOTICE = {
     INVALID_TIME_ZONE: DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE,
+    INVALID_PRECISION: "invalid-precision",
     INVALID_FORMAT: DISPLAY_SETTINGS_ERROR.INVALID_FORMAT,
     UNAVAILABLE_TIME_ZONE: UNAVAILABLE_TIME_ZONE_ERROR,
     SAVE_FAILED: DISPLAY_SETTINGS_ERROR.SAVE_FAILED,
@@ -47,6 +51,11 @@ export type DisplayNotice =
  * Editable representation of the display settings form.
  */
 export interface DisplayDraft {
+    /**
+     * Independent label and age-based presentation policy.
+     */
+    readonly precisionPolicy: PrecisionPolicy;
+
     /**
      * Whether dates use the browser format or a custom pattern.
      */
@@ -115,6 +124,7 @@ export const DISPLAY_PREVIEW_SOURCE =
 export function draftFromDisplay(display: DisplaySettings): DisplayDraft {
     return {
         formatMode: display.formatMode,
+        precisionPolicy: display.precisionPolicy ?? DEFAULT_PRECISION_POLICY,
         pattern: display.formatMode === FORMAT_MODE.CUSTOM
             ? display.pattern
             : DEFAULT_CUSTOM_FORMAT_PATTERN,
@@ -136,9 +146,12 @@ export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
         draft.timeZoneMode === TIME_ZONE_MODE.IANA
             ? { mode: TIME_ZONE_MODE.IANA, identifier: draft.identifier }
             : { mode: draft.timeZoneMode };
+    const precision = draft.precisionPolicy === DEFAULT_PRECISION_POLICY ? {} : {
+        precisionPolicy: draft.precisionPolicy,
+    };
     return draft.formatMode === FORMAT_MODE.CUSTOM
-        ? { formatMode: FORMAT_MODE.CUSTOM, pattern: draft.pattern, timeZone }
-        : { formatMode: FORMAT_MODE.SYSTEM, timeZone };
+        ? { formatMode: FORMAT_MODE.CUSTOM, pattern: draft.pattern, timeZone, ...precision }
+        : { formatMode: FORMAT_MODE.SYSTEM, timeZone, ...precision };
 }
 
 /**
@@ -170,6 +183,7 @@ export function validateIdentifier(identifier: string): MessageKey | undefined {
  * Message mapping for every supported outcome.
  */
 const DISPLAY_NOTICE_KEYS = {
+    [DISPLAY_NOTICE.INVALID_PRECISION]: "display_age_invalid",
     [DISPLAY_NOTICE.INVALID_TIME_ZONE]: "display_error_zone_rejected",
     [DISPLAY_NOTICE.INVALID_FORMAT]: "display_error_format_invalid",
     [DISPLAY_NOTICE.UNAVAILABLE_TIME_ZONE]: "display_error_zone_saved_unavailable",

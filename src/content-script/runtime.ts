@@ -229,10 +229,14 @@ function synchronizeActivity(slot: RuntimeSlot): void {
  * @param slot - Singleton runtime state for the current document.
  * @param display - Validated presentation settings to expose.
  * @param revision - Accepted settings revision.
+ * @returns - Whether label expansion was enabled and previously skipped sources need discovery.
  */
-function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): void {
+function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): boolean {
+    const discoverAbsolute = display.precisionPolicy?.absoluteLabels === true
+        && slot.presentation?.precisionPolicy?.absoluteLabels !== true;
     slot.presentation = display;
     slot.presentationRevision = revision;
+    return discoverAbsolute;
 }
 
 /**
@@ -269,17 +273,6 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
         }
     };
     slot.controller.setDiagnosticSink(sink);
-}
-
-/**
- * Re-renders already-owned timestamps after a presentation change.
- *
- * @param slot - Singleton runtime state for the current document.
- */
-function reformatOwned(slot: RuntimeSlot): void {
-    (
-        slot.controller as DocumentTransformationController & { reformatOwned: () => void }
-    ).reformatOwned();
 }
 
 /**
@@ -392,17 +385,18 @@ function beginHydration(
                     slot.debugRevision ?? -1,
                 );
                 const previousPresentationRevision = slot.presentationRevision ?? -1;
+                let discoverAbsolute = false;
                 if (
                     slot.presentationRevision === undefined ||
                     response.revision >= slot.presentationRevision
                 ) {
-                    applyPresentation(slot, response.display, response.revision);
+                    discoverAbsolute = applyPresentation(slot, response.display, response.revision);
                 }
                 if (
                     slot.phase === DOCUMENT_PHASE.ACTIVE &&
                     response.revision > previousPresentationRevision
                 ) {
-                    reformatOwned(slot);
+                    slot.controller.reformatOwned(discoverAbsolute);
                 }
                 if (response.revision >= previousRevision) {
                     applyDebugPolicy(slot, response.debugEnabled, response.revision);
@@ -749,9 +743,9 @@ export function installContentRuntime(input: {
                 sendResponse?.(response);
                 return response;
             }
-            applyPresentation(slot, message.display, message.revision);
+            const discoverAbsolute = applyPresentation(slot, message.display, message.revision);
             if (slot.phase === DOCUMENT_PHASE.ACTIVE) {
-                reformatOwned(slot);
+                slot.controller.reformatOwned(discoverAbsolute);
             }
             const response = presentationAcknowledgement(message.revision);
             sendResponse?.(response);

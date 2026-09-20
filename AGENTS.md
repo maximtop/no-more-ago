@@ -21,8 +21,10 @@
 ## Project Overview
 
 No More Ago is a Manifest V3 browser extension that replaces eligible standard
-HTML and trusted specialized timestamps with exact, localized values only when
-the current page-owned label is recognized as relative time. It ships a generic
+HTML and trusted specialized timestamps with exact, localized values when
+the current page-owned label is recognized as relative time by default. An
+opt-in display policy also permits recognized incomplete absolute date labels
+backed by a trusted full instant. It ships a generic
 instant-only `time[datetime]` source for HTTP(S) documents,
 specialized sources for Facebook, GitHub, Hacker News, supported Stack Exchange
 Q&A sites, Telegram Web K, TikTok, best-effort LinkedIn timestamps, and Bluesky,
@@ -60,15 +62,15 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   contracts.
 - **Bundling:** Rspack builds browser-specific extension artifacts.
 - **Storage:** `chrome.storage.local` stores one versioned settings snapshot
-  (`SettingsSnapshot`, schema version 1) with its previous-snapshot recovery
-  copy, plus opt-in diagnostics. A stored snapshot of any other schema version
-  is discarded rather than migrated, because nothing is published: defaults
-  are written back to both the active and recovery keys, the load reports
-  source `discarded`, and a `console.warn` is emitted.
+  (`SettingsSnapshot`, schema version 2) with its previous-snapshot recovery
+  copy, plus opt-in diagnostics. Published schema 1 migrates both snapshots
+  without changing existing preferences or revisions. Unknown versions are
+  discarded: defaults are written to both keys and the load reports `discarded`.
+  `display.precisionPolicy` is optional; omission leaves both new policies off.
 - **Diagnostics:** Logging is opt-in and capped at 5,000,000 stored bytes.
 - **Relative labels:** A conservative shared classifier covers 40 confirmed
   locales using current page language and browser locale evidence. Unknown,
-  absolute, clock, and absent labels fail closed.
+  absolute, clock, and absent labels fail closed in the default policy.
 - **Interface language:** `src/shared/i18n/locales.ts` holds the 40-entry UI
   registry and the browser-language resolver; `src/shared/i18n/translator.ts`
   wraps `@adguard/translate` and exposes `t`, `tPlural` and
@@ -94,8 +96,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   publication sources, plus an Instagram in-place presentation rule for
   standard timestamps. Exact `bsky.app` documents prepend a document-scoped
   Bluesky rule whose anonymous resolution is limited to the fixed public
-  AppView origin. Every rule requires an existing recognized relative label
-  before its trusted value can render.
+  AppView origin. Every rule requires an existing recognized relative label by default.
+  The optional absolute-label policy accepts only bounded localized or ISO date
+  labels matching the independently trusted instant with omitted time precision.
 - **Performance:** Keep content-script observation incremental and scoped.
 - **Compatibility:** Site markup may change; adapter behavior is best-effort.
 
@@ -230,7 +233,9 @@ is needed.
 - Require every `TimestampSourceRule` to keep trusted timestamp extraction
   separate from current-label classification. Use the shared 40-locale
   classifier where applicable, never derive the timestamp from the label, and
-  fail closed when presentation evidence is absent or unknown.
+  fail closed when presentation evidence is absent or unknown. The shared
+  opt-in absolute classifier may accept incomplete date labels only for trusted
+  instants; it never supplies a timestamp or enables calendar-date expansion.
 - Keep the content script lightweight. Process matching mutations
   incrementally, avoid repeated whole-document scans, and release observers
   when the extension or domain is disabled.
@@ -298,9 +303,15 @@ is needed.
 - Restore original page text immediately when global or per-hostname
   processing is disabled, and reprocess the current document when it is
   enabled.
-- Keep settings schema versions and forward migrations explicit. Before store
-  publication, do not add backward compatibility unless a real persisted
-  release requires it.
+- Keep settings schema versions and forward migrations explicit. Preserve all
+  published schema 1 preferences when loading schema 2. An absent precision
+  policy preserves default behavior. Validate user-authored increasing age
+  bounds at the settings boundary; use inclusive elapsed hours and treat future
+  instants as age zero. Recompute on processing passes without polling.
+- Project custom formats through the shared precision-pattern module, preserving
+  retained field order and literal associations. Calendar-only values never
+  receive a time or configured-zone shift; their existing day-only presentation
+  remains independent of the instant age policy.
 - Keep diagnostics opt-in, sanitized, bounded, and independent from normal
   timestamp processing. Disabling diagnostics must remove stored logs.
 

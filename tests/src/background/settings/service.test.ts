@@ -4,6 +4,7 @@
 
 /* eslint-disable @typescript-eslint/require-await */
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_PRECISION_POLICY } from "../../../../src/shared/settings/precision-policy";
 import { SettingsService } from "../../../../src/background/settings/service";
 import {
     APPEARANCE,
@@ -70,6 +71,74 @@ function storage(initial?: object, previous?: object) {
 }
 
 describe("SettingsService", () => {
+    it("migrates published schema 1 and its recovery copy without losing preferences", async () => {
+        const saved = createSettingsSnapshot({
+            revision: 42, globalEnabled: false, debugEnabled: true, appearance: APPEARANCE.DARK,
+            siteScope: {
+                mode: SITE_SCOPE_MODE.SELECTED_ONLY,
+                allowedSites: ["github.com"], excludedSites: ["example.com"],
+            },
+            display: {
+                formatMode: "custom", pattern: "dd/MM/yyyy HH:mm:ss",
+                timeZone: { mode: "iana", identifier: "Asia/Nicosia" },
+            },
+        });
+        const previous = { ...saved, revision: 41, globalEnabled: true };
+        const backend = storage({ ...saved, schemaVersion: 1 }, { ...previous, schemaVersion: 1 });
+        await expect(new SettingsService(backend).load()).resolves.toEqual({
+            ok: true, snapshot: saved, source: "stored",
+        });
+        expect(backend.pair()).toEqual({ current: saved, previous });
+        await expect(new SettingsService(backend).load()).resolves.toEqual({
+            ok: true, snapshot: saved, source: "stored",
+        });
+        expect(backend.set).toHaveBeenCalledTimes(1);
+    });
+
+    it("recovers a schema 1 backup and leaves storage intact when migration fails", async () => {
+        const saved = { ...DEFAULT_SETTINGS_SNAPSHOT, revision: 7, globalEnabled: false };
+        const legacy = { ...saved, schemaVersion: 1 };
+        const backup = storage(undefined, legacy);
+        await expect(new SettingsService(backup).load()).resolves.toEqual({
+            ok: true, snapshot: saved, source: "recovered",
+        });
+        expect(backup.pair()).toEqual({ current: saved, previous: saved });
+        const failing = storage(legacy);
+        failing.set.mockRejectedValueOnce(new Error("Storage unavailable"));
+        await expect(new SettingsService(failing).load()).resolves.toEqual({
+            ok: false, error: "load-failed",
+        });
+        expect(failing.pair().current).toEqual(legacy);
+        await expect(new SettingsService(failing).load()).resolves.toEqual({
+            ok: true, snapshot: saved, source: "stored",
+        });
+    });
+
+    it("persists the precision policy across other writes and rejects invalid ranges", async () => {
+        const backend = storage(DEFAULT_SETTINGS_SNAPSHOT);
+        const service = new SettingsService(backend);
+        const display = {
+            ...DEFAULT_SETTINGS_SNAPSHOT.display,
+            precisionPolicy: {
+                ...DEFAULT_PRECISION_POLICY, absoluteLabels: true, agePrecision: true,
+            },
+        };
+        expect((await service.setDisplaySettings(display)).ok).toBe(true);
+        expect((await service.setGlobalEnabled(false)).ok).toBe(true);
+        const loaded = await new SettingsService(backend).load();
+        expect(loaded.ok && loaded.snapshot.display).toEqual(display);
+        expect(loaded.ok && loaded.snapshot.globalEnabled).toBe(false);
+        const result = await service.setDisplaySettings({
+            ...display,
+            precisionPolicy: {
+                ...DEFAULT_PRECISION_POLICY,
+                ranges: [{ hours: 0, precision: DEFAULT_PRECISION_POLICY.older }],
+            },
+        });
+        expect(result.ok).toBe(false);
+        expect(result.snapshot.display).toEqual(display);
+    });
+
     it("uses the default-on snapshot only when storage is missing", async () => {
         await expect(new SettingsService(storage()).load()).resolves.toEqual({
             ok: true,
