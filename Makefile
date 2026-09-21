@@ -1,39 +1,58 @@
-# Command-line values cannot override these selectors or reach a shell recipe.
-override FIXED_MODES := dev release
-override FIXED_BROWSERS := chrome firefox edge
-override FIXED_STORE := chrome_status chrome_update chrome_publish
-override GOALS := $(MAKECMDGOALS)
-override MODE_GOALS := $(filter $(FIXED_MODES),$(GOALS))
-override BROWSER_GOALS := $(filter $(FIXED_BROWSERS),$(GOALS))
-override STORE_GOALS := $(filter $(FIXED_STORE),$(GOALS))
-override OTHER_GOALS := $(filter-out $(FIXED_MODES) $(FIXED_BROWSERS) $(FIXED_STORE),$(GOALS))
-
-ifneq ($(OTHER_GOALS),)
-  $(error Usage: make [dev|release] [chrome|firefox|edge] \
-    or make chrome_status|chrome_update|chrome_publish)
+# Local builds never upload, submit, or publish. See DEVELOPMENT.md for outputs.
+.DEFAULT_GOAL := build
+override BROWSERS := chrome edge firefox
+override BROWSER_GOALS := $(filter $(BROWSERS),$(MAKECMDGOALS))
+override BUILD_GOALS := $(filter build dev start release package,$(MAKECMDGOALS))
+override COMMAND_GOALS := install setup init build dev start release package lint typecheck test check validate chrome_status chrome_update chrome_publish .require-chrome-app-id
+override UNKNOWN_GOALS := $(filter-out $(COMMAND_GOALS) $(BROWSERS),$(MAKECMDGOALS))
+ifneq ($(UNKNOWN_GOALS),)
+  $(error Unknown command or unsupported browser: $(UNKNOWN_GOALS). Supported browsers: $(BROWSERS))
 endif
-ifeq ($(words $(MODE_GOALS)),0)
-  ifneq ($(BROWSER_GOALS),)
-    $(error A browser requires exactly one mode: make dev|release [chrome|firefox|edge])
-  endif
-else ifneq ($(words $(MODE_GOALS)),1)
-  $(error Choose exactly one mode: dev or release)
+ifneq ($(word 2,$(BROWSER_GOALS)),)
+  $(error Choose at most one browser: $(BROWSERS))
 endif
-ifneq ($(words $(BROWSER_GOALS)),0)
-  ifneq ($(words $(BROWSER_GOALS)),1)
-    $(error Choose at most one browser: chrome, firefox, or edge)
+ifneq ($(BROWSER_GOALS),)
+  ifneq ($(words $(BUILD_GOALS)),1)
+    $(error A browser requires exactly one build command: build, dev, start, release or package)
   endif
 endif
+override BROWSER_TARGET := $(firstword $(BROWSER_GOALS))
 
-override SELECTED_BROWSER := $(firstword $(BROWSER_GOALS))
-override SELECTED_ARGS := $(if $(SELECTED_BROWSER),$(SELECTED_BROWSER),)
+.PHONY: $(COMMAND_GOALS) $(BROWSERS)
+
+install setup init:
+	pnpm install
+
+build dev:
+	pnpm build $(BROWSER_TARGET)
+
+start:
+	pnpm start $(BROWSER_TARGET)
+
+release package:
+	pnpm release $(BROWSER_TARGET)
+
+lint:
+	pnpm lint
+
+typecheck:
+	pnpm typecheck
+
+test:
+	pnpm test
+
+check validate:
+	pnpm check
+
+$(BROWSERS):
+	@:
 
 # Local Chrome Web Store fallback. go-webext loads the credentials from the
 # gitignored .env itself; make reads only the item ID from that file, accepting
 # an optional export prefix, whitespace, quotes, and a trailing comment.
 override CHROME_API_VERSION := v2
 export CHROME_API_VERSION
-ifneq ($(STORE_GOALS),)
+ifneq ($(filter chrome_status chrome_update chrome_publish,$(MAKECMDGOALS)),)
   # An exported CHROME_APP_ID (for example from op run --env-file=.env.1password)
   # wins over the .env file.
   ifeq ($(origin CHROME_APP_ID),undefined)
@@ -48,18 +67,6 @@ ifneq ($(STORE_GOALS),)
     $(error CHROME_APP_ID is empty; export it or fill in .env (see .env.example))
   endif
 endif
-
-.DEFAULT_GOAL := dev
-.PHONY: dev release chrome firefox edge chrome_status chrome_update chrome_publish
-
-dev:
-	@pnpm dev $(SELECTED_ARGS)
-
-release:
-	@pnpm release $(SELECTED_ARGS)
-
-chrome firefox edge:
-	@:
 
 chrome_status:
 	@go-webext status chrome -a "$(CHROME_APP_ID)"

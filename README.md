@@ -618,3 +618,10 @@ source types are deferred.
 - [Development](DEVELOPMENT.md)
 - [LLM agent rules](AGENTS.md)
 - [Feature specifications](specs/)
+
+## Developer workflow
+
+Use `make install`, `make build`, `make start`, `make check`, and
+`make package`. Builds default to Chrome; packaging is local only. See
+[development guide](DEVELOPMENT.md) for browser targets, output paths,
+and the equivalent pnpm commands.

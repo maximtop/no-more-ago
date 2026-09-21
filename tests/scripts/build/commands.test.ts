@@ -55,7 +55,7 @@ describe("build commands", () => {
         }
     });
 
-    it("builds all development targets and one release target", async () => {
+    it("defaults to Chrome and accepts explicit development and release targets", async () => {
         const workspace = createBuildWorkspace();
         try {
             const packageJson = JSON.parse(
@@ -65,10 +65,14 @@ describe("build commands", () => {
                 cwd: workspace.root,
                 timeout: 120_000,
             });
-            expect(readdirSync(`${workspace.root}/dist/dev`).sort()).toEqual(
-                BROWSERS.flatMap((browser) => [browser, `${browser}.zip`]).sort(),
-            );
+            expect(readdirSync(`${workspace.root}/dist/dev`).sort()).toEqual([
+                "chrome", "chrome.zip",
+            ]);
             for (const browser of BROWSERS) {
+                await execFileAsync(PNPM_COMMAND, ["dev", browser], {
+                    cwd: workspace.root,
+                    timeout: 120_000,
+                });
                 const directory = `${workspace.root}/dist/dev/${browser}`;
                 const manifestText = readFileSync(`${directory}/manifest.json`, "utf8");
                 const manifest = JSON.parse(manifestText) as Record<string, unknown>;
