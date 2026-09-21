@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "bn",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "অসম্পূর্ণ পরম তারিখ পূরণ করুন",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "শুধু শনাক্ত করা তারিখের লেবেলগুলিই পূরণ করা হয়, যেগুলির জন্য বিশ্বস্ত পূর্ণ টাইমস্ট্যাম্প রয়েছে। ফাঁকা বা অজানা লেবেল অপরিবর্তিত থাকে।",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "অতিবাহিত সময় অনুযায়ী নির্ভুলতা সামঞ্জস্য করুন",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "অতিবাহিত সময়ের সীমাগুলি পরিসরের অন্তর্ভুক্ত। ভবিষ্যতের টাইমস্ট্যাম্প প্রথম পরিসর ব্যবহার করে। পৃষ্ঠা প্রক্রিয়াকরণের সময় নির্ভুলতা আপডেট হয়।",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "ঘণ্টায় অতিবাহিত সময়ের সীমা",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "নির্ভুলতা",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "পুরোনো টাইমস্ট্যাম্প",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "সেকেন্ড",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "মিনিট",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "ক্যালেন্ডারের দিন",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "বছর",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "পরিসর যোগ করুন",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "পরিসর সরান",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "ঘণ্টায় ধনাত্মক সীমাগুলি ঊর্ধ্বক্রমে লিখুন।",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "কাস্টম ফর্ম্যাট তারিখের অংশগুলির ক্রম ও শৈলী বজায় রাখে। নির্ভুলতা কেবল প্রদর্শিত ক্ষেত্রগুলি সীমিত করে; কাস্টম ফর্ম্যাটে নতুন ক্ষেত্র যোগ করে না।",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

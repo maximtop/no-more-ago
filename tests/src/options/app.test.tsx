@@ -26,6 +26,7 @@ import type {
     DisplayState,
     SitesState,
 } from "../../../src/shared/messaging/view-state";
+import { DEFAULT_PRECISION_POLICY } from "../../../src/shared/settings/precision-policy";
 import { APPEARANCE, type DisplaySettings } from "../../../src/shared/settings/snapshot";
 import { SITE_SCOPE_MODE } from "../../../src/shared/settings/site-scope";
 import {
@@ -1412,6 +1413,92 @@ describe("Options Display contract", () => {
             expect(zone.value).toBe("utc");
             expect(rendered.container.querySelector('main select[aria-label="Appearance"]'))
                 .toBeNull();
+        } finally {
+            await rendered.unmount();
+        }
+    });
+
+    it("saves independent precision choices and rejects unordered age limits", async () => {
+        const writes: DisplaySettings[] = [];
+        const rendered = await renderOptions(ready, {
+            transport: {
+                sendMessage: (message) => {
+                    if (message.type === SET_DISPLAY_SETTINGS_MESSAGE) {
+                        writes.push(message.display);
+                        return Promise.resolve({
+                            ok: true, acceptedRevision: 5,
+                            state: { ...displayReady, revision: 5, display: message.display },
+                            refreshFailures: [],
+                        });
+                    }
+                    return Promise.resolve(projectionFor(message));
+                },
+            },
+        });
+        try {
+            await openSection(rendered.container, "Display");
+            const switches = [...rendered.container.querySelectorAll<HTMLInputElement>(
+                'input[role="switch"]',
+            )];
+            expect(switches).toHaveLength(2);
+            expect(switches.every((control) => !control.checked)).toBe(true);
+            await act(async () => {
+                switches[0]?.click();
+            });
+            await act(async () => {
+                switches[1]?.click();
+            });
+            const first = rendered.container.querySelector<HTMLInputElement>(
+                'input[aria-label="Age limit in hours 1"]',
+            );
+            const second = rendered.container.querySelector<HTMLInputElement>(
+                'input[aria-label="Age limit in hours 2"]',
+            );
+            const precision = rendered.container.querySelector<HTMLSelectElement>(
+                'select[aria-label="Precision 1"]',
+            );
+            const save = findButton(rendered.container, "Save display settings");
+            if (!first || !second || !precision || !save) {
+                throw new Error("Expected precision controls");
+            }
+            await act(async () => {
+                setControlValue(first, "48");
+            });
+            await act(async () => {
+                setControlValue(second, "24");
+            });
+            await act(async () => {
+                save.click();
+            });
+            expect(writes).toHaveLength(0);
+            expect(rendered.container.textContent)
+                .toContain("Use positive, increasing hour limits.");
+            await act(async () => {
+                setControlValue(second, "720");
+            });
+            await act(async () => {
+                setControlValue(precision, "minutes");
+            });
+            await act(async () => {
+                save.click();
+            });
+            expect(writes).toEqual([{
+                ...displayReady.display,
+                precisionPolicy: {
+                    ...DEFAULT_PRECISION_POLICY, absoluteLabels: true, agePrecision: true,
+                    ranges: [
+                        { hours: 48, precision: "minutes" },
+                        ...DEFAULT_PRECISION_POLICY.ranges.slice(1),
+                    ],
+                },
+            }]);
+            await openSection(rendered.container, "Sites");
+            await openSection(rendered.container, "Display");
+            const saved = rendered.container.querySelector<HTMLInputElement>(
+                'input[aria-label="Age limit in hours 1"]',
+            );
+            expect(saved?.value).toBe("48");
+            expect(rendered.container.textContent).toContain("Display settings saved.");
         } finally {
             await rendered.unmount();
         }

@@ -5,10 +5,11 @@ such as “3 months ago.” It replaces eligible standard and trusted specialize
 timestamps with localized exact values while preserving the original page
 state for restoration.
 
-No More Ago changes an existing timestamp only when the page currently
-presents that label as relative time and the extension also has a trusted
-machine-readable timestamp. Absolute dates, clocks, unknown wording, and
-sources with no existing timestamp label remain unchanged.
+By default, No More Ago changes an existing timestamp only when the page
+presents that label as relative time and the extension has a trusted
+machine-readable timestamp. An optional Display setting expands recognized
+incomplete absolute dates. Clock-only, unknown, and absent labels remain unchanged.
+Site descriptions below describe the default relative-only behavior.
 
 The current version processes standard HTML timestamps on accessible HTTP(S)
 pages, including public Telegram channel pages under `https://t.me/s/*`.
@@ -119,10 +120,11 @@ timestamp label.
 
 No More Ago processes standard `time[datetime]` values on accessible HTTP(S)
 pages only when the value is an unambiguous global date-time and the current
-visible label is recognized as relative. Accepted values have a complete date,
+visible label is recognized as relative (or an eligible absolute date when
+explicitly enabled). Accepted values have a complete date,
 a valid time, and `Z`, a colonized numeric offset, or a compact numeric offset.
 Date-only, local, malformed, impossible, and unknown-zone values remain
-unchanged. Visible text is used only to classify relative presentation; it is
+unchanged. Visible text is used only to classify presentation; it is
 never parsed to obtain the date or time.
 
 GitHub, Hacker News, supported Stack Exchange Q&A sites, and LinkedIn have
@@ -134,7 +136,7 @@ plus the branded Q&A roots `stackoverflow.com`, `serverfault.com`,
 Known localized Stack Overflow Q&A hosts are included; service hosts such as
 Chat, API, Data Explorer, Area 51, and blogs are excluded.
 
-These specialized sources still require a current relative label. A trusted
+By default, these specialized sources require a current relative label. A trusted
 machine value beside `2 hours ago` may be shown exactly, while the same value
 beside `Aug 22, 2026` or an unknown label remains page-owned and unchanged.
 
@@ -319,6 +321,31 @@ Choose **Settings** in the toolbar popup to open the browser-managed Options
 page and select how dates are displayed. The page also remains available from
 the browser extension controls.
 
+**Absolute dates and precision by age**
+
+Both options are off by default and are independent of each other.
+
+- **Expand incomplete absolute dates** permits a recognized date-only or
+  minute-precision label when the page supplies a trusted, more precise full
+  timestamp. For example, `Aug 22, 2026` backed by
+  `2026-08-22T09:19:17Z` can become `2026-08-22 09:19:17` in a custom UTC format.
+  Recognition compares bounded ISO or localized date forms to the trusted value;
+  it never parses a timestamp from the label. Unrecognized forms stay unchanged.
+- **Adjust precision by age** selects seconds, minutes, calendar day, or year
+  using one to four increasing limits in hours and an older-values fallback.
+  The initial ranges are up to 24 hours (seconds), 720 hours (minutes), and
+  8760 hours (day), then year. Limits are inclusive. Future instants use the
+  first range, subject to each adapter's existing timestamp validation.
+- The selected locale and time zone remain effective. Custom patterns retain
+  their field order and style, including localized `P`/`p` tokens. Precision
+  removes finer fields; it does not add fields absent from a custom pattern.
+  If no fields remain, the localized presentation at the selected precision
+  is used. Calendar-date-only sources keep date-only formatting, independently
+  of instant age ranges, and cannot be expanded into a time.
+- Choose **Save display settings** to persist both options and their ranges.
+  Open reachable pages are refreshed through the existing settings channel.
+  Published schema 1 settings migrate to schema 2 without resetting preferences.
+
 **Date format**
 
 - **System** uses the browser locale's medium date and short time format for
@@ -465,12 +492,13 @@ The extension requests:
 - **Web navigation:** enumerates reachable HTTP(S) frames so settings refreshes
   can verify each frame's revision acknowledgement, and coalesces YouTube
   history-state updates into payload-free route signals for the exact frame.
-- **Storage:** keeps one versioned settings snapshot (schema version 1), a
+- **Storage:** keeps one versioned settings snapshot (schema version 2), a
   copy of the previous snapshot used to recover from a failed write, and
   optional diagnostic entries locally.
 
 No More Ago uses the current visible label only to decide whether its
-presentation is recognized as relative. It never derives the timestamp value
+presentation is recognized as relative or an opted-in incomplete absolute date.
+It never derives the timestamp value
 from visible relative or absolute labels, ARIA labels, nearby text, or elapsed
 time. Apart from the explicitly documented Bluesky and TikTok identity inputs,
 link destinations are not timestamp inputs. The Hacker News specialized source
@@ -533,8 +561,12 @@ source types are deferred.
 ## Limitations
 
 - Generic support applies to eligible standard timestamps on accessible
-  HTTP(S) pages whose current label is recognized as relative. Arbitrary,
-  absolute, and unknown page labels remain unchanged.
+  HTTP(S) pages whose current label is recognized as relative by default.
+  Absolute labels require the separate opt-in policy and a recognized shape;
+  arbitrary and unknown page labels remain unchanged.
+- Age precision is recalculated during processing, including settings refreshes
+  and relevant DOM mutations. There is no timer: crossing an age boundary on an
+  otherwise unchanged page does not by itself trigger a new rendering.
 - Facebook, GitHub, Hacker News, Stack Exchange, Instagram, Telegram Web K,
   TikTok, LinkedIn, Bluesky, and YouTube are best-effort integrations whose markup and,
   where applicable, payload contracts can change independently of the

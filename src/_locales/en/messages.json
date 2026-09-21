@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "en",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Expand incomplete absolute dates",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Only recognized date labels with a trusted full timestamp are expanded. Empty or unknown labels stay unchanged.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Adjust precision by age",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Age limits include the boundary. Future timestamps use the first range. Precision updates when the page is processed.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Age limit in hours",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Precision",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Older timestamps",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Seconds",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minutes",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Calendar day",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Year",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Add range",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Remove range",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Use positive, increasing hour limits.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Custom formats keep their date order and style. Precision limits which fields are shown; it does not add fields to a custom format.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

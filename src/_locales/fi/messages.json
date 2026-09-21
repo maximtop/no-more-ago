@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "fi",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Täydennä puutteelliset absoluuttiset päivämäärät",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Vain tunnistetut päivämäärätekstit, joilla on luotettava täydellinen aikaleima, täydennetään. Tyhjät tai tuntemattomat tekstit pysyvät ennallaan.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Mukauta tarkkuutta iän mukaan",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Ikärajat sisältyvät aikaväliin. Tulevat aikaleimat käyttävät ensimmäistä aikaväliä. Tarkkuus päivittyy sivua käsiteltäessä.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Ikäraja tunteina",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Tarkkuus",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Vanhemmat aikaleimat",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Sekunnit",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minuutit",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Kalenteripäivä",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Vuosi",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Lisää aikaväli",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Poista aikaväli",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Anna positiiviset tuntirajat nousevassa järjestyksessä.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Mukautetut muodot säilyttävät päivämäärän osien järjestyksen ja tyylin. Tarkkuus rajoittaa näytettäviä kenttiä; se ei lisää kenttiä mukautettuun muotoon.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

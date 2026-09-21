@@ -2,6 +2,7 @@
  * @file Owns editable display settings and their persistence lifecycle as a state machine.
  */
 
+import { isPrecisionPolicyValid, type PrecisionPolicy } from "../shared/settings/precision-policy";
 import { useMachine } from "@xstate/react";
 import { assertEvent, assign, fromPromise, setup, waitFor, type SnapshotFrom } from "xstate";
 import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
@@ -93,6 +94,13 @@ export interface DisplayController {
      * @param pattern - New date-format pattern.
      */
     setPattern(pattern: string): void;
+
+    /**
+     * Changes the independent absolute-label and age precision choices.
+     *
+     * @param precisionPolicy - New draft policy.
+     */
+    setPrecisionPolicy(precisionPolicy: PrecisionPolicy): void;
 
     /**
      * Selects the system, UTC, or named time-zone mode.
@@ -472,6 +480,8 @@ const displayMachine = setup({
         stateReady: ({ context }) => context.state?.availability === STATE_AVAILABILITY.READY,
         stateLoaded: ({ context }) => context.state !== undefined,
         loadsWhenMissing: ({ context }) => context.loadWhenMissing,
+        invalidPrecision: ({ context }) =>
+            !isPrecisionPolicyValid(requireDraft(context).precisionPolicy),
         invalidPattern: ({ context }) => {
             const draft = requireDraft(context);
             return draft.formatMode === FORMAT_MODE.CUSTOM
@@ -606,6 +616,13 @@ const displayMachine = setup({
                         idle: {
                             on: {
                                 [DISPLAY_EVENT.SAVE]: [
+                                    {
+                                        guard: "invalidPrecision",
+                                        actions: {
+                                            type: "reject",
+                                            params: { notice: DISPLAY_NOTICE.INVALID_PRECISION },
+                                        },
+                                    },
                                     {
                                         guard: "invalidPattern",
                                         actions: {
@@ -814,6 +831,9 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         notice: context.notice,
         setFormatMode: (formatMode) => {
             edit({ formatMode });
+        },
+        setPrecisionPolicy: (precisionPolicy) => {
+            edit({ precisionPolicy });
         },
         setPattern: (pattern) => {
             edit({ pattern });

@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "cs",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Doplnit neúplná absolutní data",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Doplní se pouze rozpoznané popisky data s důvěryhodným úplným časovým údajem. Prázdné a neznámé popisky zůstanou beze změny.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Přizpůsobit přesnost podle stáří",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Hranice stáří jsou součástí rozsahu. Budoucí data používají první rozsah. Přesnost se aktualizuje při zpracování stránky.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Hranice stáří v hodinách",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Přesnost",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Starší data",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Sekundy",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minuty",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Kalendářní den",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Rok",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Přidat rozsah",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Odebrat rozsah",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Zadejte kladné, vzestupně seřazené hranice v hodinách.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Vlastní formáty zachovávají pořadí částí data a styl. Přesnost omezuje zobrazená pole; do vlastního formátu žádná pole nepřidává.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

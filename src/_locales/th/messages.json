@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "th",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "เติมวันที่แบบสัมบูรณ์ที่ไม่ครบถ้วน",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "จะเติมเฉพาะป้ายวันที่ที่รู้จักและมีข้อมูลประทับเวลาที่ครบถ้วนและเชื่อถือได้ ป้ายที่ว่างหรือไม่รู้จักจะไม่เปลี่ยนแปลง",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "ปรับความละเอียดตามเวลาที่ผ่านไป",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "ค่าขีดจำกัดของเวลาที่ผ่านไปจะรวมอยู่ในช่วง ข้อมูลประทับเวลาในอนาคตจะใช้ช่วงแรก ความละเอียดจะอัปเดตเมื่อประมวลผลหน้าเว็บ",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "ขีดจำกัดของเวลาที่ผ่านไปเป็นชั่วโมง",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "ความละเอียด",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "ข้อมูลประทับเวลาที่เก่ากว่า",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "วินาที",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "นาที",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "วันตามปฏิทิน",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "ปี",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "เพิ่มช่วง",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "ลบช่วง",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "ป้อนขีดจำกัดชั่วโมงเป็นค่าบวกโดยเรียงจากน้อยไปมาก",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "รูปแบบที่กำหนดเองจะคงลำดับส่วนต่าง ๆ ของวันที่และรูปแบบการแสดงผลไว้ ความละเอียดจะจำกัดฟิลด์ที่แสดงเท่านั้น โดยไม่เพิ่มฟิลด์ลงในรูปแบบที่กำหนดเอง",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

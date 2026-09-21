@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "nl",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Onvolledige absolute datums aanvullen",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Alleen herkende datumlabels met een betrouwbare volledige tijdstempel worden aangevuld. Lege of onbekende labels blijven ongewijzigd.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Precisie aanpassen aan ouderdom",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "De ouderdomsgrenzen vallen binnen het bereik. Toekomstige tijdstempels gebruiken het eerste bereik. De precisie wordt bijgewerkt wanneer de pagina wordt verwerkt.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Ouderdomsgrens in uren",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Precisie",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Oudere tijdstempels",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Seconden",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Minuten",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Kalenderdag",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Jaar",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Bereik toevoegen",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Bereik verwijderen",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Voer positieve uurgrenzen in oplopende volgorde in.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Aangepaste notaties behouden de volgorde van de datumonderdelen en de stijl. De precisie beperkt welke velden worden weergegeven; er worden geen velden aan een aangepaste notatie toegevoegd.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

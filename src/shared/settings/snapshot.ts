@@ -2,6 +2,9 @@
  * @file Canonical settings types, domain validation, and default values.
  */
 
+import {
+    isPrecisionPolicyValid, samePrecisionPolicy, type PrecisionPolicy,
+} from "./precision-policy";
 import { validateCustomFormatPattern } from "./custom-format";
 import {
     DEFAULT_SITE_SCOPE,
@@ -12,7 +15,7 @@ import {
 /**
  * Current schema version written with extension settings.
  */
-export const SETTINGS_SCHEMA_VERSION = 1 as const;
+export const SETTINGS_SCHEMA_VERSION = 2 as const;
 
 /**
  * Named appearance choices applied to the popup and the settings page.
@@ -123,7 +126,12 @@ export type TimeZoneSelection =
 /**
  * Immutable formatting choices persisted with each settings revision.
  */
-export type DisplaySettings =
+export type DisplaySettings = {
+    /**
+     * Optional policy; omission preserves the original relative-only behavior.
+     */
+    readonly precisionPolicy?: PrecisionPolicy;
+} & (
     | {
         /**
          * Uses the browser locale's standard date and time format.
@@ -150,11 +158,11 @@ export type DisplaySettings =
          * Time zone applied before the custom pattern renders the timestamp.
          */
         readonly timeZone: TimeZoneSelection;
-    };
+    }
+);
 
 /**
- * Persisted settings document. The schema is unpublished, so a stored document
- * of any other version is discarded rather than migrated.
+ * Persisted settings document. Published schema 1 is migrated without changing user choices.
  */
 export interface SettingsSnapshot {
     /**
@@ -369,18 +377,30 @@ export function isDisplaySettings(value: DisplaySettings): boolean {
  * @returns - Immutable validated display settings, or null when invalid.
  */
 export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | null {
+    const policy = value.precisionPolicy;
+    if (policy !== undefined && !isPrecisionPolicyValid(policy)) {
+        return null;
+    }
+    const precision = policy === undefined ? {} : {
+        precisionPolicy: Object.freeze({
+            ...policy,
+            ranges: Object.freeze(policy.ranges.map((range) => Object.freeze({ ...range }))),
+        }),
+    };
     const timeZone = parseTimeZoneSelection(value.timeZone);
     if (timeZone === null) {
         return null;
     }
     if (value.formatMode === FORMAT_MODE.SYSTEM) {
-        return Object.freeze({ formatMode: FORMAT_MODE.SYSTEM, timeZone });
+        return Object.freeze({ formatMode: FORMAT_MODE.SYSTEM, timeZone, ...precision });
     }
     const checked = validateCustomFormatPattern(value.pattern);
     if (!checked.ok) {
         return null;
     }
-    return Object.freeze({ formatMode: FORMAT_MODE.CUSTOM, pattern: checked.pattern, timeZone });
+    return Object.freeze({
+        formatMode: FORMAT_MODE.CUSTOM, pattern: checked.pattern, timeZone, ...precision,
+    });
 }
 
 /**
@@ -391,6 +411,9 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
  * @returns - Whether both values contain the same presentation choices.
  */
 export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boolean {
+    if (!samePrecisionPolicy(a.precisionPolicy, b.precisionPolicy)) {
+        return false;
+    }
     if (a.formatMode !== b.formatMode) {
         return false;
     }
@@ -445,12 +468,28 @@ export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSn
 }
 
 /**
- * Recognizes a stored value written by this schema version. A document from any
- * other version is discarded, because no released build persisted one.
+ * Recognizes a stored value written by the current schema version.
  *
  * @param value - Value read from durable storage.
  * @returns - Whether the value is a snapshot of the current schema version.
  */
 export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshot {
     return (value as SettingsSnapshot | undefined)?.schemaVersion === SETTINGS_SCHEMA_VERSION;
+}
+
+/**
+ * Migrates the published schema without resetting any existing preference or revision.
+ *
+ * @param value - Extension-owned persisted snapshot.
+ * @returns - Current snapshot, migrated schema 1 snapshot, or undefined for unknown versions.
+ */
+export function migrateSettingsSnapshot(value: unknown): SettingsSnapshot | undefined {
+    const snapshot = value as SettingsSnapshot | undefined;
+    if (isCurrentSettingsSnapshot(snapshot)) {
+        return snapshot;
+    }
+    if ((value as { readonly schemaVersion: number } | undefined)?.schemaVersion === 1) {
+        return { ...(value as SettingsSnapshot), schemaVersion: SETTINGS_SCHEMA_VERSION };
+    }
+    return undefined;
 }

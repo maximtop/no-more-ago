@@ -12,6 +12,7 @@ import {
     TIME_ZONE_MODE,
     createSettingsSnapshot,
     isCurrentSettingsSnapshot,
+    migrateSettingsSnapshot,
     parseDisplaySettings,
     sameDisplaySettings,
     type Appearance,
@@ -350,10 +351,16 @@ export class SettingsService implements SettingsPersistence {
 
         const stored = values[this.key];
         const storedPreviousValue = values[SETTINGS_PREVIOUS_STORAGE_KEY];
-        const current = isCurrentSettingsSnapshot(stored) ? stored : undefined;
-        const storedPrevious = isCurrentSettingsSnapshot(storedPreviousValue)
-            ? storedPreviousValue
-            : undefined;
+        const current = migrateSettingsSnapshot(stored);
+        const storedPrevious = migrateSettingsSnapshot(storedPreviousValue);
+        if (current !== undefined && !isCurrentSettingsSnapshot(stored)) {
+            try {
+                await this.storage.set(this.pair(current, storedPrevious ?? current));
+            } catch {
+                this.loadError = SETTINGS_LOAD_ERROR.LOAD_FAILED;
+                return { ok: false, error: SETTINGS_LOAD_ERROR.LOAD_FAILED };
+            }
+        }
         if (current !== undefined) {
             this.loadError = undefined;
             this.current = current;
@@ -366,7 +373,7 @@ export class SettingsService implements SettingsPersistence {
                 this.current = DEFAULT_SETTINGS_SNAPSHOT;
                 return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DEFAULT };
             }
-            // A document of another schema version is discarded, not migrated.
+            // A document of an unknown schema version cannot be migrated.
             // The defaults are persisted so the stale document stops being
             // re-read on every worker start and recovery can trust storage.
             try {

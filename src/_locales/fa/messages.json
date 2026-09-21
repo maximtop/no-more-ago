@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "fa",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "تکمیل تاریخ‌های مطلق ناقص",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "فقط برچسب‌های تاریخ شناسایی‌شده که زمان‌مهر کامل و قابل‌اعتماد دارند تکمیل می‌شوند. برچسب‌های خالی یا ناشناخته بدون تغییر می‌مانند.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "تنظیم دقت بر اساس زمان سپری‌شده",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "حدهای زمان سپری‌شده در بازه قرار می‌گیرند. زمان‌مهرهای آینده از بازهٔ اول استفاده می‌کنند. دقت هنگام پردازش صفحه به‌روز می‌شود.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "حد زمان سپری‌شده به ساعت",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "دقت",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "زمان‌مهرهای قدیمی‌تر",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "ثانیه",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "دقیقه",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "روز تقویمی",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "سال",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "افزودن بازه",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "حذف بازه",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "حدهای مثبت را به ساعت و به‌ترتیب صعودی وارد کنید.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "قالب‌های سفارشی ترتیب بخش‌های تاریخ و سبک آن را حفظ می‌کنند. دقت، فیلدهای نمایش‌داده‌شده را محدود می‌کند؛ فیلدی به قالب سفارشی اضافه نمی‌کند.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

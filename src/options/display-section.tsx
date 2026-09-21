@@ -2,6 +2,7 @@
  * @file Renders date-format and time-zone controls with a live preview.
  */
 
+import { PrecisionControls } from "./precision-controls";
 import { Alert, Box, Button, NativeSelect, Stack, Text, TextInput, Title } from "@mantine/core";
 import { useMemo, type ReactElement } from "react";
 import type { DisplayState } from "../shared/messaging/view-state";
@@ -220,6 +221,13 @@ export function DisplaySection({ controller }: DisplaySectionProps): ReactElemen
                             disabled={saving}
                         />
                     ) : null}
+                    <PrecisionControls
+                        policy={draft.precisionPolicy}
+                        disabled={saving}
+                        onChange={(policy) => {
+                            controller.setPrecisionPolicy(policy);
+                        }}
+                    />
                     <div className="options-preview" data-ok={analysis.preview.ok}>
                         <div>
                             <div className="nma-eyebrow">{t("display_preview_label")}</div>

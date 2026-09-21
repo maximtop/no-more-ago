@@ -654,5 +654,65 @@
   "catalog_locale": {
     "message": "tr",
     "description": "Language tag of this catalog; keep aligned with its directory code"
+  },
+  "display_absolute_label": {
+    "message": "Eksik mutlak tarihleri tamamla",
+    "description": "Toggle for replacing existing absolute date labels with a more precise trusted timestamp."
+  },
+  "display_absolute_hint": {
+    "message": "Yalnızca güvenilir ve tam bir zaman damgasına sahip, tanınan tarih etiketleri tamamlanır. Boş veya bilinmeyen etiketler değişmeden kalır.",
+    "description": "Explanation of the opt-in absolute date setting."
+  },
+  "display_age_label": {
+    "message": "Hassasiyeti geçen süreye göre ayarla",
+    "description": "Independent toggle for choosing output precision by timestamp age."
+  },
+  "display_age_hint": {
+    "message": "Geçen süre sınırları aralığa dahildir. Gelecekteki zaman damgaları ilk aralığı kullanır. Hassasiyet, sayfa işlendiğinde güncellenir.",
+    "description": "Explains inclusive hour limits and absence of a timer."
+  },
+  "display_age_hours": {
+    "message": "Saat cinsinden geçen süre sınırı",
+    "description": "Label for a numeric range upper bound."
+  },
+  "display_age_precision": {
+    "message": "Hassasiyet",
+    "description": "Label for an output precision selector."
+  },
+  "display_age_older": {
+    "message": "Daha eski zaman damgaları",
+    "description": "Label for precision beyond the last age range."
+  },
+  "display_precision_seconds": {
+    "message": "Saniye",
+    "description": "Output precision choice."
+  },
+  "display_precision_minutes": {
+    "message": "Dakika",
+    "description": "Output precision choice."
+  },
+  "display_precision_day": {
+    "message": "Takvim günü",
+    "description": "Output precision choice, with no time of day."
+  },
+  "display_precision_year": {
+    "message": "Yıl",
+    "description": "Output precision choice, with no month or day."
+  },
+  "display_age_add": {
+    "message": "Aralık ekle",
+    "description": "Button adding an age range."
+  },
+  "display_age_remove": {
+    "message": "Aralığı kaldır",
+    "description": "Button removing an age range."
+  },
+  "display_age_invalid": {
+    "message": "Saat cinsinden pozitif sınırları artan sırada girin.",
+    "description": "Validation error for age range thresholds."
+  },
+  "display_age_custom_hint": {
+    "message": "Özel biçimler tarih öğelerinin sırasını ve stilini korur. Hassasiyet, gösterilen alanları sınırlar; özel biçime alan eklemez.",
+    "description": "Explains projection of a custom date format to the chosen precision."
   }
 }

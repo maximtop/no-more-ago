@@ -4,6 +4,8 @@
 
 import { format, intlFormat } from "date-fns";
 import { tz } from "@date-fns/tz";
+import { DATE_PRECISION, precisionForAge } from "../settings/precision-policy";
+import { projectPrecisionPattern } from "./precision-pattern";
 import { resolveDateLocale } from "./date-locale";
 import {
     INVALID_DATE_FORMAT_ERROR,
@@ -86,6 +88,7 @@ export function formatDefaultDate(instant: Date, locales: readonly string[]): st
  * @param locales - Preferred locale tags in display order.
  * @param display - Validated format and time-zone choices.
  * @param available - Capability check for named time zones.
+ * @param nowMilliseconds - Shared age snapshot for a complete processing batch.
  * @returns - Formatted text and effective zone, or an explicit presentation error.
  */
 export function formatDateWithPresentation(
@@ -93,7 +96,37 @@ export function formatDateWithPresentation(
     locales: readonly string[],
     display: DisplaySettings = DEFAULT_DISPLAY_SETTINGS,
     available: TimeZoneAvailability = isTimeZoneAvailable,
+    nowMilliseconds?: number,
 ): DatePresentationResult {
+    const precision = precisionForAge(instant, display.precisionPolicy, nowMilliseconds);
+    if (precision !== undefined) {
+        if (display.formatMode === FORMAT_MODE.CUSTOM) {
+            const pattern = projectPrecisionPattern(display.pattern, precision, locales);
+            if (pattern !== null) {
+                return formatDateWithPresentation(instant, locales, {
+                    formatMode: FORMAT_MODE.CUSTOM, pattern, timeZone: display.timeZone,
+                }, available);
+            }
+        }
+        const zone = display.timeZone;
+        const unavailable = zone.mode === TIME_ZONE_MODE.IANA && !available(zone.identifier);
+        const timeZone = zone.mode === TIME_ZONE_MODE.UTC ? "UTC"
+            : zone.mode === TIME_ZONE_MODE.IANA && !unavailable ? zone.identifier : undefined;
+        const options: Intl.DateTimeFormatOptions = precision === DATE_PRECISION.YEAR
+            ? { year: "numeric" }
+            : {
+                dateStyle: "medium",
+                ...(precision === DATE_PRECISION.DAY ? {} : {
+                    timeStyle: precision === DATE_PRECISION.SECONDS ? "medium" : "short",
+                }),
+            };
+        return {
+            text: new Intl.DateTimeFormat(locales.length === 0 ? undefined : [...locales], {
+                ...options, ...(timeZone === undefined ? {} : { timeZone }),
+            }).format(instant),
+            ...(unavailable ? { error: UNAVAILABLE_TIME_ZONE_ERROR } : {}),
+        };
+    }
     if (display.formatMode === FORMAT_MODE.SYSTEM) {
         const zone = display.timeZone;
         if (zone.mode === TIME_ZONE_MODE.SYSTEM) {

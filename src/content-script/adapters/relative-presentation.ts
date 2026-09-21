@@ -283,7 +283,7 @@ function canonicalLocales(value: string): readonly CanonicalRelativeTimeLocale[]
  * @param preferred - Current browser locale preference snapshot.
  * @returns - Ordered supported locales, or an empty collection when evidence fails closed.
  */
-function activeLocales(
+export function activePresentationLocales(
     source: Element,
     preferred: readonly string[],
 ): readonly CanonicalRelativeTimeLocale[] {
@@ -331,7 +331,7 @@ export function isRelativeLabelText(
     if (signature.length === 0) {
         return false;
     }
-    const locales = activeLocales(source, preferredLocales);
+    const locales = activePresentationLocales(source, preferredLocales);
     if (locales.length === 0) {
         return false;
     }
@@ -434,7 +434,7 @@ function readBoundedPresentationText(root: Node): string | null {
  * @param context - Current route, locales, and retained page-text capabilities.
  * @returns - Label and language-owning element, or null when no label exists.
  */
-function readPresentationText(
+export function readTimestampPresentationText(
     candidate: TimestampCandidate,
     context: TimestampPresentationContext,
 ): { readonly source: Element; readonly text: string } | null {
@@ -486,7 +486,7 @@ export function isRelativeTimestampPresentation(
     profiles: readonly RelativePresentationProfile[],
     additionalPatterns: readonly string[] = [],
 ): boolean {
-    const presentation = readPresentationText(candidate, context);
+    const presentation = readTimestampPresentationText(candidate, context);
     return presentation !== null && isRelativeLabelText(
         presentation.text,
         presentation.source,
