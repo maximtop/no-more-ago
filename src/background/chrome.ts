@@ -2,8 +2,6 @@
  * @file Chrome API wiring for the background application and runtime messages.
  */
 
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-
 import { DIAGNOSTIC_BROWSER_FAMILY } from '../shared/diagnostics/contracts';
 import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from '../shared/extension-files';
 import {
@@ -60,7 +58,6 @@ import type {
     UnavailablePopupState,
     UnavailableSitesState,
 } from '../shared/messaging/view-state';
-import type { DisplaySettings } from '../shared/settings/snapshot';
 
 /**
  * Announces committed settings revisions to open extension pages.
@@ -133,7 +130,7 @@ function installApplication(): BackgroundApplication | undefined {
     };
     const scripting: ScriptingRuntime = {
         getRegisteredContentScripts: (filter) => candidate.scripting
-            ?.getRegisteredContentScripts?.(filter as { ids: string[] })
+            ?.getRegisteredContentScripts?.(filter)
             .then((scripts) => scripts.map((script) => ({
                 id: script.id,
                 matches: script.matches,
@@ -353,7 +350,7 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(request.display as DisplaySettings)
+                .setDisplaySettings(request.display)
                 .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableDisplayState())));
             return true;
         }

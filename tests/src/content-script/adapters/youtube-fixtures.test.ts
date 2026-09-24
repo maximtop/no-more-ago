@@ -470,13 +470,13 @@ describe('offline YouTube watch fixture', () => {
         {
             name: 'date-looking visible text',
             apply: (source: Element) => {
-                source.textContent = '2024-02-29';
+                Object.assign(source, { textContent: '2024-02-29' });
             },
         },
         {
             name: 'instant-looking visible text',
             apply: (source: Element) => {
-                source.textContent = '2024-02-29T00:00:00Z';
+                Object.assign(source, { textContent: '2024-02-29T00:00:00Z' });
             },
         },
         {

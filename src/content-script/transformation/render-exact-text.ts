@@ -83,12 +83,11 @@ function findRecordForTarget(node: Node): OwnedTextRecord | null {
  */
 function restoreRecord(record: OwnedTextRecord, mutations?: OwnedDomMutationSink): void {
     if (record.target.data !== record.renderedText) {
-        record.pageText = record.target.data;
         return;
     }
     if (record.target.data !== record.pageText) {
         mutations?.beforeOwnedTextChange?.(record.target, record.pageText);
-        record.target.data = record.pageText;
+        Object.assign(record.target, { data: record.pageText });
     }
 }
 
@@ -187,7 +186,7 @@ export function renderExactText(
     mutations?.trackOwnedTextSource?.(source, target);
     if (target.data !== text) {
         mutations?.beforeOwnedTextChange?.(target, text);
-        target.data = text;
+        Object.assign(target, { data: text });
     }
     return target;
 }

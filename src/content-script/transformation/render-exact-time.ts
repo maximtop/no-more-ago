@@ -148,9 +148,8 @@ function updateOutput(
     datetime: string,
     text: string,
 ): void {
-    output.dateTime = datetime;
-    output.textContent = text;
-    output.style.display = '';
+    Object.assign(output, { dateTime: datetime, textContent: text });
+    output.style.removeProperty('display');
 }
 
 /**

@@ -379,7 +379,7 @@ function installTransportWrappers(
         }
         return response;
     };
-    target.fetch = wrappedFetch;
+    Object.assign(target, { fetch: wrappedFetch });
 
     const xhrTarget = target as Window & {
         readonly XMLHttpRequest: typeof XMLHttpRequest;
@@ -494,7 +494,7 @@ function restoreTransportWrappers(
 ): void {
     try {
         if (target.fetch === wrappers.wrappedFetch) {
-            target.fetch = wrappers.originalFetch;
+            Object.assign(target, { fetch: wrappers.originalFetch });
         }
     } catch {
         /* page-owned fetch replacement remains untouched */

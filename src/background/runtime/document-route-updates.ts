@@ -88,10 +88,10 @@ export function installDocumentRouteUpdates(input: {
      * Queues one delivery for a route key unless one is scheduled or in flight.
      *
      * @param key - Route delivery key.
-     * @param state - Delivery state of the key.
      */
-    const schedule = (key: string, state: RouteDeliveryState): void => {
-        if (state.scheduled || state.inFlight) {
+    const schedule = (key: string): void => {
+        const state = deliveries.get(key);
+        if (!state || state.scheduled || state.inFlight) {
             return;
         }
         state.scheduled = true;
@@ -109,7 +109,7 @@ export function installDocumentRouteUpdates(input: {
             const complete = (): void => {
                 state.inFlight = false;
                 if (state.pending) {
-                    schedule(key, state);
+                    schedule(key);
                 } else if (!state.scheduled) {
                     deliveries.delete(key);
                 }
@@ -135,7 +135,7 @@ export function installDocumentRouteUpdates(input: {
         const existing = deliveries.get(key);
         if (existing) {
             existing.pending = true;
-            schedule(key, existing);
+            schedule(key);
             return;
         }
         const state: RouteDeliveryState = {
@@ -146,6 +146,6 @@ export function installDocumentRouteUpdates(input: {
             inFlight: false,
         };
         deliveries.set(key, state);
-        schedule(key, state);
+        schedule(key);
     });
 }

@@ -532,20 +532,22 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             return;
         }
         this.running = true;
-        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         try {
-            await this.resolveActors(generation, signal, diagnostics);
+            const actorCounts = await this.resolveActors(generation, signal);
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
             this.pruneLookupState();
-            await this.resolvePosts(generation, signal, diagnostics);
+            const postCounts = await this.resolvePosts(generation, signal);
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
             this.publishPending();
             this.pruneLookupState();
-            this.emitDiagnostics(diagnostics);
+            this.emitDiagnostics({
+                failure: actorCounts.failure + postCounts.failure,
+                partial: actorCounts.partial + postCounts.partial,
+            });
         } finally {
             if (this.isCurrentGeneration(generation)) {
                 this.running = false;
@@ -562,13 +564,14 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      *
      * @param generation - Active lifecycle generation.
      * @param signal - Active cancellation signal.
-     * @param diagnostics - Mutable finite event counts for this drain.
+     *
+     * @returns - Finite event counts for this drain.
      */
     private async resolveActors(
         generation: number,
         signal: AbortSignal,
-        diagnostics: DiagnosticCounts,
-    ): Promise<void> {
+    ): Promise<DiagnosticCounts> {
+        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         const actors = new Set(
             [...this.pending.values()].map(({ outerIdentity }) => outerIdentity.actor),
         );
@@ -595,7 +598,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
                 }
                 if (!this.isCurrentGeneration(generation)) {
-                    return;
+                    return diagnostics;
                 }
                 const liveActors = batch.filter((actor) => this.isActorReferenced(actor));
                 for (const actor of liveActors) {
@@ -604,7 +607,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
                     diagnostics.failure += liveActors.length;
                     if (liveActors.length > 0) {
-                        return;
+                        return diagnostics;
                     }
                 } else {
                     for (const actor of liveActors) {
@@ -619,6 +622,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 }
             }
         }
+        return diagnostics;
     }
 
     /**
@@ -640,13 +644,14 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      *
      * @param generation - Active lifecycle generation.
      * @param signal - Active cancellation signal.
-     * @param diagnostics - Mutable finite event counts for this drain.
+     *
+     * @returns - Finite event counts for this drain.
      */
     private async resolvePosts(
         generation: number,
         signal: AbortSignal,
-        diagnostics: DiagnosticCounts,
-    ): Promise<void> {
+    ): Promise<DiagnosticCounts> {
+        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         const uris = [...new Set(
             [...this.pending.values()].flatMap((descriptor) => {
                 const uri = this.getPostUri(descriptor);
@@ -670,7 +675,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
                 }
                 if (!this.isCurrentGeneration(generation)) {
-                    return;
+                    return diagnostics;
                 }
                 const liveUris = batch.filter((uri) => this.isPostReferenced(uri));
                 for (const uri of liveUris) {
@@ -679,7 +684,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
                     diagnostics.failure += liveUris.length;
                     if (liveUris.length > 0) {
-                        return;
+                        return diagnostics;
                     }
                 } else {
                     for (const uri of liveUris) {
@@ -694,6 +699,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 }
             }
         }
+        return diagnostics;
     }
 
     /**

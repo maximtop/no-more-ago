@@ -66,21 +66,38 @@ function scratchProject(): string {
 }
 
 /**
+ * Message catalog keyed by message name.
+ */
+type Catalog = Record<string, CatalogEntry>;
+
+/**
+ * Copies a catalog with some fields of one entry replaced.
+ *
+ * @param catalog - Catalog to copy.
+ * @param key - Message name of the entry to change.
+ * @param patch - Fields that replace the entry's current values.
+ *
+ * @returns - The edited copy.
+ */
+function withEntry(catalog: Catalog, key: string, patch: Partial<CatalogEntry>): Catalog {
+    return { ...catalog, [key]: { ...catalog[key], ...patch } as CatalogEntry };
+}
+
+/**
  * Rewrites one catalog inside a scratch project.
  *
  * @param root - Scratch project root.
  * @param code - Locale directory code.
- * @param mutate - Transforms the parsed catalog in place.
+ * @param transform - Returns the catalog to store, given the parsed one.
  */
 function editCatalog(
     root: string,
     code: string,
-    mutate: (catalog: Record<string, CatalogEntry>) => void,
+    transform: (catalog: Catalog) => Catalog,
 ): void {
     const file = path.join(root, 'src/_locales', code, 'messages.json');
-    const catalog = JSON.parse(readFileSync(file, 'utf8')) as Record<string, CatalogEntry>;
-    mutate(catalog);
-    writeFileSync(file, `${JSON.stringify(catalog, null, 2)}\n`);
+    const catalog = JSON.parse(readFileSync(file, 'utf8')) as Catalog;
+    writeFileSync(file, `${JSON.stringify(transform(catalog), null, 2)}\n`);
 }
 
 /**
@@ -109,9 +126,7 @@ afterEach(() => {
 describe('locale validation', () => {
     it('rejects a catalog that identifies a different language', async () => {
         const root = scratchProject();
-        editCatalog(root, 'ru', (catalog) => {
-            (catalog.catalog_locale as CatalogEntry).message = 'en';
-        });
+        editCatalog(root, 'ru', (catalog) => withEntry(catalog, 'catalog_locale', { message: 'en' }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('ru: catalog_locale');
@@ -123,9 +138,7 @@ describe('locale validation', () => {
 
     it('rejects a missing key', async () => {
         const root = scratchProject();
-        editCatalog(root, 'th', (catalog) => {
-            delete catalog.popup_status_active;
-        });
+        editCatalog(root, 'th', ({ popup_status_active: removed, ...catalog }) => catalog);
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('th: missing key popup_status_active');
@@ -133,9 +146,10 @@ describe('locale validation', () => {
 
     it('rejects an extra key', async () => {
         const root = scratchProject();
-        editCatalog(root, 'th', (catalog) => {
-            catalog.invented_key = { message: 'x', description: 'x' };
-        });
+        editCatalog(root, 'th', (catalog) => ({
+            ...catalog,
+            invented_key: { message: 'x', description: 'x' },
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('invented_key');
@@ -143,9 +157,9 @@ describe('locale validation', () => {
 
     it('rejects a dropped placeholder', async () => {
         const root = scratchProject();
-        editCatalog(root, 'ko', (catalog) => {
-            (catalog.popup_site_switch_aria as CatalogEntry).message = '사이트에서 사용';
-        });
+        editCatalog(root, 'ko', (catalog) => withEntry(catalog, 'popup_site_switch_aria', {
+            message: '사이트에서 사용',
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('ko: popup_site_switch_aria');
@@ -153,9 +167,9 @@ describe('locale validation', () => {
 
     it('rejects a wrong plural form count', async () => {
         const root = scratchProject();
-        editCatalog(root, 'ru', (catalog) => {
-            (catalog.sites_count as CatalogEntry).message = '%count% сайт|%count% сайта';
-        });
+        editCatalog(root, 'ru', (catalog) => withEntry(catalog, 'sites_count', {
+            message: '%count% сайт|%count% сайта',
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('ru: sites_count');
@@ -163,9 +177,9 @@ describe('locale validation', () => {
 
     it('rejects an over-long extension description', async () => {
         const root = scratchProject();
-        editCatalog(root, 'de', (catalog) => {
-            (catalog.extension_description as CatalogEntry).message = 'x'.repeat(133);
-        });
+        editCatalog(root, 'de', (catalog) => withEntry(catalog, 'extension_description', {
+            message: 'x'.repeat(133),
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('133');
@@ -173,9 +187,9 @@ describe('locale validation', () => {
 
     it('rejects a translated product name', async () => {
         const root = scratchProject();
-        editCatalog(root, 'fr', (catalog) => {
-            (catalog.extension_name as CatalogEntry).message = 'Plus Jamais Il Y A';
-        });
+        editCatalog(root, 'fr', (catalog) => withEntry(catalog, 'extension_name', {
+            message: 'Plus Jamais Il Y A',
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('extension_name');
@@ -195,9 +209,9 @@ describe('locale validation', () => {
 
     it('rejects a changed translator note', async () => {
         const root = scratchProject();
-        editCatalog(root, 'ja', (catalog) => {
-            (catalog.popup_status_active as CatalogEntry).description = '翻訳者向けメモ';
-        });
+        editCatalog(root, 'ja', (catalog) => withEntry(catalog, 'popup_status_active', {
+            description: '翻訳者向けメモ',
+        }));
         const result = await validate(root);
         expect(result.ok).toBe(false);
         expect(result.output).toContain('ja: popup_status_active description');
