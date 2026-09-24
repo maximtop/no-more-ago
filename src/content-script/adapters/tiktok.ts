@@ -321,13 +321,12 @@ function discoverHydrationSources(
         visited += 1;
         const element = node as Element;
         node = walker.nextNode();
-        if (!element.matches(selector)) {
-            continue;
-        }
-        if (predicate(element)) {
-            sources.push(element);
-            if (sources.length === MAXIMUM_HYDRATION_RECONCILIATION_SOURCES) {
-                break;
+        if (element.matches(selector)) {
+            if (predicate(element)) {
+                sources.push(element);
+                if (sources.length === MAXIMUM_HYDRATION_RECONCILIATION_SOURCES) {
+                    break;
+                }
             }
         }
     }

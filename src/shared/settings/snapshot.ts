@@ -361,17 +361,6 @@ export function parseTimeZoneSelection(value: TimeZoneSelection): TimeZoneSelect
 }
 
 /**
- * Validates user-authored domain values inside typed display choices.
- *
- * @param value - Typed display settings.
- *
- * @returns - Whether the settings satisfy their domain constraints.
- */
-export function isDisplaySettings(value: DisplaySettings): boolean {
-    return parseDisplaySettings(value) !== null;
-}
-
-/**
  * Copies validated display choices into an immutable representation, or returns null.
  *
  * @param value - Typed display settings.
@@ -403,6 +392,17 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
     return Object.freeze({
         formatMode: FORMAT_MODE.CUSTOM, pattern: checked.pattern, timeZone, ...precision,
     });
+}
+
+/**
+ * Validates user-authored domain values inside typed display choices.
+ *
+ * @param value - Typed display settings.
+ *
+ * @returns - Whether the settings satisfy their domain constraints.
+ */
+export function isDisplaySettings(value: DisplaySettings): boolean {
+    return parseDisplaySettings(value) !== null;
 }
 
 /**

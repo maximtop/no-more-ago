@@ -312,53 +312,52 @@ export class DocumentTransformationController {
                             }
                             current = current.parentElement;
                         }
-                        continue;
-                    }
-                    let hasCustomMapping = false;
-                    if (rule.getMutationSources) {
-                        const mutationSelection = normalizeMutationSources(
-                            rule.getMutationSources(
-                                element,
-                                attributeName as TimestampSourceAttribute | undefined,
-                                oldValue ?? null,
-                                extractionContext,
-                                mutationKind,
-                            ),
-                        );
-                        for (const source of mutationSelection.sources) {
-                            addSource(source);
+                    } else {
+                        let hasCustomMapping = false;
+                        if (rule.getMutationSources) {
+                            const mutationSelection = normalizeMutationSources(
+                                rule.getMutationSources(
+                                    element,
+                                    attributeName as TimestampSourceAttribute | undefined,
+                                    oldValue ?? null,
+                                    extractionContext,
+                                    mutationKind,
+                                ),
+                            );
+                            for (const source of mutationSelection.sources) {
+                                addSource(source);
+                            }
+                            hasCustomMapping = mutationSelection.handled;
                         }
-                        hasCustomMapping = mutationSelection.handled;
-                    }
-                    if (
-                        mutationKind === TIMESTAMP_MUTATION_KIND.CHILD_LIST
-                        && rule.getChildMutationSources
-                    ) {
-                        const childMutationSelection = normalizeMutationSources(
-                            rule.getChildMutationSources(
-                                element,
-                                addedNodes,
-                                removedNodes,
-                            ),
-                        );
-                        for (const source of childMutationSelection.sources) {
-                            addSource(source);
-                        }
-                        hasCustomMapping = hasCustomMapping
-                            || childMutationSelection.handled;
-                    }
-                    if (hasCustomMapping) {
-                        continue;
-                    }
-                    let current: Element | null = element;
-                    while (current && current.ownerDocument === this.input.root) {
                         if (
-                            rule.matchesElement(current, extractionContext)
+                            mutationKind === TIMESTAMP_MUTATION_KIND.CHILD_LIST
+                            && rule.getChildMutationSources
                         ) {
-                            addSource(current);
-                            break;
+                            const childMutationSelection = normalizeMutationSources(
+                                rule.getChildMutationSources(
+                                    element,
+                                    addedNodes,
+                                    removedNodes,
+                                ),
+                            );
+                            for (const source of childMutationSelection.sources) {
+                                addSource(source);
+                            }
+                            hasCustomMapping = hasCustomMapping
+                                || childMutationSelection.handled;
                         }
-                        current = current.parentElement;
+                        if (!hasCustomMapping) {
+                            let current: Element | null = element;
+                            while (current && current.ownerDocument === this.input.root) {
+                                if (
+                                    rule.matchesElement(current, extractionContext)
+                                ) {
+                                    addSource(current);
+                                    break;
+                                }
+                                current = current.parentElement;
+                            }
+                        }
                     }
                 }
                 return sources;

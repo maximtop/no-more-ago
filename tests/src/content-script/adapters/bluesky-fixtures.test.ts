@@ -164,22 +164,21 @@ class FixtureAppView implements BlueskyAppView {
         for (const uri of uris) {
             const recordKey = recordKeyFromUri(uri);
             const indexedAt = timestamps.get(recordKey);
-            if (!indexedAt) {
-                continue;
+            if (indexedAt) {
+                let quoteIndexedAt: string | undefined;
+                if (recordKey === '3quotedouter') {
+                    quoteIndexedAt = QUOTE_INDEXED_AT;
+                } else if (recordKey === '3quotedreplacement') {
+                    quoteIndexedAt = REPLACEMENT_QUOTE_INDEXED_AT;
+                }
+                records.push({
+                    uri,
+                    indexedAt,
+                    ...(quoteIndexedAt && this.includeQuote
+                        ? { quote: { uri: QUOTE_URI, indexedAt: quoteIndexedAt } }
+                        : {}),
+                });
             }
-            let quoteIndexedAt: string | undefined;
-            if (recordKey === '3quotedouter') {
-                quoteIndexedAt = QUOTE_INDEXED_AT;
-            } else if (recordKey === '3quotedreplacement') {
-                quoteIndexedAt = REPLACEMENT_QUOTE_INDEXED_AT;
-            }
-            records.push({
-                uri,
-                indexedAt,
-                ...(quoteIndexedAt && this.includeQuote
-                    ? { quote: { uri: QUOTE_URI, indexedAt: quoteIndexedAt } }
-                    : {}),
-            });
         }
         return { status: BLUESKY_LOOKUP_STATUS.SUCCESS, records } as const;
     }

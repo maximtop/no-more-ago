@@ -227,39 +227,35 @@ export function restoreExactTexts(
     for (const candidate of roots) {
         const rootNode = candidate as Node;
         const document = rootNode.nodeType === 9 ? rootNode as Document : rootNode.ownerDocument;
-        if (!document) {
-            continue;
+        if (document) {
+            const documentRoots = rootsByDocument.get(document) ?? [];
+            documentRoots.push(rootNode);
+            rootsByDocument.set(document, documentRoots);
         }
-        const documentRoots = rootsByDocument.get(document) ?? [];
-        documentRoots.push(rootNode);
-        rootsByDocument.set(document, documentRoots);
     }
     for (const [document, rootNodes] of rootsByDocument) {
         const records = recordsByDocument.get(document);
-        if (!records) {
-            continue;
-        }
-        const restoredSources: Element[] = [];
-        for (const [source, record] of records) {
-            const isCovered = rootNodes.some((rootNode) => (
-                rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
-            ));
-            if (!isCovered) {
-                continue;
+        if (records) {
+            const restoredSources: Element[] = [];
+            for (const [source, record] of records) {
+                const isCovered = rootNodes.some((rootNode) => (
+                    rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
+                ));
+                if (isCovered) {
+                    restoreRecord(record, mutations);
+                    restoredSources.push(source);
+                    records.delete(source);
+                    recordsByTarget.delete(record.target);
+                }
             }
-            restoreRecord(record, mutations);
-            restoredSources.push(source);
-            records.delete(source);
-            recordsByTarget.delete(record.target);
-        }
-        if (restoredSources.length === 0) {
-            continue;
-        }
-        if (mutations?.untrackOwnedTextSources) {
-            mutations.untrackOwnedTextSources(restoredSources);
-        } else {
-            for (const source of restoredSources) {
-                mutations?.untrackOwnedTextSource?.(source);
+            if (restoredSources.length > 0) {
+                if (mutations?.untrackOwnedTextSources) {
+                    mutations.untrackOwnedTextSources(restoredSources);
+                } else {
+                    for (const source of restoredSources) {
+                        mutations?.untrackOwnedTextSource?.(source);
+                    }
+                }
             }
         }
     }

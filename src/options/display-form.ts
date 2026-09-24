@@ -235,6 +235,22 @@ export function customPatternError(pattern: string): MessageKey | undefined {
 }
 
 /**
+ * Selects browser locales for the display-format preview.
+ *
+ * @returns - Browser preference locales, or en-US when browser information is unavailable.
+ */
+function previewLocales(): readonly string[] {
+    if (typeof navigator === 'undefined') {
+        return ['en-US'];
+    }
+    const locales = navigator.languages;
+    if (locales.length > 0) {
+        return locales;
+    }
+    return navigator.language ? [navigator.language] : ['en-US'];
+}
+
+/**
  * Renders the fixture with the current draft, or explains what must be fixed.
  *
  * @param draft - Current display form fields.
@@ -262,20 +278,4 @@ export function previewDisplayDraft(
     return result.text.length === 0
         ? { ok: false, key: 'display_preview_fix_pattern' }
         : { ok: true, text: result.text };
-}
-
-/**
- * Selects browser locales for the display-format preview.
- *
- * @returns - Browser preference locales, or en-US when browser information is unavailable.
- */
-function previewLocales(): readonly string[] {
-    if (typeof navigator === 'undefined') {
-        return ['en-US'];
-    }
-    const locales = navigator.languages;
-    if (locales.length > 0) {
-        return locales;
-    }
-    return navigator.language ? [navigator.language] : ['en-US'];
 }

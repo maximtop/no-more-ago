@@ -138,22 +138,6 @@ export function matchesBlueskyUrl(url: URL): boolean {
 }
 
 /**
- * Decodes one permalink segment while rejecting ambiguous or unsafe values.
- *
- * @param value - Encoded path segment.
- *
- * @returns - Decoded segment, or null when it is malformed or ambiguous.
- */
-function decodeIdentitySegment(value: string): string | null {
-    try {
-        const decoded = decodeURIComponent(value);
-        return decoded === '' || hasControlOrSlash(decoded) ? null : decoded;
-    } catch {
-        return null;
-    }
-}
-
-/**
  * Detects slashes and ASCII or C1 controls forbidden in decoded identity segments.
  *
  * @param value - Decoded permalink segment.
@@ -168,6 +152,22 @@ function hasControlOrSlash(value: string): boolean {
         }
     }
     return false;
+}
+
+/**
+ * Decodes one permalink segment while rejecting ambiguous or unsafe values.
+ *
+ * @param value - Encoded path segment.
+ *
+ * @returns - Decoded segment, or null when it is malformed or ambiguous.
+ */
+function decodeIdentitySegment(value: string): string | null {
+    try {
+        const decoded = decodeURIComponent(value);
+        return decoded === '' || hasControlOrSlash(decoded) ? null : decoded;
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -504,18 +504,19 @@ function discoverTargets(
     const seen = new Set<Element>();
     const targets: BlueskyRelativeTarget[] = [];
     for (const source of sources) {
-        if (seen.has(source)) {
-            continue;
-        }
-        seen.add(source);
-        const target = describeBlueskySource(source, allowsExactLabel(source));
-        if (target) {
-            targets.push(target);
+        if (!seen.has(source)) {
+            seen.add(source);
+            const target = describeBlueskySource(source, allowsExactLabel(source));
+            if (target) {
+                targets.push(target);
+            }
         }
     }
     return targets.sort((left, right) => {
         const position = left.source.compareDocumentPosition(right.source);
-        return position & Node.DOCUMENT_POSITION_PRECEDING ? 1 : -1;
+        // The position is a bitmask; the single-bit flag is read arithmetically.
+        const precedes = Math.floor(position / Node.DOCUMENT_POSITION_PRECEDING) % 2 === 1;
+        return precedes ? 1 : -1;
     });
 }
 

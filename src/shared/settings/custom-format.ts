@@ -104,17 +104,13 @@ export function validateCustomFormatPattern(pattern: string): CustomPatternValid
         if (character === "'") {
             if (pattern[index + 1] === "'") {
                 index += 2;
-                continue;
+            } else {
+                quoted = !quoted;
+                index += 1;
             }
-            quoted = !quoted;
+        } else if (quoted) {
             index += 1;
-            continue;
-        }
-        if (quoted) {
-            index += 1;
-            continue;
-        }
-        if (/[A-Za-z]/u.test(character)) {
+        } else if (/[A-Za-z]/u.test(character)) {
             let end = index + 1;
             while (end < pattern.length && pattern[end] === character) {
                 end += 1;
@@ -128,9 +124,9 @@ export function validateCustomFormatPattern(pattern: string): CustomPatternValid
             }
             hasToken = true;
             index = end;
-            continue;
+        } else {
+            index += 1;
         }
-        index += 1;
     }
     if (quoted) {
         return { ok: false, error: CUSTOM_FORMAT_ERROR.UNCLOSED_QUOTE };

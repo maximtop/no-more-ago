@@ -43,7 +43,7 @@ async function flushMutations(): Promise<void> {
  * @returns - Decimal publication ID.
  */
 function publicationId(unixSeconds: number, lowBits: number): string {
-    return ((BigInt(unixSeconds) << 32n) | BigInt(lowBits)).toString();
+    return (BigInt(unixSeconds) * 2n ** 32n + BigInt(lowBits)).toString();
 }
 
 /**

@@ -76,35 +76,31 @@ function tokenizePrecisionPattern(
             if (pattern[offset + 1] === "'") {
                 parts.push({ kind: 'literal', source: "''", index: parts.length });
                 offset += 2;
-                continue;
-            }
-            let end = offset + 1;
-            let closed = false;
-            while (end < pattern.length) {
-                if (pattern[end] !== "'") {
-                    end += 1;
-                    continue;
+            } else {
+                let end = offset + 1;
+                let closed = false;
+                while (end < pattern.length) {
+                    if (pattern[end] !== "'") {
+                        end += 1;
+                    } else if (pattern[end + 1] === "'") {
+                        end += 2;
+                    } else {
+                        end += 1;
+                        closed = true;
+                        break;
+                    }
                 }
-                if (pattern[end + 1] === "'") {
-                    end += 2;
-                    continue;
+                if (!closed) {
+                    return null;
                 }
-                end += 1;
-                closed = true;
-                break;
+                parts.push({
+                    kind: 'literal',
+                    source: pattern.slice(offset, end),
+                    index: parts.length,
+                });
+                offset = end;
             }
-            if (!closed) {
-                return null;
-            }
-            parts.push({
-                kind: 'literal',
-                source: pattern.slice(offset, end),
-                index: parts.length,
-            });
-            offset = end;
-            continue;
-        }
-        if (isFieldCharacter(character)) {
+        } else if (isFieldCharacter(character)) {
             const retainedField = precision === DATE_PRECISION.YEAR
                 ? 'GyYuUR'.includes(character)
                 : CALENDAR_FIELD_SYMBOLS.has(character)
@@ -129,22 +125,22 @@ function tokenizePrecisionPattern(
                 index: parts.length,
             });
             offset = end;
-            continue;
+        } else {
+            let end = offset + 1;
+            while (
+                end < pattern.length
+                && pattern[end] !== "'"
+                && !isFieldCharacter(pattern[end] ?? '')
+            ) {
+                end += 1;
+            }
+            parts.push({
+                kind: 'literal',
+                source: pattern.slice(offset, end),
+                index: parts.length,
+            });
+            offset = end;
         }
-        let end = offset + 1;
-        while (
-            end < pattern.length
-            && pattern[end] !== "'"
-            && !isFieldCharacter(pattern[end] ?? '')
-        ) {
-            end += 1;
-        }
-        parts.push({
-            kind: 'literal',
-            source: pattern.slice(offset, end),
-            index: parts.length,
-        });
-        offset = end;
     }
     return parts;
 }
@@ -192,12 +188,11 @@ export function projectPrecisionPattern(
     nearestField = undefined;
     for (let index = parts.length - 1; index >= 0; index -= 1) {
         const part = parts[index];
-        if (!part) {
-            continue;
-        }
-        nextFields[part.index] = nearestField;
-        if (part.kind !== 'literal') {
-            nearestField = part.kind;
+        if (part) {
+            nextFields[part.index] = nearestField;
+            if (part.kind !== 'literal') {
+                nearestField = part.kind;
+            }
         }
     }
 
@@ -209,25 +204,23 @@ export function projectPrecisionPattern(
             if (retainedFieldCount > 0) {
                 discardedSinceRetained = true;
             }
-            continue;
-        }
-        if (part.kind === 'retained-field') {
+        } else if (part.kind === 'retained-field') {
             if (discardedSinceRetained) {
                 projected = `${projected.trimEnd()} `;
             }
             projected += part.source;
             retainedFieldCount += 1;
             discardedSinceRetained = false;
-            continue;
-        }
-        const previousField = previousFields[part.index];
-        const nextField = nextFields[part.index];
-        if (
-            (previousField === 'retained-field' && nextField === 'retained-field')
-            || (previousField === undefined && nextField === 'retained-field')
-            || (previousField === 'retained-field' && nextField === undefined)
-        ) {
-            projected += part.source;
+        } else {
+            const previousField = previousFields[part.index];
+            const nextField = nextFields[part.index];
+            if (
+                (previousField === 'retained-field' && nextField === 'retained-field')
+                || (previousField === undefined && nextField === 'retained-field')
+                || (previousField === 'retained-field' && nextField === undefined)
+            ) {
+                projected += part.source;
+            }
         }
     }
     return retainedFieldCount === 0 ? null : projected.trim();

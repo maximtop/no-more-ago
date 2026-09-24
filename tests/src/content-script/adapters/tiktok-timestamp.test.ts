@@ -23,7 +23,7 @@ const NOW = new Date('2026-08-30T12:00:00Z');
  * @returns - Decimal synthetic post ID.
  */
 function postIdFor(seconds: number, low = 1n): string {
-    return ((BigInt(seconds) << 32n) + low).toString();
+    return (BigInt(seconds) * 2n ** 32n + low).toString();
 }
 
 /**

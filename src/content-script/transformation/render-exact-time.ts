@@ -242,18 +242,14 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
     }
     const entries: OwnedSourceEntry[] = [];
     for (const record of records.values()) {
-        if (!record.source.isConnected || !record.output.isConnected) {
-            continue;
-        }
         if (
-            record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE) !== expectedSourceMarker(record)
+            record.source.isConnected
+            && record.output.isConnected
+            && record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE) === expectedSourceMarker(record)
+            && record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
         ) {
-            continue;
+            entries.push({ source: record.source, output: record.output });
         }
-        if (record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(record)) {
-            continue;
-        }
-        entries.push({ source: record.source, output: record.output });
     }
     return entries;
 }
@@ -417,10 +413,9 @@ export function restoreExactTimes(root: ParentNode, mutations?: OwnedDomMutation
     }
 
     for (const [source, record] of records) {
-        if (rootNode.nodeType !== 9 && source !== rootNode && !rootNode.contains(source)) {
-            continue;
+        if (rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)) {
+            restoreRecord(record, mutations);
+            records.delete(source);
         }
-        restoreRecord(record, mutations);
-        records.delete(source);
     }
 }

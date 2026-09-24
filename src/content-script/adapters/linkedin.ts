@@ -271,14 +271,13 @@ function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
     const ids = new Map<string, LinkedInLogicalId>();
     for (const attribute of EVIDENCE_ATTRIBUTES) {
         const value = element.getAttribute(attribute);
-        if (value === null) {
-            continue;
-        }
-        const parsed = attribute === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
-            ? parseLinkedInPermalinkIds(value)
-            : parseLinkedInTargetIds(value);
-        for (const id of parsed) {
-            ids.set(`${id.kind}:${id.decimal}`, id);
+        if (value !== null) {
+            const parsed = attribute === TIMESTAMP_SOURCE_ATTRIBUTE.HREF
+                ? parseLinkedInPermalinkIds(value)
+                : parseLinkedInTargetIds(value);
+            for (const id of parsed) {
+                ids.set(`${id.kind}:${id.decimal}`, id);
+            }
         }
     }
     return [...ids.values()];
@@ -453,29 +452,28 @@ function createAssociationIndex(
     const evidenceByScope = new Map<Element, LinkedInIdCounts>();
     for (const evidence of collectEvidenceElements(root)) {
         const ids = collectElementIds(evidence);
-        if (ids.length === 0) {
-            continue;
-        }
-        const contentBoundary = findContentItemBoundary(evidence);
-        let scope: Element | null = evidence;
-        while (scope && belongsToRoot(scope, root)) {
-            if (
-                candidateScopes.has(scope)
-                && findContentItemBoundary(scope) === contentBoundary
-            ) {
-                const counts = evidenceByScope.get(scope)
-                    ?? new Map<string, CountedLinkedInId>();
-                addLogicalIds(counts, ids);
-                evidenceByScope.set(scope, counts);
+        if (ids.length > 0) {
+            const contentBoundary = findContentItemBoundary(evidence);
+            let scope: Element | null = evidence;
+            while (scope && belongsToRoot(scope, root)) {
+                if (
+                    candidateScopes.has(scope)
+                    && findContentItemBoundary(scope) === contentBoundary
+                ) {
+                    const counts = evidenceByScope.get(scope)
+                        ?? new Map<string, CountedLinkedInId>();
+                    addLogicalIds(counts, ids);
+                    evidenceByScope.set(scope, counts);
+                }
+                if (
+                    scope === contentBoundary
+                    || scope === root
+                    || isBroadAssociationBoundary(scope)
+                ) {
+                    break;
+                }
+                scope = scope.parentElement;
             }
-            if (
-                scope === contentBoundary
-                || scope === root
-                || isBroadAssociationBoundary(scope)
-            ) {
-                break;
-            }
-            scope = scope.parentElement;
         }
     }
     return {
@@ -524,13 +522,12 @@ function findAssociation(
     index: LinkedInAssociationIndex,
 ): LinkedInAssociation | null {
     for (const scope of index.scopesByPresentation.get(presentation) ?? []) {
-        if ((index.pendingByScope.get(scope)?.size ?? 0) > 1) {
-            continue;
-        }
-        const evidence = getEffectiveEvidence(index, scope);
-        const id = evidence.size === 1 ? evidence.values().next().value?.id : undefined;
-        if (id) {
-            return { ...presentation, source: scope, id };
+        if ((index.pendingByScope.get(scope)?.size ?? 0) <= 1) {
+            const evidence = getEffectiveEvidence(index, scope);
+            const id = evidence.size === 1 ? evidence.values().next().value?.id : undefined;
+            if (id) {
+                return { ...presentation, source: scope, id };
+            }
         }
     }
     return null;
@@ -593,33 +590,31 @@ function resolveAssociations(
     const queued = new Set(queue);
     for (let cursor = 0; cursor < queue.length; cursor += 1) {
         const presentation = queue[cursor];
-        if (!presentation || associationsByPresentation.has(presentation)) {
-            continue;
-        }
-        queued.delete(presentation);
-        const association = findAssociation(presentation, index);
-        if (!association) {
-            continue;
-        }
-        associationsByPresentation.set(presentation, association);
-        if (associationsBySource.has(association.source)) {
-            associationsBySource.set(association.source, null);
-        } else {
-            associationsBySource.set(association.source, association);
-            excludeAssociationEvidence(association, index);
-        }
-        for (const scope of index.scopesByPresentation.get(presentation) ?? []) {
-            const pending = index.pendingByScope.get(scope);
-            pending?.delete(presentation);
-            if (pending?.size === 1) {
-                const remaining = pending.values().next().value;
-                if (
-                    remaining
-                    && !queued.has(remaining)
-                    && !associationsByPresentation.has(remaining)
-                ) {
-                    queued.add(remaining);
-                    queue.push(remaining);
+        if (presentation && !associationsByPresentation.has(presentation)) {
+            queued.delete(presentation);
+            const association = findAssociation(presentation, index);
+            if (association) {
+                associationsByPresentation.set(presentation, association);
+                if (associationsBySource.has(association.source)) {
+                    associationsBySource.set(association.source, null);
+                } else {
+                    associationsBySource.set(association.source, association);
+                    excludeAssociationEvidence(association, index);
+                }
+                for (const scope of index.scopesByPresentation.get(presentation) ?? []) {
+                    const pending = index.pendingByScope.get(scope);
+                    pending?.delete(presentation);
+                    if (pending?.size === 1) {
+                        const remaining = pending.values().next().value;
+                        if (
+                            remaining
+                            && !queued.has(remaining)
+                            && !associationsByPresentation.has(remaining)
+                        ) {
+                            queued.add(remaining);
+                            queue.push(remaining);
+                        }
+                    }
                 }
             }
         }

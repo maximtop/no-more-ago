@@ -279,6 +279,24 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
 }
 
 /**
+ * Stops the controller and clears state retained by the current runtime generation.
+ *
+ * @param slot - Singleton runtime state to stop and clear.
+ */
+function teardown(slot: RuntimeSlot): void {
+    slot.generation += 1;
+    notifyActivity(slot, false);
+    slot.controller.teardown();
+    slot.phase = DOCUMENT_PHASE.STOPPED;
+    slot.presentation = undefined;
+    slot.presentationRevision = undefined;
+    slot.debugEnabled = false;
+    slot.debugRevision = undefined;
+    slot.controller.setDiagnosticSink(undefined);
+    slot.hydration = undefined;
+}
+
+/**
  * Samples and reconciles the current route without trusting message payload data.
  *
  * @param slot - Singleton runtime state for the current document.
@@ -327,6 +345,31 @@ function maybeStart(slot: RuntimeSlot, generation: number): void {
         }
         throw error;
     }
+}
+
+/**
+ * Restores page-owned content when the current hydration generation cannot be trusted.
+ *
+ * @param slot - Singleton runtime state for the current document.
+ * @param generation - Hydration generation that failed.
+ * @param failurePhase - Stable phase exposed after fail-closed teardown.
+ */
+function failHydration(
+    slot: RuntimeSlot,
+    generation: number,
+    failurePhase: Extract<
+        DocumentPhase,
+        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
+    >,
+): void {
+    if (
+        slot.generation !== generation
+        || (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE)
+    ) {
+        return;
+    }
+    teardown(slot);
+    slot.phase = failurePhase;
 }
 
 /**
@@ -425,31 +468,6 @@ function beginHydration(
 }
 
 /**
- * Restores page-owned content when the current hydration generation cannot be trusted.
- *
- * @param slot - Singleton runtime state for the current document.
- * @param generation - Hydration generation that failed.
- * @param failurePhase - Stable phase exposed after fail-closed teardown.
- */
-function failHydration(
-    slot: RuntimeSlot,
-    generation: number,
-    failurePhase: Extract<
-        DocumentPhase,
-        typeof DOCUMENT_PHASE.FAILED | typeof DOCUMENT_PHASE.STOPPED
-    >,
-): void {
-    if (
-        slot.generation !== generation
-        || (slot.phase !== DOCUMENT_PHASE.WAITING && slot.phase !== DOCUMENT_PHASE.ACTIVE)
-    ) {
-        return;
-    }
-    teardown(slot);
-    slot.phase = failurePhase;
-}
-
-/**
  * Resets a stopped runtime and begins a new state-hydration generation.
  *
  * @param slot - Singleton runtime state for the current document.
@@ -503,24 +521,6 @@ function refreshPolicy(
     }
     slot.generation += 1;
     beginHydration(slot, slot.generation, slot.loadDocumentState, failurePhase);
-}
-
-/**
- * Stops the controller and clears state retained by the current runtime generation.
- *
- * @param slot - Singleton runtime state to stop and clear.
- */
-function teardown(slot: RuntimeSlot): void {
-    slot.generation += 1;
-    notifyActivity(slot, false);
-    slot.controller.teardown();
-    slot.phase = DOCUMENT_PHASE.STOPPED;
-    slot.presentation = undefined;
-    slot.presentationRevision = undefined;
-    slot.debugEnabled = false;
-    slot.debugRevision = undefined;
-    slot.controller.setDiagnosticSink(undefined);
-    slot.hydration = undefined;
 }
 
 /**

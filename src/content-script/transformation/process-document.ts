@@ -514,34 +514,33 @@ function processCandidateCollection(
                     ownedDomMutations?.untrackSource?.(source);
                 }
                 restoreTimestampPresentation(source, ownedDomMutations);
-                if (blockedSources.has(source)) {
-                    continue;
+                if (!blockedSources.has(source)) {
+                    if (candidates.length === 0 && presentationRejectedSources.has(source)) {
+                        emitCandidateSkipped(diagnosticSink);
+                    } else {
+                        const sourceTimestamp = getFailureSourceTimestamp(candidates);
+                        diagnosticSink?.({
+                            category: DIAGNOSTIC_CATEGORY.SKIP,
+                            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                            count: 1,
+                            ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
+                        });
+                    }
                 }
-                if (candidates.length === 0 && presentationRejectedSources.has(source)) {
-                    emitCandidateSkipped(diagnosticSink);
-                    continue;
-                }
-                const sourceTimestamp = getFailureSourceTimestamp(candidates);
-                diagnosticSink?.({
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-                    count: 1,
-                    ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
-                });
-                continue;
-            }
-            const result = renderResolvedTimestamp(
-                resolved,
-                locales,
-                display,
-                diagnosticSink,
-                ownedDomMutations,
-                nowMilliseconds,
-            );
-            if (result) {
-                renderedCount += 1;
-                if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
-                    outputs.push(result.output);
+            } else {
+                const result = renderResolvedTimestamp(
+                    resolved,
+                    locales,
+                    display,
+                    diagnosticSink,
+                    ownedDomMutations,
+                    nowMilliseconds,
+                );
+                if (result) {
+                    renderedCount += 1;
+                    if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
+                        outputs.push(result.output);
+                    }
                 }
             }
         }
@@ -602,17 +601,17 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, element)) {
                 blockedSources.add(element);
-                continue;
+            } else {
+                evaluateRuleCandidate(
+                    accumulator,
+                    rule,
+                    element,
+                    extractionContext,
+                    presentationContext,
+                    nowMilliseconds,
+                    display?.precisionPolicy?.absoluteLabels ?? false,
+                );
             }
-            evaluateRuleCandidate(
-                accumulator,
-                rule,
-                element,
-                extractionContext,
-                presentationContext,
-                nowMilliseconds,
-                display?.precisionPolicy?.absoluteLabels ?? false,
-            );
         }
     }
 
@@ -688,28 +687,27 @@ export function reconcileDocumentSources(
     const presentationContext = createPresentationContext(input);
     for (const source of input.sources) {
         if (
-            discovered.has(source)
-            || source.ownerDocument !== input.root
-            || !source.isConnected
+            !discovered.has(source)
+            && source.ownerDocument === input.root
+            && source.isConnected
         ) {
-            continue;
-        }
-        discovered.add(source);
-        discoveredSources.push(source);
-        for (const rule of rules) {
-            if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
-                blockedSources.add(source);
-                continue;
+            discovered.add(source);
+            discoveredSources.push(source);
+            for (const rule of rules) {
+                if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
+                    blockedSources.add(source);
+                } else {
+                    evaluateRuleCandidate(
+                        accumulator,
+                        rule,
+                        source,
+                        extractionContext,
+                        presentationContext,
+                        nowMilliseconds,
+                        display?.precisionPolicy?.absoluteLabels ?? false,
+                    );
+                }
             }
-            evaluateRuleCandidate(
-                accumulator,
-                rule,
-                source,
-                extractionContext,
-                presentationContext,
-                nowMilliseconds,
-                display?.precisionPolicy?.absoluteLabels ?? false,
-            );
         }
     }
     return processCandidateCollection(

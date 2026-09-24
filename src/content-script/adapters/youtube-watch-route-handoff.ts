@@ -76,22 +76,21 @@ function activateWatchHandoff(
         let added = false;
         for (const script of findYouTubePlayerResponseScripts(root)) {
             if (
-                observers.has(script)
-                || script.ownerDocument !== input.document
-                || !script.isConnected
+                !observers.has(script)
+                && script.ownerDocument === input.document
+                && script.isConnected
             ) {
-                continue;
+                const observer = new MutationObserver(() => {
+                    queueReconciliation();
+                });
+                observer.observe(script, {
+                    childList: true,
+                    characterData: true,
+                    subtree: true,
+                });
+                observers.set(script, observer);
+                added = true;
             }
-            const observer = new MutationObserver(() => {
-                queueReconciliation();
-            });
-            observer.observe(script, {
-                childList: true,
-                characterData: true,
-                subtree: true,
-            });
-            observers.set(script, observer);
-            added = true;
         }
         return added;
     };

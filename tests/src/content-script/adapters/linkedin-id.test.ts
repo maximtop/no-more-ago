@@ -103,7 +103,7 @@ describe('decodeLinkedInIdMilliseconds', () => {
     });
 
     it('rejects a shifted value that is not a positive safe integer', () => {
-        const unsafe = ((BigInt(Number.MAX_SAFE_INTEGER) + 1n) << 22n).toString();
+        const unsafe = ((BigInt(Number.MAX_SAFE_INTEGER) + 1n) * 2n ** 22n).toString();
 
         expect(decodeLinkedInIdMilliseconds({
             kind: LINKEDIN_ID_KIND.ACTIVITY,

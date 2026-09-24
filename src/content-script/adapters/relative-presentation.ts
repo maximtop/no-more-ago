@@ -382,17 +382,16 @@ function hasBoundedPresentationSubtree(root: Node): boolean {
     let visited = 0;
     while (remaining.length > 0) {
         const node = remaining.pop();
-        if (!node) {
-            continue;
-        }
-        visited += 1;
-        if (visited > MAX_PRESENTATION_NODE_COUNT) {
-            return false;
-        }
-        let child = node.lastChild;
-        while (child) {
-            remaining.push(child);
-            child = child.previousSibling;
+        if (node) {
+            visited += 1;
+            if (visited > MAX_PRESENTATION_NODE_COUNT) {
+                return false;
+            }
+            let child = node.lastChild;
+            while (child) {
+                remaining.push(child);
+                child = child.previousSibling;
+            }
         }
     }
     return true;
@@ -411,25 +410,24 @@ function readBoundedPresentationText(root: Node): string | null {
     let visited = 0;
     while (remaining.length > 0) {
         const node = remaining.pop();
-        if (!node) {
-            continue;
-        }
-        visited += 1;
-        if (visited > MAX_PRESENTATION_NODE_COUNT) {
-            return null;
-        }
-        if (node.nodeType === Node.TEXT_NODE) {
-            const value = (node as Text).data;
-            if (text.length + value.length > MAX_PRESENTATION_TEXT_LENGTH) {
+        if (node) {
+            visited += 1;
+            if (visited > MAX_PRESENTATION_NODE_COUNT) {
                 return null;
             }
-            text += value;
-            continue;
-        }
-        let child = node.lastChild;
-        while (child) {
-            remaining.push(child);
-            child = child.previousSibling;
+            if (node.nodeType === Node.TEXT_NODE) {
+                const value = (node as Text).data;
+                if (text.length + value.length > MAX_PRESENTATION_TEXT_LENGTH) {
+                    return null;
+                }
+                text += value;
+            } else {
+                let child = node.lastChild;
+                while (child) {
+                    remaining.push(child);
+                    child = child.previousSibling;
+                }
+            }
         }
     }
     return text;

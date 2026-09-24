@@ -39,6 +39,23 @@ export type MutationResult<TResponse, TState> = | {
     };
 
 /**
+ * Reads current state after a mutation response is lost.
+ *
+ * @param reread - Reads the surface's current state.
+ *
+ * @returns - An ambiguous result carrying the state when the reread succeeds.
+ */
+async function rereadAfterAmbiguousResponse<TResponse, TState>(
+    reread: () => Promise<TState>,
+): Promise<MutationResult<TResponse, TState>> {
+    try {
+        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state: await reread() };
+    } catch {
+        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
+    }
+}
+
+/**
  * Dispatches one mutation exactly once and rereads state when no usable response
  * arrives. The mutation is never retried, because a lost response may follow a
  * committed write. The background produces the response, so its shape is the
@@ -72,21 +89,4 @@ export async function runMutation<TResponse, TState, TAccepted extends TResponse
     return accept(result)
         ? { kind: CLIENT_RESULT_KIND.RESPONSE, response: result }
         : rereadAfterAmbiguousResponse(reread);
-}
-
-/**
- * Reads current state after a mutation response is lost.
- *
- * @param reread - Reads the surface's current state.
- *
- * @returns - An ambiguous result carrying the state when the reread succeeds.
- */
-async function rereadAfterAmbiguousResponse<TResponse, TState>(
-    reread: () => Promise<TState>,
-): Promise<MutationResult<TResponse, TState>> {
-    try {
-        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state: await reread() };
-    } catch {
-        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-    }
 }

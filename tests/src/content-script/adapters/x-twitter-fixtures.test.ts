@@ -249,22 +249,22 @@ describe('offline X/Twitter public-surface fixtures', () => {
                         expect(source.hidden).toBe(false);
                         expect(output).toBeNull();
                         expect(source.textContent).toBe(originalTextById.get(expected.id));
-                        continue;
-                    }
-                    if (!(output instanceof HTMLTimeElement)) {
-                        throw new Error(`Missing output for ${expected.id}`);
-                    }
-                    expect(source.getAttribute(OWNED_SOURCE_ATTRIBUTE))
-                        .toMatch(/^visible:/);
-                    expect(source.hidden).toBe(true);
-                    expect(output.dateTime).toBe(expected.rawDatetime);
-                    expect(new Date(output.dateTime).toISOString())
-                        .toBe(expected.instant);
-                    expect(output.textContent).toBe(expected.text);
-                    const token = output.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
-                    expect(token).toBeTruthy();
-                    if (token) {
-                        tokens.add(token);
+                    } else {
+                        if (!(output instanceof HTMLTimeElement)) {
+                            throw new Error(`Missing output for ${expected.id}`);
+                        }
+                        expect(source.getAttribute(OWNED_SOURCE_ATTRIBUTE))
+                            .toMatch(/^visible:/);
+                        expect(source.hidden).toBe(true);
+                        expect(output.dateTime).toBe(expected.rawDatetime);
+                        expect(new Date(output.dateTime).toISOString())
+                            .toBe(expected.instant);
+                        expect(output.textContent).toBe(expected.text);
+                        const token = output.getAttribute(OWNED_OUTPUT_ATTRIBUTE);
+                        expect(token).toBeTruthy();
+                        if (token) {
+                            tokens.add(token);
+                        }
                     }
                 }
                 expect(tokens.size).toBe(relativeSources.length);

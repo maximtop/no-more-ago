@@ -72,52 +72,51 @@ const baseKeys = Object.keys(base).sort();
 const baseName = (base.extension_name)?.message;
 
 for (const entry of UI_LOCALES) {
-    if (!directories.includes(entry.code)) {
-        continue;
-    }
-    const catalog = readCatalog(entry.code);
-    const keys = Object.keys(catalog).sort();
-    if (catalog.catalog_locale?.message !== entry.code.replaceAll('_', '-')) {
-        failures.push(`${entry.code}: catalog_locale must identify its own catalog.`);
-    }
-    for (const key of baseKeys.filter((candidate) => !keys.includes(candidate))) {
-        failures.push(`${entry.code}: missing key ${key}.`);
-    }
-    for (const key of keys.filter((candidate) => !baseKeys.includes(candidate))) {
-        failures.push(`${entry.code}: extra key ${key}.`);
-    }
-    for (const key of baseKeys.filter((candidate) => keys.includes(candidate))) {
-        const baseEntry = base[key] as CatalogEntry;
-        const translated = catalog[key] as CatalogEntry;
-        if (translated.description !== baseEntry.description) {
-            failures.push(`${entry.code}: ${key} description must stay the English note.`);
+    if (directories.includes(entry.code)) {
+        const catalog = readCatalog(entry.code);
+        const keys = Object.keys(catalog).sort();
+        if (catalog.catalog_locale?.message !== entry.code.replaceAll('_', '-')) {
+            failures.push(`${entry.code}: catalog_locale must identify its own catalog.`);
         }
-        try {
-            if (!validator.isTranslationValid(
-                baseEntry.message,
-                translated.message,
-                entry.adguardCode,
-            )) {
-                failures.push(`${entry.code}: ${key} does not preserve placeholders or tags.`);
+        for (const key of baseKeys.filter((candidate) => !keys.includes(candidate))) {
+            failures.push(`${entry.code}: missing key ${key}.`);
+        }
+        for (const key of keys.filter((candidate) => !baseKeys.includes(candidate))) {
+            failures.push(`${entry.code}: extra key ${key}.`);
+        }
+        for (const key of baseKeys.filter((candidate) => keys.includes(candidate))) {
+            const baseEntry = base[key] as CatalogEntry;
+            const translated = catalog[key] as CatalogEntry;
+            if (translated.description !== baseEntry.description) {
+                failures.push(`${entry.code}: ${key} description must stay the English note.`);
             }
-        } catch (error) {
-            // isTranslationValid throws for a wrong plural form count and for
-            // unbalanced tags, so the locale and key are attached here.
-            failures.push(`${entry.code}: ${key} — ${(error as Error).message}.`);
+            try {
+                if (!validator.isTranslationValid(
+                    baseEntry.message,
+                    translated.message,
+                    entry.adguardCode,
+                )) {
+                    failures.push(`${entry.code}: ${key} does not preserve placeholders or tags.`);
+                }
+            } catch (error) {
+                // isTranslationValid throws for a wrong plural form count and for
+                // unbalanced tags, so the locale and key are attached here.
+                failures.push(`${entry.code}: ${key} — ${(error as Error).message}.`);
+            }
         }
-    }
-    const description = (catalog.extension_description)?.message;
-    if (description !== undefined && description.length > MANIFEST_DESCRIPTION_LIMIT) {
-        failures.push(
-            `${entry.code}: extension_description is ${String(description.length)} characters; `
-            + `the manifest limit is ${String(MANIFEST_DESCRIPTION_LIMIT)}.`,
-        );
-    }
-    const name = (catalog.extension_name)?.message;
-    if (name !== undefined && name !== baseName) {
-        failures.push(
-            `${entry.code}: extension_name is a brand literal and must not be translated.`,
-        );
+        const description = (catalog.extension_description)?.message;
+        if (description !== undefined && description.length > MANIFEST_DESCRIPTION_LIMIT) {
+            failures.push(
+                `${entry.code}: extension_description is ${String(description.length)} characters; `
+                + `the manifest limit is ${String(MANIFEST_DESCRIPTION_LIMIT)}.`,
+            );
+        }
+        const name = (catalog.extension_name)?.message;
+        if (name !== undefined && name !== baseName) {
+            failures.push(
+                `${entry.code}: extension_name is a brand literal and must not be translated.`,
+            );
+        }
     }
 }
 

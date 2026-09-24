@@ -90,6 +90,25 @@ function absoluteFieldOptions(
 }
 
 /**
+ * Builds a UTC formatter for one field combination.
+ *
+ * @param locale - Locale tag to format with.
+ * @param option - Date and time fields to include.
+ *
+ * @returns - The formatter, or null when the runtime rejects the combination.
+ */
+function utcFormatter(
+    locale: string,
+    option: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat | null {
+    try {
+        return new Intl.DateTimeFormat(locale, { ...option, timeZone: 'UTC' });
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Selects dates covering every month and weekday arrangement used by narrow fields.
  *
  * @returns - Bounded representative absolute-date corpus.
@@ -295,33 +314,26 @@ describe('relative presentation classification', () => {
                 [timeOptions, times],
             ] as const) {
                 for (const option of options) {
-                    let formatter: Intl.DateTimeFormat;
-                    try {
-                        formatter = new Intl.DateTimeFormat(locale, {
-                            ...option,
-                            timeZone: 'UTC',
-                        });
-                    } catch {
-                        continue;
-                    }
-                    for (const date of samples) {
-                        const label = formatter.format(date);
-                        if (
-                            !compactSignatures.has(presentationSignature(label))
-                            || checkedLabels.has(label)
-                        ) {
-                            continue;
+                    const formatter = utcFormatter(locale, option);
+                    if (formatter) {
+                        for (const date of samples) {
+                            const label = formatter.format(date);
+                            if (
+                                compactSignatures.has(presentationSignature(label))
+                                && !checkedLabels.has(label)
+                            ) {
+                                checkedLabels.add(label);
+                                if (isRelativeLabelText(label, element, [], [
+                                    RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
+                                ], patterns)) {
+                                    acceptedAbsolute = `${locale}: ${label}`;
+                                    break;
+                                }
+                            }
                         }
-                        checkedLabels.add(label);
-                        if (isRelativeLabelText(label, element, [], [
-                            RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-                        ], patterns)) {
-                            acceptedAbsolute = `${locale}: ${label}`;
+                        if (acceptedAbsolute) {
                             break;
                         }
-                    }
-                    if (acceptedAbsolute) {
-                        break;
                     }
                 }
                 if (acceptedAbsolute) {

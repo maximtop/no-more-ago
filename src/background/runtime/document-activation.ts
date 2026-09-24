@@ -263,6 +263,40 @@ interface DocumentActivationDependencies {
 }
 
 /**
+ * Bounds one idempotent registration write and observes a successful late completion.
+ *
+ * @param operation - Registration mutation to invoke once.
+ * @param onLateWrite - Callback requesting convergence after a timed-out write succeeds.
+ *
+ * @returns - Whether the write completed successfully before the deadline.
+ */
+async function settleRegistrationWrite(
+    operation: () => Promise<void>,
+    onLateWrite?: () => void,
+): Promise<boolean> {
+    let pending: Promise<void>;
+    try {
+        pending = Promise.resolve(operation());
+    } catch {
+        return false;
+    }
+    let deadlineElapsed = false;
+    void pending.then(
+        () => {
+            if (deadlineElapsed) {
+                onLateWrite?.();
+            }
+        },
+        () => undefined,
+    );
+    const result = await settleBrowserOperation(() => pending);
+    if (!result.ok) {
+        deadlineElapsed = true;
+    }
+    return result.ok;
+}
+
+/**
  * Reconciles one registration without coupling its outcome to sibling registrations.
  *
  * @param scripting - Scripting API boundary.
@@ -363,40 +397,6 @@ function aggregateRegistrationOutcome(
         return REGISTRATION_OUTCOME.UNREGISTERED;
     }
     return REGISTRATION_OUTCOME.UNCHANGED;
-}
-
-/**
- * Bounds one idempotent registration write and observes a successful late completion.
- *
- * @param operation - Registration mutation to invoke once.
- * @param onLateWrite - Callback requesting convergence after a timed-out write succeeds.
- *
- * @returns - Whether the write completed successfully before the deadline.
- */
-async function settleRegistrationWrite(
-    operation: () => Promise<void>,
-    onLateWrite?: () => void,
-): Promise<boolean> {
-    let pending: Promise<void>;
-    try {
-        pending = Promise.resolve(operation());
-    } catch {
-        return false;
-    }
-    let deadlineElapsed = false;
-    void pending.then(
-        () => {
-            if (deadlineElapsed) {
-                onLateWrite?.();
-            }
-        },
-        () => undefined,
-    );
-    const result = await settleBrowserOperation(() => pending);
-    if (!result.ok) {
-        deadlineElapsed = true;
-    }
-    return result.ok;
 }
 
 /**

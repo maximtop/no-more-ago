@@ -141,28 +141,27 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
                 }
                 pending.push(child);
             }
-            continue;
-        }
-        const node = v.safeParse(hydrationNodeSchema, current);
-        if (!node.success) {
-            continue;
-        }
-        const post = v.safeParse(hydrationPostSchema, node.output);
-        if (post.success) {
-            const { id, createTime } = post.output;
-            const existing = index.get(id);
-            if (existing === undefined) {
-                index.set(id, createTime);
-            } else if (existing !== createTime) {
-                index.set(id, null);
+        } else {
+            const node = v.safeParse(hydrationNodeSchema, current);
+            if (node.success) {
+                const post = v.safeParse(hydrationPostSchema, node.output);
+                if (post.success) {
+                    const { id, createTime } = post.output;
+                    const existing = index.get(id);
+                    if (existing === undefined) {
+                        index.set(id, createTime);
+                    } else if (existing !== createTime) {
+                        index.set(id, null);
+                    }
+                }
+                for (const child of Object.values(node.output)) {
+                    scheduledNodes += 1;
+                    if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
+                        return EMPTY_INDEX;
+                    }
+                    pending.push(child);
+                }
             }
-        }
-        for (const child of Object.values(node.output)) {
-            scheduledNodes += 1;
-            if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
-                return EMPTY_INDEX;
-            }
-            pending.push(child);
         }
     }
     return index;
@@ -253,7 +252,7 @@ function decodePostIdSeconds(postId: string): string | null {
     if (!isTikTokPostId(postId)) {
         return null;
     }
-    return (BigInt(postId) >> 32n).toString();
+    return (BigInt(postId) / 2n ** 32n).toString();
 }
 
 /**

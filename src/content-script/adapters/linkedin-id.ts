@@ -67,9 +67,9 @@ const NAMED_COMMENT_CONTEXT_PATTERN = new RegExp(
         + `(${POST_ID_KIND_TOKEN}):(${DECIMAL_TOKEN})(?=$|[,)])`,
     'gu',
 );
-const LINKEDIN_TIMESTAMP_BITS = 22n;
+const LINKEDIN_TIMESTAMP_DIVISOR = 2n ** 22n;
 const MAX_SAFE_INTEGER_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
-const MAX_UNSIGNED_64_BIT_INTEGER = (1n << 64n) - 1n;
+const MAX_UNSIGNED_64_BIT_INTEGER = 2n ** 64n - 1n;
 
 /**
  * Decodes a URL-encoded evidence value without making malformed encoding fatal.
@@ -203,7 +203,7 @@ export function decodeLinkedInIdMilliseconds(id: LinkedInLogicalId): number | nu
     if (numericId > MAX_UNSIGNED_64_BIT_INTEGER) {
         return null;
     }
-    const epoch = numericId >> LINKEDIN_TIMESTAMP_BITS;
+    const epoch = numericId / LINKEDIN_TIMESTAMP_DIVISOR;
     if (epoch <= 0n || epoch > MAX_SAFE_INTEGER_BIGINT) {
         return null;
     }

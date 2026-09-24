@@ -277,18 +277,17 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         }
         let changed = false;
         for (const source of new Set(sources)) {
-            if (source.ownerDocument !== this.input.document || !source.isConnected) {
-                continue;
+            if (source.ownerDocument === this.input.document && source.isConnected) {
+                const descriptor = describeBlueskySource(source, this.tracked.has(source));
+                if (descriptor) {
+                    this.track(descriptor);
+                } else {
+                    this.tracked.delete(source);
+                    this.pending.delete(source);
+                    this.clearResolution(source);
+                }
+                changed = true;
             }
-            const descriptor = describeBlueskySource(source, this.tracked.has(source));
-            if (descriptor) {
-                this.track(descriptor);
-            } else {
-                this.tracked.delete(source);
-                this.pending.delete(source);
-                this.clearResolution(source);
-            }
-            changed = true;
         }
         if (changed) {
             this.pruneLookupState();
@@ -325,20 +324,19 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         let dependenciesChanged = false;
         for (const [source, descriptor] of [...this.tracked]) {
             if (
-                descriptor.role !== BLUESKY_TARGET_ROLE.QUOTE
-                || !removedOuterIdentities.has(descriptor.outerIdentity.key)
+                descriptor.role === BLUESKY_TARGET_ROLE.QUOTE
+                && removedOuterIdentities.has(descriptor.outerIdentity.key)
             ) {
-                continue;
+                const current = describeBlueskySource(source, true);
+                if (current) {
+                    this.track(current);
+                } else {
+                    this.tracked.delete(source);
+                    this.pending.delete(source);
+                    this.clearResolution(source);
+                }
+                dependenciesChanged = true;
             }
-            const current = describeBlueskySource(source, true);
-            if (current) {
-                this.track(current);
-            } else {
-                this.tracked.delete(source);
-                this.pending.delete(source);
-                this.clearResolution(source);
-            }
-            dependenciesChanged = true;
         }
         this.pruneLookupState();
         if (dependenciesChanged) {
@@ -589,36 +587,35 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     && !this.actorCache.has(actor)
                     && !this.attemptedActors.has(actor);
             });
-            if (batch.length === 0) {
-                continue;
-            }
-            let result: Awaited<ReturnType<BlueskyAppView['getProfiles']>>;
-            try {
-                result = await this.input.appView.getProfiles(batch, signal);
-            } catch {
-                result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
-            }
-            if (!this.isCurrentGeneration(generation)) {
-                return;
-            }
-            const liveActors = batch.filter((actor) => this.isActorReferenced(actor));
-            for (const actor of liveActors) {
-                this.attemptedActors.add(actor);
-            }
-            if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
-                diagnostics.failure += liveActors.length;
-                if (liveActors.length > 0) {
+            if (batch.length > 0) {
+                let result: Awaited<ReturnType<BlueskyAppView['getProfiles']>>;
+                try {
+                    result = await this.input.appView.getProfiles(batch, signal);
+                } catch {
+                    result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
+                }
+                if (!this.isCurrentGeneration(generation)) {
                     return;
                 }
-                continue;
-            }
-            for (const actor of liveActors) {
-                const matches = result.records.filter((record) => record.actor === actor);
-                const match = matches.length === 1 ? matches[0] : undefined;
-                if (match) {
-                    this.actorCache.set(actor, match.did);
+                const liveActors = batch.filter((actor) => this.isActorReferenced(actor));
+                for (const actor of liveActors) {
+                    this.attemptedActors.add(actor);
+                }
+                if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
+                    diagnostics.failure += liveActors.length;
+                    if (liveActors.length > 0) {
+                        return;
+                    }
                 } else {
-                    diagnostics.partial += 1;
+                    for (const actor of liveActors) {
+                        const matches = result.records.filter((record) => record.actor === actor);
+                        const match = matches.length === 1 ? matches[0] : undefined;
+                        if (match) {
+                            this.actorCache.set(actor, match.did);
+                        } else {
+                            diagnostics.partial += 1;
+                        }
+                    }
                 }
             }
         }
@@ -665,36 +662,35 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     && !this.postCache.has(uri)
                     && !this.attemptedPosts.has(uri);
             });
-            if (batch.length === 0) {
-                continue;
-            }
-            let result: Awaited<ReturnType<BlueskyAppView['getPosts']>>;
-            try {
-                result = await this.input.appView.getPosts(batch, signal);
-            } catch {
-                result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
-            }
-            if (!this.isCurrentGeneration(generation)) {
-                return;
-            }
-            const liveUris = batch.filter((uri) => this.isPostReferenced(uri));
-            for (const uri of liveUris) {
-                this.attemptedPosts.add(uri);
-            }
-            if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
-                diagnostics.failure += liveUris.length;
-                if (liveUris.length > 0) {
+            if (batch.length > 0) {
+                let result: Awaited<ReturnType<BlueskyAppView['getPosts']>>;
+                try {
+                    result = await this.input.appView.getPosts(batch, signal);
+                } catch {
+                    result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
+                }
+                if (!this.isCurrentGeneration(generation)) {
                     return;
                 }
-                continue;
-            }
-            for (const uri of liveUris) {
-                const matches = result.records.filter((record) => record.uri === uri);
-                const match = matches.length === 1 ? matches[0] : undefined;
-                if (match) {
-                    this.postCache.set(uri, match);
+                const liveUris = batch.filter((uri) => this.isPostReferenced(uri));
+                for (const uri of liveUris) {
+                    this.attemptedPosts.add(uri);
+                }
+                if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
+                    diagnostics.failure += liveUris.length;
+                    if (liveUris.length > 0) {
+                        return;
+                    }
                 } else {
-                    diagnostics.partial += 1;
+                    for (const uri of liveUris) {
+                        const matches = result.records.filter((record) => record.uri === uri);
+                        const match = matches.length === 1 ? matches[0] : undefined;
+                        if (match) {
+                            this.postCache.set(uri, match);
+                        } else {
+                            diagnostics.partial += 1;
+                        }
+                    }
                 }
             }
         }
@@ -725,58 +721,68 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      */
     private publishPending(): void {
         for (const [source, descriptor] of [...this.pending]) {
-            const current = this.getCurrentDescriptor(descriptor);
-            if (!current) {
-                if (this.pending.get(source) === descriptor) {
-                    this.pending.delete(source);
-                }
-                if (this.tracked.get(source) === descriptor) {
-                    this.tracked.delete(source);
-                }
-                this.clearResolution(source);
-                continue;
+            this.publishDescriptor(source, descriptor);
+        }
+    }
+
+    /**
+     * Publishes one pending descriptor once it is still current and its lookups have resolved.
+     *
+     * @param source - Source element the descriptor belongs to.
+     * @param descriptor - Descriptor retained before asynchronous work.
+     */
+    private publishDescriptor(source: Element, descriptor: BlueskyRelativeTarget): void {
+        const current = this.getCurrentDescriptor(descriptor);
+        if (!current) {
+            if (this.pending.get(source) === descriptor) {
+                this.pending.delete(source);
             }
-            const { actor } = current.outerIdentity;
-            const uri = this.getPostUri(current);
-            if (!uri) {
-                if (this.attemptedActors.has(actor)) {
-                    this.pending.delete(source);
-                    this.clearResolution(source);
-                }
-                continue;
+            if (this.tracked.get(source) === descriptor) {
+                this.tracked.delete(source);
             }
-            const post = this.postCache.get(uri);
-            if (!post) {
-                if (this.attemptedPosts.has(uri)) {
-                    this.pending.delete(source);
-                    this.clearResolution(source);
-                }
-                continue;
-            }
-            const indexedAt = current.role === BLUESKY_TARGET_ROLE.POST
-                ? post.indexedAt
-                : post.quote?.indexedAt;
-            if (!indexedAt) {
+            this.clearResolution(source);
+            return;
+        }
+        const { actor } = current.outerIdentity;
+        const uri = this.getPostUri(current);
+        if (!uri) {
+            if (this.attemptedActors.has(actor)) {
                 this.pending.delete(source);
                 this.clearResolution(source);
-                continue;
             }
-            const previous = this.resolutions.get(source);
-            if (
-                !previous
-                || previous.target !== current.target
-                || previous.fingerprint !== current.fingerprint
-                || previous.indexedAt !== indexedAt
-            ) {
-                this.resolutions.set(source, {
-                    target: current.target,
-                    fingerprint: current.fingerprint,
-                    indexedAt,
-                });
-                this.changedSources.add(source);
-            }
-            this.pending.delete(source);
+            return;
         }
+        const post = this.postCache.get(uri);
+        if (!post) {
+            if (this.attemptedPosts.has(uri)) {
+                this.pending.delete(source);
+                this.clearResolution(source);
+            }
+            return;
+        }
+        const indexedAt = current.role === BLUESKY_TARGET_ROLE.POST
+            ? post.indexedAt
+            : post.quote?.indexedAt;
+        if (!indexedAt) {
+            this.pending.delete(source);
+            this.clearResolution(source);
+            return;
+        }
+        const previous = this.resolutions.get(source);
+        if (
+            !previous
+            || previous.target !== current.target
+            || previous.fingerprint !== current.fingerprint
+            || previous.indexedAt !== indexedAt
+        ) {
+            this.resolutions.set(source, {
+                target: current.target,
+                fingerprint: current.fingerprint,
+                indexedAt,
+            });
+            this.changedSources.add(source);
+        }
+        this.pending.delete(source);
     }
 
     /**

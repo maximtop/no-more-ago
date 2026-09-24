@@ -57,18 +57,14 @@ function failureFor(
 ): PopupRuntimeFailure | undefined {
     for (const failure of failures) {
         if (failure.scope === RECONCILE_FAILURE_SCOPE.REGISTRATION) {
-            if (
-                failure.registrationId === FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID
-                && !isFacebookHostname(hostname)
-            ) {
-                continue;
+            const isForeignBridge = failure.registrationId === FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID
+                && !isFacebookHostname(hostname);
+            if (!isForeignBridge) {
+                return POPUP_RUNTIME_FAILURE.REGISTRATION;
             }
-            return POPUP_RUNTIME_FAILURE.REGISTRATION;
-        }
-        if (failure.scope === RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY) {
+        } else if (failure.scope === RECONCILE_FAILURE_SCOPE.MATCHING_TABS_QUERY) {
             return POPUP_RUNTIME_FAILURE.MATCHING_TABS_QUERY;
-        }
-        if (failure.tabId === tabId && failure.hostname === hostname) {
+        } else if (failure.tabId === tabId && failure.hostname === hostname) {
             return failure.action === TAB_ACTION.INJECT
                 ? POPUP_RUNTIME_FAILURE.CURRENT_TAB_INJECT
                 : POPUP_RUNTIME_FAILURE.CURRENT_TAB_TEARDOWN;

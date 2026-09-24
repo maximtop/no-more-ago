@@ -253,31 +253,31 @@ export function extractFacebookTimestampUpdate(
                     return false;
                 }
                 pushChildren(stack, children);
-                continue;
-            }
-            const node = v.safeParse(payloadNodeSchema, value);
-            if (!node.success) {
-                continue;
-            }
-            if (node.output.__typename === FACEBOOK_STORY_TYPENAME) {
-                const story = v.safeParse(storySchema, node.output);
-                if (story.success) {
-                    const storyTime = story.output.creation_time;
-                    for (const trackingToken of storyTimestampTokens(story.output)) {
-                        if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
-                            return false;
+            } else {
+                const node = v.safeParse(payloadNodeSchema, value);
+                if (node.success) {
+                    const { __typename: typename } = node.output;
+                    if (typename === FACEBOOK_STORY_TYPENAME) {
+                        const story = v.safeParse(storySchema, node.output);
+                        if (story.success) {
+                            const storyTime = story.output.creation_time;
+                            for (const trackingToken of storyTimestampTokens(story.output)) {
+                                if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
+                                    return false;
+                                }
+                            }
                         }
                     }
+                    const children = Object.values(node.output);
+                    const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
+                        - visited
+                        - stack.length;
+                    if (children.length > remaining) {
+                        return false;
+                    }
+                    pushChildren(stack, children);
                 }
             }
-            const children = Object.values(node.output);
-            const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
-                - visited
-                - stack.length;
-            if (children.length > remaining) {
-                return false;
-            }
-            pushChildren(stack, children);
         }
         return true;
     });

@@ -343,15 +343,14 @@ function parsePosts(
     for (const uri of uris) {
         const matches = posts.filter((post) => post.uri === uri);
         const match = matches.length === 1 ? matches[0] : undefined;
-        if (!match || !parseExplicitZoneDatetime(match.indexedAt)) {
-            continue;
+        if (match && parseExplicitZoneDatetime(match.indexedAt)) {
+            const quote = parseQuote(match.embed);
+            records.push({
+                uri: match.uri,
+                indexedAt: match.indexedAt,
+                ...(quote ? { quote } : {}),
+            });
         }
-        const quote = parseQuote(match.embed);
-        records.push({
-            uri: match.uri,
-            indexedAt: match.indexedAt,
-            ...(quote ? { quote } : {}),
-        });
     }
     return records;
 }

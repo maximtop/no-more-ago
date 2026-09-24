@@ -93,12 +93,11 @@ function payloadScriptCandidates(record: MutationRecord): readonly HTMLScriptEle
     addCandidate(record.target);
     for (const node of record.addedNodes) {
         addCandidate(node);
-        if (!(node instanceof Element)) {
-            continue;
-        }
-        for (const element of node.querySelectorAll(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR)) {
-            if (element instanceof HTMLScriptElement) {
-                candidates.add(element);
+        if (node instanceof Element) {
+            for (const element of node.querySelectorAll(FACEBOOK_PAYLOAD_SCRIPT_SELECTOR)) {
+                if (element instanceof HTMLScriptElement) {
+                    candidates.add(element);
+                }
             }
         }
     }
@@ -130,14 +129,13 @@ function trackedLinkCandidates(record: MutationRecord): readonly Element[] {
     addClosest(record.target);
     for (const node of record.addedNodes) {
         addClosest(node);
-        if (!(node instanceof Element)) {
-            continue;
-        }
-        if (node.matches(FACEBOOK_TRACKED_LINK_SELECTOR)) {
-            candidates.add(node);
-        }
-        for (const element of node.querySelectorAll(FACEBOOK_TRACKED_LINK_SELECTOR)) {
-            candidates.add(element);
+        if (node instanceof Element) {
+            if (node.matches(FACEBOOK_TRACKED_LINK_SELECTOR)) {
+                candidates.add(node);
+            }
+            for (const element of node.querySelectorAll(FACEBOOK_TRACKED_LINK_SELECTOR)) {
+                candidates.add(element);
+            }
         }
     }
     return [...candidates];

@@ -182,45 +182,43 @@ export function storeFacebookTimestampUpdate(
     }
     for (const record of update.records) {
         const existing = store.associations.get(record.trackingToken);
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
-            continue;
-        }
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD) {
-            if (existing.record.rawDatetime === record.rawDatetime) {
-                continue;
+        const isRejected = existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT;
+        const isUnchanged = existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD
+            && existing.record.rawDatetime === record.rawDatetime;
+        if (!isRejected && !isUnchanged) {
+            if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD) {
+                store.associations.set(record.trackingToken, {
+                    state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
+                });
+                changed.set(record.trackingToken, {
+                    trackingToken: record.trackingToken,
+                    state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+                });
+            } else {
+                store.associations.set(record.trackingToken, {
+                    state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD,
+                    record,
+                });
+                changed.set(record.trackingToken, {
+                    trackingToken: record.trackingToken,
+                    state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
+                });
+                enforceAssociationLimit(store, changed);
             }
-            store.associations.set(record.trackingToken, {
-                state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
-            });
-            changed.set(record.trackingToken, {
-                trackingToken: record.trackingToken,
-                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
-            });
-            continue;
         }
-        store.associations.set(record.trackingToken, {
-            state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD,
-            record,
-        });
-        changed.set(record.trackingToken, {
-            trackingToken: record.trackingToken,
-            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
-        });
-        enforceAssociationLimit(store, changed);
     }
     for (const trackingToken of update.invalidatedTrackingTokens) {
         const existing = store.associations.get(trackingToken);
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
-            continue;
+        if (existing?.state !== FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
+            store.associations.set(trackingToken, {
+                state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
+            });
+            changed.set(trackingToken, {
+                trackingToken,
+                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+            });
+            enforceAssociationLimit(store, changed);
         }
-        store.associations.set(trackingToken, {
-            state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
-        });
-        changed.set(trackingToken, {
-            trackingToken,
-            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
-        });
-        enforceAssociationLimit(store, changed);
     }
     return [...changed.values()];
 }
@@ -244,17 +242,15 @@ export function ingestFacebookPayloadScripts(
             (element): element is HTMLScriptElement => element instanceof HTMLScriptElement,
         );
     for (const element of candidates) {
-        if (!(element instanceof HTMLScriptElement) || store.parsedScripts.has(element)) {
-            continue;
-        }
-        const payloadText = element.textContent;
-        if (payloadText.trim() === '') {
-            continue;
-        }
-        store.parsedScripts.add(element);
-        const update = extractFacebookTimestampUpdate(payloadText);
-        for (const change of storeFacebookTimestampUpdate(document, update)) {
-            changed.set(change.trackingToken, change);
+        if (element instanceof HTMLScriptElement && !store.parsedScripts.has(element)) {
+            const payloadText = element.textContent;
+            if (payloadText.trim() !== '') {
+                store.parsedScripts.add(element);
+                const update = extractFacebookTimestampUpdate(payloadText);
+                for (const change of storeFacebookTimestampUpdate(document, update)) {
+                    changed.set(change.trackingToken, change);
+                }
+            }
         }
     }
     return [...changed.values()];

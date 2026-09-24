@@ -139,11 +139,12 @@ export function startChromeWatch(workspace: string): RunningWatch {
     });
     return {
         waitFor: (predicate) => new Promise((resolve, reject) => {
+            let poll: ReturnType<typeof setInterval> | undefined;
             const timeout = setTimeout(() => {
                 clearInterval(poll);
                 reject(new Error(`Timed out waiting for build event. ${stderr}`));
             }, 30_000);
-            const poll = setInterval(() => {
+            poll = setInterval(() => {
                 const event = events.find(predicate);
                 if (event) {
                     clearTimeout(timeout);

@@ -153,21 +153,20 @@ function collapseRoots(roots: readonly Element[]): Element[] {
     const emitted = new Set<Element>();
     const collapsed: Element[] = [];
     for (const root of roots) {
-        if (emitted.has(root)) {
-            continue;
-        }
-        emitted.add(root);
-        let ancestor = root.parentElement;
-        let covered = false;
-        while (ancestor) {
-            if (candidates.has(ancestor)) {
-                covered = true;
-                break;
+        if (!emitted.has(root)) {
+            emitted.add(root);
+            let ancestor = root.parentElement;
+            let covered = false;
+            while (ancestor) {
+                if (candidates.has(ancestor)) {
+                    covered = true;
+                    break;
+                }
+                ancestor = ancestor.parentElement;
             }
-            ancestor = ancestor.parentElement;
-        }
-        if (!covered) {
-            collapsed.push(root);
+            if (!covered) {
+                collapsed.push(root);
+            }
         }
     }
     return collapsed;
@@ -597,13 +596,12 @@ export class DocumentMutationScheduler {
         for (const source of released) {
             const target = this.pageTextTargetsBySource.get(source);
             this.pageTextTargetsBySource.delete(source);
-            if (!target) {
-                continue;
-            }
-            const targetSources = this.pageTextSourcesByTarget.get(target);
-            targetSources?.delete(source);
-            if (targetSources?.size === 0) {
-                this.pageTextSourcesByTarget.delete(target);
+            if (target) {
+                const targetSources = this.pageTextSourcesByTarget.get(target);
+                targetSources?.delete(source);
+                if (targetSources?.size === 0) {
+                    this.pageTextSourcesByTarget.delete(target);
+                }
             }
         }
         this.requestTextObservationRebuild();
@@ -842,12 +840,11 @@ export class DocumentMutationScheduler {
         }
         for (const element of relevantElements) {
             const sources = this.sourcesByRelevantElement.get(element);
-            if (!sources) {
-                continue;
-            }
-            sources.delete(source);
-            if (sources.size === 0) {
-                this.sourcesByRelevantElement.delete(element);
+            if (sources) {
+                sources.delete(source);
+                if (sources.size === 0) {
+                    this.sourcesByRelevantElement.delete(element);
+                }
             }
         }
         this.relevantElementsBySource.delete(source);
@@ -991,21 +988,19 @@ export class DocumentMutationScheduler {
         const newValues = this.getCharacterDataNewValues(records);
         const seenSources = sources ? new Set(sources) : undefined;
         for (const record of records) {
-            if (record.type !== 'characterData' || record.target.nodeType !== 3) {
-                continue;
-            }
-            const target = record.target as Text;
-            const newValue = newValues.get(record) ?? target.data;
-            if (this.consumeExpectedTextChange(target, record.oldValue, newValue)) {
-                continue;
-            }
-            const ownedSource = capture(target, newValue);
-            const affectedSources = ownedSource
-                ? [ownedSource]
-                : this.findPageTextSources(target);
-            if (sources && seenSources) {
-                for (const source of affectedSources) {
-                    addUnique(sources, seenSources, source);
+            if (record.type === 'characterData' && record.target.nodeType === 3) {
+                const target = record.target as Text;
+                const newValue = newValues.get(record) ?? target.data;
+                if (!this.consumeExpectedTextChange(target, record.oldValue, newValue)) {
+                    const ownedSource = capture(target, newValue);
+                    const affectedSources = ownedSource
+                        ? [ownedSource]
+                        : this.findPageTextSources(target);
+                    if (sources && seenSources) {
+                        for (const source of affectedSources) {
+                            addUnique(sources, seenSources, source);
+                        }
+                    }
                 }
             }
         }
@@ -1043,150 +1038,140 @@ export class DocumentMutationScheduler {
         }
         this.drainPendingTextSourceTargets(sourceTargets, sourceTargetSet);
         for (const record of records) {
-            if (record.type === 'characterData') {
-                continue;
-            }
             if (record.type === 'attributes') {
-                if (record.target.nodeType !== 1) {
-                    continue;
-                }
                 const target = record.target as Element;
-                if (this.input.getOwnedSourceForOutput(target)) {
-                    continue;
-                }
                 const { attributeName } = record;
-                if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
-                    if (
-                        !languageRootSet.has(target)
-                        || processedLanguageRoots.has(target)
-                    ) {
-                        continue;
+                // Language changes are handled once per collapsed root.
+                const isPendingLanguageRoot = attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.LANG
+                    || (languageRootSet.has(target) && !processedLanguageRoots.has(target));
+                if (
+                    record.target.nodeType === 1
+                    && !this.input.getOwnedSourceForOutput(target)
+                    && isPendingLanguageRoot
+                ) {
+                    if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
+                        processedLanguageRoots.add(target);
                     }
-                    processedLanguageRoots.add(target);
+                    const changesSource = attributeName !== null
+                        && (this.input.sourceAttributes ?? []).includes(attributeName);
+                    if (changesSource) {
+                        for (const source of this.input.getSourceMutationRoots?.(
+                            target,
+                            attributeName,
+                            record.oldValue,
+                            this.findTrackedSources(target),
+                            TIMESTAMP_MUTATION_KIND.ATTRIBUTE,
+                        ) ?? []) {
+                            addUnique(sourceTargets, sourceTargetSet, source);
+                        }
+                    }
+                    if (
+                        attributeName
+                        && (VISIBILITY_ATTRIBUTES as readonly string[]).includes(attributeName)
+                    ) {
+                        const expected = this.expectedHiddenChanges.get(target);
+                        const expectedChange = expected?.[0];
+                        const followingChange = expected?.[1];
+                        let reachedExpectedState = false;
+                        if (expectedChange) {
+                            reachedExpectedState = followingChange
+                                ? (followingChange.oldValue !== null) === expectedChange.hidden
+                                : target.hasAttribute('hidden') === expectedChange.hidden;
+                        }
+                        if (
+                            attributeName === 'hidden'
+                            && expectedChange
+                            && expectedChange.oldValue === record.oldValue
+                            && reachedExpectedState
+                        ) {
+                            expected.shift();
+                            if (expected.length === 0) {
+                                this.expectedHiddenChanges.delete(target);
+                            }
+                        } else {
+                            if (attributeName === 'hidden') {
+                                (this.input.clearSourceHiddenProvenance ?? clearSourceHiddenProvenance)(
+                                    target,
+                                );
+                            }
+                            const changesLocalStyle = attributeName === 'class'
+                                || attributeName === 'style';
+                            let affectedSources: readonly Element[];
+                            if (changesLocalStyle) {
+                                affectedSources = this.sourcesByRelevantElement.has(target)
+                                    ? this.getAffectedSources(target)
+                                    : [];
+                            } else {
+                                affectedSources = this.getAffectedSources(target);
+                            }
+                            for (const source of affectedSources) {
+                                addUnique(visibilityRoots, visibilityRootSet, source);
+                            }
+                        }
+                    }
                 }
-                const changesSource = attributeName !== null
-                    && (this.input.sourceAttributes ?? []).includes(attributeName);
-                if (changesSource) {
+            } else if (
+                record.type !== 'characterData'
+                && !this.input.getOwnedSourceForOutput(record.target)
+            ) {
+                if (record.target.nodeType === 1) {
                     for (const source of this.input.getSourceMutationRoots?.(
-                        target,
-                        attributeName,
-                        record.oldValue,
-                        this.findTrackedSources(target),
-                        TIMESTAMP_MUTATION_KIND.ATTRIBUTE,
+                        record.target as Element,
+                        undefined,
+                        null,
+                        this.findTrackedSources(record.target as Element),
+                        TIMESTAMP_MUTATION_KIND.CHILD_LIST,
+                        Array.from(record.addedNodes),
+                        Array.from(record.removedNodes),
                     ) ?? []) {
                         addUnique(sourceTargets, sourceTargetSet, source);
                     }
                 }
-                if (
-                    attributeName
-                    && (VISIBILITY_ATTRIBUTES as readonly string[]).includes(attributeName)
-                ) {
-                    const expected = this.expectedHiddenChanges.get(target);
-                    const expectedChange = expected?.[0];
-                    const followingChange = expected?.[1];
-                    let reachedExpectedState = false;
-                    if (expectedChange) {
-                        reachedExpectedState = followingChange
-                            ? (followingChange.oldValue !== null) === expectedChange.hidden
-                            : target.hasAttribute('hidden') === expectedChange.hidden;
-                    }
-                    if (
-                        attributeName === 'hidden'
-                        && expectedChange
-                        && expectedChange.oldValue === record.oldValue
-                        && reachedExpectedState
-                    ) {
-                        expected.shift();
-                        if (expected.length === 0) {
-                            this.expectedHiddenChanges.delete(target);
-                        }
-                    } else {
-                        if (attributeName === 'hidden') {
-                            (this.input.clearSourceHiddenProvenance ?? clearSourceHiddenProvenance)(
-                                target,
-                            );
-                        }
-                        const changesLocalStyle = attributeName === 'class'
-                            || attributeName === 'style';
-                        let affectedSources: readonly Element[];
-                        if (changesLocalStyle) {
-                            affectedSources = this.sourcesByRelevantElement.has(target)
-                                ? this.getAffectedSources(target)
-                                : [];
+
+                for (const node of record.addedNodes) {
+                    if (node.nodeType === 1) {
+                        const element = node as Element;
+                        const source = this.input.getOwnedSourceForOutput(element);
+                        if (source) {
+                            if (
+                                source.parentNode !== element.parentNode
+                                || source.nextElementSibling !== element
+                            ) {
+                                addUnique(
+                                    displacedOutputSources,
+                                    displacedOutputSourceSet,
+                                    source,
+                                );
+                            }
                         } else {
-                            affectedSources = this.getAffectedSources(target);
-                        }
-                        for (const source of affectedSources) {
-                            addUnique(visibilityRoots, visibilityRootSet, source);
+                            addUnique(addedRoots, addedRootSet, element);
                         }
                     }
                 }
-                continue;
-            }
 
-            if (this.input.getOwnedSourceForOutput(record.target)) {
-                continue;
-            }
-            if (record.target.nodeType === 1) {
-                for (const source of this.input.getSourceMutationRoots?.(
-                    record.target as Element,
-                    undefined,
-                    null,
-                    this.findTrackedSources(record.target as Element),
-                    TIMESTAMP_MUTATION_KIND.CHILD_LIST,
-                    Array.from(record.addedNodes),
-                    Array.from(record.removedNodes),
-                ) ?? []) {
-                    addUnique(sourceTargets, sourceTargetSet, source);
-                }
-            }
-
-            for (const node of record.addedNodes) {
-                if (node.nodeType !== 1) {
-                    continue;
-                }
-                const element = node as Element;
-                const source = this.input.getOwnedSourceForOutput(element);
-                if (source) {
-                    if (
-                        source.parentNode !== element.parentNode
-                        || source.nextElementSibling !== element
-                    ) {
-                        addUnique(
-                            displacedOutputSources,
-                            displacedOutputSourceSet,
-                            source,
-                        );
+                for (const node of record.removedNodes) {
+                    if (node.nodeType === 1) {
+                        const element = node as Element;
+                        if (this.suppressedRemovals.get(element) === this.generation) {
+                            this.suppressedRemovals.delete(element);
+                        } else {
+                            const source = this.input.getOwnedSourceForOutput(element);
+                            if (source) {
+                                if (
+                                    source.parentNode !== element.parentNode
+                                    || source.nextElementSibling !== element
+                                ) {
+                                    addUnique(
+                                        displacedOutputSources,
+                                        displacedOutputSourceSet,
+                                        source,
+                                    );
+                                }
+                            } else {
+                                addUnique(removedRoots, removedRootSet, element);
+                            }
+                        }
                     }
-                } else {
-                    addUnique(addedRoots, addedRootSet, element);
-                }
-            }
-
-            for (const node of record.removedNodes) {
-                if (node.nodeType !== 1) {
-                    continue;
-                }
-                const element = node as Element;
-                const suppressedGeneration = this.suppressedRemovals.get(element);
-                if (suppressedGeneration === this.generation) {
-                    this.suppressedRemovals.delete(element);
-                    continue;
-                }
-                const source = this.input.getOwnedSourceForOutput(element);
-                if (source) {
-                    if (
-                        source.parentNode !== element.parentNode
-                        || source.nextElementSibling !== element
-                    ) {
-                        addUnique(
-                            displacedOutputSources,
-                            displacedOutputSourceSet,
-                            source,
-                        );
-                    }
-                } else {
-                    addUnique(removedRoots, removedRootSet, element);
                 }
             }
         }
