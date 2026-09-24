@@ -167,11 +167,12 @@ class FixtureAppView implements BlueskyAppView {
             if (!indexedAt) {
                 continue;
             }
-            const quoteIndexedAt = recordKey === '3quotedouter'
-                ? QUOTE_INDEXED_AT
-                : recordKey === '3quotedreplacement'
-                    ? REPLACEMENT_QUOTE_INDEXED_AT
-                    : undefined;
+            let quoteIndexedAt: string | undefined;
+            if (recordKey === '3quotedouter') {
+                quoteIndexedAt = QUOTE_INDEXED_AT;
+            } else if (recordKey === '3quotedreplacement') {
+                quoteIndexedAt = REPLACEMENT_QUOTE_INDEXED_AT;
+            }
             records.push({
                 uri,
                 indexedAt,
@@ -245,6 +246,8 @@ function snapshotDom(descriptor: BlueskyRelativeTarget): DomSnapshot {
  * @param descriptor - Current fixture target.
  *
  * @returns - Exact deterministic presentation text.
+ *
+ * @throws If the fixture has no timestamp for the target.
  */
 function expectedText(descriptor: BlueskyRelativeTarget): string {
     if (descriptor.role === BLUESKY_TARGET_ROLE.QUOTE) {

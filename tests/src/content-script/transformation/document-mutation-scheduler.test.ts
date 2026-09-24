@@ -72,6 +72,32 @@ function stubControllableMutationObserver(): ControllableMutationCallback[] {
     return callbacks;
 }
 
+/**
+ * Replaces MutationObserver with a wrapper that reports every native delivery.
+ *
+ * @param onDelivery - Called with the records of each native delivery before the scheduler sees them.
+ */
+function stubCountingMutationObserver(
+    onDelivery: (records: readonly MutationRecord[]) => void,
+): void {
+    const NativeObserver = MutationObserver;
+
+    /**
+     * Constructor that wraps the scheduler callback with delivery reporting.
+     *
+     * @param callback - Native mutation callback registered by the scheduler.
+     *
+     * @returns - The native observer that reports to the test.
+     */
+    function CountingObserver(callback: MutationCallback): MutationObserver {
+        return new NativeObserver((records, observer) => {
+            onDelivery(records);
+            callback(records, observer);
+        });
+    }
+    vi.stubGlobal('MutationObserver', CountingObserver);
+}
+
 const flushMutations = async (): Promise<void> => {
     await Promise.resolve();
     await Promise.resolve();
@@ -390,28 +416,12 @@ describe('DocumentMutationScheduler', () => {
     });
 
     it('stops character-data observation after an in-place source is released', async () => {
-        const NativeObserver = MutationObserver;
         let characterDataDeliveries = 0;
-
-        /**
-         * Native observer wrapper that counts character-data deliveries.
-         */
-        class CharacterDataCountingObserver extends NativeObserver {
-            /**
-             * Counts native deliveries that contain character-data records.
-             *
-             * @param callback - Scheduler callback wrapped by the test observer.
-             */
-            constructor(callback: MutationCallback) {
-                super((records, observer) => {
-                    if (records.some((record) => record.type === 'characterData')) {
-                        characterDataDeliveries += 1;
-                    }
-                    callback(records, observer);
-                });
+        stubCountingMutationObserver((records) => {
+            if (records.some((record) => record.type === 'characterData')) {
+                characterDataDeliveries += 1;
             }
-        }
-        vi.stubGlobal('MutationObserver', CharacterDataCountingObserver);
+        });
         try {
             const firstSource = document.createElement('span');
             const firstTarget = document.createTextNode('first relative');
@@ -726,26 +736,10 @@ describe('DocumentMutationScheduler', () => {
     });
 
     it('receives one raw suppressed removal without a public batch', async () => {
-        const NativeObserver = MutationObserver;
         let rawDeliveries = 0;
-
-        /**
-         * Native MutationObserver wrapper that counts raw deliveries.
-         */
-        class CountingObserver extends NativeObserver {
-            /**
-             * Wraps the scheduler callback with delivery counting.
-             *
-             * @param callback - Native mutation callback registered by the scheduler.
-             */
-            constructor(callback: MutationCallback) {
-                super((records, observer) => {
-                    rawDeliveries += 1;
-                    callback(records, observer);
-                });
-            }
-        }
-        vi.stubGlobal('MutationObserver', CountingObserver);
+        stubCountingMutationObserver(() => {
+            rawDeliveries += 1;
+        });
         try {
             document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">ago</relative-time>';
             const source = document.querySelector('relative-time');

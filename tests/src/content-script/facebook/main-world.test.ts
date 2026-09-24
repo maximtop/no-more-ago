@@ -346,7 +346,7 @@ describe('Facebook main-world bridge', () => {
     });
 
     it('cancels an active response reader when inspection is disabled', async () => {
-        const read = vi.fn(() => new Promise<never>(() => undefined));
+        const read = vi.fn(() => new Promise<never>(() => {}));
         const cancel = vi.fn(() => Promise.resolve());
         const response = {
             clone: vi.fn(() => ({

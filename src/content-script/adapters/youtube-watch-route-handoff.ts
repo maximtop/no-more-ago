@@ -137,7 +137,9 @@ function activateWatchHandoff(
  * Immutable loaded-only policy for a same-document Watch video handoff.
  */
 const YOUTUBE_WATCH_HANDOFF_POLICY: DocumentRouteHandoffPolicy = Object.freeze({
-    allowsRule: (ruleId: string, source: Element) => ruleId !== YOUTUBE_ADAPTER_ID || !isYouTubeWatchPublicationSource(source),
+    allowsRule: (ruleId: string, source: Element) => (
+        ruleId !== YOUTUBE_ADAPTER_ID || !isYouTubeWatchPublicationSource(source)
+    ),
     activate: activateWatchHandoff,
 });
 

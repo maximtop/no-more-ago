@@ -140,7 +140,11 @@ export class DocumentRefresh {
                     throw new Error('No reachable document frames');
                 }
                 await Promise.all(frames.value.map(async ({ frameId }) => {
-                    const response = await settleBrowserOperation(() => this.tabs.sendMessage(tab.id, message, { frameId }));
+                    const response = await settleBrowserOperation(() => this.tabs.sendMessage(
+                        tab.id,
+                        message,
+                        { frameId },
+                    ));
                     if (!response.ok || !isRefreshAcknowledgement(response.value, message)) {
                         throw new Error('Invalid document refresh acknowledgement');
                     }

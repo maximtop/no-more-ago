@@ -92,6 +92,8 @@ interface GenericControllerFixture {
  * @param markup - Body markup containing one generic HTML time source.
  *
  * @returns - Source and controller sharing the fixture document.
+ *
+ * @throws If the markup has no generic time source.
  */
 function createGenericControllerFixture(
     markup = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>',
@@ -407,10 +409,9 @@ describe('DocumentTransformationController', () => {
             participantFactory,
         });
 
-        expect(() => {
-            new DocumentTransformationController(input);
-            new DocumentTransformationController(input);
-        }).not.toThrow();
+        const construct = (): DocumentTransformationController => new DocumentTransformationController(input);
+
+        expect(() => [construct(), construct()]).not.toThrow();
         expect(participantFactory).toHaveBeenCalledTimes(2);
         expect(Object.keys(input)).not.toContain('registry');
     });
@@ -555,7 +556,9 @@ describe('DocumentTransformationController', () => {
 
         try {
             controller.start();
-            const documentOptions = (): MutationObserverInit | undefined => observe.mock.calls.filter(([target]) => target === document).at(-1)?.[1];
+            const documentOptions = (): MutationObserverInit | undefined => observe.mock.calls
+                .filter(([target]) => target === document)
+                .at(-1)?.[1];
             expect(documentOptions()?.characterData).toBeUndefined();
             expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 
@@ -1793,7 +1796,9 @@ describe('DocumentTransformationController', () => {
             source.setAttribute('datetime', '2026-08-24T10:15Z');
             await flushMutations();
             expect(inspected).toContain(source);
-            expect(inspected.some((element) => element === source && element.isConnected && !element.hasAttribute('hidden'))).toBe(true);
+            expect(inspected.some((element) => (
+                element === source && element.isConnected && !element.hasAttribute('hidden')
+            ))).toBe(true);
             expect(inspected.every((element) => element === source)).toBe(true);
             expect(source.hasAttribute('hidden')).toBe(false);
             expect(source.textContent).toBe('2 hours ago');

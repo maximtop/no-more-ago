@@ -185,6 +185,8 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      *
      * @param storage - Durable extension storage.
      * @param maxBytes - Maximum serialized journal size.
+     *
+     * @throws If the size limit is not a positive safe integer.
      */
     public constructor(
         private readonly storage: DiagnosticStorage,

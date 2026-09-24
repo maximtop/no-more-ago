@@ -118,6 +118,8 @@ export class DiagnosticArchiveError extends Error {
  * @param encoder - ZIP encoder.
  *
  * @returns - ZIP archive bytes.
+ *
+ * @throws If the snapshot has no entries or compression fails.
  */
 export function createDiagnosticsZip(
     snapshot: DiagnosticArchiveSnapshot,
@@ -146,6 +148,8 @@ export function createDiagnosticsZip(
  *
  * @param bytes - ZIP archive bytes.
  * @param browser - Browser download primitives.
+ *
+ * @throws If the browser cannot start the download.
  */
 export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRuntime): void {
     let objectUrl: string | undefined;

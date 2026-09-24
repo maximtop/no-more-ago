@@ -67,6 +67,8 @@ const documentState = {
  * @param publication - Explicit loaded publication value.
  *
  * @returns - Page-owned Watch label.
+ *
+ * @throws If the label is missing.
  */
 function setWatchMarkup(publication: string): Element {
     document.head.innerHTML = `<script>${youtubePlayerResponseAssignment(
@@ -116,6 +118,8 @@ async function flushRuntime(): Promise<void> {
  * Requires the generated Watch publication output.
  *
  * @returns - Current extension-owned time element.
+ *
+ * @throws If no output was generated.
  */
 function requireWatchOutput(): HTMLTimeElement {
     const output = document.querySelector('time[data-no-more-ago-output]');

@@ -152,6 +152,8 @@ function watchOutput(): HTMLTimeElement | null {
  * Requires the current approved Watch publication label.
  *
  * @returns - Current page-owned Watch label.
+ *
+ * @throws If the label is missing.
  */
 function requireWatchLabel(): Element {
     const label = document.querySelector('ytd-watch-metadata yt-formatted-string');
@@ -660,7 +662,7 @@ describe('installContentRuntime', () => {
         const source = messages();
         const load = vi.fn()
             .mockResolvedValueOnce(state(true, 5))
-            .mockImplementationOnce(() => new Promise<never>(() => undefined));
+            .mockImplementationOnce(() => new Promise<never>(() => {}));
         install(source, load);
         await settleRuntime();
         expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();

@@ -5,16 +5,14 @@
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import type {
-    DiagnosticArchiveError
-} from '../../../../src/shared/diagnostics/archive';
 import {
     DIAGNOSTICS_ARCHIVE_FILE,
     DIAGNOSTICS_ARCHIVE_MEMBER,
     createDiagnosticsZip,
     downloadDiagnosticsZip,
+    type DiagnosticArchiveError,
     type DiagnosticArchiveSnapshot,
-    type DownloadRuntime
+    type DownloadRuntime,
 } from '../../../../src/shared/diagnostics/archive';
 
 const snapshot: DiagnosticArchiveSnapshot = {

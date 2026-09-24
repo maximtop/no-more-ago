@@ -9,6 +9,8 @@ import {
 import russian from '../../../../src/_locales/ru/messages.json';
 import { resolveUiLocale } from '../../../../src/shared/i18n/locales';
 
+import type * as Translator from '../../../../src/shared/i18n/translator';
+
 /**
  * Loads the translator with a stubbed extension i18n API.
  *
@@ -20,7 +22,7 @@ import { resolveUiLocale } from '../../../../src/shared/i18n/locales';
 async function loadTranslator(
     uiLanguage: string,
     messages: Readonly<Record<string, string>> = {},
-): Promise<typeof import('../../../../src/shared/i18n/translator')> {
+): Promise<typeof Translator> {
     vi.stubGlobal('chrome', {
         i18n: {
             getUILanguage: () => uiLanguage,

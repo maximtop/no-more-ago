@@ -51,6 +51,8 @@ const display: DisplaySettings = {
  * @param datetime - Machine-supplied value.
  *
  * @returns - Generated timestamp elements.
+ *
+ * @throws If the document has no timestamp source.
  */
 function processLabel(label: string, settings = display, datetime = instant) {
     document.body.innerHTML = `<time datetime="${datetime}"></time>`;
@@ -86,12 +88,22 @@ describe('absolute date policy', () => {
         expect(processLabel('1 day ago')[0]?.textContent).toBe('2026-08-22 09:19:17');
     });
 
-    it.each(['Aug 22, 2026', '2026-08-22', '2026-08-22 09:19'])('expands the existing incomplete label %s only after opting in', (label) => {
+    it.each([
+        'Aug 22, 2026',
+        '2026-08-22',
+        '2026-08-22 09:19',
+    ])('expands the existing incomplete label %s only after opting in', (label) => {
         expect(processLabel(label, { ...display, precisionPolicy: expanded })[0]?.textContent)
             .toBe('2026-08-22 09:19:17');
     });
 
-    it.each(['', 'Unknown', '2026-08-22 09:19:17', '09:19', 'Aug 21, 2026'])('leaves empty, unknown, complete, clock-only, or mismatched labels alone: %s', (label) => {
+    it.each([
+        '',
+        'Unknown',
+        '2026-08-22 09:19:17',
+        '09:19',
+        'Aug 21, 2026',
+    ])('leaves empty, unknown, complete, clock-only, or mismatched labels alone: %s', (label) => {
         expect(processLabel(label, { ...display, precisionPolicy: expanded })).toHaveLength(0);
     });
 

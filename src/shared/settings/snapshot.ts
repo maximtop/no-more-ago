@@ -443,6 +443,8 @@ export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boo
  * @param input - Validated settings fields.
  *
  * @returns - Frozen canonical settings snapshot.
+ *
+ * @throws If the revision, site scope, display settings or appearance is invalid.
  */
 export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSnapshot {
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) {

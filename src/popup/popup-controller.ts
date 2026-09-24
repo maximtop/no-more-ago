@@ -155,7 +155,7 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
 
     useEffect(() => {
         if (options.initialState) {
-            return;
+            return undefined;
         }
         let mounted = true;
         void readWithDeadline(client.getState()).then(

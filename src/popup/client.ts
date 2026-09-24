@@ -112,8 +112,9 @@ export class PopupClient {
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
             () => this.getState(),
-            (response: SetGlobalEnabledResponse):
-                response is PopupSurfaceResponse<SetGlobalEnabledResponse> => response.surface === SITE_SETTINGS_SURFACE.POPUP,
+            (response: SetGlobalEnabledResponse): response is PopupSurfaceResponse<SetGlobalEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.POPUP
+            ),
         );
     }
 
@@ -140,8 +141,9 @@ export class PopupClient {
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
             () => this.getState(),
-            (response: SetSiteEnabledResponse):
-                response is PopupSurfaceResponse<SetSiteEnabledResponse> => response.surface === SITE_SETTINGS_SURFACE.POPUP,
+            (response: SetSiteEnabledResponse): response is PopupSurfaceResponse<SetSiteEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.POPUP
+            ),
         );
     }
 

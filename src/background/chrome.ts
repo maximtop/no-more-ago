@@ -163,7 +163,11 @@ function installApplication(): BackgroundApplication | undefined {
                 ? []
                 : [tab.url === undefined ? { id: tab.id } : { id: tab.id, url: tab.url }]));
         },
-        sendMessage: (tabId, message, options) => candidate.tabs?.sendMessage?.(tabId, message, options) as Promise<unknown>,
+        sendMessage: (tabId, message, options) => candidate.tabs?.sendMessage?.(
+            tabId,
+            message,
+            options,
+        ) as Promise<unknown>,
         getAllFrames: async (tabId) => {
             const frames = await candidate.webNavigation?.getAllFrames?.({ tabId });
             return (frames ?? []).flatMap(({ frameId, url }) => (parseHttpUrl(url) ? [{ frameId, url }] : []));
@@ -177,11 +181,12 @@ function installApplication(): BackgroundApplication | undefined {
         });
     }
     const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
-    const browserFamily: DiagnosticBrowserFamily = /Firefox|FxiOS/iu.test(userAgent)
-        ? DIAGNOSTIC_BROWSER_FAMILY.FIREFOX
-        : /Chrome|Chromium|Edg|OPR/iu.test(userAgent)
-            ? DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM
-            : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
+    let browserFamily: DiagnosticBrowserFamily = DIAGNOSTIC_BROWSER_FAMILY.OTHER;
+    if (/Firefox|FxiOS/iu.test(userAgent)) {
+        browserFamily = DIAGNOSTIC_BROWSER_FAMILY.FIREFOX;
+    } else if (/Chrome|Chromium|Edg|OPR/iu.test(userAgent)) {
+        browserFamily = DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM;
+    }
     let extensionVersion: string | undefined;
     try {
         extensionVersion = chrome.runtime?.getManifest?.().version;
@@ -261,14 +266,14 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         /**
          * Sends the response once; a later attempt from the same handler is ignored.
          *
-         * @param value - Response payload.
+         * @param payload - Response payload.
          */
-        const sendOnce = (value: unknown): void => {
+        const sendOnce = (payload: unknown): void => {
             if (responseSent) {
                 return;
             }
             responseSent = true;
-            sendResponse(value);
+            sendResponse(payload);
         };
         if (message?.type === DIAGNOSTIC_EVENT_MESSAGE) {
             void application.recordDocumentEvent(message.event, sender).then(

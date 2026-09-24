@@ -53,6 +53,8 @@ const presentationContext = (): TimestampPresentationContext => ({
  * @param markup - Synthetic source markup.
  *
  * @returns - Extracted candidate, or null when the source is rejected.
+ *
+ * @throws If the markup has no source to extract.
  */
 function extractSingle(markup: string) {
     document.body.innerHTML = markup;

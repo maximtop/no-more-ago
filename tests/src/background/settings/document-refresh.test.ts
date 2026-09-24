@@ -262,7 +262,7 @@ describe('DocumentRefresh', () => {
                     url: 'https://example.test/page',
                 }])),
                 getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
-                sendMessage: vi.fn(() => new Promise<never>(() => undefined)),
+                sendMessage: vi.fn(() => new Promise<never>(() => {})),
             };
             const snapshot = createSettingsSnapshot({ revision: 6, globalEnabled: true });
 

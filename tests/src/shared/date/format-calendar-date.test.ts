@@ -17,6 +17,8 @@ import type {
  * Requires one valid semantic calendar date for formatter assertions.
  *
  * @returns - Validated leap-day calendar date.
+ *
+ * @throws If the date is invalid.
  */
 function calendarValue() {
     const value = parseCalendarDate('2024-02-29');

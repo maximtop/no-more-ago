@@ -96,6 +96,8 @@ export function formatDefaultDate(instant: Date, locales: readonly string[]): st
  * @param nowMilliseconds - Shared age snapshot for a complete processing batch.
  *
  * @returns - Formatted text and effective zone, or an explicit presentation error.
+ *
+ * @throws Any formatting error other than an unavailable named time zone.
  */
 export function formatDateWithPresentation(
     instant: Date,
@@ -116,8 +118,12 @@ export function formatDateWithPresentation(
         }
         const zone = display.timeZone;
         const unavailable = zone.mode === TIME_ZONE_MODE.IANA && !available(zone.identifier);
-        const timeZone = zone.mode === TIME_ZONE_MODE.UTC ? 'UTC'
-            : zone.mode === TIME_ZONE_MODE.IANA && !unavailable ? zone.identifier : undefined;
+        let timeZone: string | undefined;
+        if (zone.mode === TIME_ZONE_MODE.UTC) {
+            timeZone = 'UTC';
+        } else if (zone.mode === TIME_ZONE_MODE.IANA && !unavailable) {
+            timeZone = zone.identifier;
+        }
         const options: Intl.DateTimeFormatOptions = precision === DATE_PRECISION.YEAR
             ? { year: 'numeric' }
             : {

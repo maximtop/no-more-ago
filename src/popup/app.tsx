@@ -5,7 +5,9 @@
 import {
     DirectionProvider, MantineProvider, Stack, Text, Title,
 } from '@mantine/core';
-import { useMemo, useState, type ReactElement } from 'react';
+import {
+    useMemo, useState, type ReactElement, type ReactNode,
+} from 'react';
 
 import { t, uiDirection, type MessageKey } from '../shared/i18n/translator';
 import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
@@ -162,6 +164,60 @@ export function PopupApp({
         void openOptionsPage().catch(() => undefined);
     };
 
+    let content: ReactNode;
+    if (controller.loading || !state) {
+        content = (
+            <Text role="status" className="popup-section">
+                {t('popup_loading')}
+            </Text>
+        );
+    } else if (state.availability !== STATE_AVAILABILITY.READY) {
+        content = (
+            <PopupUnavailablePanel
+                copy={{
+                    status: popupStatusModel(state).text,
+                    consequence: t(
+                        unavailableSettingsKeys(state.failure).consequence,
+                    ),
+                }}
+                busy={controller.saving}
+                notice={noticePresentation(controller.notice)}
+                onReport={() => {
+                    void reporter.openOptionsReport().catch(() => undefined);
+                }}
+                onReset={() => {
+                    void controller.resetAll();
+                }}
+                onDownloadLogs={() => {
+                    void controller.downloadLogs();
+                }}
+                downloading={controller.downloading}
+                downloadNotice={controller.downloadNotice}
+                onOpenSettings={onOpenSettings}
+            />
+        );
+    } else {
+        content = (
+            <PopupReadyView
+                state={state}
+                saving={controller.saving}
+                notice={controller.notice}
+                reporting={reporting}
+                reportNotice={reportNotice}
+                onChangeGlobal={(enabled) => {
+                    void controller.changeGlobal(enabled);
+                }}
+                onChangeSite={(enabled) => {
+                    void controller.changeSite(enabled);
+                }}
+                onReportSite={() => {
+                    void onReportSite();
+                }}
+                onOpenSettings={onOpenSettings}
+            />
+        );
+    }
+
     return (
         <DirectionProvider initialDirection={uiDirection()} detectDirection={false}>
             <MantineProvider
@@ -184,52 +240,7 @@ export function PopupApp({
                         </div>
                     </header>
                     <Stack gap={0}>
-                        {controller.loading || !state ? (
-                            <Text role="status" className="popup-section">
-                                {t('popup_loading')}
-                            </Text>
-                        ) : state.availability !== STATE_AVAILABILITY.READY ? (
-                            <PopupUnavailablePanel
-                                copy={{
-                                    status: popupStatusModel(state).text,
-                                    consequence: t(
-                                        unavailableSettingsKeys(state.failure).consequence,
-                                    ),
-                                }}
-                                busy={controller.saving}
-                                notice={noticePresentation(controller.notice)}
-                                onReport={() => {
-                                    void reporter.openOptionsReport().catch(() => undefined);
-                                }}
-                                onReset={() => {
-                                    void controller.resetAll();
-                                }}
-                                onDownloadLogs={() => {
-                                    void controller.downloadLogs();
-                                }}
-                                downloading={controller.downloading}
-                                downloadNotice={controller.downloadNotice}
-                                onOpenSettings={onOpenSettings}
-                            />
-                        ) : (
-                            <PopupReadyView
-                                state={state}
-                                saving={controller.saving}
-                                notice={controller.notice}
-                                reporting={reporting}
-                                reportNotice={reportNotice}
-                                onChangeGlobal={(enabled) => {
-                                    void controller.changeGlobal(enabled);
-                                }}
-                                onChangeSite={(enabled) => {
-                                    void controller.changeSite(enabled);
-                                }}
-                                onReportSite={() => {
-                                    void onReportSite();
-                                }}
-                                onOpenSettings={onOpenSettings}
-                            />
-                        )}
+                        {content}
                     </Stack>
                 </main>
             </MantineProvider>

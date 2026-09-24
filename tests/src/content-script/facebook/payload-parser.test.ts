@@ -266,7 +266,11 @@ describe('Facebook payload parser', () => {
             story('d'.repeat(FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS + 1)),
         ]);
 
-        expect(extractFacebookTimestampRecords(payload).map(({ trackingToken }) => trackingToken.length).sort((left, right) => left - right)).toEqual([
+        const trackingTokenLengths = extractFacebookTimestampRecords(payload)
+            .map(({ trackingToken }) => trackingToken.length)
+            .sort((left, right) => left - right);
+
+        expect(trackingTokenLengths).toEqual([
             FACEBOOK_PAYLOAD_LIMIT.MIN_TRACKING_TOKEN_CHARACTERS,
             FACEBOOK_PAYLOAD_LIMIT.MAX_TRACKING_TOKEN_CHARACTERS,
         ]);

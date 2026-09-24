@@ -44,10 +44,7 @@ const EVIDENCE_SELECTOR = [
     '[data-urn]',
     'a[href]',
 ].join(', ');
-const LINKEDIN_PERMALINK_PATTERN = new RegExp(
-    '^/feed/update/([^/]+)/?$',
-    'u',
-);
+const LINKEDIN_PERMALINK_PATTERN = /^\/feed\/update\/([^/]+)\/?$/u;
 const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY,
     TIMESTAMP_SOURCE_ATTRIBUTE.SDUI_ANCHOR_ID,
@@ -857,8 +854,13 @@ export const linkedinAdapter = {
     mutationAttributes: MUTATION_ATTRIBUTES,
     getMutationSources,
     matches: matchesLinkedInUrl,
-    matchesElement: (element: Element, context: TimestampExtractionContext) => resolveAssociation(element, context) !== null,
-    discover: (root: ParentNode, context: TimestampExtractionContext) => cacheAssociations(resolveAssociations(root, context), context),
+    matchesElement: (element: Element, context: TimestampExtractionContext) => (
+        resolveAssociation(element, context) !== null
+    ),
+    discover: (root: ParentNode, context: TimestampExtractionContext) => cacheAssociations(
+        resolveAssociations(root, context),
+        context,
+    ),
     isRelativePresentation: createRelativePresentationClassifier([
         RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
         RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,

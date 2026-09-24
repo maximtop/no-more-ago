@@ -225,9 +225,11 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
         : undefined;
     // A confirmation names the list it was added to, so it is dropped as soon
     // as the mode changes or a failure notice replaces it.
-    useEffect(() => {
+    const [shown, setShown] = useState({ scopeMode, notice });
+    if (shown.scopeMode !== scopeMode || shown.notice !== notice) {
+        setShown({ scopeMode, notice });
         setConfirmation(undefined);
-    }, [scopeMode, notice]);
+    }
     // The controller's commands are recreated on every render; the list gets
     // one stable callback that reads the latest ones.
     const latest = useRef(controller);

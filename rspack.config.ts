@@ -19,6 +19,8 @@ import {
 } from './src/shared/extension-files.ts';
 import { CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from './src/shared/i18n/locales.ts';
 
+import type { Compiler, Configuration } from '@rspack/core';
+
 /**
  * Loads a trusted build-time JSON file and returns its object representation.
  *
@@ -26,8 +28,8 @@ import { CHROMIUM_LOCALE_ALIAS, UI_LOCALES } from './src/shared/i18n/locales.ts'
  *
  * @returns - Parsed JSON object.
  */
-function readJson(file: string): Record<string, any> {
-    return JSON.parse(readFileSync(file, 'utf8')) as Record<string, any>;
+function readJson(file: string): Record<string, unknown> {
+    return JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
 }
 
 /**
@@ -43,7 +45,10 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
     const commonPath = path.join(workspaceRoot, 'src/manifest/common.json');
     const variantPath = path.join(workspaceRoot, `src/manifest/${browser}.json`);
     const packagePath = path.join(workspaceRoot, 'package.json');
-    const iconPaths = EXTENSION_ICON_SIZES.map((size) => path.join(workspaceRoot, `src/assets/icons/${EXTENSION_ICON_BASENAME}-${size}.png`));
+    const iconPaths = EXTENSION_ICON_SIZES.map((size) => path.join(
+        workspaceRoot,
+        `src/assets/icons/${EXTENSION_ICON_BASENAME}-${size}.png`,
+    ));
     const popupHtmlPath = path.join(workspaceRoot, 'src/popup', POPUP_PAGE_FILE);
     const optionsHtmlPath = path.join(workspaceRoot, 'src/options', OPTIONS_PAGE_FILE);
 
@@ -60,8 +65,8 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
         ? []
         : Object.entries(CHROMIUM_LOCALE_ALIAS);
     return {
-        apply(compiler: any): void {
-            compiler.hooks.thisCompilation.tap('NoMoreAgoMetadata', (compilation: any) => {
+        apply(compiler: Compiler): void {
+            compiler.hooks.thisCompilation.tap('NoMoreAgoMetadata', (compilation) => {
                 for (const file of [
                     packagePath,
                     commonPath,
@@ -135,6 +140,8 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
  * @param options.outputPath - Directory where Rspack emits the build.
  *
  * @returns - Rspack configuration for the requested browser and mode.
+ *
+ * @throws If the browser or mode is not supported.
  */
 export function createRspackConfig({
     workspaceRoot,
@@ -146,7 +153,7 @@ export function createRspackConfig({
     browser: string;
     mode: string;
     outputPath: string;
-}): Record<string, any> {
+}): Configuration {
     if (!isBrowser(browser) || !isBuildMode(mode)) {
         throw new Error('Invalid browser or mode');
     }

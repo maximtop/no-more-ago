@@ -235,7 +235,7 @@ export function useDiagnosticsController(
 
     useEffect(() => {
         if (initialState) {
-            return;
+            return undefined;
         }
         let mounted = true;
         void client

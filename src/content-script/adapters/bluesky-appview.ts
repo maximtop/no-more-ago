@@ -307,11 +307,8 @@ function parseProfiles(
 function parseQuote(value: unknown): BlueskyQuoteRecord | undefined {
     const plain = v.safeParse(plainQuoteSchema, value);
     const media = plain.success ? null : v.safeParse(mediaQuoteSchema, value);
-    const record = plain.success
-        ? plain.output.record
-        : media?.success
-            ? media.output.record.record
-            : null;
+    const mediaRecord = media?.success ? media.output.record.record : null;
+    const record = plain.success ? plain.output.record : mediaRecord;
     if (
         !record
         || !isValidBlueskyPostUri(record.uri)

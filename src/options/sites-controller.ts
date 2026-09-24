@@ -195,7 +195,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
 
     useEffect(() => {
         if (initialState) {
-            return;
+            return undefined;
         }
         // The whole page waits on this read, so a silent worker sends it
         // to the recovery view instead of leaving it loading forever.

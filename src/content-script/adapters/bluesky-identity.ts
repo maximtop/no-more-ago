@@ -62,9 +62,10 @@ export function isValidBlueskyDid(value: string): boolean {
  * @returns - Canonical public actor, or null when unsupported.
  */
 export function normalizeBlueskyActor(value: string): string | null {
-    return value.startsWith('did:')
-        ? isValidBlueskyDid(value) ? value : null
-        : normalizeBlueskyHandle(value);
+    if (!value.startsWith('did:')) {
+        return normalizeBlueskyHandle(value);
+    }
+    return isValidBlueskyDid(value) ? value : null;
 }
 
 /**

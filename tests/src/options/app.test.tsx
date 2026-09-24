@@ -741,7 +741,7 @@ describe('Options Sites contract', () => {
         document.body.append(container);
         const root = createRoot(container);
         const pendingTransport: SitesTransport = {
-            sendMessage: () => new Promise(() => undefined),
+            sendMessage: () => new Promise(() => {}),
         };
         try {
             await act(async () => {
@@ -900,13 +900,17 @@ describe('Options reset contract', () => {
         });
         try {
             expect(
-                [...rendered.container.querySelectorAll('button')].filter((button) => button.textContent.includes('Reset all settings')),
+                [...rendered.container.querySelectorAll('button')].filter(
+                    (button) => button.textContent.includes('Reset all settings'),
+                ),
             ).toHaveLength(1);
             const readyRendered = await renderOptions(ready);
             try {
                 await openSection(readyRendered.container, 'Reset');
                 expect(
-                    [...readyRendered.container.querySelectorAll('button')].filter((button) => button.textContent.includes('Reset all settings')),
+                    [...readyRendered.container.querySelectorAll('button')].filter(
+                        (button) => button.textContent.includes('Reset all settings'),
+                    ),
                 ).toHaveLength(1);
             } finally {
                 await readyRendered.unmount();

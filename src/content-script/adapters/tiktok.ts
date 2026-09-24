@@ -220,7 +220,9 @@ function findDirectFeedDateTarget(
     source: Element,
     publication: TikTokPublication,
 ): Text | null {
-    const ownsPublication = Array.from(source.querySelectorAll('[id]')).some((element) => getDirectFeedPostId(element.id) === publication.id);
+    const ownsPublication = Array.from(source.querySelectorAll('[id]')).some(
+        (element) => getDirectFeedPostId(element.id) === publication.id,
+    );
     if (!ownsPublication) {
         return null;
     }

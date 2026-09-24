@@ -197,12 +197,12 @@ describe('Bluesky AppView request contract', () => {
             ): Promise<Response> => {
                 observedSignal = init?.signal;
                 if (mode === 'transport') {
-                    return new Promise<Response>(() => undefined);
+                    return new Promise<Response>(() => {});
                 }
                 return {
                     ok: true,
                     redirected: false,
-                    json: () => new Promise<unknown>(() => undefined),
+                    json: () => new Promise<unknown>(() => {}),
                 } as Response;
             }) as typeof fetch;
             try {

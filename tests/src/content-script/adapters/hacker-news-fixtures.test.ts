@@ -179,8 +179,10 @@ describe('Hacker News fixtures', () => {
     it(
         'processes 100 widgets incrementally and emits sanitized diagnostics without fetch',
         async () => {
-            const rows = Array.from({ length: 100 }, (_, index) => '<span class="age" title="2026-08-28T10:09:07.000000Z">'
-            + `<a href="item?id=${String(index)}">${String(index)} minutes ago</a></span>`).join('');
+            const rows = Array.from({ length: 100 }, (_, index) => (
+                '<span class="age" title="2026-08-28T10:09:07.000000Z">'
+                + `<a href="item?id=${String(index)}">${String(index)} minutes ago</a></span>`
+            )).join('');
             document.body.innerHTML = `<main id="matrix">${rows}</main><p id="unrelated">other</p>`;
             let visits = 0;
             const instrumented = {
@@ -217,12 +219,15 @@ describe('Hacker News fixtures', () => {
                     throw new Error('Expected unrelated text');
                 }
                 unrelated.data = 'other changed';
-                await Promise.resolve(); await Promise.resolve();
+                await Promise.resolve();
+                await Promise.resolve();
                 expect(visits).toBe(100);
                 document.querySelector('span.age')?.setAttribute('title', '2027-08-28T10:09:07Z');
-                await Promise.resolve(); await Promise.resolve();
+                await Promise.resolve();
+                await Promise.resolve();
                 expect(visits).toBe(101);
-                await Promise.resolve(); await Promise.resolve();
+                await Promise.resolve();
+                await Promise.resolve();
                 expect(visits).toBe(101);
                 const payload = JSON.stringify(sink.mock.calls);
                 const allowed = new Set(['category', 'reason', 'count', 'durationMs']);

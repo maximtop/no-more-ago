@@ -11,6 +11,8 @@ import {
 
 import { resolveUiLocale } from '../../../../src/shared/i18n/locales';
 
+import type * as Translator from '../../../../src/shared/i18n/translator';
+
 /**
  * Reads one committed catalog from the repository.
  *
@@ -35,7 +37,7 @@ function catalog(code: string): Record<string, { message: string; description: s
  */
 async function withCatalog(
     code: string,
-): Promise<typeof import('../../../../src/shared/i18n/translator')> {
+): Promise<typeof Translator> {
     const messages = catalog(code);
     vi.stubGlobal('chrome', {
         i18n: {

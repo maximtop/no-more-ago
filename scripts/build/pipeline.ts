@@ -199,7 +199,7 @@ function watchBrowser(
     };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
-    done.finally(() => {
+    void done.finally(() => {
         process.off('SIGINT', stop);
         process.off('SIGTERM', stop);
     });
@@ -210,20 +210,22 @@ function watchBrowser(
         const compilationError = error
             ?? (stats?.hasErrors() ? new Error(stats.toString({ errors: true })) : undefined);
         if (compilationError) {
+            sequence += 1;
             events({
                 type: 'build',
                 status: 'failed',
-                sequence: ++sequence,
+                sequence,
                 error: compilationError.message,
             });
             return;
         }
         try {
             writeArtifactZip(output.directory, output.zip);
+            sequence += 1;
             const event = {
                 type: 'build',
                 status: 'success',
-                sequence: ++sequence,
+                sequence,
                 browser,
                 mode: BUILD_MODE.DEV,
             };
@@ -233,10 +235,11 @@ function watchBrowser(
                 }
             });
         } catch (buildError) {
+            sequence += 1;
             events({
                 type: 'build',
                 status: 'failed',
-                sequence: ++sequence,
+                sequence,
                 error: buildError instanceof Error ? buildError.message : String(buildError),
             });
         }

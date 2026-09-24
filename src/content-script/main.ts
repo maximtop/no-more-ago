@@ -40,7 +40,10 @@ runtimeComposition.content = installContentRuntime({
     ...(typeof chrome.runtime.sendMessage === 'function'
         ? {
             loadDocumentState: () => chrome.runtime.sendMessage({ type: GET_DOCUMENT_STATE_MESSAGE }),
-            reportDiagnostic: (event: Record<string, unknown>) => chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
+            reportDiagnostic: (event: Record<string, unknown>) => chrome.runtime.sendMessage({
+                type: DIAGNOSTIC_EVENT_MESSAGE,
+                event,
+            }),
         }
         : {}),
     ...(facebookRuntime === undefined

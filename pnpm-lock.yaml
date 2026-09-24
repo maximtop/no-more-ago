@@ -26,6 +26,9 @@ importers:
       date-fns:
         specifier: 4.4.0
         version: 4.4.0
+      fflate:
+        specifier: 0.8.2
+        version: 0.8.2
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -78,9 +81,6 @@ importers:
       eslint-plugin-jsdoc:
         specifier: 64.5.4
         version: 64.5.4(eslint@10.11.0(jiti@2.7.0))(typescript@6.0.3)
-      fflate:
-        specifier: 0.8.2
-        version: 0.8.2
       globals:
         specifier: 17.12.0
         version: 17.12.0

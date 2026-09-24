@@ -241,7 +241,9 @@ export function restoreExactTexts(
         }
         const restoredSources: Element[] = [];
         for (const [source, record] of records) {
-            const isCovered = rootNodes.some((rootNode) => rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source));
+            const isCovered = rootNodes.some((rootNode) => (
+                rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
+            ));
             if (!isCovered) {
                 continue;
             }

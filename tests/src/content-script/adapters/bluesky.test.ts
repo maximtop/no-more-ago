@@ -50,6 +50,8 @@ const fixtures = new Map<string, string>();
  * @param id - Element identifier to resolve.
  *
  * @returns - Matching element.
+ *
+ * @throws If the element is missing.
  */
 function requireElement(id: string): Element {
     const element = document.getElementById(id);

@@ -23,6 +23,8 @@ const DATETIME = '2026-08-23T10:15:00+03:00';
  * @param hidden - Whether the page source starts hidden.
  *
  * @returns - Connected relative-time source element.
+ *
+ * @throws If the source is missing.
  */
 function createSource(hidden = false): Element {
     document.body.innerHTML = `<div id="host"><relative-time${hidden ? ' hidden' : ''}>`

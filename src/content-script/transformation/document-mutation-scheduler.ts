@@ -314,12 +314,15 @@ export class DocumentMutationScheduler {
 
     /**
      * Starts observing the document and batches later mutation records.
+     *
+     * @throws If the document cannot be observed.
      */
     start(): void {
         if (this.phase === 'observing') {
             return;
         }
-        const generation = ++this.generation;
+        this.generation += 1;
+        const { generation } = this;
         const observer = new MutationObserver((records) => {
             if (
                 this.phase !== 'observing'
@@ -902,7 +905,9 @@ export class DocumentMutationScheduler {
      * @param roots - Subtrees removed from the observed document.
      */
     private untrackRemovedRoots(roots: readonly Element[]): void {
-        const removed = [...this.trackedSources].filter((source) => roots.some((root) => source === root || root.contains(source)));
+        const removed = [...this.trackedSources].filter((source) => roots.some(
+            (root) => source === root || root.contains(source),
+        ));
         this.untrackSources(removed);
     }
 
@@ -1079,11 +1084,12 @@ export class DocumentMutationScheduler {
                     const expected = this.expectedHiddenChanges.get(target);
                     const expectedChange = expected?.[0];
                     const followingChange = expected?.[1];
-                    const reachedExpectedState = expectedChange
-                        ? followingChange
+                    let reachedExpectedState = false;
+                    if (expectedChange) {
+                        reachedExpectedState = followingChange
                             ? (followingChange.oldValue !== null) === expectedChange.hidden
-                            : target.hasAttribute('hidden') === expectedChange.hidden
-                        : false;
+                            : target.hasAttribute('hidden') === expectedChange.hidden;
+                    }
                     if (
                         attributeName === 'hidden'
                         && expectedChange

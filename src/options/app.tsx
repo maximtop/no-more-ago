@@ -6,7 +6,7 @@ import {
     Alert, DirectionProvider, MantineProvider, Text,
 } from '@mantine/core';
 import {
-    useCallback, useEffect, useMemo, useRef, useState, type ReactElement,
+    useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode,
 } from 'react';
 
 import { t, uiDirection } from '../shared/i18n/translator';
@@ -174,6 +174,15 @@ export function OptionsApp({
         || display.appearanceSaving
         || diagnostics.saving
         || reset.resetting;
+    // The banner is a signal about the last change, so this page's own next
+    // write retires it.
+    const [ownWriteWasInFlight, setOwnWriteWasInFlight] = useState(ownWriteInFlight);
+    if (ownWriteWasInFlight !== ownWriteInFlight) {
+        setOwnWriteWasInFlight(ownWriteInFlight);
+        if (ownWriteInFlight) {
+            setExternalChange(false);
+        }
+    }
     const reloadSites = sites.reload;
     const reloadDisplay = display.reload;
     const reloadDiagnostics = diagnostics.reload;
@@ -222,14 +231,44 @@ export function OptionsApp({
         reloadDisplay,
         reloadDiagnostics,
     ]);
-    // The banner is a signal about the last change, so this page's own next
-    // write retires it.
-    useEffect(() => {
-        if (ownWriteInFlight) {
-            setExternalChange(false);
-        }
-    }, [ownWriteInFlight]);
     const appearance = display.state?.appearance ?? APPEARANCE.SYSTEM;
+    let content: ReactNode;
+    if (sites.loading || !sites.state) {
+        content = (
+            <Text role="status" className="options-content">
+                {t('options_loading')}
+            </Text>
+        );
+    } else if (sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE) {
+        content = (
+            <OptionsUnavailablePanel
+                failure={sites.state.failure}
+                diagnostics={diagnostics}
+                reset={reset}
+                resetNotice={resetNoticeKey(reset.notice, reset.origin)}
+            />
+        );
+    } else {
+        content = (
+            <SettingsNavigation
+                banner={externalChange ? (
+                    <Alert role="status" color="gray" mb="md">
+                        {t('settings_updated_elsewhere')}
+                    </Alert>
+                ) : null}
+                panels={{
+                    [SETTINGS_SECTION.SITES]: <SitesSection controller={sites} />,
+                    [SETTINGS_SECTION.DISPLAY]: (
+                        <DisplaySection controller={display} />
+                    ),
+                    [SETTINGS_SECTION.DIAGNOSTICS]: (
+                        <DiagnosticsSection controller={diagnostics} />
+                    ),
+                    [SETTINGS_SECTION.RESET]: <ResetControl controller={reset} />,
+                }}
+            />
+        );
+    }
     return (
         <DirectionProvider initialDirection={uiDirection()} detectDirection={false}>
             <MantineProvider
@@ -246,36 +285,7 @@ export function OptionsApp({
                         {version ? <span className="nma-eyebrow">v{version}</span> : null}
                     </header>
                     <main aria-label={t('options_document_title')}>
-                        {sites.loading || !sites.state ? (
-                            <Text role="status" className="options-content">
-                                {t('options_loading')}
-                            </Text>
-                        ) : sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
-                            <OptionsUnavailablePanel
-                                failure={sites.state.failure}
-                                diagnostics={diagnostics}
-                                reset={reset}
-                                resetNotice={resetNoticeKey(reset.notice, reset.origin)}
-                            />
-                        ) : (
-                            <SettingsNavigation
-                                banner={externalChange ? (
-                                    <Alert role="status" color="gray" mb="md">
-                                        {t('settings_updated_elsewhere')}
-                                    </Alert>
-                                ) : null}
-                                panels={{
-                                    [SETTINGS_SECTION.SITES]: <SitesSection controller={sites} />,
-                                    [SETTINGS_SECTION.DISPLAY]: (
-                                        <DisplaySection controller={display} />
-                                    ),
-                                    [SETTINGS_SECTION.DIAGNOSTICS]: (
-                                        <DiagnosticsSection controller={diagnostics} />
-                                    ),
-                                    [SETTINGS_SECTION.RESET]: <ResetControl controller={reset} />,
-                                }}
-                            />
-                        )}
+                        {content}
                     </main>
                 </div>
             </MantineProvider>

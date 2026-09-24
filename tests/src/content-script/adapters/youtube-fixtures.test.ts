@@ -79,6 +79,8 @@ describe('offline YouTube watch fixture', () => {
      * Requires the approved watch publication label from the loaded fixture.
      *
      * @returns - Approved page-owned publication label.
+     *
+     * @throws If the label is missing.
      */
     function requireWatchSource(): Element {
         const source = document.getElementById('watch-publication');
@@ -92,6 +94,8 @@ describe('offline YouTube watch fixture', () => {
      * Requires the unique loaded player-response script from the fixture.
      *
      * @returns - Current loaded player-response script.
+     *
+     * @throws If the script is missing.
      */
     function requirePlayerScript(): HTMLScriptElement {
         const script = document.scripts[0];

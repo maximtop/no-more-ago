@@ -56,6 +56,8 @@ afterEach(() => {
  * Loads one sanitized LinkedIn fixture into the JSDOM document.
  *
  * @param file - Fixture filename from the fixed matrix.
+ *
+ * @throws If the fixture file was not loaded.
  */
 function load(file: typeof files[number]): void {
     const fixture = fixtures.get(file);

@@ -302,6 +302,8 @@ function reconcileCurrentRoute(slot: RuntimeSlot): boolean {
  *
  * @param slot - Singleton runtime state for the current document.
  * @param generation - Activation generation allowed to start the controller.
+ *
+ * @throws The controller start error, after activity is reported stopped and the controller is torn down.
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (

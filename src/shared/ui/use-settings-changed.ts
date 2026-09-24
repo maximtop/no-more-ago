@@ -52,28 +52,31 @@ export function useSettingsChanged(options: SettingsChangedOptions): void {
     const {
         subscribe, revision, inFlight, onExternalChange,
     } = options;
-    const [pending, setPending] = useState<number>();
+    // Announcements are kept in a ref; the counter only schedules the render whose
+    // effect decides them, so a write that starts in the same event counts as in flight.
+    const [announcements, setAnnouncements] = useState(0);
+    const pending = useRef<number | undefined>(undefined);
     const callback = useRef(onExternalChange);
     useEffect(() => {
         callback.current = onExternalChange;
     }, [onExternalChange]);
     useEffect(() => {
         const subscription = subscribe((announced) => {
-            setPending((current) => (current === undefined
-                ? announced
-                : Math.max(current, announced)));
+            pending.current = Math.max(pending.current ?? announced, announced);
+            setAnnouncements((count) => count + 1);
         });
         return () => {
             subscription.unsubscribe();
         };
     }, [subscribe]);
     useEffect(() => {
-        if (pending === undefined || inFlight) {
+        const announced = pending.current;
+        if (announced === undefined || inFlight) {
             return;
         }
-        setPending(undefined);
-        if (revision === null || revision < pending) {
+        pending.current = undefined;
+        if (revision === null || revision < announced) {
             callback.current();
         }
-    }, [pending, inFlight, revision]);
+    }, [announcements, inFlight, revision]);
 }

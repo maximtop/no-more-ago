@@ -115,7 +115,7 @@ describe('PopupApp contract', () => {
         document.body.append(container);
         const root = createRoot(container);
         const pendingTransport: PopupTransport = {
-            sendMessage: () => new Promise(() => undefined),
+            sendMessage: () => new Promise(() => {}),
         };
 
         try {
@@ -312,7 +312,9 @@ describe('PopupApp contract', () => {
                 reset.click();
             });
             expect(resets).toBe(0);
-            const confirm = [...rendered.container.querySelectorAll('button')].find((button) => button.textContent.includes('Reset everything'));
+            const confirm = [...rendered.container.querySelectorAll('button')].find(
+                (button) => button.textContent.includes('Reset everything'),
+            );
             if (!confirm) {
                 throw new Error('Reset confirmation is missing');
             }

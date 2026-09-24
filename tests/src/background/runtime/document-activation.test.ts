@@ -65,6 +65,8 @@ function frameMessages() {
  * @param readPolicy - Reads the current top-level site policy and revision.
  *
  * @returns - Frame document, message source, and runtime handle.
+ *
+ * @throws If the frame has no document.
  */
 function installedFrame(readPolicy: () => {
     readonly enabled: boolean;
@@ -528,15 +530,13 @@ describe('DocumentActivationCoordinator', () => {
                     fake.tabs.sendMessage.mockImplementation((tabId, message) => {
                         if (tabId === 1 && firstPendingMessage) {
                             firstPendingMessage = false;
-                            return new Promise<ReturnType<typeof acknowledgePolicy>>(
-                                () => undefined,
-                            );
+                            return new Promise<ReturnType<typeof acknowledgePolicy>>(() => {});
                         }
                         return Promise.resolve(acknowledgePolicy(message));
                     });
                 } else {
                     fake.scripting.executeScript
-                        .mockImplementationOnce(() => new Promise<never>(() => undefined))
+                        .mockImplementationOnce(() => new Promise<never>(() => {}))
                         .mockResolvedValueOnce([{ frameId: 0 }]);
                 }
                 const coordinator = new DocumentActivationCoordinator(fake);
@@ -571,16 +571,16 @@ describe('DocumentActivationCoordinator', () => {
                 const fake = fakes(['https://example.test/page']);
                 if (pendingOperation === 'registration-read') {
                     fake.scripting.getRegisteredContentScripts.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
                 } else if (pendingOperation === 'registration-write') {
                     fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
                     fake.scripting.registerContentScripts.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
                 } else {
                     fake.tabs.query.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
                 }
                 const coordinator = new DocumentActivationCoordinator(fake);
@@ -687,10 +687,10 @@ describe('DocumentActivationCoordinator', () => {
                 'https://ready.test/page',
             ]);
             fake.tabs.sendMessage.mockImplementation((tabId, message) => (tabId === 1
-                ? new Promise(() => undefined)
+                ? new Promise(() => {})
                 : Promise.resolve(acknowledgePolicy(message))));
             fake.scripting.executeScript.mockImplementation((input) => (input.target.tabId === 1
-                ? new Promise(() => undefined)
+                ? new Promise(() => {})
                 : Promise.resolve([{ frameId: 0 }])));
             const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -724,7 +724,7 @@ describe('DocumentActivationCoordinator', () => {
         try {
             const fake = fakes(['https://example.test/page']);
             fake.scripting.getRegisteredContentScripts.mockImplementation(
-                () => new Promise<never>(() => undefined),
+                () => new Promise<never>(() => {}),
             );
             const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -756,7 +756,7 @@ describe('DocumentActivationCoordinator', () => {
         vi.useFakeTimers();
         try {
             const fake = fakes(['https://example.test/page']);
-            fake.tabs.query.mockImplementation(() => new Promise<never>(() => undefined));
+            fake.tabs.query.mockImplementation(() => new Promise<never>(() => {}));
             const coordinator = new DocumentActivationCoordinator(fake);
 
             const reconciliation = coordinator.reconcile({
@@ -781,7 +781,7 @@ describe('DocumentActivationCoordinator', () => {
         try {
             const fake = fakes(['https://www.facebook.com/home']);
             fake.tabs.getAllFrames.mockImplementation(
-                () => new Promise<never>(() => undefined),
+                () => new Promise<never>(() => {}),
             );
             const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -809,7 +809,7 @@ describe('DocumentActivationCoordinator', () => {
         try {
             const fake = fakes(['https://www.facebook.com/home']);
             fake.scripting.executeScript.mockImplementation((input) => ('frameIds' in input.target
-                ? new Promise<never>(() => undefined)
+                ? new Promise<never>(() => {})
                 : Promise.resolve([{ frameId: 0 }])));
             const coordinator = new DocumentActivationCoordinator(fake);
 

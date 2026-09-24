@@ -168,7 +168,7 @@ describe('StateProjection', () => {
             const activation = new ActivationManager({
                 reconcile: vi.fn(() => Promise.resolve(result)),
             });
-            const pending = new Promise<never>(() => undefined);
+            const pending = new Promise<never>(() => {});
             const tabs: TabsRuntime = {
                 query: vi.fn(() => (testCase.pending === 'active tab query'
                     ? pending

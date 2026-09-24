@@ -289,7 +289,9 @@ export class SettingsCommands {
             this.projection.clear();
             await this.projection.seed(this.lifecycle.state);
         });
-        const state = await this.lifecycle.enqueue(() => Promise.resolve(this.projection.deriveSites(this.lifecycle.state)));
+        const state = await this.lifecycle.enqueue(() => Promise.resolve(
+            this.projection.deriveSites(this.lifecycle.state),
+        ));
         this.announce(acceptedRevision);
         if (acceptedRevision !== undefined && state.availability === STATE_AVAILABILITY.READY) {
             return { ok: true, acceptedRevision, state };

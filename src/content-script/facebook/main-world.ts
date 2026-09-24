@@ -208,11 +208,12 @@ function fetchRequestDetails(
     input: RequestInfo | URL,
     init: RequestInit | undefined,
 ): { readonly url: string; readonly body: unknown } {
-    const url = typeof input === 'string'
-        ? input
-        : input instanceof URL
-            ? input.href
-            : input.url;
+    let url: string;
+    if (typeof input === 'string') {
+        url = input;
+    } else {
+        url = input instanceof URL ? input.href : input.url;
+    }
     return {
         url,
         body: init?.body,
@@ -405,7 +406,7 @@ function installTransportWrappers(
         };
     }
     const requests = new WeakMap<XMLHttpRequest, FacebookXhrRequest>();
-    const wrappedXhrOpen = function (this: XMLHttpRequest, ...args: unknown[]): unknown {
+    const wrappedXhrOpen = function wrappedXhrOpen(this: XMLHttpRequest, ...args: unknown[]): unknown {
         try {
             const generation = getGeneration();
             const method = args[0];
@@ -424,7 +425,7 @@ function installTransportWrappers(
         }
         return Reflect.apply(originalOpen, this, args);
     };
-    const wrappedXhrSend = function (this: XMLHttpRequest, ...args: unknown[]): unknown {
+    const wrappedXhrSend = function wrappedXhrSend(this: XMLHttpRequest, ...args: unknown[]): unknown {
         try {
             const generation = getGeneration();
             const request = requests.get(this);

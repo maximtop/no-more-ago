@@ -41,7 +41,10 @@ const referencedKeys = new Set<string>();
 function sourceFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const file = path.join(directory, entry.name);
-        return entry.isDirectory() ? sourceFiles(file) : /\.tsx?$/u.test(file) ? [file] : [];
+        if (entry.isDirectory()) {
+            return sourceFiles(file);
+        }
+        return /\.tsx?$/u.test(file) ? [file] : [];
     });
 }
 
@@ -105,7 +108,10 @@ for (const directory of SCANNED_DIRECTORIES) {
     }
 }
 
-const catalog = JSON.parse(readFileSync(path.join(ROOT, 'src/_locales', BASE_UI_LOCALE, 'messages.json'), 'utf8')) as Record<string, unknown>;
+const catalog = JSON.parse(readFileSync(
+    path.join(ROOT, 'src/_locales', BASE_UI_LOCALE, 'messages.json'),
+    'utf8',
+)) as Record<string, unknown>;
 for (const key of Object.keys(catalog)) {
     if (!MANIFEST_KEYS.has(key) && !referencedKeys.has(key)) {
         findings.push(`src/_locales/${BASE_UI_LOCALE}/messages.json: orphaned key ${key}`);

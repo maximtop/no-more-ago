@@ -347,6 +347,8 @@ function draftFor(
  * @param context - Current machine context.
  *
  * @returns - Current draft.
+ *
+ * @throws If the ready form holds no draft.
  */
 function requireDraft(context: DisplayContext): DisplayDraft {
     if (context.draft === undefined) {
@@ -526,14 +528,20 @@ const displayMachine = setup({
             notice: context.afterReset ? DISPLAY_NOTICE.UNKNOWN : undefined,
             afterReset: false,
         })),
-        settleSave: assign(({ context }, params: { readonly result: DisplaySetResult }) => settleSave(context, params.result)),
+        settleSave: assign(({ context }, params: { readonly result: DisplaySetResult }) => (
+            settleSave(context, params.result)
+        )),
         failSave: assign({
             state: createUnavailableDisplayState(),
             notice: DISPLAY_NOTICE.UNKNOWN,
         }),
-        settleReload: assign(({ context }, params: { readonly next: DisplayState }) => settleReload(context, params.next)),
+        settleReload: assign(({ context }, params: { readonly next: DisplayState }) => (
+            settleReload(context, params.next)
+        )),
         startAppearance: assign({ appearanceFailed: false }),
-        settleAppearance: assign(({ context }, params: { readonly result: AppearanceSetResult }) => settleAppearance(context, params.result)),
+        settleAppearance: assign(({ context }, params: { readonly result: AppearanceSetResult }) => (
+            settleAppearance(context, params.result)
+        )),
         failAppearance: assign({ appearanceFailed: true }),
         beginReset: assign({
             draft: DEFAULT_DISPLAY_DRAFT,
@@ -660,7 +668,9 @@ const displayMachine = setup({
                                 }),
                                 onDone: [
                                     {
-                                        guard: ({ context, event }) => isUnavailable(settleSave(context, event.output).state),
+                                        guard: ({ context, event }) => (
+                                            isUnavailable(settleSave(context, event.output).state)
+                                        ),
                                         actions: {
                                             type: 'settleSave',
                                             params: ({ event }) => ({ result: event.output }),
@@ -822,8 +832,11 @@ export function useDisplayController(options: DisplayControllerOptions): Display
      *
      * @returns - A promise that settles after the activity ended.
      */
-    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> => waitFor(actor, (current) => !active(current), { timeout: Infinity })
-        .then(() => undefined, () => undefined);
+    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> => waitFor(
+        actor,
+        (current) => !active(current),
+        { timeout: Infinity },
+    ).then(() => undefined, () => undefined);
 
     /**
      * Applies one draft edit and clears the current notice.

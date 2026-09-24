@@ -248,8 +248,9 @@ export class SitesClient {
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
             () => this.getState(),
-            (response: SetSiteEnabledResponse):
-                response is SitesSurfaceResponse<SetSiteEnabledResponse> => response.surface === SITE_SETTINGS_SURFACE.SITES,
+            (response: SetSiteEnabledResponse): response is SitesSurfaceResponse<SetSiteEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.SITES
+            ),
         );
     }
 
@@ -282,8 +283,9 @@ export class SitesClient {
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
             () => this.getState(),
-            (response: SetGlobalEnabledResponse):
-                response is SitesSurfaceResponse<SetGlobalEnabledResponse> => response.surface === SITE_SETTINGS_SURFACE.SITES,
+            (response: SetGlobalEnabledResponse): response is SitesSurfaceResponse<SetGlobalEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.SITES
+            ),
         );
     }
 

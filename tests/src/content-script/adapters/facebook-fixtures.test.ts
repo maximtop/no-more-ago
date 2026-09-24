@@ -79,6 +79,8 @@ function loadFixture(includeInitialPayload = true): void {
  * @param id - Fixture element identifier.
  *
  * @returns - Connected fixture element.
+ *
+ * @throws If the element is missing.
  */
 function requiredElement(id: string): HTMLElement {
     const element = document.getElementById(id);
@@ -230,6 +232,8 @@ async function flushRuntime(): Promise<void> {
  * @param source - Page-owned timestamp source.
  *
  * @returns - Extension-owned exact time output.
+ *
+ * @throws If the source has no generated output.
  */
 function outputFor(source: Element): HTMLTimeElement {
     const output = source.nextElementSibling;

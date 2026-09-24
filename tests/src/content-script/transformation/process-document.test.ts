@@ -507,7 +507,9 @@ describe('processDocument', () => {
         expect(document.getElementById('telegram-diagnostic-clock')?.textContent)
             .toBe('16:08');
         expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
-        expect(success.mock.calls.every(([value]) => !('sourceTimestamp' in (value as Record<string, unknown>)))).toBe(true);
+        expect(success.mock.calls.every(
+            ([value]) => !('sourceTimestamp' in (value as Record<string, unknown>)),
+        )).toBe(true);
         expect(JSON.stringify(success.mock.calls)).not.toContain('1778774880');
         restoreTimestampPresentations(document);
     });

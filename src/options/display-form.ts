@@ -274,5 +274,8 @@ function previewLocales(): readonly string[] {
         return ['en-US'];
     }
     const locales = navigator.languages;
-    return locales.length > 0 ? locales : navigator.language ? [navigator.language] : ['en-US'];
+    if (locales.length > 0) {
+        return locales;
+    }
+    return navigator.language ? [navigator.language] : ['en-US'];
 }

@@ -47,6 +47,8 @@ function context(url: URL = WATCH_URL): TimestampExtractionContext {
  * @param markup - Visible page-owned label content.
  *
  * @returns - Created publication source element.
+ *
+ * @throws If the label is missing.
  */
 function loadApprovedLabel(markup = '3 months ago'): Element {
     document.body.innerHTML = `<ytd-watch-metadata><div id="info-strings">

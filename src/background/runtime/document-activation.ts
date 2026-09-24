@@ -760,7 +760,8 @@ export class DocumentActivationCoordinator {
         const records: TabOutcome[] = [];
         const enabled = input.policy === ACTIVATION_POLICY.ENABLED;
         this.registrationEnabled = enabled;
-        const registrationGeneration = ++this.registrationGeneration;
+        this.registrationGeneration += 1;
+        const { registrationGeneration } = this;
         const registrations = await Promise.all(
             DOCUMENT_RUNTIME_REGISTRATIONS.map(async (expected) => ({
                 id: expected.id,

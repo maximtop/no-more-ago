@@ -51,6 +51,8 @@ function browserArgument(): Argument {
  * @param watch - Whether continuous development compilation was requested.
  *
  * @returns - Complete request consumed by the build pipeline.
+ *
+ * @throws If the browser is not a supported build target.
  */
 export function createBuildRequest(
     mode: BuildMode,
@@ -60,11 +62,10 @@ export function createBuildRequest(
     if (browser !== undefined && !isBrowser(browser)) {
         throw new Error(`Unknown browser: ${browser}`);
     }
+    const defaultBrowsers = mode === BUILD_MODE.DEV ? [BROWSER.CHROME] : [...BROWSERS];
     return {
         mode,
-        browsers: browser === undefined
-            ? (mode === BUILD_MODE.DEV ? [BROWSER.CHROME] : [...BROWSERS])
-            : [browser],
+        browsers: browser === undefined ? defaultBrowsers : [browser],
         watch,
     };
 }
