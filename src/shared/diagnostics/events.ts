@@ -2,10 +2,12 @@
  * @file Normalizes diagnostic events at the content/background boundary.
  */
 
-import * as v from "valibot";
-import { GITHUB_HOSTNAME } from "../adapters/github-contract";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../extension-version";
-import { isCanonicalHostname } from "../settings/hostname";
+import * as v from 'valibot';
+
+import { GITHUB_HOSTNAME } from '../adapters/github-contract';
+import { SAFE_EXTENSION_VERSION_PATTERN } from '../extension-version';
+import { isCanonicalHostname } from '../settings/hostname';
+
 import {
     DIAGNOSTIC_BROWSER_FAMILIES,
     DIAGNOSTIC_CATEGORIES,
@@ -21,13 +23,13 @@ import {
     DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN,
     DIAGNOSTIC_STACK_FRAME_PATTERN,
     type DiagnosticPageCategory,
-} from "./contracts";
+} from './contracts';
 
 export type {
     DiagnosticBrowserFamily,
     DiagnosticCategory,
     DiagnosticPageCategory,
-} from "./contracts";
+} from './contracts';
 
 /**
  * Canonical schema for diagnostic fields received from document runtimes.
@@ -159,6 +161,7 @@ const PAGE_PATHS: readonly [RegExp, DiagnosticPageCategory][] = [
  * Maps a page path to a finite category without retaining the path.
  *
  * @param pathname - Page URL pathname.
+ *
  * @returns - Finite diagnostic page category.
  */
 export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
@@ -170,16 +173,17 @@ export function pageCategoryFromPath(pathname: string): DiagnosticPageCategory {
  * Derives diagnostic context from WebExtension sender metadata.
  *
  * @param sender - Runtime message sender.
+ *
  * @returns - Sanitized context, or null for an unsupported sender URL.
  */
 export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticContext | null {
-    if (typeof sender.url !== "string") {
+    if (typeof sender.url !== 'string') {
         return null;
     }
     try {
         const url = new URL(sender.url);
         if (
-            (url.protocol !== "http:" && url.protocol !== "https:")
+            (url.protocol !== 'http:' && url.protocol !== 'https:')
             || !isCanonicalHostname(url.hostname)
         ) {
             return null;
@@ -202,10 +206,11 @@ export function deriveDiagnosticContext(sender: DiagnosticSender): DiagnosticCon
  *
  * @param value - Optional numeric value.
  * @param maximum - Largest accepted value.
+ *
  * @returns - Accepted number, or undefined.
  */
 function boundedNumber(value: unknown, maximum: number): number | undefined {
-    return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= maximum
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= maximum
         ? value
         : undefined;
 }
@@ -214,10 +219,11 @@ function boundedNumber(value: unknown, maximum: number): number | undefined {
  * Returns a validated extension version when available.
  *
  * @param value - Optional version value.
+ *
  * @returns - Accepted version, or undefined.
  */
 function safeVersion(value: unknown): string | undefined {
-    return typeof value === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(value)
+    return typeof value === 'string' && SAFE_EXTENSION_VERSION_PATTERN.test(value)
         ? value
         : undefined;
 }
@@ -226,21 +232,22 @@ function safeVersion(value: unknown): string | undefined {
  * Redacts raw stack text to bounded source-coordinate markers.
  *
  * @param value - Raw stack value.
+ *
  * @returns - Redacted stack markers, or undefined.
  */
 function scrubStack(value: unknown): string[] | undefined {
-    if (typeof value !== "string") {
+    if (typeof value !== 'string') {
         return undefined;
     }
     const frames = value
-        .split("\n")
+        .split('\n')
         .slice(0, DIAGNOSTIC_MAX_STACK_FRAMES)
-        .filter((line) => line.trim() !== "")
+        .filter((line) => line.trim() !== '')
         .map((line) => {
             const match = /(?::(\d+))(?::(\d+))?\s*\)?$/u.exec(line.trim());
             return match?.[1]
-                ? `frame:${match[1]}${match[2] ? `:${match[2]}` : ""}`
-                : "frame";
+                ? `frame:${match[1]}${match[2] ? `:${match[2]}` : ''}`
+                : 'frame';
         });
     return frames.length > 0 ? frames : undefined;
 }
@@ -249,10 +256,11 @@ function scrubStack(value: unknown): string[] | undefined {
  * Returns bounded numeric source evidence without retaining arbitrary page data.
  *
  * @param value - Raw page-derived timestamp value.
+ *
  * @returns - Accepted decimal value, or undefined.
  */
 export function safeDiagnosticSourceTimestamp(value: unknown): string | undefined {
-    return typeof value === "string"
+    return typeof value === 'string'
         && value.length <= DIAGNOSTIC_MAX_SOURCE_TIMESTAMP_LENGTH
         && DIAGNOSTIC_SOURCE_TIMESTAMP_PATTERN.test(value)
         ? value
@@ -265,6 +273,7 @@ export function safeDiagnosticSourceTimestamp(value: unknown): string | undefine
  * @param input - Untrusted diagnostic fields.
  * @param context - Sender-derived diagnostic context.
  * @param now - Event timestamp.
+ *
  * @returns - Canonical diagnostic event, or null when required fields are invalid.
  */
 export function sanitizeDiagnosticEvent(
@@ -312,6 +321,7 @@ export function sanitizeDiagnosticEvent(
  * @param input - Untrusted diagnostic fields.
  * @param sender - Runtime message sender.
  * @param now - Event timestamp.
+ *
  * @returns - Canonical diagnostic event, or null.
  */
 export function createDiagnosticEvent(

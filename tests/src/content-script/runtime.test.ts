@@ -2,23 +2,27 @@
  * @file Exercises content runtime hydration, policy refresh, and teardown.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    afterEach, beforeEach, describe, expect, it, vi,
+} from 'vitest';
+
 import {
     BLUESKY_LOOKUP_STATUS,
     type BlueskyAppView,
     type BlueskyLookupResult,
     type BlueskyProfileRecord,
-} from "../../../src/content-script/adapters/bluesky-appview";
-import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../../src/content-script/runtime";
+} from '../../../src/content-script/adapters/bluesky-appview';
+import { classifyYouTubeWatchRouteHandoff } from
+    '../../../src/content-script/adapters/youtube-watch-route-handoff';
 import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
-} from "../../../src/content-script/ownership-markers";
+} from '../../../src/content-script/ownership-markers';
+import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from '../../../src/content-script/runtime';
 import { DocumentTransformationController } from
-    "../../../src/content-script/transformation/document-transformation-controller";
+    '../../../src/content-script/transformation/document-transformation-controller';
 import {
     DOCUMENT_PHASE,
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
@@ -27,27 +31,27 @@ import {
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     RECONCILE_DOCUMENT_ROUTE_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-} from "../../../src/shared/messaging/document-messages";
-import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
-import { DEFAULT_PRECISION_POLICY } from "../../../src/shared/settings/precision-policy";
-import type { TimeZoneSelection } from "../../../src/shared/settings/snapshot";
-import { classifyYouTubeWatchRouteHandoff } from
-    "../../../src/content-script/adapters/youtube-watch-route-handoff";
+} from '../../../src/shared/messaging/document-messages';
+import { STATE_AVAILABILITY } from '../../../src/shared/messaging/view-state-values';
+import { DEFAULT_PRECISION_POLICY } from '../../../src/shared/settings/precision-policy';
+
 import {
     YOUTUBE_LIST_FIXTURE_ID,
     YOUTUBE_LIST_FIXTURES,
     youtubePlayerResponseAssignment,
     type YouTubeListFixtureId,
-} from "./adapters/youtube-test-data";
+} from './adapters/youtube-test-data';
 
-const WATCH_A = "https://www.youtube.com/watch?v=testVID0001";
-const WATCH_B = "https://www.youtube.com/watch?v=testVID0002";
-const WATCH_C = "https://www.youtube.com/watch?v=testVID0003";
+import type { TimeZoneSelection } from '../../../src/shared/settings/snapshot';
+
+const WATCH_A = 'https://www.youtube.com/watch?v=testVID0001';
+const WATCH_B = 'https://www.youtube.com/watch?v=testVID0002';
+const WATCH_C = 'https://www.youtube.com/watch?v=testVID0003';
 
 const YOUTUBE_LIST_CARD_SELECTORS = {
-    [YOUTUBE_LIST_FIXTURE_ID.HOME]: "ytd-rich-item-renderer",
-    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: "ytd-video-renderer",
-    [YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS]: "yt-lockup-view-model",
+    [YOUTUBE_LIST_FIXTURE_ID.HOME]: 'ytd-rich-item-renderer',
+    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: 'ytd-video-renderer',
+    [YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS]: 'yt-lockup-view-model',
 } satisfies Readonly<Record<YouTubeListFixtureId, string>>;
 
 /**
@@ -108,13 +112,13 @@ function routeEvents() {
  * @param includePlayer - Whether to include loaded dual-ID player data.
  */
 function setWatchMarkup(videoId: string, publication: string, includePlayer = true): void {
-    document.head.innerHTML = `<meta itemprop="datePublished" content="${publication}">`
-        + (includePlayer
+    document.head.innerHTML = `<meta itemprop="datePublished" content="${publication}">${
+        includePlayer
             ? `<script>${youtubePlayerResponseAssignment(
                 publication,
                 videoId,
             )}</script>`
-            : "");
+            : ''}`;
     document.body.innerHTML = `
         <ytd-watch-metadata>
             <div id="info-strings"><yt-formatted-string>3 months ago</yt-formatted-string></div>
@@ -128,7 +132,7 @@ function setWatchMarkup(videoId: string, publication: string, includePlayer = tr
  * @param publication - Explicit publication value.
  */
 function setWatchPlayer(videoId: string, publication: string): void {
-    const script = document.head.querySelector("script") ?? document.createElement("script");
+    const script = document.head.querySelector('script') ?? document.createElement('script');
     script.textContent = youtubePlayerResponseAssignment(publication, videoId);
     if (!script.isConnected) {
         document.head.append(script);
@@ -141,7 +145,7 @@ function setWatchPlayer(videoId: string, publication: string): void {
  * @returns - Current generated output, or null.
  */
 function watchOutput(): HTMLTimeElement | null {
-    return document.querySelector("time[data-no-more-ago-output]");
+    return document.querySelector('time[data-no-more-ago-output]');
 }
 
 /**
@@ -150,9 +154,9 @@ function watchOutput(): HTMLTimeElement | null {
  * @returns - Current page-owned Watch label.
  */
 function requireWatchLabel(): Element {
-    const label = document.querySelector("ytd-watch-metadata yt-formatted-string");
+    const label = document.querySelector('ytd-watch-metadata yt-formatted-string');
     if (!label) {
-        throw new Error("Expected Watch publication label");
+        throw new Error('Expected Watch publication label');
     }
     return label;
 }
@@ -162,6 +166,7 @@ function requireWatchLabel(): Element {
  *
  * @param enabled - Effective top-level policy.
  * @param revision - Settings revision.
+ *
  * @returns - Ready document state.
  */
 function state(enabled = true, revision = 1) {
@@ -169,7 +174,7 @@ function state(enabled = true, revision = 1) {
         availability: STATE_AVAILABILITY.READY,
         revision,
         enabled,
-        display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
+        display: { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } },
         debugEnabled: false,
     };
 }
@@ -179,6 +184,7 @@ function state(enabled = true, revision = 1) {
  *
  * @param revision - Settings revision carried by the command.
  * @param enabled - Effective document activation policy.
+ *
  * @returns - Complete document-policy command.
  */
 function policy(revision: number | null, enabled: boolean) {
@@ -189,6 +195,7 @@ function policy(revision: number | null, enabled: boolean) {
  * Creates the expected acknowledgement for one policy revision.
  *
  * @param revision - Retained policy revision.
+ *
  * @returns - Complete policy acknowledgement.
  */
 function policyAcknowledgement(revision: number | null) {
@@ -211,6 +218,7 @@ async function settleRuntime(): Promise<void> {
  * @param source - Controllable message source.
  * @param load - Document-state loader.
  * @param onActivityChanged - Optional controller activity observer.
+ *
  * @returns - Runtime handle.
  */
 function install(
@@ -220,8 +228,8 @@ function install(
 ) {
     return installContentRuntime({
         document,
-        url: new URL("https://example.test/page"),
-        locales: ["en-US"],
+        url: new URL('https://example.test/page'),
+        locales: ['en-US'],
         loadDocumentState: load,
         ...(onActivityChanged === undefined ? {} : { onActivityChanged }),
         messages: source,
@@ -266,7 +274,7 @@ async function exercisePolicyLifecycle(fixture: PolicyLifecycleFixture): Promise
         document,
         url: fixture.url,
         urlProvider: () => fixture.url,
-        locales: ["en-US"],
+        locales: ['en-US'],
         loadDocumentState: async () => state(enabled, revision),
         messages: source,
     });
@@ -293,7 +301,7 @@ async function exercisePolicyLifecycle(fixture: PolicyLifecycleFixture): Promise
     fixture.assertIdentity();
 }
 
-describe("installContentRuntime", () => {
+describe('installContentRuntime', () => {
     beforeEach(() => {
         const current = (document as unknown as Record<symbol, {
             handle?: { teardown(): void };
@@ -302,72 +310,74 @@ describe("installContentRuntime", () => {
         ];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
-        document.head.innerHTML = "";
-        document.body.innerHTML =
-            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
+        document.head.innerHTML = '';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     });
 
     afterEach(() => {
         vi.unstubAllGlobals();
     });
 
-    it.each(["https://example.test/", "https://www.instagram.com/p/example/"])(
-        "discovers absolute labels on enable and restores them on disable at %s", async (url) => {
-            document.body.innerHTML =
-                '<time datetime="2026-08-22T09:19:17Z">Aug 22, 2026</time>';
-            const source = messages();
-            const handle = installContentRuntime({
-                document, url: new URL(url), locales: ["en-US"],
-                loadDocumentState: async () => state(), messages: source,
-            });
-            await Promise.resolve();
-            await Promise.resolve();
-            expect(document.body.textContent).toBe("Aug 22, 2026");
-            const display = {
-                formatMode: "custom", pattern: "yyyy-MM-dd HH:mm:ss", timeZone: { mode: "utc" },
-                precisionPolicy: { ...DEFAULT_PRECISION_POLICY, absoluteLabels: true },
-            };
-            source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 2, display });
-            expect(document.body.textContent).toContain("2026-08-22 09:19:17");
-            source.dispatch({
-                type: UPDATE_PRESENTATION_MESSAGE, revision: 3,
-                display: { ...display, precisionPolicy: DEFAULT_PRECISION_POLICY },
-            });
-            expect(document.body.textContent).toBe("Aug 22, 2026");
-            source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 4, display });
-            expect(document.body.textContent).toContain("2026-08-22 09:19:17");
-            handle.teardown();
-            expect(document.body.textContent).toBe("Aug 22, 2026");
-        },
-    );
+    it.each(['https://example.test/', 'https://www.instagram.com/p/example/'])('discovers absolute labels on enable and restores them on disable at %s', async (url) => {
+        document.body.innerHTML = '<time datetime="2026-08-22T09:19:17Z">Aug 22, 2026</time>';
+        const source = messages();
+        const handle = installContentRuntime({
+            document,
+            url: new URL(url),
+            locales: ['en-US'],
+            loadDocumentState: async () => state(),
+            messages: source,
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(document.body.textContent).toBe('Aug 22, 2026');
+        const display = {
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm:ss',
+            timeZone: { mode: 'utc' },
+            precisionPolicy: { ...DEFAULT_PRECISION_POLICY, absoluteLabels: true },
+        };
+        source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 2, display });
+        expect(document.body.textContent).toContain('2026-08-22 09:19:17');
+        source.dispatch({
+            type: UPDATE_PRESENTATION_MESSAGE,
+            revision: 3,
+            display: { ...display, precisionPolicy: DEFAULT_PRECISION_POLICY },
+        });
+        expect(document.body.textContent).toBe('Aug 22, 2026');
+        source.dispatch({ type: UPDATE_PRESENTATION_MESSAGE, revision: 4, display });
+        expect(document.body.textContent).toContain('2026-08-22 09:19:17');
+        handle.teardown();
+        expect(document.body.textContent).toBe('Aug 22, 2026');
+    });
 
-    it("starts while the document is still loading", async () => {
+    it('starts while the document is still loading', async () => {
         const source = messages();
         install(source);
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.ACTIVE,
         });
     });
 
-    it("does not create output for a ready disabled state", async () => {
+    it('does not create output for a ready disabled state', async () => {
         const source = messages();
         install(source, async () => state(false));
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.STOPPED,
         });
     });
 
-    it("reloads current policy when an active singleton is reinjected", async () => {
+    it('reloads current policy when an active singleton is reinjected', async () => {
         const source = messages();
         const load = vi.fn(async () => state());
         const first = install(source, load);
@@ -380,7 +390,7 @@ describe("installContentRuntime", () => {
         expect(source.onMessage.addListener).toHaveBeenCalledTimes(1);
     });
 
-    it("reports active and inactive transitions around policy disable", async () => {
+    it('reports active and inactive transitions around policy disable', async () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
         install(source, async () => state(), activity);
@@ -391,7 +401,7 @@ describe("installContentRuntime", () => {
         expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
     });
 
-    it("never activates the hook for a ready disabled state", async () => {
+    it('never activates the hook for a ready disabled state', async () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
         install(source, async () => state(false), activity);
@@ -400,7 +410,7 @@ describe("installContentRuntime", () => {
         expect(activity).not.toHaveBeenCalled();
     });
 
-    it("reports disable and re-enable without duplicate active transitions", async () => {
+    it('reports disable and re-enable without duplicate active transitions', async () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
         const load = vi.fn()
@@ -420,12 +430,12 @@ describe("installContentRuntime", () => {
         ]);
     });
 
-    it("reports inactive when an enabled refresh fails closed", async () => {
+    it('reports inactive when an enabled refresh fails closed', async () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
         const load = vi.fn()
             .mockResolvedValueOnce(state(true, 1))
-            .mockRejectedValueOnce(new Error("unavailable"));
+            .mockRejectedValueOnce(new Error('unavailable'));
         install(source, load, activity);
         await settleRuntime();
 
@@ -435,7 +445,7 @@ describe("installContentRuntime", () => {
         expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
     });
 
-    it("synchronizes a replacement hook when an active singleton is reinjected", async () => {
+    it('synchronizes a replacement hook when an active singleton is reinjected', async () => {
         const source = messages();
         const firstActivity = vi.fn<(active: boolean) => void>();
         const secondActivity = vi.fn<(active: boolean) => void>();
@@ -449,41 +459,41 @@ describe("installContentRuntime", () => {
         expect(secondActivity.mock.calls.map(([active]) => active)).toEqual([true]);
     });
 
-    it("reports inactive after a synchronous controller startup failure", () => {
+    it('reports inactive after a synchronous controller startup failure', () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
-        vi.spyOn(DocumentTransformationController.prototype, "start")
+        vi.spyOn(DocumentTransformationController.prototype, 'start')
             .mockImplementationOnce(() => {
-                throw new Error("controller failed");
+                throw new Error('controller failed');
             });
 
         expect(() => installContentRuntime({
             document,
-            url: new URL("https://example.test/page"),
-            locales: ["en-US"],
+            url: new URL('https://example.test/page'),
+            locales: ['en-US'],
             onActivityChanged: activity,
             messages: source,
-        })).toThrow("controller failed");
+        })).toThrow('controller failed');
         expect(activity.mock.calls.map(([active]) => active)).toEqual([true, false]);
     });
 
-    it("contains an activity-listener failure without blocking document processing", async () => {
+    it('contains an activity-listener failure without blocking document processing', async () => {
         const source = messages();
         const activity = vi.fn(() => {
-            throw new Error("site integration failed");
+            throw new Error('site integration failed');
         });
         install(source, async () => state(), activity);
         await settleRuntime();
 
         expect(activity).toHaveBeenCalledWith(true);
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.ACTIVE,
         });
     });
 
-    it("keeps activity stable across an enabled policy refresh", async () => {
+    it('keeps activity stable across an enabled policy refresh', async () => {
         const source = messages();
         const activity = vi.fn<(active: boolean) => void>();
         const load = vi.fn()
@@ -498,7 +508,7 @@ describe("installContentRuntime", () => {
         expect(activity.mock.calls.map(([active]) => active)).toEqual([true]);
     });
 
-    it("disables synchronously and ignores the prior hydration", async () => {
+    it('disables synchronously and ignores the prior hydration', async () => {
         let resolve: ((value: unknown) => void) | undefined;
         const source = messages();
         const load = vi.fn(() => new Promise<unknown>((complete) => {
@@ -520,7 +530,7 @@ describe("installContentRuntime", () => {
         });
     });
 
-    it("tears down synchronously and ignores a stale hydration response", async () => {
+    it('tears down synchronously and ignores a stale hydration response', async () => {
         let resolve: ((value: unknown) => void) | undefined;
         const source = messages();
         install(source, () => new Promise((complete) => {
@@ -532,23 +542,23 @@ describe("installContentRuntime", () => {
         resolve?.(state());
         await Promise.resolve();
         await Promise.resolve();
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.STOPPED,
         });
     });
 
-    it("refreshes an active runtime in a new generation without teardown", async () => {
+    it('refreshes an active runtime in a new generation without teardown', async () => {
         const source = messages();
         const load = vi.fn()
             .mockResolvedValueOnce(state(true, 1))
             .mockResolvedValueOnce({
                 ...state(true, 2),
                 display: {
-                    formatMode: "custom" as const,
-                    pattern: "yyyy" as const,
-                    timeZone: { mode: "utc" as const },
+                    formatMode: 'custom' as const,
+                    pattern: 'yyyy' as const,
+                    timeZone: { mode: 'utc' as const },
                 },
             });
         install(source, load);
@@ -563,30 +573,30 @@ describe("installContentRuntime", () => {
         });
     });
 
-    it("fails closed when an active policy refresh is rejected", async () => {
+    it('fails closed when an active policy refresh is rejected', async () => {
         const source = messages();
         const load = vi.fn()
             .mockResolvedValueOnce(state(true, 1))
-            .mockRejectedValueOnce(new Error("unavailable"));
+            .mockRejectedValueOnce(new Error('unavailable'));
         install(source, load);
         await Promise.resolve();
         await Promise.resolve();
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
 
         source.dispatch(policy(2, true));
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.FAILED,
         });
     });
 
-    it("invalidates a waiting hydration when policy refresh arrives", async () => {
+    it('invalidates a waiting hydration when policy refresh arrives', async () => {
         const source = messages();
-        const resolvers: Array<(value: unknown) => void> = [];
+        const resolvers: ((value: unknown) => void)[] = [];
         const load = vi.fn(() => new Promise<unknown>((resolve) => {
             resolvers.push(resolve);
         }));
@@ -606,7 +616,7 @@ describe("installContentRuntime", () => {
         });
     });
 
-    it("ignores late policy commands after a newer revision", async () => {
+    it('ignores late policy commands after a newer revision', async () => {
         const source = messages();
         let currentState = state(true, 1);
         install(source, async () => currentState);
@@ -614,22 +624,22 @@ describe("installContentRuntime", () => {
 
         currentState = state(false, 4);
         expect(source.dispatch(policy(4, false))).toEqual(policyAcknowledgement(4));
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
 
         expect(source.dispatch(policy(3, true))).toEqual(policyAcknowledgement(4));
         await settleRuntime();
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
 
         currentState = state(true, 5);
         expect(source.dispatch(policy(5, true))).toEqual(policyAcknowledgement(5));
         await settleRuntime();
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
 
         expect(source.dispatch(policy(4, false))).toEqual(policyAcknowledgement(5));
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
     });
 
-    it("converges a late unversioned fail-closed command on current state", async () => {
+    it('converges a late unversioned fail-closed command on current state', async () => {
         const source = messages();
         const load = vi.fn(async () => state(true, 5));
         install(source, load);
@@ -639,29 +649,29 @@ describe("installContentRuntime", () => {
         await settleRuntime();
 
         expect(load).toHaveBeenCalledTimes(2);
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
         expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.ACTIVE,
         });
     });
 
-    it("restores synchronously while an unversioned policy refresh remains pending", async () => {
+    it('restores synchronously while an unversioned policy refresh remains pending', async () => {
         const source = messages();
         const load = vi.fn()
             .mockResolvedValueOnce(state(true, 5))
             .mockImplementationOnce(() => new Promise<never>(() => undefined));
         install(source, load);
         await settleRuntime();
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
 
         expect(source.dispatch(policy(null, false))).toEqual(policyAcknowledgement(null));
 
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         expect(load).toHaveBeenCalledTimes(2);
     });
 
-    it("lets reinjection hydration replace a stale same-revision document policy", async () => {
+    it('lets reinjection hydration replace a stale same-revision document policy', async () => {
         let completeStaleHydration: ((value: unknown) => void) | undefined;
         const source = messages();
 
@@ -676,57 +686,57 @@ describe("installContentRuntime", () => {
         const first = install(source, staleLoader);
 
         expect(source.dispatch(policy(5, false))).toEqual(policyAcknowledgement(5));
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
 
         const second = install(source, async () => state(true, 5));
         expect(second).toBe(first);
         await settleRuntime();
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
 
         completeStaleHydration?.(state(false, 5));
         await settleRuntime();
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
     });
 
-    it("restores and reprocesses Hacker News across site policy refreshes", async () => {
-        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07.000000Z">`
-            + `<a id="hn-policy-link" href="item?id=1">1 hour ago</a></span>`;
-        const link = document.getElementById("hn-policy-link");
+    it('restores and reprocesses Hacker News across site policy refreshes', async () => {
+        document.body.innerHTML = '<span class="age" title="2026-08-28T10:09:07.000000Z">'
+            + '<a id="hn-policy-link" href="item?id=1">1 hour ago</a></span>';
+        const link = document.getElementById('hn-policy-link');
         if (!(link instanceof HTMLAnchorElement)) {
-            throw new Error("Expected Hacker News link");
+            throw new Error('Expected Hacker News link');
         }
 
         await exercisePolicyLifecycle({
-            url: new URL("https://news.ycombinator.com/item?id=1"),
-            isTransformed: () => link.textContent !== "1 hour ago",
-            isOriginal: () => link.textContent === "1 hour ago",
+            url: new URL('https://news.ycombinator.com/item?id=1'),
+            isTransformed: () => link.textContent !== '1 hour ago',
+            isOriginal: () => link.textContent === '1 hour ago',
             assertIdentity: () => {
-                expect(document.getElementById("hn-policy-link")).toBe(link);
+                expect(document.getElementById('hn-policy-link')).toBe(link);
             },
         });
     });
 
-    it("restores and reprocesses Telegram Web K across site policy refreshes", async () => {
+    it('restores and reprocesses Telegram Web K across site policy refreshes', async () => {
         document.body.innerHTML = '<div class="bubble" data-timestamp="1778774880">'
             + '<span class="time-inner"><span id="telegram-policy-clock" '
             + 'class="i18n">2 hours ago</span></span></div>';
-        const clock = document.getElementById("telegram-policy-clock");
+        const clock = document.getElementById('telegram-policy-clock');
         if (!clock) {
-            throw new Error("Expected Telegram policy clock");
+            throw new Error('Expected Telegram policy clock');
         }
 
         await exercisePolicyLifecycle({
-            url: new URL("https://web.telegram.org/k/#@fictional"),
-            isTransformed: () => clock.textContent !== "2 hours ago",
-            isOriginal: () => clock.textContent === "2 hours ago",
+            url: new URL('https://web.telegram.org/k/#@fictional'),
+            isTransformed: () => clock.textContent !== '2 hours ago',
+            isOriginal: () => clock.textContent === '2 hours ago',
             assertIdentity: () => {
-                expect(document.getElementById("telegram-policy-clock")).toBe(clock);
+                expect(document.getElementById('telegram-policy-clock')).toBe(clock);
             },
         });
     });
 
-    it("restores and reprocesses a TikTok direct label across policy changes", async () => {
-        const postId = "7639779880711749733";
+    it('restores and reprocesses a TikTok direct label across policy changes', async () => {
+        const postId = '7639779880711749733';
         document.head.innerHTML = '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" '
             + 'type="application/json">'
             + `{"itemInfo":{"itemStruct":{"id":"${postId}",`
@@ -734,54 +744,54 @@ describe("installContentRuntime", () => {
         document.body.innerHTML = '<div data-e2e="browser-nickname">'
             + '<span>Fictional</span><span> · </span>'
             + '<span id="tiktok-policy-date">3d</span></div>';
-        const date = document.getElementById("tiktok-policy-date");
+        const date = document.getElementById('tiktok-policy-date');
         if (!date) {
-            throw new Error("Expected TikTok policy date");
+            throw new Error('Expected TikTok policy date');
         }
 
         await exercisePolicyLifecycle({
             url: new URL(`https://www.tiktok.com/@fictional/video/${postId}`),
-            isTransformed: () => date.textContent !== "3d",
-            isOriginal: () => date.textContent === "3d",
+            isTransformed: () => date.textContent !== '3d',
+            isOriginal: () => date.textContent === '3d',
             assertIdentity: () => {
-                expect(document.getElementById("tiktok-policy-date")).toBe(date);
+                expect(document.getElementById('tiktok-policy-date')).toBe(date);
             },
         });
     });
 
-    it("reuses resolved Bluesky time across presentation changes", async () => {
+    it('reuses resolved Bluesky time across presentation changes', async () => {
         document.head.innerHTML = '<base href="https://bsky.app/">';
         document.body.innerHTML = `<article><a id="bluesky-runtime-source"
             href="/profile/alice.example/post/3runtime"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>2h</a></article>`;
         const source = messages();
-        const label = document.getElementById("bluesky-runtime-source")?.lastChild;
+        const label = document.getElementById('bluesky-runtime-source')?.lastChild;
         if (!(label instanceof Text)) {
-            throw new Error("Expected Bluesky runtime label");
+            throw new Error('Expected Bluesky runtime label');
         }
-        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => ({
+        const getProfiles = vi.fn<BlueskyAppView['getProfiles']>(async (actors) => ({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-            records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+            records: actors.map((actor) => ({ actor, did: 'did:plc:alice' })),
         }));
-        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+        const getPosts = vi.fn<BlueskyAppView['getPosts']>(async (uris) => ({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
             records: uris.map((uri) => ({
                 uri,
-                indexedAt: "2026-08-31T10:15:00.000Z",
+                indexedAt: '2026-08-31T10:15:00.000Z',
             })),
         }));
         const appView: BlueskyAppView = { getProfiles, getPosts };
-        const initialTimeZone: TimeZoneSelection = { mode: "utc" };
+        const initialTimeZone: TimeZoneSelection = { mode: 'utc' };
         installContentRuntime({
             document,
-            url: new URL("https://bsky.app/"),
-            locales: ["en-US"],
+            url: new URL('https://bsky.app/'),
+            locales: ['en-US'],
             loadDocumentState: async () => ({
                 ...state(true, 1),
                 display: {
-                    formatMode: "custom" as const,
-                    pattern: "yyyy-MM-dd HH:mm",
+                    formatMode: 'custom' as const,
+                    pattern: 'yyyy-MM-dd HH:mm',
                     timeZone: initialTimeZone,
                 },
             }),
@@ -790,43 +800,43 @@ describe("installContentRuntime", () => {
         });
 
         await vi.waitFor(() => {
-            expect(label.data).toBe("2026-08-31 10:15");
+            expect(label.data).toBe('2026-08-31 10:15');
         });
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
             display: {
-                formatMode: "custom",
-                pattern: "dd/MM/yyyy HH:mm",
+                formatMode: 'custom',
+                pattern: 'dd/MM/yyyy HH:mm',
                 timeZone: initialTimeZone,
             },
         })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
-        expect(label.data).toBe("31/08/2026 10:15");
+        expect(label.data).toBe('31/08/2026 10:15');
 
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 3,
             display: {
-                formatMode: "custom",
-                pattern: "dd/MM/yyyy HH:mm",
-                timeZone: { mode: "iana", identifier: "America/New_York" },
+                formatMode: 'custom',
+                pattern: 'dd/MM/yyyy HH:mm',
+                timeZone: { mode: 'iana', identifier: 'America/New_York' },
             },
         })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 3 });
-        expect(label.data).toBe("31/08/2026 06:15");
+        expect(label.data).toBe('31/08/2026 06:15');
         expect(getProfiles).toHaveBeenCalledTimes(1);
         expect(getPosts).toHaveBeenCalledTimes(1);
     });
 
-    it("makes a disabled Bluesky generation inert before fresh reactivation", async () => {
+    it('makes a disabled Bluesky generation inert before fresh reactivation', async () => {
         document.head.innerHTML = '<base href="https://bsky.app/">';
         document.body.innerHTML = `<article><a id="bluesky-policy-source"
             href="/profile/alice.example/post/3policy"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>2h</a></article>`;
         const source = messages();
-        const label = document.getElementById("bluesky-policy-source")?.lastChild;
+        const label = document.getElementById('bluesky-policy-source')?.lastChild;
         if (!(label instanceof Text)) {
-            throw new Error("Expected Bluesky policy label");
+            throw new Error('Expected Bluesky policy label');
         }
         let enabled = true;
         let revision = 1;
@@ -838,27 +848,27 @@ describe("installContentRuntime", () => {
             },
         );
         let profileInvocation = 0;
-        const getProfiles = vi.fn<BlueskyAppView["getProfiles"]>(async (actors) => {
+        const getProfiles = vi.fn<BlueskyAppView['getProfiles']>(async (actors) => {
             profileInvocation += 1;
             if (profileInvocation === 1) {
                 return firstProfiles;
             }
             return {
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-                records: actors.map((actor) => ({ actor, did: "did:plc:alice" })),
+                records: actors.map((actor) => ({ actor, did: 'did:plc:alice' })),
             };
         });
-        const getPosts = vi.fn<BlueskyAppView["getPosts"]>(async (uris) => ({
+        const getPosts = vi.fn<BlueskyAppView['getPosts']>(async (uris) => ({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
             records: uris.map((uri) => ({
                 uri,
-                indexedAt: "2026-08-31T10:15:00.000Z",
+                indexedAt: '2026-08-31T10:15:00.000Z',
             })),
         }));
         installContentRuntime({
             document,
-            url: new URL("https://bsky.app/"),
-            locales: ["en-US"],
+            url: new URL('https://bsky.app/'),
+            locales: ['en-US'],
             loadDocumentState: async () => state(enabled, revision),
             messages: source,
             blueskyAppView: { getProfiles, getPosts },
@@ -871,13 +881,13 @@ describe("installContentRuntime", () => {
         revision = 2;
         expect(source.dispatch(policy(revision, false)))
             .toEqual(policyAcknowledgement(revision));
-        expect(label.data).toBe("2h");
+        expect(label.data).toBe('2h');
         resolveFirst?.({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-            records: [{ actor: "alice.example", did: "did:plc:alice" }],
+            records: [{ actor: 'alice.example', did: 'did:plc:alice' }],
         });
         await settleRuntime();
-        expect(label.data).toBe("2h");
+        expect(label.data).toBe('2h');
         expect(getPosts).not.toHaveBeenCalled();
 
         enabled = true;
@@ -885,15 +895,15 @@ describe("installContentRuntime", () => {
         expect(source.dispatch(policy(revision, true)))
             .toEqual(policyAcknowledgement(revision));
         await vi.waitFor(() => {
-            expect(label.data).not.toBe("2h");
+            expect(label.data).not.toBe('2h');
         });
         expect(getProfiles).toHaveBeenCalledTimes(2);
         expect(getPosts).toHaveBeenCalledTimes(1);
     });
-    it.each(["global", "per-host"] as const)(
-        "restores synchronously and re-enables current Watch identity for %s policy",
+    it.each(['global', 'per-host'] as const)(
+        'restores synchronously and re-enables current Watch identity for %s policy',
         async (policyPath) => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             const watchA = requireWatchLabel();
             const watchAOriginal = watchA.outerHTML;
             let currentHref = WATCH_A;
@@ -901,9 +911,9 @@ describe("installContentRuntime", () => {
             const load = vi.fn(async (): Promise<unknown> => currentState);
             const source = messages();
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
-                throw new Error("Network access is forbidden in Watch lifecycle tests");
+                throw new Error('Network access is forbidden in Watch lifecycle tests');
             });
-            vi.stubGlobal("fetch", forbiddenFetch);
+            vi.stubGlobal('fetch', forbiddenFetch);
 
             /**
              * Installs the Watch runtime for the current href.
@@ -914,7 +924,7 @@ describe("installContentRuntime", () => {
                     url: new URL(currentHref),
                     urlProvider: () => new URL(currentHref),
                     routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-                    locales: ["en-US"],
+                    locales: ['en-US'],
                     loadDocumentState: load,
                     messages: source,
                 });
@@ -922,8 +932,8 @@ describe("installContentRuntime", () => {
             installWatchRuntime();
             await flushMutations();
 
-            expect(watchOutput()?.dateTime).toBe("2026-08-01");
-            expect(watchA.hasAttribute("hidden")).toBe(true);
+            expect(watchOutput()?.dateTime).toBe('2026-08-01');
+            expect(watchA.hasAttribute('hidden')).toBe(true);
             expect(watchA.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
 
             currentState = state(false, 2);
@@ -932,7 +942,7 @@ describe("installContentRuntime", () => {
             expect(document.querySelector(`[${OWNED_SOURCE_ATTRIBUTE}]`)).toBeNull();
             expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
             expect(watchA.outerHTML).toBe(watchAOriginal);
-            expect(watchA.hasAttribute("hidden")).toBe(false);
+            expect(watchA.hasAttribute('hidden')).toBe(false);
 
             expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
                 type: DOCUMENT_STATUS_MESSAGE,
@@ -940,10 +950,10 @@ describe("installContentRuntime", () => {
             });
 
             currentHref = WATCH_B;
-            setWatchMarkup("testVID0002", "2026-08-02");
-            document.head.querySelector("meta")?.setAttribute("content", "invalid-metadata");
+            setWatchMarkup('testVID0002', '2026-08-02');
+            document.head.querySelector('meta')?.setAttribute('content', 'invalid-metadata');
             currentState = state(true, 3);
-            if (policyPath === "global") {
+            if (policyPath === 'global') {
                 installWatchRuntime();
             } else {
                 expect(source.dispatch(policy(3, true))).toEqual(policyAcknowledgement(3));
@@ -951,9 +961,9 @@ describe("installContentRuntime", () => {
             await flushMutations();
 
             const watchB = requireWatchLabel();
-            expect(watchOutput()?.dateTime).toBe("2026-08-02");
+            expect(watchOutput()?.dateTime).toBe('2026-08-02');
             expect(document.querySelector('time[datetime="2026-08-01"]')).toBeNull();
-            expect(watchB.hasAttribute("hidden")).toBe(true);
+            expect(watchB.hasAttribute('hidden')).toBe(true);
             expect(watchB.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(true);
             expect(source.dispatch({ type: DOCUMENT_STATUS_MESSAGE })).toEqual({
                 type: DOCUMENT_STATUS_MESSAGE,
@@ -963,10 +973,10 @@ describe("installContentRuntime", () => {
         },
     );
 
-    it.each(["url-provider", "route-classifier"] as const)(
-        "fails closed before activation hydration when the %s fails",
+    it.each(['url-provider', 'route-classifier'] as const)(
+        'fails closed before activation hydration when the %s fails',
         async (failure) => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             let currentHref = WATCH_A;
             let failProvider = false;
             let failClassifier = false;
@@ -977,7 +987,7 @@ describe("installContentRuntime", () => {
                 typeof classifyYouTubeWatchRouteHandoff
             >[0]) => {
                 if (failClassifier) {
-                    throw new Error("Route classification unavailable");
+                    throw new Error('Route classification unavailable');
                 }
                 return classifyYouTubeWatchRouteHandoff(input);
             });
@@ -991,12 +1001,12 @@ describe("installContentRuntime", () => {
                     url: new URL(currentHref),
                     urlProvider: () => {
                         if (failProvider) {
-                            throw new Error("Current URL unavailable");
+                            throw new Error('Current URL unavailable');
                         }
                         return new URL(currentHref);
                     },
                     routeHandoffClassifier: classifier,
-                    locales: ["en-US"],
+                    locales: ['en-US'],
                     loadDocumentState: load,
                     messages: source,
                 });
@@ -1006,8 +1016,8 @@ describe("installContentRuntime", () => {
             expect(watchOutput()).not.toBeNull();
             expect(source.dispatch(policy(2, false))).toEqual(policyAcknowledgement(2));
             currentHref = WATCH_B;
-            failProvider = failure === "url-provider";
-            failClassifier = failure === "route-classifier";
+            failProvider = failure === 'url-provider';
+            failClassifier = failure === 'route-classifier';
 
             installRuntime();
 
@@ -1021,14 +1031,14 @@ describe("installContentRuntime", () => {
     );
 
     it.each(YOUTUBE_LIST_FIXTURES)(
-        "keeps ordinary no-source $name mutations inert through detach and reattach",
+        'keeps ordinary no-source $name mutations inert through detach and reattach',
         async ({ id, fixturePath, url }) => {
-            document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
+            document.documentElement.innerHTML = await readFile(fixturePath, 'utf8');
             const cardSelector = YOUTUBE_LIST_CARD_SELECTORS[id];
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
-                throw new Error("Network access is forbidden in runtime fixtures");
+                throw new Error('Network access is forbidden in runtime fixtures');
             });
-            vi.stubGlobal("fetch", forbiddenFetch);
+            vi.stubGlobal('fetch', forbiddenFetch);
             const reportDiagnostic = vi.fn(async () => undefined);
             const source = messages();
             let runtime: ReturnType<typeof installContentRuntime> | undefined;
@@ -1037,7 +1047,7 @@ describe("installContentRuntime", () => {
                 runtime = installContentRuntime({
                     document,
                     url: new URL(url),
-                    locales: ["en-US"],
+                    locales: ['en-US'],
                     loadDocumentState: async () => ({
                         ...state(),
                         debugEnabled: true,
@@ -1070,7 +1080,7 @@ describe("installContentRuntime", () => {
                     });
                     expect(document.querySelector(`[${OWNED_SOURCE_ATTRIBUTE}]`)).toBeNull();
                     expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
-                    expect(document.querySelector("time")).toBeNull();
+                    expect(document.querySelector('time')).toBeNull();
                     expect(sentinel.outerHTML).toBe(sentinelMarkup);
                     expect(reportDiagnostic).not.toHaveBeenCalled();
                     expect(forbiddenFetch).not.toHaveBeenCalled();
@@ -1078,25 +1088,25 @@ describe("installContentRuntime", () => {
                 expectOrdinaryNoSourceState();
                 reportDiagnostic.mockClear();
 
-                const ordinaryChild = document.createElement("div");
-                ordinaryChild.textContent = "page-authored fixture child";
+                const ordinaryChild = document.createElement('div');
+                ordinaryChild.textContent = 'page-authored fixture child';
                 target.append(ordinaryChild);
                 await flushMutations();
                 expectOrdinaryNoSourceState();
 
-                target.classList.add("fixture-layout-change");
+                target.classList.add('fixture-layout-change');
                 await flushMutations();
                 expectOrdinaryNoSourceState();
 
-                target.classList.remove("fixture-layout-change");
+                target.classList.remove('fixture-layout-change');
                 await flushMutations();
                 expectOrdinaryNoSourceState();
 
-                target.setAttribute("hidden", "");
+                target.setAttribute('hidden', '');
                 await flushMutations();
                 expectOrdinaryNoSourceState();
 
-                target.removeAttribute("hidden");
+                target.removeAttribute('hidden');
                 await flushMutations();
                 expectOrdinaryNoSourceState();
 
@@ -1117,9 +1127,9 @@ describe("installContentRuntime", () => {
     );
 
     it(
-        "handles active signal-first, DOM-first, duplicate, and metadata-only Watch handoffs",
+        'handles active signal-first, DOM-first, duplicate, and metadata-only Watch handoffs',
         async () => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             let currentHref = WATCH_A;
             const source = messages();
             const events = routeEvents();
@@ -1130,30 +1140,30 @@ describe("installContentRuntime", () => {
                 urlProvider: () => new URL(currentHref),
                 routeEvents: events,
                 routeHandoffClassifier: classifier,
-                locales: ["en-US"],
+                locales: ['en-US'],
                 loadDocumentState: async () => state(),
                 messages: source,
             });
             await flushMutations();
-            expect(watchOutput()?.dateTime).toBe("2026-08-01");
+            expect(watchOutput()?.dateTime).toBe('2026-08-01');
 
             currentHref = WATCH_B;
             events.dispatch();
             expect(watchOutput()).toBeNull();
-            expect(document.querySelector("yt-formatted-string")?.hasAttribute("hidden"))
+            expect(document.querySelector('yt-formatted-string')?.hasAttribute('hidden'))
                 .toBe(false);
-            document.head.querySelector("meta")?.setAttribute("content", "2026-08-02");
-            setWatchPlayer("testVID0002", "2026-08-02");
+            document.head.querySelector('meta')?.setAttribute('content', '2026-08-02');
+            setWatchPlayer('testVID0002', '2026-08-02');
             await flushMutations();
             await flushMutations();
-            expect(watchOutput()?.dateTime).toBe("2026-08-02");
+            expect(watchOutput()?.dateTime).toBe('2026-08-02');
 
-            setWatchPlayer("testVID0001", "2026-08-03");
-            document.head.querySelector("meta")?.setAttribute("content", "2026-08-03");
+            setWatchPlayer('testVID0001', '2026-08-03');
+            document.head.querySelector('meta')?.setAttribute('content', '2026-08-03');
             await flushMutations();
             currentHref = WATCH_A;
             events.dispatch();
-            expect(watchOutput()?.dateTime).toBe("2026-08-03");
+            expect(watchOutput()?.dateTime).toBe('2026-08-03');
 
             const duplicateOutput = watchOutput();
             const classifierCalls = classifier.mock.calls.length;
@@ -1161,21 +1171,21 @@ describe("installContentRuntime", () => {
             expect(classifier).toHaveBeenCalledTimes(classifierCalls);
             expect(watchOutput()).toBe(duplicateOutput);
 
-            document.head.querySelector("script")?.remove();
+            document.head.querySelector('script')?.remove();
             await flushMutations();
-            document.head.querySelector("meta")?.setAttribute("content", "2026-08-04");
-            const label = document.querySelector("yt-formatted-string");
+            document.head.querySelector('meta')?.setAttribute('content', '2026-08-04');
+            const label = document.querySelector('yt-formatted-string');
             if (label) {
-                label.textContent = "2 months ago";
+                label.textContent = '2 months ago';
             }
             await flushMutations();
             expect(watchOutput()).toBeNull();
-            expect(label?.hasAttribute("hidden")).toBe(false);
+            expect(label?.hasAttribute('hidden')).toBe(false);
         },
     );
 
-    it("samples the live Watch route before both DOM-driven processing paths", async () => {
-        setWatchMarkup("testVID0001", "2026-08-01");
+    it('samples the live Watch route before both DOM-driven processing paths', async () => {
+        setWatchMarkup('testVID0001', '2026-08-01');
         let currentHref = WATCH_A;
         const source = messages();
         installContentRuntime({
@@ -1183,43 +1193,43 @@ describe("installContentRuntime", () => {
             url: new URL(currentHref),
             urlProvider: () => new URL(currentHref),
             routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-            locales: ["en-US"],
+            locales: ['en-US'],
             loadDocumentState: async () => state(),
             messages: source,
         });
         await flushMutations();
-        expect(watchOutput()?.dateTime).toBe("2026-08-01");
+        expect(watchOutput()?.dateTime).toBe('2026-08-01');
 
         currentHref = WATCH_B;
-        setWatchPlayer("testVID0002", "2026-08-02");
+        setWatchPlayer('testVID0002', '2026-08-02');
         const label = requireWatchLabel();
-        label.textContent = "2 months ago";
+        label.textContent = '2 months ago';
         await flushMutations();
         await flushMutations();
 
-        expect(watchOutput()?.dateTime).toBe("2026-08-02");
-        expect(document.head.querySelector("meta")?.getAttribute("content"))
-            .toBe("2026-08-01");
+        expect(watchOutput()?.dateTime).toBe('2026-08-02');
+        expect(document.head.querySelector('meta')?.getAttribute('content'))
+            .toBe('2026-08-01');
 
         currentHref = WATCH_C;
-        setWatchPlayer("testVID0002", "2026-08-03");
+        setWatchPlayer('testVID0002', '2026-08-03');
         await flushMutations();
         await flushMutations();
 
         expect(watchOutput()).toBeNull();
-        expect(requireWatchLabel().hasAttribute("hidden")).toBe(false);
+        expect(requireWatchLabel().hasAttribute('hidden')).toBe(false);
 
-        setWatchPlayer("testVID0003", "2026-08-04");
+        setWatchPlayer('testVID0003', '2026-08-04');
         await flushMutations();
         await flushMutations();
 
-        expect(watchOutput()?.dateTime).toBe("2026-08-04");
+        expect(watchOutput()?.dateTime).toBe('2026-08-04');
     });
 
-    it.each(["before", "after"] as const)(
-        "retains a Watch handoff while waiting and resolves loaded data %s activation",
+    it.each(['before', 'after'] as const)(
+        'retains a Watch handoff while waiting and resolves loaded data %s activation',
         async (order) => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             let currentHref = WATCH_A;
             let complete: ((value: unknown) => void) | undefined;
             const source = messages();
@@ -1228,7 +1238,7 @@ describe("installContentRuntime", () => {
                 url: new URL(currentHref),
                 urlProvider: () => new URL(currentHref),
                 routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-                locales: ["en-US"],
+                locales: ['en-US'],
                 loadDocumentState: () => new Promise((resolve) => {
                     complete = resolve;
                 }),
@@ -1236,46 +1246,46 @@ describe("installContentRuntime", () => {
             });
             currentHref = WATCH_B;
             expect(source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE })).toBeUndefined();
-            if (order === "after") {
-                setWatchPlayer("testVID0002", "2026-08-02");
+            if (order === 'after') {
+                setWatchPlayer('testVID0002', '2026-08-02');
             }
             expect(watchOutput()).toBeNull();
             complete?.(state());
             await flushMutations();
 
-            if (order === "before") {
+            if (order === 'before') {
                 expect(watchOutput()).toBeNull();
-                setWatchPlayer("testVID0002", "2026-08-02");
+                setWatchPlayer('testVID0002', '2026-08-02');
                 await flushMutations();
                 await flushMutations();
             }
-            expect(watchOutput()?.dateTime).toBe("2026-08-02");
+            expect(watchOutput()?.dateTime).toBe('2026-08-02');
         },
     );
 
     it.each([
         {
-            name: "initial same-video query",
+            name: 'initial same-video query',
             routes: [`${WATCH_A}&list=fixture`],
-            expectedPublication: "2026-08-01",
+            expectedPublication: '2026-08-01',
         },
         {
-            name: "handoff then same-video query",
+            name: 'handoff then same-video query',
             routes: [WATCH_B, WATCH_B, `${WATCH_B}&list=fixture`],
             expectedPublication: null,
         },
         {
-            name: "handoff, unsupported clear, and Watch return",
-            routes: [WATCH_B, "https://www.youtube.com/", WATCH_A],
+            name: 'handoff, unsupported clear, and Watch return',
+            routes: [WATCH_B, 'https://www.youtube.com/', WATCH_A],
             expectedPublication: null,
         },
         {
-            name: "direct handoff and return",
+            name: 'direct handoff and return',
             routes: [WATCH_B, WATCH_A, WATCH_A],
             expectedPublication: null,
         },
-    ])("applies retained waiting policy for $name", async ({ routes, expectedPublication }) => {
-        setWatchMarkup("testVID0001", "2026-08-01", false);
+    ])('applies retained waiting policy for $name', async ({ routes, expectedPublication }) => {
+        setWatchMarkup('testVID0001', '2026-08-01', false);
         let currentHref = WATCH_A;
         let complete: ((value: unknown) => void) | undefined;
         const source = messages();
@@ -1284,7 +1294,7 @@ describe("installContentRuntime", () => {
             url: new URL(currentHref),
             urlProvider: () => new URL(currentHref),
             routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-            locales: ["en-US"],
+            locales: ['en-US'],
             loadDocumentState: () => new Promise((resolve) => {
                 complete = resolve;
             }),
@@ -1300,10 +1310,10 @@ describe("installContentRuntime", () => {
         expect(watchOutput()?.dateTime ?? null).toBe(expectedPublication);
     });
 
-    it.each(["before", "after"] as const)(
-        "retains a Watch handoff while stopped and resolves loaded data %s reactivation",
+    it.each(['before', 'after'] as const)(
+        'retains a Watch handoff while stopped and resolves loaded data %s reactivation',
         async (order) => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             let currentHref = WATCH_A;
             const source = messages();
             const load = vi.fn()
@@ -1314,7 +1324,7 @@ describe("installContentRuntime", () => {
                 url: new URL(currentHref),
                 urlProvider: () => new URL(currentHref),
                 routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-                locales: ["en-US"],
+                locales: ['en-US'],
                 loadDocumentState: load,
                 messages: source,
             });
@@ -1325,46 +1335,46 @@ describe("installContentRuntime", () => {
             });
             currentHref = WATCH_B;
             source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE });
-            if (order === "after") {
-                setWatchPlayer("testVID0002", "2026-08-02");
+            if (order === 'after') {
+                setWatchPlayer('testVID0002', '2026-08-02');
             }
             expect(watchOutput()).toBeNull();
             expect(source.dispatch(policy(2, true))).toEqual(policyAcknowledgement(2));
             await flushMutations();
 
-            if (order === "before") {
+            if (order === 'before') {
                 expect(watchOutput()).toBeNull();
-                setWatchPlayer("testVID0002", "2026-08-02");
+                setWatchPlayer('testVID0002', '2026-08-02');
                 await flushMutations();
                 await flushMutations();
             }
-            expect(watchOutput()?.dateTime).toBe("2026-08-02");
+            expect(watchOutput()?.dateTime).toBe('2026-08-02');
         },
     );
 
     it.each([
         {
-            name: "initial same-video query",
+            name: 'initial same-video query',
             routes: [`${WATCH_A}&list=fixture`, `${WATCH_A}&list=fixture`],
-            expectedPublication: "2026-08-01",
+            expectedPublication: '2026-08-01',
         },
         {
-            name: "handoff then same-video query",
+            name: 'handoff then same-video query',
             routes: [WATCH_B, WATCH_B, `${WATCH_B}&list=fixture`],
             expectedPublication: null,
         },
         {
-            name: "handoff, unsupported clear, and Watch return",
-            routes: [WATCH_B, "https://www.youtube.com/", WATCH_A],
+            name: 'handoff, unsupported clear, and Watch return',
+            routes: [WATCH_B, 'https://www.youtube.com/', WATCH_A],
             expectedPublication: null,
         },
         {
-            name: "direct handoff and return",
+            name: 'direct handoff and return',
             routes: [WATCH_B, WATCH_A, WATCH_A],
             expectedPublication: null,
         },
-    ])("applies retained stopped policy for $name", async ({ routes, expectedPublication }) => {
-        setWatchMarkup("testVID0001", "2026-08-01", false);
+    ])('applies retained stopped policy for $name', async ({ routes, expectedPublication }) => {
+        setWatchMarkup('testVID0001', '2026-08-01', false);
         let currentHref = WATCH_A;
         const source = messages();
         const classifier = vi.fn(classifyYouTubeWatchRouteHandoff);
@@ -1376,7 +1386,7 @@ describe("installContentRuntime", () => {
             url: new URL(currentHref),
             urlProvider: () => new URL(currentHref),
             routeHandoffClassifier: classifier,
-            locales: ["en-US"],
+            locales: ['en-US'],
             loadDocumentState: load,
             messages: source,
         });
@@ -1397,21 +1407,21 @@ describe("installContentRuntime", () => {
     });
 
     it.each(YOUTUBE_LIST_FIXTURES)(
-        "restores Watch output before routed $name no-op and quarantines a Watch return",
+        'restores Watch output before routed $name no-op and quarantines a Watch return',
         async ({ fixturePath, url }) => {
-            setWatchMarkup("testVID0001", "2026-08-01");
+            setWatchMarkup('testVID0001', '2026-08-01');
             let currentHref = WATCH_A;
             const source = messages();
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
-                throw new Error("Network access is forbidden in runtime fixtures");
+                throw new Error('Network access is forbidden in runtime fixtures');
             });
-            vi.stubGlobal("fetch", forbiddenFetch);
+            vi.stubGlobal('fetch', forbiddenFetch);
             installContentRuntime({
                 document,
                 url: new URL(currentHref),
                 urlProvider: () => new URL(currentHref),
                 routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-                locales: ["en-US"],
+                locales: ['en-US'],
                 loadDocumentState: async () => state(),
                 messages: source,
             });
@@ -1420,11 +1430,11 @@ describe("installContentRuntime", () => {
 
             currentHref = url;
             source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE });
-            document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
+            document.documentElement.innerHTML = await readFile(fixturePath, 'utf8');
             await flushMutations();
             expect(document.querySelector(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toBeNull();
 
-            setWatchMarkup("testVID0001", "2026-08-03", false);
+            setWatchMarkup('testVID0001', '2026-08-03', false);
             currentHref = WATCH_A;
             source.dispatch({ type: RECONCILE_DOCUMENT_ROUTE_MESSAGE });
             await flushMutations();

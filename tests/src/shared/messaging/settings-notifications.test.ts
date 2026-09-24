@@ -2,14 +2,17 @@
  * @file Verifies the background-to-page settings change notification.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
 import {
     SETTINGS_CHANGED_MESSAGE,
     createSettingsChangedSubscriber,
-} from "../../../../src/shared/messaging/settings-notifications";
+} from '../../../../src/shared/messaging/settings-notifications';
 
-describe("settings changed subscriber", () => {
-    it("reports announced revisions and stops on unsubscribe", () => {
+describe('settings changed subscriber', () => {
+    it('reports announced revisions and stops on unsubscribe', () => {
         const listeners: ((message: unknown) => void)[] = [];
         const runtime = {
             onMessage: {
@@ -27,7 +30,7 @@ describe("settings changed subscriber", () => {
         });
 
         listeners[0]?.({ type: SETTINGS_CHANGED_MESSAGE, revision: 3 });
-        listeners[0]?.({ type: "no-more-ago:status" });
+        listeners[0]?.({ type: 'no-more-ago:status' });
         subscription.unsubscribe();
         listeners.forEach((listener) => {
             listener({ type: SETTINGS_CHANGED_MESSAGE, revision: 4 });
@@ -37,7 +40,7 @@ describe("settings changed subscriber", () => {
         expect(runtime.onMessage.removeListener).toHaveBeenCalledTimes(1);
     });
 
-    it("ignores announcements that carry a sender tab", () => {
+    it('ignores announcements that carry a sender tab', () => {
         let receive: ((message: unknown, sender?: { tab?: unknown }) => void) | undefined;
         const runtime = {
             onMessage: {
@@ -59,7 +62,7 @@ describe("settings changed subscriber", () => {
         expect(revisions).toEqual([6, 7]);
     });
 
-    it("never throws when the runtime cannot be observed", () => {
+    it('never throws when the runtime cannot be observed', () => {
         const subscription = createSettingsChangedSubscriber(undefined)(() => undefined);
         expect(() => {
             subscription.unsubscribe();

@@ -2,18 +2,20 @@
  * @file Settings navigation listing the four sections with one visible panel.
  */
 
-import { Tabs } from "@mantine/core";
-import type { ReactElement, ReactNode } from "react";
-import { t } from "../shared/i18n/translator";
+import { Tabs } from '@mantine/core';
+
+import { t } from '../shared/i18n/translator';
+
+import type { ReactElement, ReactNode } from 'react';
 
 /**
  * Named settings sections in navigation order.
  */
 export const SETTINGS_SECTION = {
-    SITES: "sites",
-    DISPLAY: "display",
-    DIAGNOSTICS: "diagnostics",
-    RESET: "reset",
+    SITES: 'sites',
+    DISPLAY: 'display',
+    DIAGNOSTICS: 'diagnostics',
+    RESET: 'reset',
 } as const;
 
 /**
@@ -43,6 +45,7 @@ export interface SettingsNavigationProps {
  * @param props - Component properties.
  * @param props.panels - Panel content for each section.
  * @param props.banner - Optional message shown above the visible panel.
+ *
  * @returns - The settings navigation and its visible panel.
  */
 export function SettingsNavigation({ panels, banner }: SettingsNavigationProps): ReactElement {
@@ -55,14 +58,14 @@ export function SettingsNavigation({ panels, banner }: SettingsNavigationProps):
             unstyled
         >
             <div className="options-nav">
-                <p className="nma-eyebrow options-nav-title">{t("options_nav_title")}</p>
-                <Tabs.List className="options-nav-list" aria-label={t("options_nav_aria")}>
-                    <Tabs.Tab value={SETTINGS_SECTION.SITES}>{t("sites_heading")}</Tabs.Tab>
-                    <Tabs.Tab value={SETTINGS_SECTION.DISPLAY}>{t("display_heading")}</Tabs.Tab>
+                <p className="nma-eyebrow options-nav-title">{t('options_nav_title')}</p>
+                <Tabs.List className="options-nav-list" aria-label={t('options_nav_aria')}>
+                    <Tabs.Tab value={SETTINGS_SECTION.SITES}>{t('sites_heading')}</Tabs.Tab>
+                    <Tabs.Tab value={SETTINGS_SECTION.DISPLAY}>{t('display_heading')}</Tabs.Tab>
                     <Tabs.Tab value={SETTINGS_SECTION.DIAGNOSTICS}>
-                        {t("diagnostics_heading")}
+                        {t('diagnostics_heading')}
                     </Tabs.Tab>
-                    <Tabs.Tab value={SETTINGS_SECTION.RESET}>{t("reset_heading")}</Tabs.Tab>
+                    <Tabs.Tab value={SETTINGS_SECTION.RESET}>{t('reset_heading')}</Tabs.Tab>
                 </Tabs.List>
             </div>
             <div className="options-content">

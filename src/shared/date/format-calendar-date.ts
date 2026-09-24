@@ -2,23 +2,26 @@
  * @file Locale-aware presentation for calendar dates without instant semantics.
  */
 
-import { format } from "date-fns";
-import { tz } from "@date-fns/tz";
+import { tz } from '@date-fns/tz';
+import { format } from 'date-fns';
 
-import { DATE_PRECISION } from "../settings/precision-policy";
-import { projectPrecisionPattern } from "./precision-pattern";
-import type { CalendarDate } from "./calendar-date";
-import { resolveDateLocale } from "./date-locale";
+import { DATE_PRECISION } from '../settings/precision-policy';
 import {
     DEFAULT_DISPLAY_SETTINGS,
     FORMAT_MODE,
     type DisplaySettings,
-} from "../settings/snapshot";
+} from '../settings/snapshot';
+
+import { resolveDateLocale } from './date-locale';
+import { projectPrecisionPattern } from './precision-pattern';
+
+import type { CalendarDate } from './calendar-date';
 
 /**
  * Creates a private stable UTC anchor used only by the presentation boundary.
  *
  * @param value - Validated calendar date.
+ *
  * @returns - UTC midday anchor carrying the same calendar components.
  */
 function createFormattingAnchor(value: CalendarDate): Date {
@@ -33,6 +36,7 @@ function createFormattingAnchor(value: CalendarDate): Date {
  *
  * @param value - Validated calendar date.
  * @param locales - Preferred browser locales.
+ *
  * @returns - Localized date-only text.
  */
 function systemCalendarFormat(
@@ -41,7 +45,7 @@ function systemCalendarFormat(
 ): string {
     const formatter = new Intl.DateTimeFormat(
         locales.length === 0 ? undefined : [...locales],
-        { dateStyle: "medium", timeZone: "UTC" },
+        { dateStyle: 'medium', timeZone: 'UTC' },
     );
     return formatter.format(createFormattingAnchor(value));
 }
@@ -52,6 +56,7 @@ function systemCalendarFormat(
  * @param value - Validated calendar date.
  * @param locales - Preferred browser locales.
  * @param display - Validated format choices; its configured time zone is ignored.
+ *
  * @returns - Localized date-only text.
  */
 export function formatCalendarDate(
@@ -70,7 +75,7 @@ export function formatCalendarDate(
         }
         const text = format(createFormattingAnchor(value), pattern, {
             locale: resolveDateLocale(locales).locale,
-            in: tz("UTC"),
+            in: tz('UTC'),
         }).trim();
         return text.length === 0 ? fallback : text;
     } catch {

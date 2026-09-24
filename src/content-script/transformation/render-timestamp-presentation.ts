@@ -5,42 +5,43 @@
 import {
     TIMESTAMP_PRESENTATION_KIND,
     type TimestampPresentation,
-} from "../adapters/types";
-import type { OwnedDomMutationSink } from "./owned-dom-mutations";
-import {
-    getOwnedSourceEntries as getOwnedTimeSourceEntries,
-    renderExactTime,
-    restoreExactTime,
-    restoreExactTimes,
-} from "./render-exact-time";
+} from '../adapters/types';
+
 import {
     getOwnedTextSourceEntries,
     renderExactText,
     restoreExactText,
     restoreExactTexts,
-} from "./render-exact-text";
+} from './render-exact-text';
+import {
+    getOwnedSourceEntries as getOwnedTimeSourceEntries,
+    renderExactTime,
+    restoreExactTime,
+    restoreExactTimes,
+} from './render-exact-time';
+
+import type { OwnedDomMutationSink } from './owned-dom-mutations';
 
 export {
     capturePageOwnedTextChange,
     readPageOwnedText,
-} from "./render-exact-text";
-export { getOwnedSourceForOutput } from "./render-exact-time";
+} from './render-exact-text';
+export { getOwnedSourceForOutput } from './render-exact-time';
 
 /**
  * Successful output from either supported presentation strategy.
  */
-export type TimestampRenderResult =
-    | {
-        /**
-         * Generated-output strategy discriminant.
-         */
-        readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME;
+export type TimestampRenderResult = | {
+    /**
+     * Generated-output strategy discriminant.
+     */
+    readonly kind: typeof TIMESTAMP_PRESENTATION_KIND.ADJACENT_TIME;
 
-        /**
-         * Generated extension-owned time element.
-         */
-        readonly output: HTMLTimeElement;
-    }
+    /**
+     * Generated extension-owned time element.
+     */
+    readonly output: HTMLTimeElement;
+}
     | {
         /**
          * In-place strategy discriminant.
@@ -72,6 +73,7 @@ export interface OwnedTimestampSourceEntry {
  * Returns owned sources for settings-driven targeted refresh.
  *
  * @param document - Document whose ownership registries are queried.
+ *
  * @returns - Connected adjacent and in-place source entries.
  */
 export function getOwnedTimestampSourceEntries(
@@ -88,6 +90,7 @@ export function getOwnedTimestampSourceEntries(
  * @param presentation - Validated presentation descriptor.
  * @param text - Formatted exact label.
  * @param mutations - Optional observer acknowledgement sink.
+ *
  * @returns - Discriminated rendered output, or null on an ownership conflict.
  */
 export function renderTimestampPresentation(
@@ -99,8 +102,8 @@ export function renderTimestampPresentation(
 ): TimestampRenderResult | null {
     if (presentation.kind === TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
         restoreExactTime(source, mutations);
-        const renderedText = `${presentation.textPrefix ?? ""}${text}`
-            + (presentation.textSuffix ?? "");
+        const renderedText = `${presentation.textPrefix ?? ''}${text}${
+            presentation.textSuffix ?? ''}`;
         const output = renderExactText(
             source,
             presentation.target,

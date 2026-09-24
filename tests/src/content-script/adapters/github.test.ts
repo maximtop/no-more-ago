@@ -2,134 +2,132 @@
  * @file Verifies GitHub timestamp discovery and extraction behavior.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
+import { defaultRegistry } from '../../../../src/content-script/adapters/registry';
 import {
     getRelativePresentationObservationTarget,
-} from "../../../../src/content-script/adapters/relative-presentation";
+} from '../../../../src/content-script/adapters/relative-presentation';
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampExtractionContext,
-} from "../../../../src/content-script/adapters/types";
+} from '../../../../src/content-script/adapters/types';
 
-const GITHUB_URL = new URL("https://github.com/any/path");
+const GITHUB_URL = new URL('https://github.com/any/path');
 const extractionContext: TimestampExtractionContext = {
     url: GITHUB_URL,
     readPageText: (target) => target.data,
 };
 
-describe("GitHub adapter registry", () => {
-    it("selects only exact GitHub HTTP(S) URLs", () => {
-        expect(defaultRegistry.matching(new URL("https://github.com/org/repo")).map((r) => r.id))
-            .toEqual(["github", "generic-time"]);
-        expect(defaultRegistry.matching(new URL("http://github.com/org/repo")).map((r) => r.id))
-            .toEqual(["github", "generic-time"]);
+describe('GitHub adapter registry', () => {
+    it('selects only exact GitHub HTTP(S) URLs', () => {
+        expect(defaultRegistry.matching(new URL('https://github.com/org/repo')).map((r) => r.id))
+            .toEqual(['github', 'generic-time']);
+        expect(defaultRegistry.matching(new URL('http://github.com/org/repo')).map((r) => r.id))
+            .toEqual(['github', 'generic-time']);
         expect(
-            defaultRegistry.matching(new URL("https://gist.github.com/org/1")).map((r) => r.id),
+            defaultRegistry.matching(new URL('https://gist.github.com/org/1')).map((r) => r.id),
         )
-            .toEqual(["generic-time"]);
+            .toEqual(['generic-time']);
         expect(
-            defaultRegistry.matching(new URL("https://github.example/org/repo")).map((r) => r.id),
+            defaultRegistry.matching(new URL('https://github.example/org/repo')).map((r) => r.id),
         )
-            .toEqual(["generic-time"]);
+            .toEqual(['generic-time']);
     });
 
-    it("discovers and extracts a trusted source description", () => {
-        document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
-        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
+    it('discovers and extracts a trusted source description', () => {
+        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">2 hours ago</relative-time>';
+        const adapter = defaultRegistry.matching(new URL('https://github.com/org/repo'))[0];
         expect(adapter).not.toBeNull();
         if (!adapter) {
-            throw new Error("Expected the GitHub adapter");
+            throw new Error('Expected the GitHub adapter');
         }
 
         const [element] = adapter.discover(document, extractionContext);
         expect(element).toBeDefined();
         if (!element) {
-            throw new Error("Expected one discovered relative-time element");
+            throw new Error('Expected one discovered relative-time element');
         }
 
         expect(adapter.extract(element, extractionContext)).toMatchObject({
-            ruleId: "github",
-            rawDatetime: "2026-08-23T10:15:00Z",
-            sourceKind: "relative-time",
+            ruleId: 'github',
+            rawDatetime: '2026-08-23T10:15:00Z',
+            sourceKind: 'relative-time',
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             presentation: ADJACENT_TIME_PRESENTATION,
         });
     });
 
-    it("classifies the shadow-rendered label of a relative-time element", () => {
-        document.body.innerHTML =
-            '<relative-time datetime="2026-08-23T10:15:00Z">Aug 23, 2026</relative-time>';
-        const element = document.querySelector("relative-time");
+    it('classifies the shadow-rendered label of a relative-time element', () => {
+        document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">Aug 23, 2026</relative-time>';
+        const element = document.querySelector('relative-time');
         if (!element) {
-            throw new Error("Fixture element is missing");
+            throw new Error('Fixture element is missing');
         }
         // GitHub keeps an absolute fallback in light DOM and renders the visible
         // relative label into an open shadow root.
-        const shadow = element.attachShadow({ mode: "open" });
-        const label = document.createElement("span");
-        label.textContent = "2 hours ago";
+        const shadow = element.attachShadow({ mode: 'open' });
+        const label = document.createElement('span');
+        label.textContent = '2 hours ago';
         shadow.append(label);
-        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
+        const adapter = defaultRegistry.matching(new URL('https://github.com/org/repo'))[0];
         const candidate = adapter?.extract(element, extractionContext);
         if (!adapter || !candidate) {
-            throw new Error("GitHub candidate is missing");
+            throw new Error('GitHub candidate is missing');
         }
         const presentationContext = {
-            locales: ["en-US"],
+            locales: ['en-US'],
             readPageText: (target: Text) => target.data,
         };
 
         expect(adapter.isRelativePresentation(candidate, presentationContext)).toBe(true);
         expect(getRelativePresentationObservationTarget(candidate)).toBe(shadow);
 
-        label.textContent = "Aug 23, 2026";
+        label.textContent = 'Aug 23, 2026';
         expect(adapter.isRelativePresentation(candidate, presentationContext)).toBe(false);
     });
 
-    it("includes an eligible element root exactly once in bounded discovery", () => {
+    it('includes an eligible element root exactly once in bounded discovery', () => {
         document.body.innerHTML = '<relative-time datetime="2026-08-23T10:15:00Z">'
             + '<time-ago datetime="2026-08-24T10:15:00Z">nested</time-ago>'
-            + "</relative-time>";
-        const adapter = defaultRegistry.matching(new URL("https://github.com/org/repo"))[0];
+            + '</relative-time>';
+        const adapter = defaultRegistry.matching(new URL('https://github.com/org/repo'))[0];
         const root = document.body.firstElementChild;
         if (!adapter || !root) {
-            throw new Error("Expected adapter and root");
+            throw new Error('Expected adapter and root');
         }
         expect(adapter.discover(root, extractionContext)).toEqual([
             root,
             root.firstElementChild,
         ]);
         expect(adapter.discover(
-            document.createElement("aside"),
+            document.createElement('aside'),
             extractionContext,
         )).toEqual([]);
     });
 
     it.each([
-        ["relative-time", "relative-time"],
-        ["time-ago", "time-ago"],
-        ["time-until", "time-until"],
-    ] as const)("supports the approved %s source kind", (tagName, sourceKind) => {
+        ['relative-time', 'relative-time'],
+        ['time-ago', 'time-ago'],
+        ['time-until', 'time-until'],
+    ] as const)('supports the approved %s source kind', (tagName, sourceKind) => {
         document.body.innerHTML = `<${tagName} datetime=" 2026-08-23T10:15Z ">visible</${tagName}>`;
-        const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
+        const adapter = defaultRegistry.matching(new URL('https://github.com/any/path'))[0];
         expect(adapter).not.toBeNull();
         const element = document.body.firstElementChild;
         expect(element).not.toBeNull();
         if (!element) {
-            throw new Error("Expected an approved source element");
+            throw new Error('Expected an approved source element');
         }
         expect(adapter?.discover(document, extractionContext)).toEqual([element]);
         expect(adapter?.extract(element, extractionContext)).toEqual({
-            ruleId: "github",
+            ruleId: 'github',
             source: element,
             sourceKind,
-            rawDatetime: " 2026-08-23T10:15Z ",
+            rawDatetime: ' 2026-08-23T10:15Z ',
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
             presentation: ADJACENT_TIME_PRESENTATION,
@@ -137,7 +135,7 @@ describe("GitHub adapter registry", () => {
     });
 
     it.each([
-        "<relative-time>no datetime</relative-time>",
+        '<relative-time>no datetime</relative-time>',
         '<relative-time datetime=""></relative-time>',
         '<relative-time datetime="   ">visible</relative-time>',
         '<relative-time datetime="2026-08-23T10:15Z" format="datetime">absolute</relative-time>',
@@ -146,10 +144,10 @@ describe("GitHub adapter registry", () => {
         '<time datetime="2026-08-23T10:15Z">generic</time>',
         '<relative-time title="2026-08-23T10:15Z" aria-label="2026-08-23T10:15Z" '
             + 'data-date="2026-08-23T10:15Z">prose</relative-time>',
-    ])("does not extract unsafe or non-authoritative markup: %s", (markup) => {
+    ])('does not extract unsafe or non-authoritative markup: %s', (markup) => {
         document.body.innerHTML = markup;
         const original = document.body.innerHTML;
-        const adapter = defaultRegistry.matching(new URL("https://github.com/any/path"))[0];
+        const adapter = defaultRegistry.matching(new URL('https://github.com/any/path'))[0];
         expect(adapter).not.toBeNull();
         for (const element of adapter?.discover(document, extractionContext) ?? []) {
             expect(adapter?.extract(element, extractionContext)).toBeNull();
@@ -158,14 +156,14 @@ describe("GitHub adapter registry", () => {
     });
 
     it.each([
-        "https://gist.github.com/org/1",
-        "https://www.github.com/org/repo",
-        "https://github.com.example/org/repo",
-        "https://github.io/org/repo",
-        "ftp://github.com/org/repo",
-    ])("does not select %s", (url) => {
+        'https://gist.github.com/org/1',
+        'https://www.github.com/org/repo',
+        'https://github.com.example/org/repo',
+        'https://github.io/org/repo',
+        'ftp://github.com/org/repo',
+    ])('does not select %s', (url) => {
         expect(defaultRegistry.matching(new URL(url)).map((r) => r.id)).toEqual(
-            url.startsWith("ftp:") ? [] : ["generic-time"],
+            url.startsWith('ftp:') ? [] : ['generic-time'],
         );
     });
 });

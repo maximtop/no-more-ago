@@ -2,6 +2,13 @@
  * @file Hacker News adapter for trusted span.age title timestamps.
  */
 
+import { discoverElements } from './discover-elements';
+import { isHtmlElement } from './html-element';
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
+import { findSimpleTextTarget } from './simple-text-target';
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -9,37 +16,31 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
-} from "./types";
-import { findSimpleTextTarget } from "./simple-text-target";
-import { discoverElements } from "./discover-elements";
-import { isHtmlElement } from "./html-element";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
-const AGE_SELECTOR = "span.age[title]" as const;
+const AGE_SELECTOR = 'span.age[title]' as const;
 const UNZONED_UTC_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 
 /**
  * Stable identifier for the Hacker News source rule.
  */
-export const HACKER_NEWS_ADAPTER_ID = "hacker-news" as const;
+export const HACKER_NEWS_ADAPTER_ID = 'hacker-news' as const;
 
 /**
  * Canonical hostname handled by the Hacker News adapter.
  */
-export const HACKER_NEWS_HOSTNAME = "news.ycombinator.com" as const;
+export const HACKER_NEWS_HOSTNAME = 'news.ycombinator.com' as const;
 
 /**
  * Checks whether a URL belongs to the supported HTTP(S) Hacker News origin.
  *
  * @param url - URL considered for adapter selection.
+ *
  * @returns - Whether the URL uses HTTP(S) and the canonical hostname.
  */
 export function matchesHackerNewsUrl(url: URL): boolean {
     return (
-        (url.protocol === "http:" || url.protocol === "https:")
+        (url.protocol === 'http:' || url.protocol === 'https:')
         && url.hostname === HACKER_NEWS_HOSTNAME
     );
 }
@@ -48,14 +49,15 @@ export function matchesHackerNewsUrl(url: URL): boolean {
  * Checks whether an element has the exact Hacker News age source shape.
  *
  * @param element - Candidate Hacker News timestamp element.
+ *
  * @returns - Whether the element can be extracted by this adapter.
  */
 function isHackerNewsAgeElement(element: Element): boolean {
     return (
         isHtmlElement(element)
-        && element.localName === "span"
-        && element.classList.contains("age")
-        && element.hasAttribute("title")
+        && element.localName === 'span'
+        && element.classList.contains('age')
+        && element.hasAttribute('title')
     );
 }
 
@@ -63,6 +65,7 @@ function isHackerNewsAgeElement(element: Element): boolean {
  * Selects a simple linked or no-link label without replacing page-owned DOM.
  *
  * @param source - Hacker News age widget.
+ *
  * @returns - Existing date-label text node, or null for an ambiguous shape.
  */
 function findPresentationTarget(source: Element): Text | null {
@@ -75,12 +78,12 @@ function findPresentationTarget(source: Element): Text | null {
         children.length !== 1
         || !link
         || !isHtmlElement(link)
-        || link.localName !== "a"
+        || link.localName !== 'a'
     ) {
         return null;
     }
     const outsideLabel = Array.from(source.childNodes).some(
-        (node) => node.nodeType === 3 && (node as Text).data.trim() !== "",
+        (node) => node.nodeType === 3 && (node as Text).data.trim() !== '',
     );
     return outsideLabel ? null : findSimpleTextTarget(link);
 }
@@ -92,6 +95,7 @@ function findPresentationTarget(source: Element): Text | null {
  * unzoned shapes remain ambiguous and fail the shared explicit-zone parser.
  *
  * @param value - Datetime copied from the Hacker News age title.
+ *
  * @returns - Explicitly zoned datetime for the evidenced UTC shape.
  */
 function normalizeHackerNewsDatetime(value: string): string {
@@ -117,9 +121,9 @@ export const hackerNewsAdapter = {
         if (!isHackerNewsAgeElement(element)) {
             return null;
         }
-        const rawDatetime = element.getAttribute("title");
+        const rawDatetime = element.getAttribute('title');
         const target = findPresentationTarget(element);
-        if (!rawDatetime || rawDatetime.trim() === "" || !target) {
+        if (!rawDatetime || rawDatetime.trim() === '' || !target) {
             return null;
         }
         return {

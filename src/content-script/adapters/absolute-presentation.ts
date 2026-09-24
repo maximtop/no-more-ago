@@ -6,23 +6,23 @@ import {
     activePresentationLocales,
     MAX_PRESENTATION_TEXT_LENGTH,
     readTimestampPresentationText,
-} from "./relative-presentation";
+} from './relative-presentation';
 import {
     TIMESTAMP_VALIDATION_RULE,
     type TimestampCandidate, type TimestampPresentationContext,
-} from "./types";
+} from './types';
 
 /**
  * Date fields whose complete localized labels may be expanded.
  */
 const DATE_SHAPES: readonly Intl.DateTimeFormatOptions[] = [
-    ...(["short", "medium", "long", "full"] as const).map((dateStyle) => ({ dateStyle })),
-    { year: "numeric" },
-    ...(["numeric", "2-digit", "short", "long"] as const).flatMap((month) => [
-        { year: "numeric", month, day: "numeric" } as const,
-        { year: "numeric", month, day: "2-digit" } as const,
-        { year: "numeric", month } as const,
-        { month, day: "numeric" } as const,
+    ...(['short', 'medium', 'long', 'full'] as const).map((dateStyle) => ({ dateStyle })),
+    { year: 'numeric' },
+    ...(['numeric', '2-digit', 'short', 'long'] as const).flatMap((month) => [
+        { year: 'numeric', month, day: 'numeric' } as const,
+        { year: 'numeric', month, day: '2-digit' } as const,
+        { year: 'numeric', month } as const,
+        { month, day: 'numeric' } as const,
     ]),
 ];
 
@@ -30,10 +30,11 @@ const DATE_SHAPES: readonly Intl.DateTimeFormatOptions[] = [
  * Normalizes only display-equivalent spacing and bidi controls.
  *
  * @param text - Existing label or a machine-generated comparison label.
+ *
  * @returns - Comparable complete label, without parsing a timestamp from it.
  */
 function normalized(text: string): string {
-    return text.replace(/\p{Cf}/gu, "").replace(/\s+/gu, " ").trim().toLowerCase();
+    return text.replace(/\p{Cf}/gu, '').replace(/\s+/gu, ' ').trim().toLowerCase();
 }
 
 /**
@@ -43,6 +44,7 @@ function normalized(text: string): string {
  * @param candidate - Trusted-source candidate with adapter-selected label ownership.
  * @param context - Current locale and original page-text reader.
  * @param instant - Validated instant, independently extracted from machine data.
+ *
  * @returns - Whether a recognized incomplete absolute label may be expanded.
  */
 export function isIncompleteAbsolutePresentation(
@@ -63,7 +65,7 @@ export function isIncompleteAbsolutePresentation(
         return false;
     }
     const locales = new Set<string>(confirmed);
-    const pageLocale = presentation.source.closest("[lang]")?.getAttribute("lang") ?? "";
+    const pageLocale = presentation.source.closest('[lang]')?.getAttribute('lang') ?? '';
     for (const requested of [pageLocale, ...context.locales]) {
         try {
             const locale = new Intl.Locale(requested);
@@ -79,20 +81,20 @@ export function isIncompleteAbsolutePresentation(
     const hasSeconds = raw === null || !/[Tt ]\d{2}:\d{2}(?:[Zz]|[+-]\d{2}:?\d{2})$/u.test(raw);
     const iso = instant.toISOString();
     const sourceIso = raw !== null && /^\d{4}-\d{2}-\d{2}[Tt ]/u.test(raw)
-        ? raw.replace(/[t ]/u, "T") : iso;
+        ? raw.replace(/[t ]/u, 'T') : iso;
     for (const value of [iso, sourceIso]) {
         if (label === normalized(value.slice(0, 10))) {
             return true;
         }
-        if (hasSeconds && [value.slice(0, 16), value.slice(0, 16).replace("T", " ")]
+        if (hasSeconds && [value.slice(0, 16), value.slice(0, 16).replace('T', ' ')]
             .some((text) => label === normalized(text))) {
             return true;
         }
     }
     const sourceOffset = sourceIso.match(/([+-]\d{2}):?(\d{2})$/u);
-    const zones = new Set(["UTC", Intl.DateTimeFormat().resolvedOptions().timeZone]);
+    const zones = new Set(['UTC', Intl.DateTimeFormat().resolvedOptions().timeZone]);
     if (sourceOffset) {
-        zones.add(sourceOffset[0].replace(/([+-]\d{2})(\d{2})$/u, "$1:$2"));
+        zones.add(sourceOffset[0].replace(/([+-]\d{2})(\d{2})$/u, '$1:$2'));
     }
     for (const locale of locales) {
         for (const timeZone of zones) {
@@ -103,9 +105,9 @@ export function isIncompleteAbsolutePresentation(
                 }
             }
             if (hasSeconds) {
-                for (const dateStyle of ["short", "medium", "long"] as const) {
+                for (const dateStyle of ['short', 'medium', 'long'] as const) {
                     const formatter = new Intl.DateTimeFormat(locale, {
-                        dateStyle, timeStyle: "short", timeZone,
+                        dateStyle, timeStyle: 'short', timeZone,
                     });
                     if (label === normalized(formatter.format(instant))) {
                         return true;

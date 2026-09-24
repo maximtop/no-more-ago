@@ -9,13 +9,13 @@ import type {
     ReadySitesState,
     RefreshFailure,
     SitesState,
-} from "./view-state";
+} from './view-state';
 import type {
+    SITE_SETTINGS_SURFACE,
     DisplaySettingsError,
     SettingsPersistenceError,
     SiteSettingsError,
-} from "./view-state-values";
-import { SITE_SETTINGS_SURFACE } from "./view-state-values";
+} from './view-state-values';
 
 /**
  * Committed settings change carrying the projection built after it.
@@ -70,8 +70,7 @@ interface ProjectedSurface<TSurface> {
 /**
  * Result of one command answered with the projection of the requesting surface.
  */
-type SurfacedResponse<TError> =
-    | (CommittedChange<PopupState> & ProjectedSurface<typeof SITE_SETTINGS_SURFACE.POPUP>)
+type SurfacedResponse<TError> = | (CommittedChange<PopupState> & ProjectedSurface<typeof SITE_SETTINGS_SURFACE.POPUP>)
     | (CommittedChange<SitesState> & ProjectedSurface<typeof SITE_SETTINGS_SURFACE.SITES>)
     | (RejectedChange<TError, PopupState> & ProjectedSurface<typeof SITE_SETTINGS_SURFACE.POPUP>)
     | (RejectedChange<TError, SitesState> & ProjectedSurface<typeof SITE_SETTINGS_SURFACE.SITES>);
@@ -89,44 +88,39 @@ export type SetSiteEnabledResponse = SurfacedResponse<SiteSettingsError>;
 /**
  * Result of changing the active site scope mode.
  */
-export type SetSiteScopeModeResponse =
-    | CommittedChange<SitesState>
+export type SetSiteScopeModeResponse = | CommittedChange<SitesState>
     | RejectedChange<SettingsPersistenceError, SitesState>;
 
 /**
  * Result of changing display settings and refreshing matching tabs.
  */
-export type SetDisplaySettingsResponse =
-    | (CommittedChange<DisplayState> & {
-        /**
-         * Tabs that could not receive the committed revision.
-         */
-        readonly refreshFailures: readonly RefreshFailure[];
-    })
+export type SetDisplaySettingsResponse = | (CommittedChange<DisplayState> & {
+    /**
+     * Tabs that could not receive the committed revision.
+     */
+    readonly refreshFailures: readonly RefreshFailure[];
+})
     | RejectedChange<DisplaySettingsError, DisplayState>;
 
 /**
  * Result of changing the appearance applied to both surfaces.
  */
-export type SetAppearanceResponse =
-    | CommittedChange<DisplayState>
+export type SetAppearanceResponse = | CommittedChange<DisplayState>
     | RejectedChange<SettingsPersistenceError, DisplayState>;
 
 /**
  * Result of restoring all settings to their defaults.
  */
-export type ResetAllSettingsResponse =
-    | CommittedChange<ReadySitesState>
+export type ResetAllSettingsResponse = | CommittedChange<ReadySitesState>
     | RejectedChange<SettingsPersistenceError, SitesState>;
 
 /**
  * Result of changing diagnostic logging and refreshing matching tabs.
  */
-export type SetDebugEnabledResponse =
-    | (CommittedChange<DebugState> & {
-        /**
-         * Tabs that could not receive the committed revision.
-         */
-        readonly refreshFailures?: readonly RefreshFailure[];
-    })
+export type SetDebugEnabledResponse = | (CommittedChange<DebugState> & {
+    /**
+     * Tabs that could not receive the committed revision.
+     */
+    readonly refreshFailures?: readonly RefreshFailure[];
+})
     | RejectedChange<SettingsPersistenceError, DebugState>;

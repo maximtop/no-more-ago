@@ -3,6 +3,18 @@
  */
 
 import {
+    DISPLAY_SETTINGS_ERROR,
+    SITE_SETTINGS_ERROR,
+} from '../../shared/messaging/view-state-values';
+import { validateCustomFormatPattern } from '../../shared/settings/custom-format';
+import { isCanonicalHostname } from '../../shared/settings/hostname';
+import {
+    isSiteListFull,
+    isSiteProcessingEnabled,
+    withSiteProcessing,
+    type SiteScopeMode,
+} from '../../shared/settings/site-scope';
+import {
     DEFAULT_SETTINGS_SNAPSHOT,
     FORMAT_MODE,
     SETTINGS_LOAD_ERROR,
@@ -21,19 +33,7 @@ import {
     type SettingsLoadResult,
     type SettingsSnapshot,
     type SettingsSnapshotInput,
-} from "../../shared/settings/snapshot";
-import {
-    DISPLAY_SETTINGS_ERROR,
-    SITE_SETTINGS_ERROR,
-} from "../../shared/messaging/view-state-values";
-import { isCanonicalHostname } from "../../shared/settings/hostname";
-import {
-    isSiteListFull,
-    isSiteProcessingEnabled,
-    withSiteProcessing,
-    type SiteScopeMode,
-} from "../../shared/settings/site-scope";
-import { validateCustomFormatPattern } from "../../shared/settings/custom-format";
+} from '../../shared/settings/snapshot';
 
 /**
  * Durable storage operations needed to read, atomically replace, and recover settings snapshots.
@@ -76,7 +76,7 @@ export interface SettingsWriteSuccess {
  * Named reasons a settings mutation is rejected or cannot be persisted.
  */
 export const SETTINGS_WRITE_ERROR = {
-    PERSISTENCE_FAILED: "persistence-failed",
+    PERSISTENCE_FAILED: 'persistence-failed',
     INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
     LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
     SCOPE_CHANGED: SITE_SETTINGS_ERROR.SCOPE_CHANGED,
@@ -141,6 +141,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * Persists the global activation flag.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult>;
@@ -151,6 +152,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
      * @param mode - Scope mode the caller rendered when it made the decision.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setSiteEnabled(
@@ -163,6 +165,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * Persists the active scope mode.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult>;
@@ -171,6 +174,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * Persists the appearance applied to both extension surfaces.
      *
      * @param appearance - Requested appearance.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setAppearance(appearance: Appearance): Promise<SettingsWriteResult>;
@@ -179,6 +183,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * Validates and persists presentation choices.
      *
      * @param display - Typed display settings to validate and persist.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult>;
@@ -187,6 +192,7 @@ export interface SettingsPersistence extends SettingsLoader {
      * Persists diagnostic journaling policy.
      *
      * @param enabled - Requested diagnostic journaling state.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult>;
@@ -208,6 +214,7 @@ export type TimeZoneAvailability = (identifier: string) => boolean;
  * Uses Intl to determine whether an IANA time-zone identifier is available.
  *
  * @param identifier - Structurally valid IANA time-zone identifier.
+ *
  * @returns - Whether the current runtime can resolve the identifier.
  */
 function defaultTimeZoneAvailability(identifier: string): boolean {
@@ -224,11 +231,12 @@ function defaultTimeZoneAvailability(identifier: string): boolean {
  *
  * @param current - Snapshot being replaced.
  * @param patch - Fields that change in the successor.
+ *
  * @returns - Frozen successor with the next revision.
  */
 function next(
     current: SettingsSnapshot,
-    patch: Partial<Omit<SettingsSnapshotInput, "revision">>,
+    patch: Partial<Omit<SettingsSnapshotInput, 'revision'>>,
 ): SettingsSnapshot {
     return createSettingsSnapshot({ ...current, ...patch, revision: current.revision + 1 });
 }
@@ -237,27 +245,26 @@ function next(
  * Named outcomes of one pure snapshot transformation.
  */
 const MUTATION_OUTCOME = {
-    CHANGED: "changed",
-    UNCHANGED: "unchanged",
-    REJECTED: "rejected",
+    CHANGED: 'changed',
+    UNCHANGED: 'unchanged',
+    REJECTED: 'rejected',
 } as const;
 
 /**
  * Result of transforming the loaded snapshot: a successor to persist, nothing
  * to persist, or a domain rejection that leaves the snapshot untouched.
  */
-type MutationOutcome =
-    | {
-        /**
-         * The transformation produced a successor snapshot.
-         */
-        readonly kind: typeof MUTATION_OUTCOME.CHANGED;
+type MutationOutcome = | {
+    /**
+     * The transformation produced a successor snapshot.
+     */
+    readonly kind: typeof MUTATION_OUTCOME.CHANGED;
 
-        /**
-         * Successor snapshot to persist.
-         */
-        readonly snapshot: SettingsSnapshot;
-    }
+    /**
+     * Successor snapshot to persist.
+     */
+    readonly snapshot: SettingsSnapshot;
+}
     | {
         /**
          * The request is already satisfied by the loaded snapshot.
@@ -287,6 +294,7 @@ const UNCHANGED: MutationOutcome = { kind: MUTATION_OUTCOME.UNCHANGED };
  * Wraps a successor snapshot as a changed outcome.
  *
  * @param snapshot - Successor snapshot to persist.
+ *
  * @returns - Changed outcome.
  */
 function changed(snapshot: SettingsSnapshot): MutationOutcome {
@@ -297,6 +305,7 @@ function changed(snapshot: SettingsSnapshot): MutationOutcome {
  * Wraps a domain rejection as a mutation outcome.
  *
  * @param error - Reason the request was rejected.
+ *
  * @returns - Rejected outcome.
  */
 function rejected(error: SettingsWriteError): MutationOutcome {
@@ -384,7 +393,7 @@ export class SettingsService implements SettingsPersistence {
                 this.loadError = SETTINGS_LOAD_ERROR.INVALID_SETTINGS;
                 return { ok: false, error: SETTINGS_LOAD_ERROR.INVALID_SETTINGS };
             }
-            console.warn("Discarded stored settings of another schema version");
+            console.warn('Discarded stored settings of another schema version');
             this.loadError = undefined;
             this.current = DEFAULT_SETTINGS_SNAPSHOT;
             return { ok: true, snapshot: this.current, source: SETTINGS_LOAD_SOURCE.DISCARDED };
@@ -433,6 +442,7 @@ export class SettingsService implements SettingsPersistence {
      *
      * @param current - Snapshot to store as the active value.
      * @param previous - Known-good recovery snapshot.
+     *
      * @returns - Atomic storage payload containing both snapshots.
      */
     private pair(
@@ -446,6 +456,7 @@ export class SettingsService implements SettingsPersistence {
      * Applies a serialized mutation and persists its incremented snapshot revision.
      *
      * @param mutator - Pure snapshot transformation applied to the loaded snapshot.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     private async mutate(mutator: SnapshotMutator): Promise<SettingsWriteResult> {
@@ -509,14 +520,13 @@ export class SettingsService implements SettingsPersistence {
      * Persists the global activation flag and returns the resulting revision or failure projection.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setGlobalEnabled(enabled: boolean): Promise<SettingsWriteResult> {
-        return this.mutate((current) =>
-            current.globalEnabled === enabled
-                ? UNCHANGED
-                : changed(next(current, { globalEnabled: enabled })),
-        );
+        return this.mutate((current) => (current.globalEnabled === enabled
+            ? UNCHANGED
+            : changed(next(current, { globalEnabled: enabled }))));
     }
 
     /**
@@ -527,6 +537,7 @@ export class SettingsService implements SettingsPersistence {
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
      * @param mode - Scope mode the caller rendered when it made the decision.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setSiteEnabled(
@@ -561,34 +572,33 @@ export class SettingsService implements SettingsPersistence {
      * Persists the active scope mode without changing either hostname list.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setSiteScopeMode(mode: SiteScopeMode): Promise<SettingsWriteResult> {
-        return this.mutate((current) =>
-            current.siteScope.mode === mode
-                ? UNCHANGED
-                : changed(next(current, { siteScope: { ...current.siteScope, mode } })),
-        );
+        return this.mutate((current) => (current.siteScope.mode === mode
+            ? UNCHANGED
+            : changed(next(current, { siteScope: { ...current.siteScope, mode } }))));
     }
 
     /**
      * Persists the appearance applied to both extension surfaces.
      *
      * @param appearance - Requested appearance.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setAppearance(appearance: Appearance): Promise<SettingsWriteResult> {
-        return this.mutate((current) =>
-            current.appearance === appearance
-                ? UNCHANGED
-                : changed(next(current, { appearance })),
-        );
+        return this.mutate((current) => (current.appearance === appearance
+            ? UNCHANGED
+            : changed(next(current, { appearance }))));
     }
 
     /**
      * Persists validated presentation choices.
      *
      * @param display - Typed display settings to validate and persist.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setDisplaySettings(display: DisplaySettings): Promise<SettingsWriteResult> {
@@ -611,8 +621,8 @@ export class SettingsService implements SettingsPersistence {
             };
         }
         if (
-            parsed.timeZone.mode === TIME_ZONE_MODE.IANA &&
-            !this.isTimeZoneAvailable(parsed.timeZone.identifier)
+            parsed.timeZone.mode === TIME_ZONE_MODE.IANA
+            && !this.isTimeZoneAvailable(parsed.timeZone.identifier)
         ) {
             return {
                 ok: false,
@@ -620,25 +630,22 @@ export class SettingsService implements SettingsPersistence {
                 snapshot: this.fallbackSnapshot(),
             };
         }
-        return this.mutate((current) =>
-            sameDisplaySettings(current.display, parsed)
-                ? UNCHANGED
-                : changed(next(current, { display: parsed })),
-        );
+        return this.mutate((current) => (sameDisplaySettings(current.display, parsed)
+            ? UNCHANGED
+            : changed(next(current, { display: parsed }))));
     }
 
     /**
      * Persists diagnostic journaling policy before background tabs are refreshed.
      *
      * @param enabled - Requested diagnostic journaling state.
+     *
      * @returns - Persisted write result with the effective snapshot.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SettingsWriteResult> {
-        return this.mutate((current) =>
-            current.debugEnabled === enabled
-                ? UNCHANGED
-                : changed(next(current, { debugEnabled: enabled })),
-        );
+        return this.mutate((current) => (current.debugEnabled === enabled
+            ? UNCHANGED
+            : changed(next(current, { debugEnabled: enabled }))));
     }
 
     /**

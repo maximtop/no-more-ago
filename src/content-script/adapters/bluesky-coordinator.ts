@@ -3,11 +3,11 @@
  */
 
 import {
-    BLUESKY_BATCH_LIMIT,
-    BLUESKY_LOOKUP_STATUS,
-    type BlueskyAppView,
-    type BlueskyPostRecord,
-} from "./bluesky-appview";
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_MAX_COUNT,
+    DIAGNOSTIC_REASON,
+} from '../../shared/diagnostics/contracts';
+
 import {
     BLUESKY_TARGET_ROLE,
     createBlueskyAdapter,
@@ -16,18 +16,20 @@ import {
     matchesBlueskyUrl,
     type BlueskyRelativeTarget,
     type ResolvedBlueskyTarget,
-} from "./bluesky";
+} from './bluesky';
+import {
+    BLUESKY_BATCH_LIMIT,
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+    type BlueskyPostRecord,
+} from './bluesky-appview';
 import {
     createBlueskyPostUri,
     isValidBlueskyDid,
-} from "./bluesky-identity";
-import type { TimestampSourceRule } from "./types";
-import type { DocumentDiagnosticSink } from "../diagnostics";
-import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_MAX_COUNT,
-    DIAGNOSTIC_REASON,
-} from "../../shared/diagnostics/contracts";
+} from './bluesky-identity';
+
+import type { TimestampSourceRule } from './types';
+import type { DocumentDiagnosticSink } from '../diagnostics';
 
 /**
  * Non-identifying diagnostic totals accumulated during one drain.
@@ -120,6 +122,7 @@ export interface BlueskyCoordinator {
  *
  * @param values - Ordered unique values to split.
  * @param size - Maximum number of values per batch.
+ *
  * @returns - Ordered non-empty batches.
  */
 function chunk<T>(values: readonly T[], size: number): readonly (readonly T[])[] {
@@ -135,6 +138,7 @@ function chunk<T>(values: readonly T[], size: number): readonly (readonly T[])[]
  *
  * @param left - Earlier descriptor.
  * @param right - Current descriptor.
+ *
  * @returns - Whether a cached resolution remains applicable.
  */
 function descriptorsMatch(
@@ -314,7 +318,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             this.resolutions.delete(element);
             this.changedSources.delete(element);
         }
-        for (const element of root.querySelectorAll("*")) {
+        for (const element of root.querySelectorAll('*')) {
             this.resolutions.delete(element);
             this.changedSources.delete(element);
         }
@@ -377,6 +381,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a bounded root belongs to the owned document.
      *
      * @param root - Region considered for discovery or release.
+     *
      * @returns - Whether the root belongs to the active document.
      */
     private belongsToDocument(root: ParentNode): boolean {
@@ -449,6 +454,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a connected tracked source still references one public actor.
      *
      * @param actor - Normalized handle or DID queued for lookup.
+     *
      * @returns - Whether the actor is still needed by this document.
      */
     private isActorReferenced(actor: string): boolean {
@@ -463,6 +469,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a connected tracked source still resolves to one post URI.
      *
      * @param uri - Canonical AT post URI queued for lookup.
+     *
      * @returns - Whether the post remains needed by this document.
      */
     private isPostReferenced(uri: string): boolean {
@@ -491,7 +498,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         if (!this.active || this.running || this.drainScheduled) {
             return;
         }
-        const generation = this.generation;
+        const { generation } = this;
         this.drainScheduled = true;
         queueMicrotask(() => {
             if (!this.isCurrentGeneration(generation)) {
@@ -506,6 +513,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether asynchronous work still belongs to the active document generation.
      *
      * @param generation - Generation captured before awaiting external work.
+     *
      * @returns - Whether the work may still update current state.
      */
     private isCurrentGeneration(generation: number): boolean {
@@ -584,7 +592,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             if (batch.length === 0) {
                 continue;
             }
-            let result: Awaited<ReturnType<BlueskyAppView["getProfiles"]>>;
+            let result: Awaited<ReturnType<BlueskyAppView['getProfiles']>>;
             try {
                 result = await this.input.appView.getProfiles(batch, signal);
             } catch {
@@ -620,6 +628,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Collects an outer post URI for a descriptor whose actor has resolved.
      *
      * @param descriptor - Current pending descriptor.
+     *
      * @returns - Resolved outer AT post URI, or null while actor resolution is unavailable.
      */
     private getPostUri(descriptor: BlueskyRelativeTarget): string | null {
@@ -659,7 +668,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             if (batch.length === 0) {
                 continue;
             }
-            let result: Awaited<ReturnType<BlueskyAppView["getPosts"]>>;
+            let result: Awaited<ReturnType<BlueskyAppView['getPosts']>>;
             try {
                 result = await this.input.appView.getPosts(batch, signal);
             } catch {
@@ -695,6 +704,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Rediscovers one retained descriptor and rejects every changed or detached association.
      *
      * @param descriptor - Descriptor retained before asynchronous work.
+     *
      * @returns - Matching current descriptor, or null when stale.
      */
     private getCurrentDescriptor(
@@ -726,7 +736,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                 this.clearResolution(source);
                 continue;
             }
-            const actor = current.outerIdentity.actor;
+            const { actor } = current.outerIdentity;
             const uri = this.getPostUri(current);
             if (!uri) {
                 if (this.attemptedActors.has(actor)) {
@@ -817,6 +827,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
  * Creates one document-local Bluesky resolution coordinator.
  *
  * @param input - Document, AppView, diagnostics, and exact-source callback dependencies.
+ *
  * @returns - Inactive coordinator ready for the controller lifecycle.
  */
 export function createBlueskyCoordinator(

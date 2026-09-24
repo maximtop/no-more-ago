@@ -6,13 +6,14 @@ import {
     DIAGNOSTICS_ERROR,
     type DiagnosticsClearError,
     type DiagnosticsSnapshotError,
-} from "../../shared/messaging/contracts";
-import type { DiagnosticEvent } from "../../shared/diagnostics/events";
+} from '../../shared/messaging/contracts';
+
+import type { DiagnosticEvent } from '../../shared/diagnostics/events';
 
 /**
  * Storage key containing diagnostic events.
  */
-export const DIAGNOSTICS_STORAGE_KEY = "diagnostics" as const;
+export const DIAGNOSTICS_STORAGE_KEY = 'diagnostics' as const;
 
 /**
  * Maximum serialized diagnostic journal size.
@@ -44,18 +45,17 @@ export interface DiagnosticStorage {
 /**
  * Result of reading a diagnostic snapshot.
  */
-export type DiagnosticJournalSnapshotResult =
-    | {
-        /**
-         * Marks a successful snapshot read.
-         */
-        readonly ok: true;
+export type DiagnosticJournalSnapshotResult = | {
+    /**
+     * Marks a successful snapshot read.
+     */
+    readonly ok: true;
 
-        /**
-         * Canonical events loaded from storage.
-         */
-        readonly entries: readonly DiagnosticEvent[];
-    }
+    /**
+     * Canonical events loaded from storage.
+     */
+    readonly entries: readonly DiagnosticEvent[];
+}
     | {
         /**
          * Marks a failed snapshot read.
@@ -71,13 +71,12 @@ export type DiagnosticJournalSnapshotResult =
 /**
  * Result of clearing diagnostic entries.
  */
-export type DiagnosticJournalClearResult =
-    | {
-        /**
-         * Marks a successful clear.
-         */
-        readonly ok: true;
-    }
+export type DiagnosticJournalClearResult = | {
+    /**
+     * Marks a successful clear.
+     */
+    readonly ok: true;
+}
     | {
         /**
          * Marks a failed clear.
@@ -104,6 +103,7 @@ interface DiagnosticJournalEnvelope {
  * Measures a diagnostic envelope's serialized UTF-8 size.
  *
  * @param value - Diagnostic envelope.
+ *
  * @returns - Serialized byte length.
  */
 function byteLength(value: unknown): number {
@@ -118,6 +118,7 @@ export interface DiagnosticJournalStore {
      * Enables or disables collection.
      *
      * @param enabled - Requested collection state.
+     *
      * @returns - Promise settled after the policy change.
      */
     setEnabled(enabled: boolean): Promise<void>;
@@ -126,6 +127,7 @@ export interface DiagnosticJournalStore {
      * Appends one trusted event while collection is enabled.
      *
      * @param event - Sanitized diagnostic event.
+     *
      * @returns - Promise settled after the storage attempt.
      */
     append(event: DiagnosticEvent): Promise<void>;
@@ -189,7 +191,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
         private readonly maxBytes: number = DIAGNOSTICS_MAX_BYTES,
     ) {
         if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
-            throw new TypeError("Invalid diagnostics limit");
+            throw new TypeError('Invalid diagnostics limit');
         }
     }
 
@@ -206,6 +208,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      * Enables logging or disables it and deletes retained entries.
      *
      * @param enabled - Requested logging policy.
+     *
      * @returns - Promise settled after the policy change.
      */
     public setEnabled(enabled: boolean): Promise<void> {
@@ -218,13 +221,14 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      * Appends one canonical event and evicts oldest entries above the byte limit.
      *
      * @param event - Canonical diagnostic event.
+     *
      * @returns - Promise settled after the storage attempt.
      */
     public append(event: DiagnosticEvent): Promise<void> {
         if (!this.enabledState) {
             return Promise.resolve();
         }
-        const generation = this.generation;
+        const { generation } = this;
         return this.enqueue(async () => {
             if (!this.isCurrent(generation)) {
                 return;
@@ -272,11 +276,10 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
         if (!this.enabledState) {
             return Promise.resolve({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
         }
-        const generation = this.generation;
-        return this.serialize(async () =>
-            this.isCurrent(generation)
-                ? this.readEnvelope()
-                : { ok: false, error: DIAGNOSTICS_ERROR.DISABLED } as const);
+        const { generation } = this;
+        return this.serialize(async () => (this.isCurrent(generation)
+            ? this.readEnvelope()
+            : { ok: false, error: DIAGNOSTICS_ERROR.DISABLED } as const));
     }
 
     /**
@@ -349,6 +352,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      * Reports whether a queued operation still belongs to the active policy.
      *
      * @param generation - Operation generation.
+     *
      * @returns - Whether the operation may persist data.
      */
     private isCurrent(generation: number): boolean {
@@ -359,6 +363,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      * Serializes a fire-and-forget storage operation.
      *
      * @param operation - Storage operation.
+     *
      * @returns - Promise settled after the operation.
      */
     private enqueue(operation: () => Promise<void>): Promise<void> {
@@ -372,6 +377,7 @@ export class DiagnosticJournal implements DiagnosticJournalStore {
      * Serializes one storage operation and preserves its result.
      *
      * @param operation - Storage operation.
+     *
      * @returns - Operation result.
      */
     private serialize<Result>(operation: () => Promise<Result>): Promise<Result> {

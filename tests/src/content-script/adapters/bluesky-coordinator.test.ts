@@ -2,11 +2,16 @@
  * @file Verifies document-local Bluesky batching, caching, and stale-result control.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    beforeAll, beforeEach, describe, expect, it, vi,
+} from 'vitest';
 
+import {
+    BLUESKY_TARGET_ROLE,
+    discoverBlueskyRelativeTargets,
+} from '../../../../src/content-script/adapters/bluesky';
 import {
     BLUESKY_BATCH_LIMIT,
     BLUESKY_LOOKUP_STATUS,
@@ -14,34 +19,31 @@ import {
     type BlueskyLookupResult,
     type BlueskyPostRecord,
     type BlueskyProfileRecord,
-} from "../../../../src/content-script/adapters/bluesky-appview";
+} from '../../../../src/content-script/adapters/bluesky-appview';
 import {
     createBlueskyCoordinator,
-} from "../../../../src/content-script/adapters/bluesky-coordinator";
-import {
-    BLUESKY_TARGET_ROLE,
-    discoverBlueskyRelativeTargets,
-} from "../../../../src/content-script/adapters/bluesky";
-import type {
-    TimestampCandidate,
-    TimestampExtractionContext,
-} from "../../../../src/content-script/adapters/types";
+} from '../../../../src/content-script/adapters/bluesky-coordinator';
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
-} from "../../../../src/shared/diagnostics/contracts";
+} from '../../../../src/shared/diagnostics/contracts';
+
+import type {
+    TimestampCandidate,
+    TimestampExtractionContext,
+} from '../../../../src/content-script/adapters/types';
 import type {
     DiagnosticEventInput,
-} from "../../../../src/shared/diagnostics/events";
+} from '../../../../src/shared/diagnostics/events';
 
-const INDEXED_AT = "2026-08-31T10:15:00.000Z" as const;
-const QUOTE_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
+const INDEXED_AT = '2026-08-31T10:15:00.000Z' as const;
+const QUOTE_INDEXED_AT = '2026-08-30T09:00:00.000Z' as const;
 const EXTRACTION_CONTEXT: TimestampExtractionContext = {
-    url: new URL("https://bsky.app/"),
+    url: new URL('https://bsky.app/'),
     readPageText: (target) => target.data,
 };
-let feedFixture = "";
-let quoteFixture = "";
+let feedFixture = '';
+let quoteFixture = '';
 
 /**
  * Typed profile lookup result used by fake handlers.
@@ -57,10 +59,11 @@ type PostResult = BlueskyLookupResult<BlueskyPostRecord>;
  * Reads validated string evidence without assuming every adapter candidate carries it.
  *
  * @param candidate - Candidate returned by the coordinator-backed rule.
+ *
  * @returns - Raw datetime evidence when the candidate is string-backed.
  */
 function rawDatetime(candidate: TimestampCandidate | null): string | undefined {
-    return candidate && "rawDatetime" in candidate ? candidate.rawDatetime : undefined;
+    return candidate && 'rawDatetime' in candidate ? candidate.rawDatetime : undefined;
 }
 
 /**
@@ -92,7 +95,7 @@ function createDeferred<T>(): Deferred<T> {
         promise,
         resolve: (value) => {
             if (!resolvePromise) {
-                throw new Error("Deferred resolver unavailable");
+                throw new Error('Deferred resolver unavailable');
             }
             resolvePromise(value);
         },
@@ -103,18 +106,20 @@ function createDeferred<T>(): Deferred<T> {
  * Returns a deterministic fictional DID for one actor.
  *
  * @param actor - Public actor requested by the coordinator.
+ *
  * @returns - Matching fictional DID.
  */
 function didForActor(actor: string): string {
-    return actor.startsWith("did:")
+    return actor.startsWith('did:')
         ? actor
-        : `did:plc:${actor.replace(/[^A-Za-z0-9]/gu, "")}`;
+        : `did:plc:${actor.replace(/[^A-Za-z0-9]/gu, '')}`;
 }
 
 /**
  * Returns a successful fake profile response in reverse order.
  *
  * @param actors - Requested actors.
+ *
  * @returns - Matching public profile records.
  */
 function resolveProfiles(actors: readonly string[]): ProfileResult {
@@ -128,6 +133,7 @@ function resolveProfiles(actors: readonly string[]): ProfileResult {
  * Returns a successful fake post response in reverse order.
  *
  * @param uris - Requested AT post URIs.
+ *
  * @returns - Matching server-observed timestamps.
  */
 function resolvePosts(uris: readonly string[]): PostResult {
@@ -173,6 +179,7 @@ class FakeAppView implements BlueskyAppView {
      *
      * @param actors - Requested actors.
      * @param signal - Lifecycle cancellation signal.
+     *
      * @returns - Configured lookup result.
      */
     async getProfiles(actors: readonly string[], signal: AbortSignal): Promise<ProfileResult> {
@@ -185,6 +192,7 @@ class FakeAppView implements BlueskyAppView {
      *
      * @param uris - Requested AT post URIs.
      * @param signal - Lifecycle cancellation signal.
+     *
      * @returns - Configured lookup result.
      */
     async getPosts(uris: readonly string[], signal: AbortSignal): Promise<PostResult> {
@@ -200,12 +208,12 @@ class FakeAppView implements BlueskyAppView {
  */
 function installTargets(count: number): void {
     document.body.innerHTML = Array.from({ length: count }, (_, index) => {
-        const suffix = String(index).padStart(2, "0");
+        const suffix = String(index).padStart(2, '0');
         return `<article><a id="source-${suffix}"
             href="/profile/actor-${suffix}.example/post/3record${suffix}"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>2h</a></article>`;
-    }).join("");
+    }).join('');
 }
 
 /**
@@ -228,32 +236,32 @@ async function waitForResolvedSources(
     });
 }
 
-describe("Bluesky coordinator", () => {
+describe('Bluesky coordinator', () => {
     beforeAll(async () => {
         feedFixture = await readFile(
-            "tests/src/content-script/fixtures/bluesky/feed.html",
-            "utf8",
+            'tests/src/content-script/fixtures/bluesky/feed.html',
+            'utf8',
         );
         quoteFixture = await readFile(
-            "tests/src/content-script/fixtures/bluesky/quoted-post.html",
-            "utf8",
+            'tests/src/content-script/fixtures/bluesky/quoted-post.html',
+            'utf8',
         );
     });
 
     beforeEach(() => {
         document.head.innerHTML = '<base href="https://bsky.app/">';
-        document.body.innerHTML = "";
+        document.body.innerHTML = '';
     });
 
     it.each([1, BLUESKY_BATCH_LIMIT, BLUESKY_BATCH_LIMIT + 1])(
-        "batches and resolves %i unique identities",
+        'batches and resolves %i unique identities',
         async (count) => {
             installTargets(count);
             const appView = new FakeAppView();
             const changed: Element[][] = [];
             const coordinator = createBlueskyCoordinator({
                 document,
-                url: new URL("https://bsky.app/"),
+                url: new URL('https://bsky.app/'),
                 appView,
                 getDiagnosticSink: () => undefined,
                 onSourcesChanged: (sources) => changed.push([...sources]),
@@ -279,7 +287,7 @@ describe("Bluesky coordinator", () => {
         },
     );
 
-    it("runs at most one public batch at a time", async () => {
+    it('runs at most one public batch at a time', async () => {
         installTargets(BLUESKY_BATCH_LIMIT + 1);
         let activeProfiles = 0;
         let activePosts = 0;
@@ -303,7 +311,7 @@ describe("Bluesky coordinator", () => {
         );
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -317,7 +325,7 @@ describe("Bluesky coordinator", () => {
         expect(maximumPosts).toBe(1);
     });
 
-    it("uses a permalink DID without a profile lookup", async () => {
+    it('uses a permalink DID without a profile lookup', async () => {
         document.body.innerHTML = `<article><a
             href="/profile/did:plc:directactor/post/3direct"
             aria-label="localized" data-tooltip="localized">
@@ -325,7 +333,7 @@ describe("Bluesky coordinator", () => {
         const appView = new FakeAppView();
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -337,16 +345,16 @@ describe("Bluesky coordinator", () => {
 
         expect(appView.profileCalls).toEqual([]);
         expect(appView.postCalls).toEqual([
-            ["at://did:plc:directactor/app.bsky.feed.post/3direct"],
+            ['at://did:plc:directactor/app.bsky.feed.post/3direct'],
         ]);
     });
 
-    it("deduplicates fixture identities and reuses successful document caches", async () => {
+    it('deduplicates fixture identities and reuses successful document caches', async () => {
         document.body.innerHTML = feedFixture;
         const appView = new FakeAppView();
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -360,12 +368,12 @@ describe("Bluesky coordinator", () => {
         expect(appView.postCalls).toHaveLength(1);
         expect(appView.postCalls[0]).toHaveLength(2);
 
-        const firstCard = document.getElementById("feed-first");
+        const firstCard = document.getElementById('feed-first');
         if (!firstCard) {
-            throw new Error("Expected feed fixture card");
+            throw new Error('Expected feed fixture card');
         }
         const clone = firstCard.cloneNode(true) as Element;
-        clone.removeAttribute("id");
+        clone.removeAttribute('id');
         document.body.append(clone);
         coordinator.inspect(clone);
         await waitForResolvedSources(coordinator, 4);
@@ -374,12 +382,12 @@ describe("Bluesky coordinator", () => {
         expect(appView.postCalls).toHaveLength(1);
     });
 
-    it("evicts lookup state after the final source for an identity detaches", async () => {
+    it('evicts lookup state after the final source for an identity detaches', async () => {
         installTargets(1);
         const appView = new FakeAppView();
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -388,9 +396,9 @@ describe("Bluesky coordinator", () => {
         coordinator.inspect(document);
         await waitForResolvedSources(coordinator, 1);
 
-        const article = document.querySelector("article");
+        const article = document.querySelector('article');
         if (!article) {
-            throw new Error("Expected resolved article");
+            throw new Error('Expected resolved article');
         }
         const replacement = article.cloneNode(true) as Element;
         article.remove();
@@ -403,9 +411,9 @@ describe("Bluesky coordinator", () => {
         expect(appView.postCalls).toHaveLength(2);
     });
 
-    it("hydrates an outer and quote target from one outer PostView", async () => {
+    it('hydrates an outer and quote target from one outer PostView', async () => {
         document.body.innerHTML = quoteFixture;
-        const quoteUri = "at://did:plc:quoted/app.bsky.feed.post/3quote";
+        const quoteUri = 'at://did:plc:quoted/app.bsky.feed.post/3quote';
         const appView = new FakeAppView(
             async (actors) => resolveProfiles(actors),
             async (uris) => ({
@@ -419,7 +427,7 @@ describe("Bluesky coordinator", () => {
         );
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -445,7 +453,7 @@ describe("Bluesky coordinator", () => {
         expect(appView.postCalls[0]).not.toContain(quoteUri);
     });
 
-    it("drains a new identity discovered while another profile batch is in flight", async () => {
+    it('drains a new identity discovered while another profile batch is in flight', async () => {
         installTargets(1);
         const firstProfiles = createDeferred<ProfileResult>();
         let profileInvocation = 0;
@@ -457,7 +465,7 @@ describe("Bluesky coordinator", () => {
         });
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -468,7 +476,7 @@ describe("Bluesky coordinator", () => {
             expect(appView.profileCalls).toHaveLength(1);
         });
 
-        const second = document.createElement("article");
+        const second = document.createElement('article');
         second.innerHTML = `<a href="/profile/second.example/post/3second"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>4h</a>`;
@@ -480,7 +488,7 @@ describe("Bluesky coordinator", () => {
         expect(appView.profileCalls).toHaveLength(2);
     });
 
-    it("skips a detached later batch before requesting a newly connected identity", async () => {
+    it('skips a detached later batch before requesting a newly connected identity', async () => {
         installTargets(BLUESKY_BATCH_LIMIT + 1);
         const firstProfiles = createDeferred<ProfileResult>();
         let profileInvocation = 0;
@@ -492,7 +500,7 @@ describe("Bluesky coordinator", () => {
         });
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: () => undefined,
@@ -503,14 +511,14 @@ describe("Bluesky coordinator", () => {
             expect(appView.profileCalls).toHaveLength(1);
         });
 
-        const staleId = `source-${String(BLUESKY_BATCH_LIMIT).padStart(2, "0")}`;
-        const stale = document.getElementById(staleId)?.closest("article");
+        const staleId = `source-${String(BLUESKY_BATCH_LIMIT).padStart(2, '0')}`;
+        const stale = document.getElementById(staleId)?.closest('article');
         if (!stale) {
-            throw new Error("Expected later-batch source");
+            throw new Error('Expected later-batch source');
         }
         stale.remove();
         coordinator.release(stale);
-        const fresh = document.createElement("article");
+        const fresh = document.createElement('article');
         fresh.innerHTML = `<a href="/profile/fresh.example/post/3fresh"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>4h</a>`;
@@ -519,15 +527,15 @@ describe("Bluesky coordinator", () => {
         firstProfiles.resolve(resolveProfiles(appView.profileCalls[0] ?? []));
 
         await vi.waitFor(() => {
-            expect(appView.profileCalls.flat()).toContain("fresh.example");
+            expect(appView.profileCalls.flat()).toContain('fresh.example');
         });
         expect(appView.profileCalls.flat()).not.toContain(
-            `actor-${String(BLUESKY_BATCH_LIMIT).padStart(2, "0")}.example`,
+            `actor-${String(BLUESKY_BATCH_LIMIT).padStart(2, '0')}.example`,
         );
         expect(appView.profileCalls).toHaveLength(2);
     });
 
-    it("revalidates identity and target before publishing an in-flight result", async () => {
+    it('revalidates identity and target before publishing an in-flight result', async () => {
         installTargets(1);
         const postResult = createDeferred<PostResult>();
         const appView = new FakeAppView(
@@ -537,7 +545,7 @@ describe("Bluesky coordinator", () => {
         const changed: Element[][] = [];
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: (sources) => changed.push([...sources]),
@@ -550,10 +558,10 @@ describe("Bluesky coordinator", () => {
 
         const descriptor = discoverBlueskyRelativeTargets(document)[0];
         if (!descriptor) {
-            throw new Error("Expected pending descriptor");
+            throw new Error('Expected pending descriptor');
         }
         const oldTarget = descriptor.target;
-        const replacement = document.createTextNode("4h");
+        const replacement = document.createTextNode('4h');
         oldTarget.replaceWith(replacement);
         coordinator.inspectSources([descriptor.source]);
         postResult.resolve(resolvePosts(appView.postCalls[0] ?? []));
@@ -565,14 +573,14 @@ describe("Bluesky coordinator", () => {
         expect(new Set(changed.flat())).toEqual(new Set([descriptor.source]));
     });
 
-    it("makes stopped and detached in-flight work inert", async () => {
+    it('makes stopped and detached in-flight work inert', async () => {
         installTargets(1);
         const profiles = createDeferred<ProfileResult>();
         const appView = new FakeAppView(async () => profiles.promise);
         const changed: Element[][] = [];
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => undefined,
             onSourcesChanged: (sources) => changed.push([...sources]),
@@ -583,9 +591,9 @@ describe("Bluesky coordinator", () => {
             expect(appView.profileCalls).toHaveLength(1);
         });
 
-        const article = document.querySelector("article");
+        const article = document.querySelector('article');
         if (!article) {
-            throw new Error("Expected pending article");
+            throw new Error('Expected pending article');
         }
         article.remove();
         coordinator.release(article);
@@ -598,7 +606,7 @@ describe("Bluesky coordinator", () => {
         expect(changed).toEqual([]);
     });
 
-    it("does not retry failed identities after irrelevant or presentation mutations", async () => {
+    it('does not retry failed identities after irrelevant or presentation mutations', async () => {
         installTargets(1);
         const diagnostics: DiagnosticEventInput[] = [];
         const appView = new FakeAppView(async () => ({
@@ -606,7 +614,7 @@ describe("Bluesky coordinator", () => {
         }));
         const coordinator = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView,
             getDiagnosticSink: () => (event) => diagnostics.push(event),
             onSourcesChanged: () => undefined,
@@ -622,11 +630,11 @@ describe("Bluesky coordinator", () => {
 
         const descriptor = discoverBlueskyRelativeTargets(document)[0];
         if (!descriptor) {
-            throw new Error("Expected failed descriptor");
+            throw new Error('Expected failed descriptor');
         }
-        descriptor.target.data = "different presentation";
+        descriptor.target.data = 'different presentation';
         coordinator.inspectSources([descriptor.source]);
-        const irrelevant = document.createElement("div");
+        const irrelevant = document.createElement('div');
         document.body.append(irrelevant);
         coordinator.inspect(irrelevant);
         await Promise.resolve();
@@ -641,8 +649,8 @@ describe("Bluesky coordinator", () => {
         }]);
 
         descriptor.source.setAttribute(
-            "href",
-            "/profile/genuinely-new.example/post/3newidentity",
+            'href',
+            '/profile/genuinely-new.example/post/3newidentity',
         );
         coordinator.inspectSources([descriptor.source]);
         await vi.waitFor(() => {
@@ -651,23 +659,23 @@ describe("Bluesky coordinator", () => {
         await vi.waitFor(() => {
             expect(diagnostics).toHaveLength(2);
         });
-        expect(appView.profileCalls[1]).toEqual(["genuinely-new.example"]);
+        expect(appView.profileCalls[1]).toEqual(['genuinely-new.example']);
     });
 
-    it.each(["unresolved actor", "absent post"])(
-        "leaves the label page-owned for a successful partial %s",
+    it.each(['unresolved actor', 'absent post'])(
+        'leaves the label page-owned for a successful partial %s',
         async (mode) => {
             installTargets(1);
             const diagnostics: DiagnosticEventInput[] = [];
             const appView = new FakeAppView(
-                async (actors) => mode === "unresolved actor"
+                async (actors) => (mode === 'unresolved actor'
                     ? { status: BLUESKY_LOOKUP_STATUS.SUCCESS, records: [] }
-                    : resolveProfiles(actors),
+                    : resolveProfiles(actors)),
                 async () => ({ status: BLUESKY_LOOKUP_STATUS.SUCCESS, records: [] }),
             );
             const coordinator = createBlueskyCoordinator({
                 document,
-                url: new URL("https://bsky.app/"),
+                url: new URL('https://bsky.app/'),
                 appView,
                 getDiagnosticSink: () => (event) => diagnostics.push(event),
                 onSourcesChanged: () => undefined,
@@ -680,21 +688,21 @@ describe("Bluesky coordinator", () => {
 
             const descriptor = discoverBlueskyRelativeTargets(document)[0];
             if (!descriptor) {
-                throw new Error("Expected partial descriptor");
+                throw new Error('Expected partial descriptor');
             }
             expect(coordinator.rule.extract(descriptor.source, EXTRACTION_CONTEXT)).toBeNull();
-            expect(descriptor.target.data).toBe("2h");
+            expect(descriptor.target.data).toBe('2h');
             expect(diagnostics).toEqual([{
                 category: DIAGNOSTIC_CATEGORY.SKIP,
                 reason: DIAGNOSTIC_REASON.CANDIDATE_SKIPPED,
                 count: 1,
             }]);
             expect(appView.profileCalls).toHaveLength(1);
-            expect(appView.postCalls).toHaveLength(mode === "absent post" ? 1 : 0);
+            expect(appView.postCalls).toHaveLength(mode === 'absent post' ? 1 : 0);
         },
     );
 
-    it("keeps diagnostics opt-in, sanitized, and unable to affect behavior", async () => {
+    it('keeps diagnostics opt-in, sanitized, and unable to affect behavior', async () => {
         installTargets(1);
         const noSinkProvider = vi.fn(() => undefined);
         const changed: Element[][] = [];
@@ -703,7 +711,7 @@ describe("Bluesky coordinator", () => {
         }));
         const withoutSink = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/private/path?secret=query"),
+            url: new URL('https://bsky.app/private/path?secret=query'),
             appView: failed,
             getDiagnosticSink: noSinkProvider,
             onSourcesChanged: (sources) => changed.push([...sources]),
@@ -726,7 +734,7 @@ describe("Bluesky coordinator", () => {
         }));
         const withSink = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/private/path?secret=query"),
+            url: new URL('https://bsky.app/private/path?secret=query'),
             appView: partial,
             getDiagnosticSink: () => (event) => events.push(event),
             onSourcesChanged: () => undefined,
@@ -736,17 +744,17 @@ describe("Bluesky coordinator", () => {
         await vi.waitFor(() => {
             expect(events).toHaveLength(1);
         });
-        expect(Object.keys(events[0] ?? {}).sort()).toEqual(["category", "count", "reason"]);
+        expect(Object.keys(events[0] ?? {}).sort()).toEqual(['category', 'count', 'reason']);
         const serialized = JSON.stringify(events);
         for (const secret of [
-            "actor-00.example",
-            "did:plc:actor00example",
-            "3record00",
-            "at://",
+            'actor-00.example',
+            'did:plc:actor00example',
+            '3record00',
+            'at://',
             INDEXED_AT,
-            "2h",
-            "/private/path",
-            "secret=query",
+            '2h',
+            '/private/path',
+            'secret=query',
         ]) {
             expect(serialized).not.toContain(secret);
         }
@@ -758,10 +766,10 @@ describe("Bluesky coordinator", () => {
         }));
         const throwingSink = createBlueskyCoordinator({
             document,
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             appView: throwing,
             getDiagnosticSink: () => () => {
-                throw new Error("diagnostic sink unavailable");
+                throw new Error('diagnostic sink unavailable');
             },
             onSourcesChanged: () => undefined,
         });
@@ -772,7 +780,7 @@ describe("Bluesky coordinator", () => {
         });
         await Promise.resolve();
         const descriptor = discoverBlueskyRelativeTargets(document)[0];
-        expect(descriptor?.target.data).toBe("2h");
+        expect(descriptor?.target.data).toBe('2h');
         expect(descriptor && throwingSink.rule.extract(
             descriptor.source,
             EXTRACTION_CONTEXT,

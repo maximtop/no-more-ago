@@ -2,9 +2,11 @@
  * @file Runtime translation and document setup for the popup and Settings.
  */
 
-import { translate, type I18nInterface } from "@adguard/translate";
-import baseMessages from "../../_locales/en/messages.json";
-import { BASE_UI_LOCALE, resolveUiLocale, type UiLocale } from "./locales";
+import { translate, type I18nInterface } from '@adguard/translate';
+
+import baseMessages from '../../_locales/en/messages.json';
+
+import { BASE_UI_LOCALE, resolveUiLocale, type UiLocale } from './locales';
 
 /**
  * One catalog key present in every shipped locale.
@@ -20,8 +22,8 @@ export type MessageValues = Readonly<Record<string, string | number>>;
  * Text directions shared by the document and UI providers.
  */
 export const UI_DIRECTION = {
-    LTR: "ltr",
-    RTL: "rtl",
+    LTR: 'ltr',
+    RTL: 'rtl',
 } as const;
 
 /**
@@ -37,7 +39,7 @@ let resolved: UiLocale | undefined;
  * @returns - The extension i18n API, or undefined when chrome is unavailable.
  */
 function extensionI18n(): typeof chrome.i18n | undefined {
-    return typeof chrome === "undefined" ? undefined : chrome.i18n;
+    return typeof chrome === 'undefined' ? undefined : chrome.i18n;
 }
 
 /**
@@ -49,7 +51,7 @@ function extensionI18n(): typeof chrome.i18n | undefined {
  * @returns - Registry entry for the browser UI language; English outside an extension.
  */
 export function currentUiLocale(): UiLocale {
-    resolved ??= resolveUiLocale(extensionI18n()?.getMessage("catalog_locale") || BASE_UI_LOCALE);
+    resolved ??= resolveUiLocale(extensionI18n()?.getMessage('catalog_locale') || BASE_UI_LOCALE);
     return resolved;
 }
 
@@ -71,9 +73,9 @@ export function uiDirection(): UiDirection {
 const BASE_MESSAGES: Readonly<Record<string, { readonly message: string }>> = baseMessages;
 
 const i18n: I18nInterface = {
-    getMessage: (key) => extensionI18n()?.getMessage(key) ?? "",
+    getMessage: (key) => extensionI18n()?.getMessage(key) ?? '',
     getUILanguage: () => currentUiLocale().adguardCode,
-    getBaseMessage: (key) => BASE_MESSAGES[key]?.message ?? "",
+    getBaseMessage: (key) => BASE_MESSAGES[key]?.message ?? '',
     getBaseUILanguage: () => BASE_UI_LOCALE,
 };
 
@@ -84,13 +86,14 @@ const translator = translate.createTranslator(i18n);
  *
  * @param key - Catalog key present in every shipped locale.
  * @param values - Values for the message's placeholders, if it has any.
+ *
  * @returns - Translated text for the resolved UI locale.
  */
 export function t(key: MessageKey, values: MessageValues = {}): string {
     const substitutions = uiDirection() === UI_DIRECTION.RTL
         ? Object.fromEntries(Object.entries(values).map(([name, value]) => [
             name,
-            typeof value === "string" ? `\u2066${value}\u2069` : value,
+            typeof value === 'string' ? `\u2066${value}\u2069` : value,
         ]))
         : values;
     return translator.getMessage(key, substitutions);
@@ -101,6 +104,7 @@ export function t(key: MessageKey, values: MessageValues = {}): string {
  *
  * @param key - Catalog key whose message carries `|`-separated plural forms.
  * @param count - Quantity selecting the form; it also fills `%count%`.
+ *
  * @returns - Translated text for the resolved UI locale.
  */
 export function tPlural(key: MessageKey, count: number): string {
@@ -118,7 +122,7 @@ export function tPlural(key: MessageKey, count: number): string {
  */
 export function applyDocumentLocale(titleKey: MessageKey): void {
     const entry = currentUiLocale();
-    document.documentElement.lang = entry.code.replaceAll("_", "-");
+    document.documentElement.lang = entry.code.replaceAll('_', '-');
     document.documentElement.dir = uiDirection();
     document.title = t(titleKey);
 }

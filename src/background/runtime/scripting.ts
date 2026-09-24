@@ -8,15 +8,14 @@
  * JavaScript execution worlds supported by extension scripting operations.
  */
 export const SCRIPT_EXECUTION_WORLD = {
-    ISOLATED: "ISOLATED",
-    MAIN: "MAIN",
+    ISOLATED: 'ISOLATED',
+    MAIN: 'MAIN',
 } as const;
 
 /**
  * JavaScript execution world used by a registration or one-off injection.
  */
-export type ScriptExecutionWorld =
-    (typeof SCRIPT_EXECUTION_WORLD)[keyof typeof SCRIPT_EXECUTION_WORLD];
+export type ScriptExecutionWorld = (typeof SCRIPT_EXECUTION_WORLD)[keyof typeof SCRIPT_EXECUTION_WORLD];
 
 /**
  * Complete dynamic content-script registration specification.
@@ -40,7 +39,7 @@ export interface RegisteredContentScriptSpec {
     /**
      * Requests injection at document start, before normal page scripts run.
      */
-    readonly runAt: "document_start";
+    readonly runAt: 'document_start';
 
     /**
      * Whether Chrome injects into every matching frame rather than only the top frame.

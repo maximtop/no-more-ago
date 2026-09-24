@@ -2,15 +2,20 @@
  * @file LinkedIn adapter for best-effort timestamps derived from local IDs.
  */
 
-import { discoverElements } from "./discover-elements";
-import { isHtmlElement } from "./html-element";
+import { discoverElements } from './discover-elements';
+import { isHtmlElement } from './html-element';
 import {
     decodeLinkedInIdMilliseconds,
     parseLinkedInPostUrn,
     parseLinkedInTargetIds,
     type LinkedInLogicalId,
-} from "./linkedin-id";
-import { findSimpleTextTarget } from "./simple-text-target";
+} from './linkedin-id';
+import {
+    MAX_PRESENTATION_TEXT_LENGTH,
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
+import { findSimpleTextTarget } from './simple-text-target';
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -21,32 +26,27 @@ import {
     type TimestampMutationSourceResult,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
-} from "./types";
-import {
-    MAX_PRESENTATION_TEXT_LENGTH,
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
-const LINKEDIN_ROOT_HOSTNAME = "linkedin.com" as const;
-const LINKEDIN_URL_BASE = "https://www.linkedin.com" as const;
+const LINKEDIN_ROOT_HOSTNAME = 'linkedin.com' as const;
+const LINKEDIN_URL_BASE = 'https://www.linkedin.com' as const;
 const MAX_ASSOCIATION_DEPTH = 8;
 const MAX_MUTATION_SCAN_ELEMENTS = 128;
 const LABEL_SELECTOR = [
-    "p[componentkey] > span",
+    'p[componentkey] > span',
     ".update-components-actor__sub-description span[aria-hidden='true']",
-    "time.comments-comment-meta__data:not([datetime])",
-].join(", ");
+    'time.comments-comment-meta__data:not([datetime])',
+].join(', ');
 const EVIDENCE_SELECTOR = [
-    "[componentkey]",
-    "[data-sdui-anchor-id]",
-    "[data-id]",
-    "[data-urn]",
-    "a[href]",
-].join(", ");
+    '[componentkey]',
+    '[data-sdui-anchor-id]',
+    '[data-id]',
+    '[data-urn]',
+    'a[href]',
+].join(', ');
 const LINKEDIN_PERMALINK_PATTERN = new RegExp(
-    "^/feed/update/([^/]+)/?$",
-    "u",
+    '^/feed/update/([^/]+)/?$',
+    'u',
 );
 const EVIDENCE_ATTRIBUTES = [
     TIMESTAMP_SOURCE_ATTRIBUTE.COMPONENT_KEY,
@@ -65,7 +65,7 @@ const MUTATION_ATTRIBUTES = [
 /**
  * Stable identifier for the LinkedIn source rule.
  */
-export const LINKEDIN_ADAPTER_ID = "linkedin" as const;
+export const LINKEDIN_ADAPTER_ID = 'linkedin' as const;
 
 /**
  * Page-owned label and exact preserved text delimiters.
@@ -174,10 +174,11 @@ const cachedAssociationsByContext = new WeakMap<
  * Checks whether a URL belongs to LinkedIn over HTTP(S).
  *
  * @param url - URL considered for adapter selection.
+ *
  * @returns - Whether the URL has the root LinkedIn host or a true subdomain.
  */
 export function matchesLinkedInUrl(url: URL): boolean {
-    return (url.protocol === "http:" || url.protocol === "https:")
+    return (url.protocol === 'http:' || url.protocol === 'https:')
         && (
             url.hostname === LINKEDIN_ROOT_HOSTNAME
             || url.hostname.endsWith(`.${LINKEDIN_ROOT_HOSTNAME}`)
@@ -189,6 +190,7 @@ export function matchesLinkedInUrl(url: URL): boolean {
  *
  * @param label - Structurally accepted LinkedIn label element.
  * @param context - Processing context with retained page text.
+ *
  * @returns - Existing target and delimiters, or null for an unsupported shape.
  */
 function resolvePresentation(
@@ -211,12 +213,12 @@ function resolvePresentation(
         return {
             label,
             target,
-            textPrefix: "",
-            textSuffix: "",
+            textPrefix: '',
+            textSuffix: '',
         };
     }
     const prefixLength = text.length - withoutPrefix.length;
-    const bulletIndex = withoutPrefix.indexOf("•");
+    const bulletIndex = withoutPrefix.indexOf('•');
     const timestampRegion = bulletIndex === -1
         ? withoutPrefix
         : withoutPrefix.slice(0, bulletIndex);
@@ -237,6 +239,7 @@ function resolvePresentation(
  * Parses IDs only from a direct LinkedIn feed permalink path.
  *
  * @param value - Raw href attribute value.
+ *
  * @returns - The permalink's supported target ID, or an empty collection.
  */
 function parseLinkedInPermalinkIds(value: string): readonly LinkedInLogicalId[] {
@@ -264,6 +267,7 @@ function parseLinkedInPermalinkIds(value: string): readonly LinkedInLogicalId[] 
  * Collects deduplicated target IDs from one approved evidence element.
  *
  * @param element - Evidence element carrying adapter-approved attributes.
+ *
  * @returns - Supported target IDs in attribute order.
  */
 function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
@@ -288,6 +292,7 @@ function collectElementIds(element: Element): readonly LinkedInLogicalId[] {
  *
  * @param root - Candidate local association root.
  * @param context - Processing context.
+ *
  * @returns - Structural page-owned presentation candidates in document order.
  */
 function collectPresentations(
@@ -307,6 +312,7 @@ function collectPresentations(
  * Finds adapter-approved evidence elements inside one candidate root.
  *
  * @param root - Candidate local association root.
+ *
  * @returns - Evidence elements in document order.
  */
 function collectEvidenceElements(root: ParentNode): readonly Element[] {
@@ -321,22 +327,24 @@ function collectEvidenceElements(root: ParentNode): readonly Element[] {
  * Rejects document-scale containers as local timestamp association sources.
  *
  * @param element - Candidate association boundary.
+ *
  * @returns - Whether the element is too broad for one local timestamp source.
  */
 function isBroadAssociationBoundary(element: Element): boolean {
     return element === element.ownerDocument.documentElement
         || element === element.ownerDocument.body
-        || element.localName === "main";
+        || element.localName === 'main';
 }
 
 /**
  * Returns the nearest content item that evidence must not escape.
  *
  * @param element - Label, evidence, or candidate scope.
+ *
  * @returns - Nearest article boundary, or null when the shape has none.
  */
 function findContentItemBoundary(element: Element): Element | null {
-    return element.closest("article");
+    return element.closest('article');
 }
 
 /**
@@ -344,6 +352,7 @@ function findContentItemBoundary(element: Element): Element | null {
  *
  * @param element - Candidate descendant or element root.
  * @param root - Document or element root for this pass.
+ *
  * @returns - Whether the element belongs to the root.
  */
 function belongsToRoot(element: Element, root: ParentNode): boolean {
@@ -358,6 +367,7 @@ function belongsToRoot(element: Element, root: ParentNode): boolean {
  *
  * @param presentation - Structurally supported page-owned label.
  * @param root - Document or exact source root.
+ *
  * @returns - Candidate scopes from nearest to broadest.
  */
 function collectAssociationScopes(
@@ -423,6 +433,7 @@ function addLogicalIdCounts(target: LinkedInIdCounts, source: LinkedInIdCounts):
  *
  * @param root - Document or exact source subtree to inspect.
  * @param presentations - Structural label candidates inside the root.
+ *
  * @returns - Candidate-scope, evidence, and pending-presentation indexes.
  */
 function createAssociationIndex(
@@ -485,6 +496,7 @@ function createAssociationIndex(
  *
  * @param index - Pass-local association index.
  * @param scope - Candidate source boundary.
+ *
  * @returns - Effective scope-local evidence counts.
  */
 function getEffectiveEvidence(
@@ -507,6 +519,7 @@ function getEffectiveEvidence(
  *
  * @param presentation - Structural label presentation candidate.
  * @param index - Pass-local association index.
+ *
  * @returns - Accepted association, or null while local evidence is unsuitable.
  */
 function findAssociation(
@@ -568,6 +581,7 @@ function excludeAssociationEvidence(
  *
  * @param root - Document or exact source subtree to inspect.
  * @param context - Processing context.
+ *
  * @returns - Unambiguous associations in presentation document order.
  */
 function resolveAssociations(
@@ -634,6 +648,7 @@ function resolveAssociations(
  *
  * @param source - Candidate source boundary.
  * @param context - Processing context.
+ *
  * @returns - One unambiguous association, or null.
  */
 function resolveAssociation(
@@ -653,6 +668,7 @@ function resolveAssociation(
  *
  * @param associations - Associations resolved together in one regional pass.
  * @param context - Extraction context shared by discovery and extraction.
+ *
  * @returns - Source elements in association order.
  */
 function cacheAssociations(
@@ -671,6 +687,7 @@ function cacheAssociations(
  *
  * @param source - Candidate source boundary.
  * @param context - Current extraction context.
+ *
  * @returns - One unambiguous association, or null.
  */
 function takeAssociation(
@@ -694,6 +711,7 @@ function takeAssociation(
  *
  * @param root - Local ancestor being inspected.
  * @param visit - Predicate that stops traversal once both source inputs are found.
+ *
  * @returns - Whether the predicate stopped traversal before the element budget was exhausted.
  */
 function visitBoundedElements(root: Element, visit: (element: Element) => boolean): boolean {
@@ -731,6 +749,7 @@ function visitBoundedElements(root: Element, visit: (element: Element) => boolea
  *
  * @param element - Mutated element or child-list container.
  * @param context - Processing context.
+ *
  * @returns - Smallest candidate source, or null when none is found within the bounds.
  */
 function findPotentialAssociationSource(
@@ -779,6 +798,7 @@ function findPotentialAssociationSource(
  * @param element - Element whose attribute changed.
  * @param attributeName - Changed adapter attribute.
  * @param oldValue - Attribute value before the change.
+ *
  * @returns - Whether bounded local source lookup is needed.
  */
 function isRelevantAttributeMutation(
@@ -790,17 +810,17 @@ function isRelevantAttributeMutation(
         return true;
     }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.CLASS) {
-        return element.classList.contains("update-components-actor__sub-description")
+        return element.classList.contains('update-components-actor__sub-description')
             || oldValue?.split(/\s+/u)
-                .includes("update-components-actor__sub-description") === true;
+                .includes('update-components-actor__sub-description') === true;
     }
     if (attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.ARIA_HIDDEN) {
-        return element.localName === "span"
-            && (element.getAttribute(attributeName) === "true" || oldValue === "true");
+        return element.localName === 'span'
+            && (element.getAttribute(attributeName) === 'true' || oldValue === 'true');
     }
     return attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME
-        && element.localName === "time"
-        && element.classList.contains("comments-comment-meta__data");
+        && element.localName === 'time'
+        && element.classList.contains('comments-comment-meta__data');
 }
 
 /**
@@ -810,6 +830,7 @@ function isRelevantAttributeMutation(
  * @param attributeName - Changed adapter attribute, when applicable.
  * @param oldValue - Attribute value before the mutation.
  * @param context - Processing context.
+ *
  * @returns - Exact candidate source requiring reconciliation.
  */
 function getMutationSources(
@@ -836,14 +857,12 @@ export const linkedinAdapter = {
     mutationAttributes: MUTATION_ATTRIBUTES,
     getMutationSources,
     matches: matchesLinkedInUrl,
-    matchesElement: (element: Element, context: TimestampExtractionContext) =>
-        resolveAssociation(element, context) !== null,
-    discover: (root: ParentNode, context: TimestampExtractionContext) =>
-        cacheAssociations(resolveAssociations(root, context), context),
+    matchesElement: (element: Element, context: TimestampExtractionContext) => resolveAssociation(element, context) !== null,
+    discover: (root: ParentNode, context: TimestampExtractionContext) => cacheAssociations(resolveAssociations(root, context), context),
     isRelativePresentation: createRelativePresentationClassifier([
         RELATIVE_PRESENTATION_PROFILE.DIRECTIONAL,
         RELATIVE_PRESENTATION_PROFILE.COMPACT_AGE,
-    ], ["just now", "1mo", "1 mo", "1yr", "1 yr"]),
+    ], ['just now', '1mo', '1 mo', '1yr', '1 yr']),
     extract: (element: Element, context: TimestampExtractionContext) => {
         const association = takeAssociation(element, context);
         if (!association) {

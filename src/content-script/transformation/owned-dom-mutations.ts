@@ -10,6 +10,7 @@ export interface OwnedDomMutationSink {
      * Applies one reconciliation's text-target changes with one final observer rebuild.
      *
      * @param update - Synchronous rendering or restoration work.
+     *
      * @returns - Value returned by the supplied work.
      */
     batchTextObservationUpdates?<Result>(update: () => Result): Result;
@@ -51,6 +52,7 @@ export interface OwnedDomMutationSink {
      * @param source - Source that remains owned across the target replacement.
      * @param previousTarget - Previously retained page-owned text node.
      * @param target - Replacement page-owned text node inside the same source.
+     *
      * @returns - Whether the active observation was retargeted.
      */
     replaceOwnedTextSource?(

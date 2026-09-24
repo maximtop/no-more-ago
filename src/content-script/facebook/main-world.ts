@@ -2,7 +2,8 @@
  * @file Captures selected Facebook GraphQL responses in the page's main JavaScript world.
  */
 
-import { isFacebookHostname, isFacebookUrl } from "../../shared/url/facebook";
+import { isFacebookHostname, isFacebookUrl } from '../../shared/url/facebook';
+
 import {
     FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY,
     FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY,
@@ -10,26 +11,26 @@ import {
     createFacebookPayloadBridgeReadyMessage,
     createFacebookPayloadMessage,
     readFacebookBridgeControlEnabled,
-} from "./contracts";
-import { extractFacebookTimestampUpdate } from "./payload-parser";
+} from './contracts';
+import { extractFacebookTimestampUpdate } from './payload-parser';
 
 const FACEBOOK_PAYLOAD_BRIDGE_SLOT = Symbol.for(FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY);
 const FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT = Symbol.for(
     FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY,
 );
 const FACEBOOK_PAYLOAD_BRIDGE_VERSION = 3 as const;
-const FACEBOOK_GRAPHQL_PATHNAME = "/api/graphql/" as const;
+const FACEBOOK_GRAPHQL_PATHNAME = '/api/graphql/' as const;
 const FACEBOOK_QUERY_NAME = /^[\dA-Za-z_]+Query$/u;
 const FACEBOOK_STORY_QUERY_CUES = [
-    "NewsFeed",
-    "HomeFeed",
-    "TimelineFeed",
-    "GroupsCometFeed",
-    "PagesCometFeed",
-    "Story",
-    "Stories",
-    "Permalink",
-    "SinglePost",
+    'NewsFeed',
+    'HomeFeed',
+    'TimelineFeed',
+    'GroupsCometFeed',
+    'PagesCometFeed',
+    'Story',
+    'Stories',
+    'Permalink',
+    'SinglePost',
 ] as const;
 
 /**
@@ -83,12 +84,12 @@ interface InstalledFacebookTransportWrappers {
     /**
      * Original page fetch function.
      */
-    readonly originalFetch: Window["fetch"];
+    readonly originalFetch: Window['fetch'];
 
     /**
      * Fetch wrapper owned by this bridge.
      */
-    readonly wrappedFetch: Window["fetch"];
+    readonly wrappedFetch: Window['fetch'];
 
     /**
      * XMLHttpRequest prototype wrapped by this bridge.
@@ -121,6 +122,7 @@ interface InstalledFacebookTransportWrappers {
  *
  * @param value - Object containing the property.
  * @param property - Property name to read.
+ *
  * @returns - Unknown property value.
  */
 function unknownProperty(value: object, property: string): unknown {
@@ -131,11 +133,12 @@ function unknownProperty(value: object, property: string): unknown {
  * Reads the friendly operation name from a bounded form body without serializing it.
  *
  * @param body - Page-provided fetch or XMLHttpRequest body.
+ *
  * @returns - Friendly operation name, or null when synchronous inspection is unsafe.
  */
 function requestFriendlyName(body: unknown): string | null {
     let parameters: URLSearchParams;
-    if (typeof body === "string") {
+    if (typeof body === 'string') {
         if (body.length > FACEBOOK_TRANSPORT_LIMIT.MAX_REQUEST_BODY_CHARACTERS) {
             return null;
         }
@@ -157,7 +160,7 @@ function requestFriendlyName(body: unknown): string | null {
         ) {
             return null;
         }
-        if (name === "fb_api_req_friendly_name" && friendlyName === null) {
+        if (name === 'fb_api_req_friendly_name' && friendlyName === null) {
             friendlyName = value;
         }
     }
@@ -170,6 +173,7 @@ function requestFriendlyName(body: unknown): string | null {
  * @param requestUrl - Fetch input URL resolved by the page.
  * @param body - Synchronously inspectable raw request body.
  * @param baseHref - Current Facebook document URL used for relative requests.
+ *
  * @returns - Whether the response is worth bounded Story parsing.
  */
 export function shouldInspectFacebookGraphqlRequest(
@@ -197,13 +201,14 @@ export function shouldInspectFacebookGraphqlRequest(
  *
  * @param input - Fetch request URL or Request object.
  * @param init - Optional fetch initialization override.
+ *
  * @returns - Request details used for Story-query selection.
  */
 function fetchRequestDetails(
     input: RequestInfo | URL,
     init: RequestInit | undefined,
 ): { readonly url: string; readonly body: unknown } {
-    const url = typeof input === "string"
+    const url = typeof input === 'string'
         ? input
         : input instanceof URL
             ? input.href
@@ -218,6 +223,7 @@ function fetchRequestDetails(
  * Cancels a cloned response reader without allowing cancellation failures to escape.
  *
  * @param reader - Cloned response stream reader.
+ *
  * @returns - Promise settled after best-effort cancellation.
  */
 async function cancelReader(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
@@ -234,6 +240,7 @@ async function cancelReader(reader: ReadableStreamDefaultReader<Uint8Array>): Pr
  * @param response - Successful selected fetch response.
  * @param isCurrent - Checks the captured lifecycle generation between chunks.
  * @param registerReader - Retains the reader for immediate lifecycle cancellation.
+ *
  * @returns - Complete bounded response text, or null after limit/lifecycle rejection.
  */
 async function readBoundedResponseText(
@@ -249,9 +256,9 @@ async function readBoundedResponseText(
         return null;
     }
     const unregisterReader = registerReader(reader);
-    const declaredLength = clone.headers.get("content-length");
+    const declaredLength = clone.headers.get('content-length');
     const decoder = new TextDecoder();
-    let payloadText = "";
+    let payloadText = '';
     try {
         if (
             declaredLength !== null
@@ -327,6 +334,7 @@ function emitPayloadRecords(
  * @param getGeneration - Returns the current enabled generation, or null while inactive.
  * @param inspectFetchResponse - Bounded asynchronous fetch response inspector.
  * @param inspectTextResponse - Bounded text response inspector.
+ *
  * @returns - Wrapper ownership state used for safe restoration.
  */
 function installTransportWrappers(
@@ -335,16 +343,17 @@ function installTransportWrappers(
     inspectFetchResponse: (response: Response, generation: number) => void,
     inspectTextResponse: (payloadText: string, generation: number) => void,
 ): InstalledFacebookTransportWrappers {
-    const originalFetch = unknownProperty(target, "fetch") as Window["fetch"];
+    const originalFetch = unknownProperty(target, 'fetch') as Window['fetch'];
 
     /**
      * Forwards to the page's fetch and inspects the response while the bridge is enabled.
      *
      * @param input - Fetch resource.
      * @param init - Fetch options.
+     *
      * @returns - The page's fetch result.
      */
-    const wrappedFetch: Window["fetch"] = (input, init) => {
+    const wrappedFetch: Window['fetch'] = (input, init) => {
         const response = Reflect.apply(originalFetch, target, [input, init]);
         const generation = getGeneration();
         if (generation === null) {
@@ -375,15 +384,15 @@ function installTransportWrappers(
         readonly XMLHttpRequest: typeof XMLHttpRequest;
     };
     const xhrPrototype = xhrTarget.XMLHttpRequest.prototype;
-    const originalXhrOpen = Object.getOwnPropertyDescriptor(xhrPrototype, "open");
-    const originalXhrSend = Object.getOwnPropertyDescriptor(xhrPrototype, "send");
+    const originalXhrOpen = Object.getOwnPropertyDescriptor(xhrPrototype, 'open');
+    const originalXhrSend = Object.getOwnPropertyDescriptor(xhrPrototype, 'send');
     const originalOpen = originalXhrOpen?.value as unknown;
     const originalSend = originalXhrSend?.value as unknown;
     if (
         !originalXhrOpen
         || !originalXhrSend
-        || typeof originalOpen !== "function"
-        || typeof originalSend !== "function"
+        || typeof originalOpen !== 'function'
+        || typeof originalSend !== 'function'
     ) {
         return {
             originalFetch,
@@ -396,15 +405,15 @@ function installTransportWrappers(
         };
     }
     const requests = new WeakMap<XMLHttpRequest, FacebookXhrRequest>();
-    const wrappedXhrOpen = function(this: XMLHttpRequest, ...args: unknown[]): unknown {
+    const wrappedXhrOpen = function (this: XMLHttpRequest, ...args: unknown[]): unknown {
         try {
             const generation = getGeneration();
             const method = args[0];
             const url = args[1];
             if (
                 generation !== null
-                && typeof method === "string"
-                && (typeof url === "string" || url instanceof URL)
+                && typeof method === 'string'
+                && (typeof url === 'string' || url instanceof URL)
             ) {
                 requests.set(this, { method, url: String(url), generation });
             } else {
@@ -415,28 +424,28 @@ function installTransportWrappers(
         }
         return Reflect.apply(originalOpen, this, args);
     };
-    const wrappedXhrSend = function(this: XMLHttpRequest, ...args: unknown[]): unknown {
+    const wrappedXhrSend = function (this: XMLHttpRequest, ...args: unknown[]): unknown {
         try {
             const generation = getGeneration();
             const request = requests.get(this);
             if (
                 generation !== null
                 && request?.generation === generation
-                && request.method.toUpperCase() === "POST"
+                && request.method.toUpperCase() === 'POST'
                 && shouldInspectFacebookGraphqlRequest(
                     request.url,
                     args[0],
                     target.location.href,
                 )
             ) {
-                this.addEventListener("load", () => {
+                this.addEventListener('load', () => {
                     if (
                         getGeneration() !== generation
                         || requests.get(this) !== request
                     ) {
                         return;
                     }
-                    if (this.responseType === "" || this.responseType === "text") {
+                    if (this.responseType === '' || this.responseType === 'text') {
                         try {
                             const payloadText = this.responseText;
                             if (payloadText.length <= FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS) {
@@ -453,11 +462,11 @@ function installTransportWrappers(
         }
         return Reflect.apply(originalSend, this, args);
     };
-    Object.defineProperty(xhrPrototype, "open", {
+    Object.defineProperty(xhrPrototype, 'open', {
         ...originalXhrOpen,
         value: wrappedXhrOpen,
     });
-    Object.defineProperty(xhrPrototype, "send", {
+    Object.defineProperty(xhrPrototype, 'send', {
         ...originalXhrSend,
         value: wrappedXhrSend,
     });
@@ -492,12 +501,12 @@ function restoreTransportWrappers(
     try {
         const open = Object.getOwnPropertyDescriptor(
             wrappers.xhrPrototype,
-            "open",
+            'open',
         )?.value as unknown;
         if (open === wrappers.wrappedXhrOpen && wrappers.originalXhrOpen) {
             Object.defineProperty(
                 wrappers.xhrPrototype,
-                "open",
+                'open',
                 wrappers.originalXhrOpen,
             );
         }
@@ -507,12 +516,12 @@ function restoreTransportWrappers(
     try {
         const send = Object.getOwnPropertyDescriptor(
             wrappers.xhrPrototype,
-            "send",
+            'send',
         )?.value as unknown;
         if (send === wrappers.wrappedXhrSend && wrappers.originalXhrSend) {
             Object.defineProperty(
                 wrappers.xhrPrototype,
-                "send",
+                'send',
                 wrappers.originalXhrSend,
             );
         }
@@ -537,13 +546,13 @@ export function installFacebookPayloadBridge(target: Window): void {
         mutableTarget,
         FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT,
     )?.value as unknown;
-    const legacyObject = legacy !== null && typeof legacy === "object"
+    const legacyObject = legacy !== null && typeof legacy === 'object'
         ? legacy
         : undefined;
     const legacyDispose = legacyObject
-        ? unknownProperty(legacyObject, "dispose")
+        ? unknownProperty(legacyObject, 'dispose')
         : undefined;
-    if (typeof legacyDispose === "function" && legacyObject) {
+    if (typeof legacyDispose === 'function' && legacyObject) {
         try {
             (legacyDispose as (this: object) => unknown).call(legacyObject);
         } catch {
@@ -557,22 +566,22 @@ export function installFacebookPayloadBridge(target: Window): void {
     const existing = existingDescriptor?.value as unknown;
     if (
         existing !== null
-        && typeof existing === "object"
+        && typeof existing === 'object'
         && !Array.isArray(existing)
-        && unknownProperty(existing, "version") === FACEBOOK_PAYLOAD_BRIDGE_VERSION
-        && typeof unknownProperty(existing, "dispose") === "function"
+        && unknownProperty(existing, 'version') === FACEBOOK_PAYLOAD_BRIDGE_VERSION
+        && typeof unknownProperty(existing, 'dispose') === 'function'
     ) {
         target.postMessage(createFacebookPayloadBridgeReadyMessage(), target.location.origin);
         return;
     }
     if (existing !== undefined) {
-        const existingObject = existing !== null && typeof existing === "object"
+        const existingObject = existing !== null && typeof existing === 'object'
             ? existing
             : undefined;
         const dispose = existingObject
-            ? unknownProperty(existingObject, "dispose")
+            ? unknownProperty(existingObject, 'dispose')
             : undefined;
-        if (typeof dispose === "function" && existingObject) {
+        if (typeof dispose === 'function' && existingObject) {
             try {
                 (dispose as (this: object) => unknown).call(existingObject);
             } catch {
@@ -595,16 +604,16 @@ export function installFacebookPayloadBridge(target: Window): void {
      *
      * @returns - Active generation, or null.
      */
-    const getGeneration = (): number | null => enabled && !disposed ? generation : null;
+    const getGeneration = (): number | null => (enabled && !disposed ? generation : null);
 
     /**
      * Reports whether a captured generation is still the active one.
      *
      * @param capturedGeneration - Generation captured when a response arrived.
+     *
      * @returns - Whether the generation is still active.
      */
-    const isCurrent = (capturedGeneration: number): boolean =>
-        getGeneration() === capturedGeneration;
+    const isCurrent = (capturedGeneration: number): boolean => getGeneration() === capturedGeneration;
 
     /**
      * Cancels every response reader still inspecting a body.
@@ -708,7 +717,7 @@ export function installFacebookPayloadBridge(target: Window): void {
             cancelActiveReaders();
         }
     };
-    target.addEventListener("message", messageListener);
+    target.addEventListener('message', messageListener);
 
     /**
      * Disables the bridge, restores the page transports, and releases readers.
@@ -721,7 +730,7 @@ export function installFacebookPayloadBridge(target: Window): void {
         enabled = false;
         generation += 1;
         cancelActiveReaders();
-        target.removeEventListener("message", messageListener);
+        target.removeEventListener('message', messageListener);
         restoreTransportWrappers(target, wrappers);
         const descriptor = Object.getOwnPropertyDescriptor(
             mutableTarget,
@@ -730,8 +739,8 @@ export function installFacebookPayloadBridge(target: Window): void {
         const installed = descriptor?.value as unknown;
         if (
             installed !== null
-            && typeof installed === "object"
-            && unknownProperty(installed, "dispose") === dispose
+            && typeof installed === 'object'
+            && unknownProperty(installed, 'dispose') === dispose
             && descriptor?.configurable === true
         ) {
             Reflect.deleteProperty(mutableTarget, FACEBOOK_PAYLOAD_BRIDGE_SLOT);

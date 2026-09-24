@@ -2,8 +2,9 @@
  * @file Verifies the anonymous, bounded, fail-closed Bluesky AppView boundary.
  */
 
-import { describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    describe, expect, it, vi,
+} from 'vitest';
 
 import {
     BLUESKY_BATCH_LIMIT,
@@ -12,13 +13,13 @@ import {
     BLUESKY_PROFILE_METHOD,
     BLUESKY_PUBLIC_APPVIEW_ORIGIN,
     createBlueskyAppView,
-} from "../../../../src/content-script/adapters/bluesky-appview";
+} from '../../../../src/content-script/adapters/bluesky-appview';
 import {
     createBlueskyPostUri,
-} from "../../../../src/content-script/adapters/bluesky-identity";
+} from '../../../../src/content-script/adapters/bluesky-identity';
 
-const VALID_INDEXED_AT = "2026-08-31T10:15:00.000Z" as const;
-const SECOND_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
+const VALID_INDEXED_AT = '2026-08-31T10:15:00.000Z' as const;
+const SECOND_INDEXED_AT = '2026-08-30T09:00:00.000Z' as const;
 
 /**
  * Optional transport shape exposed by a fake response.
@@ -50,6 +51,7 @@ interface FakeResponseOptions {
  *
  * @param body - Value returned from the JSON reader.
  * @param options - Optional transport failure shape.
+ *
  * @returns - Response-shaped test value.
  */
 function fakeResponse(body: unknown, options: FakeResponseOptions = {}): Response {
@@ -58,7 +60,7 @@ function fakeResponse(body: unknown, options: FakeResponseOptions = {}): Respons
         redirected: options.redirected ?? false,
         status: options.status ?? (options.ok === false ? 500 : 200),
         json: options.jsonFailure
-            ? async () => Promise.reject(new SyntaxError("not JSON"))
+            ? async () => Promise.reject(new SyntaxError('not JSON'))
             : async () => body,
     } as unknown as Response;
 }
@@ -67,25 +69,27 @@ function fakeResponse(body: unknown, options: FakeResponseOptions = {}): Respons
  * Creates a fetch double with ordered responses and inspectable calls.
  *
  * @param responses - Responses or errors returned in call order.
+ *
  * @returns - Fetch implementation and captured call tuples.
  */
 function createFetchDouble(responses: readonly (Response | Error)[]): {
     readonly fetch: typeof fetch;
-    readonly calls: Array<Parameters<typeof fetch>>;
+    readonly calls: Parameters<typeof fetch>[];
 } {
-    const calls: Array<Parameters<typeof fetch>> = [];
+    const calls: Parameters<typeof fetch>[] = [];
 
     /**
      * Serves the scripted responses in order and records each call.
      *
      * @param parameters - Fetch call arguments.
+     *
      * @returns - Next scripted response.
      */
     const implementation = async (...parameters: Parameters<typeof fetch>): Promise<Response> => {
         calls.push(parameters);
         const response = responses[calls.length - 1];
         if (!response) {
-            throw new Error("Unexpected fetch call");
+            throw new Error('Unexpected fetch call');
         }
         if (response instanceof Error) {
             throw response;
@@ -99,48 +103,49 @@ function createFetchDouble(responses: readonly (Response | Error)[]): {
  * Returns one canonical AT post URI for a fictional DID and record key.
  *
  * @param suffix - Fictional identity suffix.
+ *
  * @returns - Canonical AT post URI.
  */
 function postUri(suffix: string): string {
     return createBlueskyPostUri(`did:plc:${suffix}`, `3${suffix}`);
 }
 
-describe("Bluesky AppView request contract", () => {
-    it("uses only fixed, anonymous GET requests and preserves value order", async () => {
+describe('Bluesky AppView request contract', () => {
+    it('uses only fixed, anonymous GET requests and preserves value order', async () => {
         const responses = Array.from(
             { length: 4 },
             (_, index) => fakeResponse(index < 2 ? { profiles: [] } : { posts: [] }),
         );
         const fake = createFetchDouble(responses);
         const appView = createBlueskyAppView(fake.fetch);
-        const signal = new AbortController().signal;
+        const { signal } = new AbortController();
         const actors = Array.from({ length: BLUESKY_BATCH_LIMIT }, (_, index) => {
-            return `actor-${String(index).padStart(2, "0")}.example`;
+            return `actor-${String(index).padStart(2, '0')}.example`;
         });
         const uris = Array.from({ length: BLUESKY_BATCH_LIMIT }, (_, index) => {
-            return postUri(String(index).padStart(2, "0"));
+            return postUri(String(index).padStart(2, '0'));
         });
 
-        await appView.getProfiles(["alice.example"], signal);
+        await appView.getProfiles(['alice.example'], signal);
         await appView.getProfiles(actors, signal);
-        await appView.getPosts([postUri("one")], signal);
+        await appView.getPosts([postUri('one')], signal);
         await appView.getPosts(uris, signal);
 
         expect(fake.calls).toHaveLength(4);
         const expectedQueries = [
-            [BLUESKY_PROFILE_METHOD, "actors", ["alice.example"]],
-            [BLUESKY_PROFILE_METHOD, "actors", actors],
-            [BLUESKY_POST_METHOD, "uris", [postUri("one")]],
-            [BLUESKY_POST_METHOD, "uris", uris],
+            [BLUESKY_PROFILE_METHOD, 'actors', ['alice.example']],
+            [BLUESKY_PROFILE_METHOD, 'actors', actors],
+            [BLUESKY_POST_METHOD, 'uris', [postUri('one')]],
+            [BLUESKY_POST_METHOD, 'uris', uris],
         ] as const;
         for (const [index, [method, queryName, values]] of expectedQueries.entries()) {
             const call = fake.calls[index];
             if (!call) {
-                throw new Error("Expected fetch call");
+                throw new Error('Expected fetch call');
             }
             const requestTarget = call[0];
             if (!(requestTarget instanceof URL)) {
-                throw new Error("Expected URL fetch target");
+                throw new Error('Expected URL fetch target');
             }
             const url = requestTarget;
             expect(url.origin).toBe(BLUESKY_PUBLIC_APPVIEW_ORIGIN);
@@ -148,20 +153,20 @@ describe("Bluesky AppView request contract", () => {
             expect([...url.searchParams.keys()]).toEqual(values.map(() => queryName));
             expect(url.searchParams.getAll(queryName)).toEqual(values);
             expect(call[1]).toMatchObject({
-                method: "GET",
-                cache: "no-store",
-                credentials: "omit",
-                redirect: "error",
-                referrerPolicy: "no-referrer",
+                method: 'GET',
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'error',
+                referrerPolicy: 'no-referrer',
             });
             expect(call[1]?.signal).toBeInstanceOf(AbortSignal);
         }
     });
 
-    it("rejects empty and oversized direct batches before fetch", async () => {
+    it('rejects empty and oversized direct batches before fetch', async () => {
         const fake = createFetchDouble([]);
         const appView = createBlueskyAppView(fake.fetch);
-        const signal = new AbortController().signal;
+        const { signal } = new AbortController();
         const oversized = Array.from({ length: BLUESKY_BATCH_LIMIT + 1 }, (_, index) => {
             return `actor-${String(index)}.example`;
         });
@@ -181,8 +186,8 @@ describe("Bluesky AppView request contract", () => {
         expect(fake.calls).toEqual([]);
     });
 
-    it.each(["transport", "body"])(
-        "fails a request whose %s never settles",
+    it.each(['transport', 'body'])(
+        'fails a request whose %s never settles',
         async (mode) => {
             vi.useFakeTimers();
             let observedSignal: AbortSignal | null | undefined;
@@ -191,7 +196,7 @@ describe("Bluesky AppView request contract", () => {
                 init?: RequestInit,
             ): Promise<Response> => {
                 observedSignal = init?.signal;
-                if (mode === "transport") {
+                if (mode === 'transport') {
                     return new Promise<Response>(() => undefined);
                 }
                 return {
@@ -202,7 +207,7 @@ describe("Bluesky AppView request contract", () => {
             }) as typeof fetch;
             try {
                 const result = createBlueskyAppView(fetchImplementation).getPosts(
-                    [postUri("stalled")],
+                    [postUri('stalled')],
                     new AbortController().signal,
                 );
 
@@ -219,63 +224,63 @@ describe("Bluesky AppView request contract", () => {
     );
 });
 
-describe("Bluesky AppView response contract", () => {
-    it("matches reordered partial profiles and omits foreign or ambiguous records", async () => {
-        const oversizedDid = `did:plc:${"a".repeat(2_048)}`;
+describe('Bluesky AppView response contract', () => {
+    it('matches reordered partial profiles and omits foreign or ambiguous records', async () => {
+        const oversizedDid = `did:plc:${'a'.repeat(2_048)}`;
         const fake = createFetchDouble([fakeResponse({
             profiles: [
-                { did: "did:plc:bob", handle: "bob.example", displayName: "ignored" },
-                { did: "did:plc:foreign", handle: "foreign.example" },
-                { did: "did:plc:alice", handle: "ALICE.EXAMPLE" },
-                { did: "did:plc:duplicate-one", handle: "duplicate.example" },
-                { did: "did:plc:duplicate-two", handle: "duplicate.example" },
-                { did: oversizedDid, handle: "oversized.example" },
-                { did: 42, handle: "invalid.example" },
+                { did: 'did:plc:bob', handle: 'bob.example', displayName: 'ignored' },
+                { did: 'did:plc:foreign', handle: 'foreign.example' },
+                { did: 'did:plc:alice', handle: 'ALICE.EXAMPLE' },
+                { did: 'did:plc:duplicate-one', handle: 'duplicate.example' },
+                { did: 'did:plc:duplicate-two', handle: 'duplicate.example' },
+                { did: oversizedDid, handle: 'oversized.example' },
+                { did: 42, handle: 'invalid.example' },
             ],
         })]);
         const result = await createBlueskyAppView(fake.fetch).getProfiles([
-            "alice.example",
-            "did:plc:bob",
-            "missing.example",
-            "duplicate.example",
-            "oversized.example",
-            "invalid.example",
+            'alice.example',
+            'did:plc:bob',
+            'missing.example',
+            'duplicate.example',
+            'oversized.example',
+            'invalid.example',
         ], new AbortController().signal);
 
         expect(result).toEqual({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
             records: [
-                { actor: "alice.example", did: "did:plc:alice" },
-                { actor: "did:plc:bob", did: "did:plc:bob" },
+                { actor: 'alice.example', did: 'did:plc:alice' },
+                { actor: 'did:plc:bob', did: 'did:plc:bob' },
             ],
         });
     });
 
-    it("matches posts by exact URI and accepts only the two supported quote views", async () => {
-        const plainUri = postUri("plain");
-        const mediaUri = postUri("media");
-        const blockedUri = postUri("blocked");
-        const plainQuoteUri = postUri("plainquote");
-        const mediaQuoteUri = postUri("mediaquote");
+    it('matches posts by exact URI and accepts only the two supported quote views', async () => {
+        const plainUri = postUri('plain');
+        const mediaUri = postUri('media');
+        const blockedUri = postUri('blocked');
+        const plainQuoteUri = postUri('plainquote');
+        const mediaQuoteUri = postUri('mediaquote');
         const fake = createFetchDouble([fakeResponse({
             posts: [
                 {
                     uri: mediaUri,
                     indexedAt: SECOND_INDEXED_AT,
                     embed: {
-                        $type: "app.bsky.embed.recordWithMedia#view",
+                        $type: 'app.bsky.embed.recordWithMedia#view',
                         record: {
                             record: { uri: mediaQuoteUri, indexedAt: VALID_INDEXED_AT },
                         },
                     },
-                    record: { createdAt: "1999-01-01T00:00:00.000Z" },
+                    record: { createdAt: '1999-01-01T00:00:00.000Z' },
                 },
-                { uri: postUri("foreign"), indexedAt: VALID_INDEXED_AT },
+                { uri: postUri('foreign'), indexedAt: VALID_INDEXED_AT },
                 {
                     uri: plainUri,
                     indexedAt: VALID_INDEXED_AT,
                     embed: {
-                        $type: "app.bsky.embed.record#view",
+                        $type: 'app.bsky.embed.record#view',
                         record: { uri: plainQuoteUri, indexedAt: SECOND_INDEXED_AT },
                     },
                 },
@@ -283,14 +288,14 @@ describe("Bluesky AppView response contract", () => {
                     uri: blockedUri,
                     indexedAt: VALID_INDEXED_AT,
                     embed: {
-                        $type: "app.bsky.embed.record#view",
-                        record: { $type: "app.bsky.embed.record#viewBlocked" },
+                        $type: 'app.bsky.embed.record#view',
+                        record: { $type: 'app.bsky.embed.record#viewBlocked' },
                     },
                 },
             ],
         })]);
         const result = await createBlueskyAppView(fake.fetch).getPosts(
-            [plainUri, mediaUri, blockedUri, postUri("missing")],
+            [plainUri, mediaUri, blockedUri, postUri('missing')],
             new AbortController().signal,
         );
 
@@ -312,22 +317,22 @@ describe("Bluesky AppView response contract", () => {
         });
     });
 
-    it("omits duplicate, malformed, mismatched, and invalid timestamp records", async () => {
-        const duplicateUri = postUri("duplicate");
-        const invalidUri = postUri("invalid");
-        const validUri = postUri("valid");
+    it('omits duplicate, malformed, mismatched, and invalid timestamp records', async () => {
+        const duplicateUri = postUri('duplicate');
+        const invalidUri = postUri('invalid');
+        const validUri = postUri('valid');
         const fake = createFetchDouble([fakeResponse({
             posts: [
                 { uri: duplicateUri, indexedAt: VALID_INDEXED_AT },
                 { uri: duplicateUri, indexedAt: SECOND_INDEXED_AT },
-                { uri: invalidUri, indexedAt: "2026-08-31T10:15:00" },
+                { uri: invalidUri, indexedAt: '2026-08-31T10:15:00' },
                 { uri: 12, indexedAt: VALID_INDEXED_AT },
                 {
                     uri: validUri,
                     indexedAt: VALID_INDEXED_AT,
                     embed: {
-                        $type: "app.bsky.embed.record#view",
-                        record: { uri: postUri("quote"), indexedAt: "not-a-time" },
+                        $type: 'app.bsky.embed.record#view',
+                        record: { uri: postUri('quote'), indexedAt: 'not-a-time' },
                     },
                 },
             ],
@@ -344,18 +349,18 @@ describe("Bluesky AppView response contract", () => {
     });
 
     it.each([
-        ["missing envelope field", fakeResponse({})],
-        ["malformed envelope field", fakeResponse({ posts: "wrong" })],
-        ["429 status", fakeResponse({ posts: [] }, { ok: false, status: 429 })],
-        ["500 status", fakeResponse({ posts: [] }, { ok: false, status: 500 })],
-        ["redirect", fakeResponse({ posts: [] }, { redirected: true })],
-        ["non-JSON body", fakeResponse(null, { jsonFailure: true })],
-        ["transport failure", new TypeError("offline")],
-        ["abort", new DOMException("aborted", "AbortError")],
-    ])("returns failure for %s", async (_description, response) => {
+        ['missing envelope field', fakeResponse({})],
+        ['malformed envelope field', fakeResponse({ posts: 'wrong' })],
+        ['429 status', fakeResponse({ posts: [] }, { ok: false, status: 429 })],
+        ['500 status', fakeResponse({ posts: [] }, { ok: false, status: 500 })],
+        ['redirect', fakeResponse({ posts: [] }, { redirected: true })],
+        ['non-JSON body', fakeResponse(null, { jsonFailure: true })],
+        ['transport failure', new TypeError('offline')],
+        ['abort', new DOMException('aborted', 'AbortError')],
+    ])('returns failure for %s', async (_description, response) => {
         const fake = createFetchDouble([response]);
         const result = await createBlueskyAppView(fake.fetch).getPosts(
-            [postUri("one")],
+            [postUri('one')],
             new AbortController().signal,
         );
         expect(result).toEqual({ status: BLUESKY_LOOKUP_STATUS.FAILURE });

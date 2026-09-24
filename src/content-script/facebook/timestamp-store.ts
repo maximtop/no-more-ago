@@ -9,15 +9,15 @@ import {
     FACEBOOK_TRACKING_QUERY_PARAMETER,
     type FacebookTimestampPayloadUpdate,
     type FacebookTimestampRecord,
-} from "./contracts";
-import { extractFacebookTimestampUpdate } from "./payload-parser";
+} from './contracts';
+import { extractFacebookTimestampUpdate } from './payload-parser';
 
 /**
  * Observable association changes consumed by targeted Facebook reconciliation.
  */
 export const FACEBOOK_TIMESTAMP_RECORD_CHANGE = {
-    AVAILABLE: "available",
-    INVALIDATED: "invalidated",
+    AVAILABLE: 'available',
+    INVALIDATED: 'invalidated',
 } as const;
 
 /**
@@ -41,25 +41,24 @@ export interface FacebookTimestampRecordChange {
  * Internal retained association states.
  */
 const FACEBOOK_TIMESTAMP_ASSOCIATION_STATE = {
-    RECORD: "record",
-    CONFLICT: "conflict",
+    RECORD: 'record',
+    CONFLICT: 'conflict',
 } as const;
 
 /**
  * Retained usable record or fail-closed conflict marker.
  */
-type FacebookTimestampAssociation =
-    | {
-        /**
-         * Identifies an available association.
-         */
-        readonly state: typeof FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD;
+type FacebookTimestampAssociation = | {
+    /**
+     * Identifies an available association.
+     */
+    readonly state: typeof FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD;
 
-        /**
-         * Minimal timestamp record associated with the token.
-         */
-        readonly record: FacebookTimestampRecord;
-    }
+    /**
+     * Minimal timestamp record associated with the token.
+     */
+    readonly record: FacebookTimestampRecord;
+}
     | {
         /**
          * Identifies a token rejected after contradictory evidence.
@@ -88,6 +87,7 @@ const stores = new WeakMap<Document, FacebookTimestampStore>();
  * Returns the mutable store owned by one document.
  *
  * @param document - Document whose Facebook payload state is requested.
+ *
  * @returns - Existing or newly created timestamp store.
  */
 function getStore(document: Document): FacebookTimestampStore {
@@ -133,23 +133,24 @@ function enforceAssociationLimit(
  * Extracts the tracking token from an eligible Facebook link URL.
  *
  * @param element - Candidate page-owned anchor.
+ *
  * @returns - Exact encrypted tracking token, or null when the link is unsuitable.
  */
 export function getFacebookTrackingToken(element: Element): string | null {
     if (
-        element.namespaceURI !== "http://www.w3.org/1999/xhtml"
-        || element.localName !== "a"
+        element.namespaceURI !== 'http://www.w3.org/1999/xhtml'
+        || element.localName !== 'a'
     ) {
         return null;
     }
-    const href = element.getAttribute("href");
+    const href = element.getAttribute('href');
     if (!href) {
         return null;
     }
     try {
         const token = new URL(href, element.ownerDocument.baseURI)
             .searchParams.get(FACEBOOK_TRACKING_QUERY_PARAMETER);
-        return token && token.trim() !== "" ? token : null;
+        return token && token.trim() !== '' ? token : null;
     } catch {
         return null;
     }
@@ -160,6 +161,7 @@ export function getFacebookTrackingToken(element: Element): string | null {
  *
  * @param document - Document receiving the update.
  * @param update - Structurally validated records and same-payload conflicts.
+ *
  * @returns - Availability changes requiring targeted source reconciliation.
  */
 export function storeFacebookTimestampUpdate(
@@ -228,6 +230,7 @@ export function storeFacebookTimestampUpdate(
  *
  * @param document - Facebook document whose scripts are inspected.
  * @param scripts - Exact mutated scripts, or all matching scripts during startup.
+ *
  * @returns - Availability changes produced by newly parsed scripts.
  */
 export function ingestFacebookPayloadScripts(
@@ -245,7 +248,7 @@ export function ingestFacebookPayloadScripts(
             continue;
         }
         const payloadText = element.textContent;
-        if (payloadText.trim() === "") {
+        if (payloadText.trim() === '') {
             continue;
         }
         store.parsedScripts.add(element);
@@ -261,6 +264,7 @@ export function ingestFacebookPayloadScripts(
  * Returns the exact Story record associated with one page-owned timestamp link.
  *
  * @param element - Candidate Facebook timestamp link.
+ *
  * @returns - Matching record, or null when the payload provides no unambiguous proof.
  */
 export function getFacebookTimestampRecord(element: Element): FacebookTimestampRecord | null {
@@ -278,6 +282,7 @@ export function getFacebookTimestampRecord(element: Element): FacebookTimestampR
  *
  * @param document - Facebook document to search.
  * @param tokens - Exact tracking tokens whose records changed.
+ *
  * @returns - Page-owned anchors suitable for targeted reconciliation.
  */
 export function findFacebookTimestampSources(

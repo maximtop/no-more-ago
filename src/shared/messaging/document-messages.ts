@@ -2,61 +2,61 @@
  * @file Defines the messages exchanged between background and document runtimes.
  */
 
-import type { DisplaySettings } from "../settings/snapshot";
+import type { DisplaySettings } from '../settings/snapshot';
 
 /**
  * Reconciles a document runtime with one effective, revisioned activation policy.
  */
-export const RECONCILE_DOCUMENT_POLICY_MESSAGE = "no-more-ago:reconcile-document-policy";
+export const RECONCILE_DOCUMENT_POLICY_MESSAGE = 'no-more-ago:reconcile-document-policy';
 
 /**
  * Acknowledges the policy revision retained by a document runtime.
  */
-export const DOCUMENT_POLICY_RECONCILED_MESSAGE = "no-more-ago:document-policy-reconciled";
+export const DOCUMENT_POLICY_RECONCILED_MESSAGE = 'no-more-ago:document-policy-reconciled';
 
 /**
  * Requests that a document runtime sample and reconcile its current route.
  */
-export const RECONCILE_DOCUMENT_ROUTE_MESSAGE = "no-more-ago:reconcile-document-route";
+export const RECONCILE_DOCUMENT_ROUTE_MESSAGE = 'no-more-ago:reconcile-document-route';
 
 /**
  * Requests the current lifecycle phase of a document runtime.
  */
-export const DOCUMENT_STATUS_MESSAGE = "no-more-ago:status";
+export const DOCUMENT_STATUS_MESSAGE = 'no-more-ago:status';
 
 /**
  * Delivers new display settings to a document runtime.
  */
-export const UPDATE_PRESENTATION_MESSAGE = "no-more-ago:update-presentation";
+export const UPDATE_PRESENTATION_MESSAGE = 'no-more-ago:update-presentation';
 
 /**
  * Confirms that a presentation revision was accepted.
  */
-export const PRESENTATION_UPDATED_MESSAGE = "no-more-ago:presentation-updated";
+export const PRESENTATION_UPDATED_MESSAGE = 'no-more-ago:presentation-updated';
 
 /**
  * Delivers the diagnostic-forwarding policy to a document runtime.
  */
-export const UPDATE_DEBUG_POLICY_MESSAGE = "no-more-ago:update-debug-policy";
+export const UPDATE_DEBUG_POLICY_MESSAGE = 'no-more-ago:update-debug-policy';
 
 /**
  * Confirms that a diagnostic-policy revision was accepted.
  */
-export const DEBUG_POLICY_UPDATED_MESSAGE = "no-more-ago:debug-policy-updated";
+export const DEBUG_POLICY_UPDATED_MESSAGE = 'no-more-ago:debug-policy-updated';
 
 /**
  * Carries a content-runtime diagnostic event to the background context.
  */
-export const DIAGNOSTIC_EVENT_MESSAGE = "no-more-ago:diagnostic-event";
+export const DIAGNOSTIC_EVENT_MESSAGE = 'no-more-ago:diagnostic-event';
 
 /**
  * Lifecycle phases returned by a content document runtime.
  */
 export const DOCUMENT_PHASE = {
-    WAITING: "waiting",
-    ACTIVE: "active",
-    STOPPED: "stopped",
-    FAILED: "failed",
+    WAITING: 'waiting',
+    ACTIVE: 'active',
+    STOPPED: 'stopped',
+    FAILED: 'failed',
 } as const;
 
 /**
@@ -157,8 +157,7 @@ export interface DebugPolicyUpdateMessage {
 /**
  * Every command a document runtime receives from the background context.
  */
-export type DocumentCommand =
-    | ReconcileDocumentPolicyMessage
+export type DocumentCommand = | ReconcileDocumentPolicyMessage
     | ReconcileDocumentRouteMessage
     | DocumentStatusMessage
     | PresentationUpdateMessage
@@ -242,8 +241,7 @@ export interface DiagnosticEventMessage {
 /**
  * Every reply a document runtime returns to the background context.
  */
-type DocumentReply =
-    | DocumentPolicyReconciledMessage
+type DocumentReply = | DocumentPolicyReconciledMessage
     | DocumentStatusResponse
     | PresentationUpdateAcknowledgement
     | DebugPolicyUpdateAcknowledgement;
@@ -255,6 +253,7 @@ type DocumentReply =
  * rather than untrusted: their fields are produced by this extension.
  *
  * @param response - Reply returned by the messaged frame.
+ *
  * @returns - Typed reply, or undefined when the frame did not answer.
  */
 function documentReply(response: unknown): DocumentReply | undefined {
@@ -266,6 +265,7 @@ function documentReply(response: unknown): DocumentReply | undefined {
  *
  * @param response - Reply returned by the messaged frame.
  * @param revision - Revision the acknowledgement must retain.
+ *
  * @returns - Whether a document runtime acknowledged the exact revision.
  */
 export function isDocumentPolicyAcknowledgement(
@@ -281,6 +281,7 @@ export function isDocumentPolicyAcknowledgement(
  *
  * @param response - Reply returned by the messaged frame.
  * @param revision - Revision the acknowledgement must match.
+ *
  * @returns - Whether a document runtime acknowledged the exact revision.
  */
 export function isPresentationAcknowledgement(response: unknown, revision: number): boolean {
@@ -293,6 +294,7 @@ export function isPresentationAcknowledgement(response: unknown, revision: numbe
  *
  * @param response - Reply returned by the messaged frame.
  * @param revision - Revision the acknowledgement must match.
+ *
  * @returns - Whether a document runtime acknowledged the exact revision.
  */
 export function isDebugPolicyAcknowledgement(response: unknown, revision: number): boolean {
@@ -304,6 +306,7 @@ export function isDebugPolicyAcknowledgement(response: unknown, revision: number
  * Reads the lifecycle phase reported by a messaged frame.
  *
  * @param response - Reply returned by the messaged frame.
+ *
  * @returns - Reported phase, or undefined when the frame did not answer.
  */
 export function readDocumentStatusPhase(response: unknown): DocumentPhase | undefined {

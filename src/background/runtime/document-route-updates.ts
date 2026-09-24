@@ -2,11 +2,12 @@
  * @file Delivers payload-free same-document route signals to exact browser frames.
  */
 
+import { YOUTUBE_HOSTNAME } from '../../shared/adapters/youtube-contract';
 import { RECONCILE_DOCUMENT_ROUTE_MESSAGE } from
-    "../../shared/messaging/document-messages";
-import { YOUTUBE_HOSTNAME } from "../../shared/adapters/youtube-contract";
-import { parseHttpUrl } from "../../shared/url/http";
-import type { TabsRuntime } from "./tabs";
+    '../../shared/messaging/document-messages';
+import { parseHttpUrl } from '../../shared/url/http';
+
+import type { TabsRuntime } from './tabs';
 
 /**
  * Typed subset of one browser history-state update.
@@ -79,7 +80,7 @@ interface RouteDeliveryState {
  */
 export function installDocumentRouteUpdates(input: {
     readonly updates: HistoryStateUpdateSource;
-    readonly tabs: Pick<TabsRuntime, "sendMessage">;
+    readonly tabs: Pick<TabsRuntime, 'sendMessage'>;
 }): void {
     const deliveries = new Map<string, RouteDeliveryState>();
 

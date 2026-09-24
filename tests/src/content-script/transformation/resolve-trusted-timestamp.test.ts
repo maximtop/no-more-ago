@@ -2,8 +2,14 @@
  * @file Verifies strict resolution of explicit-zone adapter timestamps.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
+import {
+    LINKEDIN_ADAPTER_ID,
+} from '../../../../src/content-script/adapters/linkedin';
+import {
+    TELEGRAM_WEB_K_ADAPTER_ID,
+} from '../../../../src/content-script/adapters/telegram-web-k';
 import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_KIND,
@@ -11,32 +17,27 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     TIMESTAMP_PRESENTATION_KIND,
     type TimestampCandidate,
-} from "../../../../src/content-script/adapters/types";
+} from '../../../../src/content-script/adapters/types';
 import {
     RESOLVED_TIMESTAMP_KIND,
     resolveTrustedTimestamp,
-} from "../../../../src/content-script/transformation/resolve-trusted-timestamp";
-import {
-    TELEGRAM_WEB_K_ADAPTER_ID,
-} from "../../../../src/content-script/adapters/telegram-web-k";
-import {
-    LINKEDIN_ADAPTER_ID,
-} from "../../../../src/content-script/adapters/linkedin";
+} from '../../../../src/content-script/transformation/resolve-trusted-timestamp';
 import {
     YOUTUBE_ADAPTER_ID,
     YOUTUBE_PLAYER_RESPONSE_RULE_ID,
-} from "../../../../src/shared/adapters/youtube-contract";
+} from '../../../../src/shared/adapters/youtube-contract';
 
-const IN_PLACE_TEST_RULE_ID = "in-place-test" as const;
-const NOW_MILLISECONDS = Date.parse("2100-01-01T00:00:00Z");
-const DERIVED_SOURCE = document.createElement("span");
-const DERIVED_TARGET = document.createTextNode("1w");
+const IN_PLACE_TEST_RULE_ID = 'in-place-test' as const;
+const NOW_MILLISECONDS = Date.parse('2100-01-01T00:00:00Z');
+const DERIVED_SOURCE = document.createElement('span');
+const DERIVED_TARGET = document.createTextNode('1w');
 DERIVED_SOURCE.append(DERIVED_TARGET);
 
 /**
  * Creates one derived candidate for resolver-domain tests.
  *
  * @param epochMilliseconds - Candidate Unix milliseconds.
+ *
  * @returns - Derived in-place timestamp candidate.
  */
 const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => ({
@@ -54,7 +55,7 @@ const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => ({
 
 const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
     ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
-    source: document.createElement("div"),
+    source: document.createElement('div'),
     sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
     rawDatetime,
     presentation: ADJACENT_TIME_PRESENTATION,
@@ -62,49 +63,49 @@ const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
     visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
 });
 
-describe("resolveTrustedTimestamp", () => {
-    it("resolves an exact ten-digit Unix-seconds source", () => {
+describe('resolveTrustedTimestamp', () => {
+    it('resolves an exact ten-digit Unix-seconds source', () => {
         const result = resolveTrustedTimestamp(
-            unixSecondsCandidate("1778774880"),
+            unixSecondsCandidate('1778774880'),
             NOW_MILLISECONDS,
         );
 
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved instant");
+            throw new Error('Expected resolved instant');
         }
-        expect(result.instant.toISOString()).toBe("2026-05-14T16:08:00.000Z");
-        expect(result.sourceDatetime).toBe("1778774880");
+        expect(result.instant.toISOString()).toBe('2026-05-14T16:08:00.000Z');
+        expect(result.sourceDatetime).toBe('1778774880');
         expect(result.validationRule).toBe(TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS);
     });
 
     it.each([
-        "",
-        "177877488",
-        "01778774880",
-        "17787748800",
-        "1778774880000",
-        " 1778774880",
-        "1778774880 ",
-        "+1778774880",
-        "-1778774880",
-        "177877488.0",
-        "1.77877488e9",
-        "17787748\n80",
-        "not-a-timestamp",
-    ])("rejects non-contract Unix-seconds input %j", (rawDatetime) => {
+        '',
+        '177877488',
+        '01778774880',
+        '17787748800',
+        '1778774880000',
+        ' 1778774880',
+        '1778774880 ',
+        '+1778774880',
+        '-1778774880',
+        '177877488.0',
+        '1.77877488e9',
+        '17787748\n80',
+        'not-a-timestamp',
+    ])('rejects non-contract Unix-seconds input %j', (rawDatetime) => {
         expect(resolveTrustedTimestamp(
             unixSecondsCandidate(rawDatetime),
             NOW_MILLISECONDS,
         )).toBeNull();
     });
 
-    it("normalizes an explicitly zoned timestamp to its instant", () => {
+    it('normalizes an explicitly zoned timestamp to its instant', () => {
         const result = resolveTrustedTimestamp({
-            ruleId: "github",
-            source: document.createElement("relative-time"),
-            sourceKind: "relative-time",
-            rawDatetime: "2026-08-23T10:15:00+03:00",
+            ruleId: 'github',
+            source: document.createElement('relative-time'),
+            sourceKind: 'relative-time',
+            rawDatetime: '2026-08-23T10:15:00+03:00',
             presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
@@ -112,19 +113,19 @@ describe("resolveTrustedTimestamp", () => {
 
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved instant");
+            throw new Error('Expected resolved instant');
         }
-        expect(result.instant.toISOString()).toBe("2026-08-23T07:15:00.000Z");
-        expect(result.sourceDatetime).toBe("2026-08-23T10:15:00+03:00");
+        expect(result.instant.toISOString()).toBe('2026-08-23T07:15:00.000Z');
+        expect(result.sourceDatetime).toBe('2026-08-23T10:15:00+03:00');
     });
 
-    it("rejects a timestamp without an explicit time zone", () => {
+    it('rejects a timestamp without an explicit time zone', () => {
         expect(
             resolveTrustedTimestamp({
-                ruleId: "github",
-                source: document.createElement("relative-time"),
-                sourceKind: "relative-time",
-                rawDatetime: "2026-08-23T10:15:00",
+                ruleId: 'github',
+                source: document.createElement('relative-time'),
+                sourceKind: 'relative-time',
+                rawDatetime: '2026-08-23T10:15:00',
                 presentation: ADJACENT_TIME_PRESENTATION,
                 validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
                 visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
@@ -137,23 +138,23 @@ describe("resolveTrustedTimestamp", () => {
      *
      * @param rawDatetime - Raw datetime value.
      * @param rule - Validation rule.
+     *
      * @returns - Timestamp candidate.
      */
     const candidate = (
         rawDatetime: string,
         rule: unknown = TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
-    ) =>
-        ({
-            ruleId: "github",
-            source: document.createElement("relative-time"),
-            sourceKind: "relative-time" as const,
-            rawDatetime,
-            presentation: ADJACENT_TIME_PRESENTATION,
-            ...(rule === null ? {} : { validationRule: rule }),
-            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-        }) as unknown as TimestampCandidate;
+    ) => ({
+        ruleId: 'github',
+        source: document.createElement('relative-time'),
+        sourceKind: 'relative-time' as const,
+        rawDatetime,
+        presentation: ADJACENT_TIME_PRESENTATION,
+        ...(rule === null ? {} : { validationRule: rule }),
+        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+    }) as unknown as TimestampCandidate;
 
-    it("preserves a valid derived Unix millisecond instant", () => {
+    it('preserves a valid derived Unix millisecond instant', () => {
         const epochMilliseconds = 1_704_164_645_678;
         const result = resolveTrustedTimestamp(
             derivedCandidate(epochMilliseconds),
@@ -162,7 +163,7 @@ describe("resolveTrustedTimestamp", () => {
 
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved derived instant");
+            throw new Error('Expected resolved derived instant');
         }
         expect(result.instant.getTime()).toBe(epochMilliseconds);
         expect(result.sourceDatetime).toBeNull();
@@ -178,33 +179,33 @@ describe("resolveTrustedTimestamp", () => {
         [Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER + 2],
         [8_640_000_000_000_001, Number.MAX_SAFE_INTEGER],
         [1_704_164_645_680, 1_704_164_645_679],
-    ])("rejects derived epoch %s at clock %s", (epochMilliseconds, now) => {
+    ])('rejects derived epoch %s at clock %s', (epochMilliseconds, now) => {
         expect(resolveTrustedTimestamp(derivedCandidate(epochMilliseconds), now))
             .toBeNull();
     });
 
-    it("does not apply the derived future check to an existing datetime candidate", () => {
+    it('does not apply the derived future check to an existing datetime candidate', () => {
         const result = resolveTrustedTimestamp(
-            candidate("2099-01-01T00:00:00Z"),
+            candidate('2099-01-01T00:00:00Z'),
             1_704_164_645_679,
         );
 
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved page instant");
+            throw new Error('Expected resolved page instant');
         }
-        expect(result.instant.toISOString()).toBe("2099-01-01T00:00:00.000Z");
+        expect(result.instant.toISOString()).toBe('2099-01-01T00:00:00.000Z');
     });
 
-    it("carries only a presentation target that belongs to the source", () => {
-        const source = document.createElement("span");
-        const target = document.createTextNode("1 hour ago");
+    it('carries only a presentation target that belongs to the source', () => {
+        const source = document.createElement('span');
+        const target = document.createTextNode('1 hour ago');
         source.append(target);
         const base = {
             ruleId: IN_PLACE_TEST_RULE_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
-            rawDatetime: "2026-08-28T10:09:07.000000Z",
+            rawDatetime: '2026-08-28T10:09:07.000000Z',
             validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
         } as const;
@@ -227,11 +228,12 @@ describe("resolveTrustedTimestamp", () => {
      * Builds a YouTube calendar-date candidate.
      *
      * @param rawDatetime - Raw datetime value.
+     *
      * @returns - Timestamp candidate.
      */
     const calendarCandidate = (rawDatetime: string): TimestampCandidate => ({
         ruleId: YOUTUBE_ADAPTER_ID,
-        source: document.createElement("yt-formatted-string"),
+        source: document.createElement('yt-formatted-string'),
         sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
         rawDatetime,
         presentation: ADJACENT_TIME_PRESENTATION,
@@ -239,13 +241,13 @@ describe("resolveTrustedTimestamp", () => {
         visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
     });
 
-    it("preserves a trusted calendar date as a non-instant value", () => {
-        const source = document.createElement("yt-formatted-string");
+    it('preserves a trusted calendar date as a non-instant value', () => {
+        const source = document.createElement('yt-formatted-string');
         const result = resolveTrustedTimestamp({
             ruleId: YOUTUBE_ADAPTER_ID,
             source,
             sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
-            rawDatetime: "2024-02-29",
+            rawDatetime: '2024-02-29',
             presentation: ADJACENT_TIME_PRESENTATION,
             validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
@@ -254,8 +256,10 @@ describe("resolveTrustedTimestamp", () => {
         expect(result).toEqual({
             kind: RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE,
             source,
-            sourceDatetime: "2024-02-29",
-            calendarDate: { isoDate: "2024-02-29", year: 2024, month: 2, day: 29 },
+            sourceDatetime: '2024-02-29',
+            calendarDate: {
+                isoDate: '2024-02-29', year: 2024, month: 2, day: 29,
+            },
             validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
             presentation: ADJACENT_TIME_PRESENTATION,
@@ -263,13 +267,13 @@ describe("resolveTrustedTimestamp", () => {
     });
 
     it.each([
-        "2023-02-29",
-        "2024-02-30",
-        "2024-2-29",
-        " 2024-02-29",
-        "2024-02-29\u009f",
-        "2024-02-29T00:00:00Z",
-    ])("rejects calendar candidate %j", (rawDatetime) => {
+        '2023-02-29',
+        '2024-02-30',
+        '2024-2-29',
+        ' 2024-02-29',
+        '2024-02-29\u009f',
+        '2024-02-29T00:00:00Z',
+    ])('rejects calendar candidate %j', (rawDatetime) => {
         expect(resolveTrustedTimestamp(calendarCandidate(rawDatetime), NOW_MILLISECONDS))
             .toBeNull();
     });
@@ -278,11 +282,12 @@ describe("resolveTrustedTimestamp", () => {
      * Builds a YouTube player-response candidate.
      *
      * @param rawDatetime - Raw datetime value.
+     *
      * @returns - Timestamp candidate.
      */
     const combinedCandidate = (rawDatetime: string): TimestampCandidate => ({
         ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
-        source: document.createElement("yt-formatted-string"),
+        source: document.createElement('yt-formatted-string'),
         sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
         rawDatetime,
         presentation: ADJACENT_TIME_PRESENTATION,
@@ -292,9 +297,9 @@ describe("resolveTrustedTimestamp", () => {
     });
 
     it.each([
-        ["2024-02-29", RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE],
-        ["2026-08-29T10:15:00+03:00", RESOLVED_TIMESTAMP_KIND.INSTANT],
-    ])("resolves combined publication value %s", (rawDatetime, kind) => {
+        ['2024-02-29', RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE],
+        ['2026-08-29T10:15:00+03:00', RESOLVED_TIMESTAMP_KIND.INSTANT],
+    ])('resolves combined publication value %s', (rawDatetime, kind) => {
         const result = resolveTrustedTimestamp(
             combinedCandidate(rawDatetime),
             NOW_MILLISECONDS,
@@ -302,71 +307,71 @@ describe("resolveTrustedTimestamp", () => {
         expect(result?.kind).toBe(kind);
     });
 
-    it("normalizes a combined explicitly zoned value to the same instant", () => {
+    it('normalizes a combined explicitly zoned value to the same instant', () => {
         const result = resolveTrustedTimestamp(
-            combinedCandidate("2026-08-29T10:15:00+03:00"),
+            combinedCandidate('2026-08-29T10:15:00+03:00'),
             NOW_MILLISECONDS,
         );
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved combined instant");
+            throw new Error('Expected resolved combined instant');
         }
-        expect(result.instant.toISOString()).toBe("2026-08-29T07:15:00.000Z");
+        expect(result.instant.toISOString()).toBe('2026-08-29T07:15:00.000Z');
     });
 
     it.each([
-        "2023-02-29",
-        "2024-02-30",
-        "2024-2-29",
-        " 2024-02-29",
-        "2024-02-29 ",
-        "2024-02-29\u0000",
-        "2024-02-29\u009f",
-        "2026-08-29T10:15:00",
-        "2026-08-29T10Z",
-        "2026-08-29t10:15:00Z",
-        "2026-08-29T10:15:00z",
-        "2026-08-29T10:15:00+24:00",
-        "2026-08-29T10:15:00-00:00",
-        "not a publication value",
-    ])("rejects combined publication value %j", (rawDatetime) => {
+        '2023-02-29',
+        '2024-02-30',
+        '2024-2-29',
+        ' 2024-02-29',
+        '2024-02-29 ',
+        '2024-02-29\u0000',
+        '2024-02-29\u009f',
+        '2026-08-29T10:15:00',
+        '2026-08-29T10Z',
+        '2026-08-29t10:15:00Z',
+        '2026-08-29T10:15:00z',
+        '2026-08-29T10:15:00+24:00',
+        '2026-08-29T10:15:00-00:00',
+        'not a publication value',
+    ])('rejects combined publication value %j', (rawDatetime) => {
         expect(resolveTrustedTimestamp(combinedCandidate(rawDatetime), NOW_MILLISECONDS))
             .toBeNull();
     });
 
     it.each([
-        ["2026-08-23T10:15Z", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23T10:15:30Z", "2026-08-23T10:15:30.000Z"],
-        ["2026-08-23T10:15:30.123456789Z", "2026-08-23T10:15:30.123Z"],
-        ["2026-08-23T10:15:30,123456789Z", "2026-08-23T10:15:30.123Z"],
-        ["20260823T101530.123456789Z", "2026-08-23T10:15:30.123Z"],
-        ["20260823 101530Z", "2026-08-23T10:15:30.000Z"],
-        ["2026-08-23 10:15:30Z", "2026-08-23T10:15:30.000Z"],
-        ["2026-235T10:15Z", "2026-08-23T10:15:00.000Z"],
-        ["2026235T1015Z", "2026-08-23T10:15:00.000Z"],
-        ["2026-W34-7T10:15Z", "2026-08-23T10:15:00.000Z"],
-        ["2026W347T1015Z", "2026-08-23T10:15:00.000Z"],
-        ["+002026-08-23T10:15Z", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23T10:15.5Z", "2026-08-23T10:15:30.000Z"],
-        ["2026-08-23T24:00Z", "2026-08-24T00:00:00.000Z"],
-        ["2026-08-23T10:15+00", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23T10:15+0000", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23T10:15+00:00", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23T10:15+23", "2026-08-22T11:15:00.000Z"],
-        ["2026-08-23T10:15+2359", "2026-08-22T10:16:00.000Z"],
-        ["2026-08-23T10:15+23:59", "2026-08-22T10:16:00.000Z"],
-        ["2026-08-23T10:15-23", "2026-08-24T09:15:00.000Z"],
-        ["2026-08-23T10:15-2359", "2026-08-24T10:14:00.000Z"],
-        ["2026-08-23T10:15-23:59", "2026-08-24T10:14:00.000Z"],
-        ["2026-08-23T10:15-00:01", "2026-08-23T10:16:00.000Z"],
-    ])("accepts complete supported instant %s", (rawDatetime, expected) => {
-        const source = document.createElement("relative-time");
+        ['2026-08-23T10:15Z', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23T10:15:30Z', '2026-08-23T10:15:30.000Z'],
+        ['2026-08-23T10:15:30.123456789Z', '2026-08-23T10:15:30.123Z'],
+        ['2026-08-23T10:15:30,123456789Z', '2026-08-23T10:15:30.123Z'],
+        ['20260823T101530.123456789Z', '2026-08-23T10:15:30.123Z'],
+        ['20260823 101530Z', '2026-08-23T10:15:30.000Z'],
+        ['2026-08-23 10:15:30Z', '2026-08-23T10:15:30.000Z'],
+        ['2026-235T10:15Z', '2026-08-23T10:15:00.000Z'],
+        ['2026235T1015Z', '2026-08-23T10:15:00.000Z'],
+        ['2026-W34-7T10:15Z', '2026-08-23T10:15:00.000Z'],
+        ['2026W347T1015Z', '2026-08-23T10:15:00.000Z'],
+        ['+002026-08-23T10:15Z', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23T10:15.5Z', '2026-08-23T10:15:30.000Z'],
+        ['2026-08-23T24:00Z', '2026-08-24T00:00:00.000Z'],
+        ['2026-08-23T10:15+00', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23T10:15+0000', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23T10:15+00:00', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23T10:15+23', '2026-08-22T11:15:00.000Z'],
+        ['2026-08-23T10:15+2359', '2026-08-22T10:16:00.000Z'],
+        ['2026-08-23T10:15+23:59', '2026-08-22T10:16:00.000Z'],
+        ['2026-08-23T10:15-23', '2026-08-24T09:15:00.000Z'],
+        ['2026-08-23T10:15-2359', '2026-08-24T10:14:00.000Z'],
+        ['2026-08-23T10:15-23:59', '2026-08-24T10:14:00.000Z'],
+        ['2026-08-23T10:15-00:01', '2026-08-23T10:16:00.000Z'],
+    ])('accepts complete supported instant %s', (rawDatetime, expected) => {
+        const source = document.createElement('relative-time');
         const result = resolveTrustedTimestamp(
             { ...candidate(rawDatetime), source },
             NOW_MILLISECONDS,
         );
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved instant");
+            throw new Error('Expected resolved instant');
         }
         expect(result.source).toBe(source);
         expect(result.sourceDatetime).toBe(rawDatetime);
@@ -374,133 +379,133 @@ describe("resolveTrustedTimestamp", () => {
     });
 
     it.each([
-        "",
-        " 2026-08-23T10:15Z",
-        "2026-08-23T10:15Z ",
-        "2026-08-23T10:15\nZ",
-        "2026-08-23T10:15",
-        "2026-08-23",
-        "2026-08-23Z",
-        "2026T10:15Z",
-        "2026-08T10:15Z",
-        "2026-W34T10:15Z",
-        "2026-23T10:15Z",
-        "2026-08-23T10Z",
-        "2026-08-23T10.5Z",
-        "2026-08-23T10:15.Z",
-        "2026-08-23T10:15z",
-        "2026-08-23t10:15Z",
-        "2026-08-23T10:15+3",
-        "2026-08-23T10:15+030",
-        "2026-08-23T10:15+03:",
-        "2026-08-23T10:15+03:30:00",
-        "2026-08-23T10:15+24",
-        "2026-08-23T10:15-24",
-        "2026-08-23T10:15+2400",
-        "2026-08-23T10:15-2400",
-        "2026-08-23T10:15+24:00",
-        "2026-08-23T10:15-24:00",
-        "2026-08-23T10:15+99",
-        "2026-08-23T10:15-99",
-        "2026-08-23T10:15+9959",
-        "2026-08-23T10:15-9959",
-        "2026-08-23T10:15+99:59",
-        "2026-08-23T10:15-99:59",
-        "2026-08-23T10:15+23:60",
-        "2026-08-23T10:15-23:60",
-        "2026-08-23T10:15-00",
-        "2026-08-23T10:15-0000",
-        "2026-08-23T10:15-00:00",
-        "2026-08-23T10:15+03:30junkZ",
-        "2026-08-23T10:15Zjunk+03",
-        "2026-08-23T10:15+03Z",
-        "2026-08-23T10:15Zjunk",
-        "2026-08-23T10:15+03:30junk",
-        "2026-08-23T10:15\u0080Z",
-        "2026-08-23T10:15\u009fZ",
-        "2026W34T1015Z",
-        "2026-02-30T10:15Z",
-        "2026-13-01T10:15Z",
-        "2026-W54-1T10:15Z",
-        "2026-W00-1T10:15Z",
-        "2026-08-23T25:15Z",
-        "2026-08-23T10:60Z",
-        "2026-08-23T10:15:60Z",
-        "not a timestamp",
-    ])("rejects unsafe or incomplete input %j", (rawDatetime) => {
-        const source = document.createElement("relative-time");
-        source.textContent = "3 months ago";
+        '',
+        ' 2026-08-23T10:15Z',
+        '2026-08-23T10:15Z ',
+        '2026-08-23T10:15\nZ',
+        '2026-08-23T10:15',
+        '2026-08-23',
+        '2026-08-23Z',
+        '2026T10:15Z',
+        '2026-08T10:15Z',
+        '2026-W34T10:15Z',
+        '2026-23T10:15Z',
+        '2026-08-23T10Z',
+        '2026-08-23T10.5Z',
+        '2026-08-23T10:15.Z',
+        '2026-08-23T10:15z',
+        '2026-08-23t10:15Z',
+        '2026-08-23T10:15+3',
+        '2026-08-23T10:15+030',
+        '2026-08-23T10:15+03:',
+        '2026-08-23T10:15+03:30:00',
+        '2026-08-23T10:15+24',
+        '2026-08-23T10:15-24',
+        '2026-08-23T10:15+2400',
+        '2026-08-23T10:15-2400',
+        '2026-08-23T10:15+24:00',
+        '2026-08-23T10:15-24:00',
+        '2026-08-23T10:15+99',
+        '2026-08-23T10:15-99',
+        '2026-08-23T10:15+9959',
+        '2026-08-23T10:15-9959',
+        '2026-08-23T10:15+99:59',
+        '2026-08-23T10:15-99:59',
+        '2026-08-23T10:15+23:60',
+        '2026-08-23T10:15-23:60',
+        '2026-08-23T10:15-00',
+        '2026-08-23T10:15-0000',
+        '2026-08-23T10:15-00:00',
+        '2026-08-23T10:15+03:30junkZ',
+        '2026-08-23T10:15Zjunk+03',
+        '2026-08-23T10:15+03Z',
+        '2026-08-23T10:15Zjunk',
+        '2026-08-23T10:15+03:30junk',
+        '2026-08-23T10:15\u0080Z',
+        '2026-08-23T10:15\u009fZ',
+        '2026W34T1015Z',
+        '2026-02-30T10:15Z',
+        '2026-13-01T10:15Z',
+        '2026-W54-1T10:15Z',
+        '2026-W00-1T10:15Z',
+        '2026-08-23T25:15Z',
+        '2026-08-23T10:60Z',
+        '2026-08-23T10:15:60Z',
+        'not a timestamp',
+    ])('rejects unsafe or incomplete input %j', (rawDatetime) => {
+        const source = document.createElement('relative-time');
+        source.textContent = '3 months ago';
         const result = resolveTrustedTimestamp(
             { ...candidate(rawDatetime), source },
             NOW_MILLISECONDS,
         );
         expect(result).toBeNull();
-        expect(source.textContent).toBe("3 months ago");
+        expect(source.textContent).toBe('3 months ago');
     });
 
     /**
      * Builds a generic time-element candidate.
      *
      * @param rawDatetime - Raw datetime value.
+     *
      * @returns - Timestamp candidate.
      */
-    const htmlCandidate = (rawDatetime: string) =>
-        ({
-            ruleId: "generic-time",
-            source: document.createElement("time"),
-            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
-            rawDatetime,
-            presentation: ADJACENT_TIME_PRESENTATION,
-            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
-            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
-        }) as unknown as TimestampCandidate;
+    const htmlCandidate = (rawDatetime: string) => ({
+        ruleId: 'generic-time',
+        source: document.createElement('time'),
+        sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+        rawDatetime,
+        presentation: ADJACENT_TIME_PRESENTATION,
+        validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+    }) as unknown as TimestampCandidate;
 
     it.each([
-        ["2026-08-23T10:15Z", "2026-08-23T10:15:00.000Z"],
-        ["2026-08-23 10:15+03:00", "2026-08-23T07:15:00.000Z"],
-        ["2026-08-23T10:15+0300", "2026-08-23T07:15:00.000Z"],
-        ["2026-08-23T10:15:30Z", "2026-08-23T10:15:30.000Z"],
-        ["2026-08-23T10:15:30.1Z", "2026-08-23T10:15:30.100Z"],
-        ["2026-08-23T10:15:30.123Z", "2026-08-23T10:15:30.123Z"],
-        ["10000-01-01T00:00Z", "+010000-01-01T00:00:00.000Z"],
-    ])("accepts HTML global date-time %s", (rawDatetime, expected) => {
+        ['2026-08-23T10:15Z', '2026-08-23T10:15:00.000Z'],
+        ['2026-08-23 10:15+03:00', '2026-08-23T07:15:00.000Z'],
+        ['2026-08-23T10:15+0300', '2026-08-23T07:15:00.000Z'],
+        ['2026-08-23T10:15:30Z', '2026-08-23T10:15:30.000Z'],
+        ['2026-08-23T10:15:30.1Z', '2026-08-23T10:15:30.100Z'],
+        ['2026-08-23T10:15:30.123Z', '2026-08-23T10:15:30.123Z'],
+        ['10000-01-01T00:00Z', '+010000-01-01T00:00:00.000Z'],
+    ])('accepts HTML global date-time %s', (rawDatetime, expected) => {
         const result = resolveTrustedTimestamp(htmlCandidate(rawDatetime), NOW_MILLISECONDS);
 
         expect(result?.kind).toBe(RESOLVED_TIMESTAMP_KIND.INSTANT);
         if (!result || result.kind !== RESOLVED_TIMESTAMP_KIND.INSTANT) {
-            throw new Error("Expected resolved instant");
+            throw new Error('Expected resolved instant');
         }
         expect(result.instant.toISOString()).toBe(expected);
         expect(result.validationRule).toBe(TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL);
     });
 
     it.each([
-        "2026-08-23",
-        "2026-08-23T10:15",
-        " 2026-08-23T10:15Z",
-        "2026-08-23T10:15Z ",
-        "2026-08-23T10:15\nZ",
-        "2026-02-30T10:15Z",
-        "0000-08-23T10:15Z",
-        "2026-08-23T25:15Z",
-        "2026-08-23T10:15z",
-        "2026-08-23T10:15+03",
-        "2026-08-23T10:15-00:00",
-        "2026-08-23T10:15:60Z",
-        "2026-08-23T10:15Zjunk",
-        "2026-08-23T10:15+24:00",
-        "P1D",
-        "100000000000000000000000-08-23T10:15Z",
-    ])("rejects ineligible HTML global date-time %j", (rawDatetime) => {
+        '2026-08-23',
+        '2026-08-23T10:15',
+        ' 2026-08-23T10:15Z',
+        '2026-08-23T10:15Z ',
+        '2026-08-23T10:15\nZ',
+        '2026-02-30T10:15Z',
+        '0000-08-23T10:15Z',
+        '2026-08-23T25:15Z',
+        '2026-08-23T10:15z',
+        '2026-08-23T10:15+03',
+        '2026-08-23T10:15-00:00',
+        '2026-08-23T10:15:60Z',
+        '2026-08-23T10:15Zjunk',
+        '2026-08-23T10:15+24:00',
+        'P1D',
+        '100000000000000000000000-08-23T10:15Z',
+    ])('rejects ineligible HTML global date-time %j', (rawDatetime) => {
         expect(resolveTrustedTimestamp(
             htmlCandidate(rawDatetime),
             NOW_MILLISECONDS,
         )).toBeNull();
     });
 
-    it.each([null, "other:rule"])("rejects rule %j", (rule) => {
+    it.each([null, 'other:rule'])('rejects rule %j', (rule) => {
         expect(resolveTrustedTimestamp(
-            candidate("2026-08-23T10:15Z", rule),
+            candidate('2026-08-23T10:15Z', rule),
             NOW_MILLISECONDS,
         )).toBeNull();
     });

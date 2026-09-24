@@ -41,6 +41,7 @@ export type SettledOperation<T> = SettledSuccess<T> | SettledFailure;
  * Settles a browser operation without rejecting its caller.
  *
  * @param operation - Operation to invoke and settle.
+ *
  * @returns - Tagged success or failure result.
  */
 function settle<T>(operation: () => Promise<T>): Promise<SettledOperation<T>> {
@@ -61,6 +62,7 @@ function settle<T>(operation: () => Promise<T>): Promise<SettledOperation<T>> {
  * idempotent because browser APIs do not provide cancellation.
  *
  * @param operation - Operation to invoke and settle.
+ *
  * @returns - Tagged success or failure result.
  */
 export async function settleBrowserOperation<T>(

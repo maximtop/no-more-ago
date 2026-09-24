@@ -2,16 +2,20 @@
  * @file Discovers trusted TikTok direct-publication timestamps.
  */
 
-import { discoverElements } from "./discover-elements";
-import { isHtmlElement } from "./html-element";
-import { findSimpleTextTarget } from "./simple-text-target";
+import { discoverElements } from './discover-elements';
+import { isHtmlElement } from './html-element';
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
+import { findSimpleTextTarget } from './simple-text-target';
 import {
     isTikTokHydrationScript,
     isTikTokPostId,
     invalidateTikTokHydrationCache,
     resolveTikTokPublicationDatetime,
     TIKTOK_HYDRATION_SELECTOR,
-} from "./tiktok-timestamp";
+} from './tiktok-timestamp';
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -21,17 +25,12 @@ import {
     type TimestampPresentation,
     type TimestampSourceAttribute,
     type TimestampSourceRule,
-} from "./types";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
-const LEGACY_DIRECT_MARKER = "browser-nickname" as const;
-const DIRECT_FEED_MARKER = "recommend-list-item-container" as const;
+const LEGACY_DIRECT_MARKER = 'browser-nickname' as const;
+const DIRECT_FEED_MARKER = 'recommend-list-item-container' as const;
 const LEGACY_DIRECT_SOURCE_SELECTOR = `[data-e2e="${LEGACY_DIRECT_MARKER}"]` as const;
-const DIRECT_FEED_SOURCE_SELECTOR =
-    `article[data-e2e="${DIRECT_FEED_MARKER}"]` as const;
+const DIRECT_FEED_SOURCE_SELECTOR = `article[data-e2e="${DIRECT_FEED_MARKER}"]` as const;
 const AUTHOR_PROFILE_PATH = /^\/@[^/]+\/?$/u;
 const PUBLICATION_PATH = /^\/(@[^/]+)\/(video|photo)\/([^/]+)\/?$/u;
 const DIRECT_FEED_WRAPPER_ID = /^xgwrapper-\d+-(.+)$/u;
@@ -41,17 +40,17 @@ const MAXIMUM_HYDRATION_RECONCILIATION_VISITS = 100_000;
 /**
  * Stable identifier for legacy TikTok direct-page metadata.
  */
-export const TIKTOK_LEGACY_DIRECT_ADAPTER_ID = "tiktok-legacy-direct" as const;
+export const TIKTOK_LEGACY_DIRECT_ADAPTER_ID = 'tiktok-legacy-direct' as const;
 
 /**
  * Stable identifier for current TikTok direct-feed metadata.
  */
-export const TIKTOK_DIRECT_FEED_ADAPTER_ID = "tiktok-direct-feed" as const;
+export const TIKTOK_DIRECT_FEED_ADAPTER_ID = 'tiktok-direct-feed' as const;
 
 /**
  * Canonical hostname handled by the TikTok adapters.
  */
-export const TIKTOK_HOSTNAME = "www.tiktok.com" as const;
+export const TIKTOK_HOSTNAME = 'www.tiktok.com' as const;
 
 /**
  * Supported publication identity parsed from a TikTok path.
@@ -73,16 +72,18 @@ interface TikTokPublication {
  * Checks the exact supported TikTok origin.
  *
  * @param url - URL considered by the adapter.
+ *
  * @returns - Whether the URL is HTTPS on the canonical hostname.
  */
 function hasTikTokOrigin(url: URL): boolean {
-    return url.protocol === "https:" && url.hostname === TIKTOK_HOSTNAME;
+    return url.protocol === 'https:' && url.hostname === TIKTOK_HOSTNAME;
 }
 
 /**
  * Parses one supported direct publication URL.
  *
  * @param url - Candidate TikTok URL.
+ *
  * @returns - Publication identity, or null outside direct video/photo paths.
  */
 function parsePublication(url: URL): TikTokPublication | null {
@@ -93,7 +94,7 @@ function parsePublication(url: URL): TikTokPublication | null {
     const author = match?.[1];
     const kind = match?.[2];
     const id = match?.[3];
-    return author && (kind === "video" || kind === "photo") && id && isTikTokPostId(id)
+    return author && (kind === 'video' || kind === 'photo') && id && isTikTokPostId(id)
         ? { authorPath: `/${author}`, id }
         : null;
 }
@@ -102,6 +103,7 @@ function parsePublication(url: URL): TikTokPublication | null {
  * Extracts a strict TikTok post ID from one direct-feed wrapper ID.
  *
  * @param value - Candidate wrapper ID.
+ *
  * @returns - Supported post ID, or null for another wrapper shape.
  */
 function getDirectFeedPostId(value: string): string | null {
@@ -113,6 +115,7 @@ function getDirectFeedPostId(value: string): string | null {
  * Checks one serialized link destination against the exact TikTok profile shape.
  *
  * @param href - Current or prior serialized link destination.
+ *
  * @returns - Whether the destination is an exact canonical TikTok profile.
  */
 function isProfileHref(href: string | null): boolean {
@@ -131,6 +134,7 @@ function isProfileHref(href: string | null): boolean {
  * Checks whether a URL belongs to a confirmed TikTok publication surface.
  *
  * @param url - URL considered for adapter selection.
+ *
  * @returns - Whether the URL is a direct video or photo surface.
  */
 export function matchesTikTokUrl(url: URL): boolean {
@@ -141,6 +145,7 @@ export function matchesTikTokUrl(url: URL): boolean {
  * Checks the observed direct-page metadata source shape.
  *
  * @param element - Candidate direct publication source.
+ *
  * @returns - Whether the element owns the observed metadata marker.
  */
 function isLegacyDirectSource(element: Element): boolean {
@@ -153,11 +158,12 @@ function isLegacyDirectSource(element: Element): boolean {
  * Checks the observed direct feed-article source shape.
  *
  * @param element - Candidate direct publication source.
+ *
  * @returns - Whether the element is one TikTok feed article.
  */
 function isDirectFeedSource(element: Element): boolean {
     return isHtmlElement(element)
-        && element.localName === "article"
+        && element.localName === 'article'
         && element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E)
             === DIRECT_FEED_MARKER;
 }
@@ -166,11 +172,12 @@ function isDirectFeedSource(element: Element): boolean {
  * Selects the last simple direct span as the page-owned publication date.
  *
  * @param source - Observed direct metadata source.
+ *
  * @returns - Simple date text node, or null for ambiguous markup.
  */
 function findLegacyDirectDateTarget(source: Element): Text | null {
     const spans = Array.from(source.children).filter(
-        (child) => isHtmlElement(child) && child.localName === "span",
+        (child) => isHtmlElement(child) && child.localName === 'span',
     );
     if (spans.length < 2) {
         return null;
@@ -184,17 +191,18 @@ function findLegacyDirectDateTarget(source: Element): Text | null {
  *
  * @param link - Candidate author link.
  * @param publication - Current direct publication identity.
+ *
  * @returns - Whether the link owns the expected exact profile path.
  */
 function isPublicationAuthorLink(link: Element, publication: TikTokPublication): boolean {
     const href = link.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.HREF);
-    if (!isHtmlElement(link) || link.localName !== "a" || href === null) {
+    if (!isHtmlElement(link) || link.localName !== 'a' || href === null) {
         return false;
     }
     try {
         const url = new URL(href, `https://${TIKTOK_HOSTNAME}/`);
         return hasTikTokOrigin(url)
-            && url.pathname.replace(/\/$/u, "") === publication.authorPath;
+            && url.pathname.replace(/\/$/u, '') === publication.authorPath;
     } catch {
         return false;
     }
@@ -205,19 +213,18 @@ function isPublicationAuthorLink(link: Element, publication: TikTokPublication):
  *
  * @param source - Candidate direct feed article.
  * @param publication - Current direct publication identity.
+ *
  * @returns - Exact page-owned date text, or null for another or ambiguous article.
  */
 function findDirectFeedDateTarget(
     source: Element,
     publication: TikTokPublication,
 ): Text | null {
-    const ownsPublication = Array.from(source.querySelectorAll("[id]")).some((element) =>
-        getDirectFeedPostId(element.id) === publication.id
-    );
+    const ownsPublication = Array.from(source.querySelectorAll('[id]')).some((element) => getDirectFeedPostId(element.id) === publication.id);
     if (!ownsPublication) {
         return null;
     }
-    const targets = Array.from(source.querySelectorAll("a[href]")).flatMap((link) => {
+    const targets = Array.from(source.querySelectorAll('a[href]')).flatMap((link) => {
         if (!isPublicationAuthorLink(link, publication)) {
             return [];
         }
@@ -226,7 +233,7 @@ function findDirectFeedDateTarget(
             return [];
         }
         const date = row.lastElementChild;
-        if (!date || !isHtmlElement(date) || date.localName !== "span") {
+        if (!date || !isHtmlElement(date) || date.localName !== 'span') {
             return [];
         }
         const target = findSimpleTextTarget(date);
@@ -239,14 +246,15 @@ function findDirectFeedDateTarget(
  * Creates an in-place TikTok presentation while retaining its author separator.
  *
  * @param target - Exact simple page-owned timestamp text.
+ *
  * @returns - Presentation with an optional retained leading bullet segment.
  */
 function createDirectPresentation(target: Text): TimestampPresentation {
-    const textPrefix = target.data.match(/^\s*·\s*/u)?.[0] ?? "";
+    const textPrefix = target.data.match(/^\s*·\s*/u)?.[0] ?? '';
     return {
         kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
         target,
-        ...(textPrefix === "" ? {} : { textPrefix }),
+        ...(textPrefix === '' ? {} : { textPrefix }),
     };
 }
 
@@ -254,6 +262,7 @@ function createDirectPresentation(target: Text): TimestampPresentation {
  * Checks whether one changed subtree contains the exact hydration script.
  *
  * @param node - Added or removed page-authored node.
+ *
  * @returns - Whether the subtree can replace TikTok hydration evidence.
  */
 function containsHydrationScript(node: Node): boolean {
@@ -271,6 +280,7 @@ function containsHydrationScript(node: Node): boolean {
  * @param element - Element whose direct children changed.
  * @param addedNodes - Nodes added by the mutation.
  * @param removedNodes - Nodes removed by the mutation.
+ *
  * @returns - Whether current TikTok sources need bounded evidence reconciliation.
  */
 function changesHydration(
@@ -293,6 +303,7 @@ function changesHydration(
  * @param document - TikTok document containing current source elements.
  * @param selector - Exact surface-specific source selector.
  * @param predicate - Source-shape predicate for the surface.
+ *
  * @returns - Bounded source prefix requiring evidence reconciliation.
  */
 function discoverHydrationSources(
@@ -328,6 +339,7 @@ function discoverHydrationSources(
  * @param source - Page-owned timestamp source.
  * @param publication - Publication identity used for hydration and ID evidence.
  * @param presentation - Surface-specific output presentation.
+ *
  * @returns - Trusted candidate, or null when timestamp evidence is invalid.
  */
 function createCandidate(
@@ -360,6 +372,7 @@ function createCandidate(
  * @param element - Element whose adapter-declared attribute changed.
  * @param attributeName - Changed attribute.
  * @param oldValue - Previous serialized value.
+ *
  * @returns - Exact legacy source requiring reconciliation.
  */
 function getLegacyMutationSources(
@@ -382,6 +395,7 @@ function getLegacyMutationSources(
  * @param element - Element whose adapter-declared attribute changed.
  * @param attributeName - Changed attribute.
  * @param oldValue - Previous serialized value.
+ *
  * @returns - Exact feed article requiring reconciliation.
  */
 function getDirectFeedMutationSources(
@@ -413,7 +427,7 @@ function getDirectFeedMutationSources(
     }
     const currentValue = element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATA_E2E);
     return isHtmlElement(element)
-        && element.localName === "article"
+        && element.localName === 'article'
         && (currentValue === DIRECT_FEED_MARKER || oldValue === DIRECT_FEED_MARKER)
         ? [element]
         : [];
@@ -424,13 +438,14 @@ function getDirectFeedMutationSources(
  *
  * @param selector - Exact source selector for the rule.
  * @param predicate - Source-shape predicate for the rule.
+ *
  * @returns - Child-list mutation mapper for that source surface.
  */
 function hydrationMutationSources(
     selector: string,
     predicate: (element: Element) => boolean,
-): NonNullable<TimestampSourceRule["getChildMutationSources"]> {
-    return (element, addedNodes, removedNodes) => changesHydration(
+): NonNullable<TimestampSourceRule['getChildMutationSources']> {
+    return (element, addedNodes, removedNodes) => (changesHydration(
         element,
         addedNodes,
         removedNodes,
@@ -440,7 +455,7 @@ function hydrationMutationSources(
             selector,
             predicate,
         )
-        : [];
+        : []);
 }
 
 /**

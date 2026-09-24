@@ -6,68 +6,68 @@
  * Validation rules proving that a candidate carries an eligible timestamp value.
  */
 export const TIMESTAMP_VALIDATION_RULE = {
-    CALENDAR_DATE: "date:calendar",
-    CALENDAR_OR_EXPLICIT_ISO_ZONE: "datetime:calendar-or-explicit-zone",
-    EXPLICIT_ISO_ZONE: "datetime:iso8601-explicit-zone",
-    HTML_GLOBAL: "datetime:html-global",
-    UNIX_SECONDS: "datetime:unix-seconds",
-    DERIVED_UNIX_MILLISECONDS: "instant:derived-unix-milliseconds",
+    CALENDAR_DATE: 'date:calendar',
+    CALENDAR_OR_EXPLICIT_ISO_ZONE: 'datetime:calendar-or-explicit-zone',
+    EXPLICIT_ISO_ZONE: 'datetime:iso8601-explicit-zone',
+    HTML_GLOBAL: 'datetime:html-global',
+    UNIX_SECONDS: 'datetime:unix-seconds',
+    DERIVED_UNIX_MILLISECONDS: 'instant:derived-unix-milliseconds',
 } as const;
 
 /**
  * Source kinds recognized by timestamp extraction rules.
  */
 export const TIMESTAMP_SOURCE_KIND = {
-    BLUESKY_POST: "bluesky-post",
-    RELATIVE_TIME: "relative-time",
-    TIME_AGO: "time-ago",
-    TIME_UNTIL: "time-until",
-    STANDARD_TIME: "time",
-    HACKER_NEWS_AGE: "hacker-news-age",
-    STACK_EXCHANGE_TIMESTAMP: "stack-exchange-timestamp",
-    TELEGRAM_WEB_K_MESSAGE: "telegram-web-k-message",
-    TIKTOK_PUBLICATION: "tiktok-publication",
-    LINKEDIN_TIMESTAMP: "linkedin-timestamp",
-    YT_FORMATTED_STRING: "yt-formatted-string",
-    FACEBOOK_STORY_TIMESTAMP: "facebook-story-timestamp",
+    BLUESKY_POST: 'bluesky-post',
+    RELATIVE_TIME: 'relative-time',
+    TIME_AGO: 'time-ago',
+    TIME_UNTIL: 'time-until',
+    STANDARD_TIME: 'time',
+    HACKER_NEWS_AGE: 'hacker-news-age',
+    STACK_EXCHANGE_TIMESTAMP: 'stack-exchange-timestamp',
+    TELEGRAM_WEB_K_MESSAGE: 'telegram-web-k-message',
+    TIKTOK_PUBLICATION: 'tiktok-publication',
+    LINKEDIN_TIMESTAMP: 'linkedin-timestamp',
+    YT_FORMATTED_STRING: 'yt-formatted-string',
+    FACEBOOK_STORY_TIMESTAMP: 'facebook-story-timestamp',
 } as const;
 
 /**
  * Source attributes whose page-authored changes can affect adapter eligibility or extraction.
  */
 export const TIMESTAMP_SOURCE_ATTRIBUTE = {
-    ARIA_LABEL: "aria-label",
-    CLASS: "class",
-    DATA_TOOLTIP: "data-tooltip",
-    DATA_E2E: "data-e2e",
-    ARIA_HIDDEN: "aria-hidden",
-    DATA_TIMESTAMP: "data-timestamp",
-    DATETIME: "datetime",
-    FORMAT: "format",
-    HREF: "href",
-    ID: "id",
-    LANG: "lang",
-    TITLE: "title",
-    DATA_ID: "data-id",
-    DATA_URN: "data-urn",
-    COMPONENT_KEY: "componentkey",
-    SDUI_ANCHOR_ID: "data-sdui-anchor-id",
+    ARIA_LABEL: 'aria-label',
+    CLASS: 'class',
+    DATA_TOOLTIP: 'data-tooltip',
+    DATA_E2E: 'data-e2e',
+    ARIA_HIDDEN: 'aria-hidden',
+    DATA_TIMESTAMP: 'data-timestamp',
+    DATETIME: 'datetime',
+    FORMAT: 'format',
+    HREF: 'href',
+    ID: 'id',
+    LANG: 'lang',
+    TITLE: 'title',
+    DATA_ID: 'data-id',
+    DATA_URN: 'data-urn',
+    COMPONENT_KEY: 'componentkey',
+    SDUI_ANCHOR_ID: 'data-sdui-anchor-id',
 } as const;
 
 /**
  * DOM mutation kinds forwarded to adapter-specific source invalidation.
  */
 export const TIMESTAMP_MUTATION_KIND = {
-    ATTRIBUTE: "attribute",
-    CHILD_LIST: "child-list",
+    ATTRIBUTE: 'attribute',
+    CHILD_LIST: 'child-list',
 } as const;
 
 /**
  * Presentation strategies selected by trusted timestamp sources.
  */
 export const TIMESTAMP_PRESENTATION_KIND = {
-    ADJACENT_TIME: "adjacent-time",
-    IN_PLACE_TEXT: "in-place-text",
+    ADJACENT_TIME: 'adjacent-time',
+    IN_PLACE_TEXT: 'in-place-text',
 } as const;
 
 /**
@@ -80,8 +80,7 @@ export const ADJACENT_TIME_PRESENTATION = {
 /**
  * Validated presentation strategy carried from adapter extraction to rendering.
  */
-export type TimestampPresentation =
-    | typeof ADJACENT_TIME_PRESENTATION
+export type TimestampPresentation = | typeof ADJACENT_TIME_PRESENTATION
     | {
         /**
          * In-place strategy discriminant.
@@ -109,33 +108,29 @@ export type TimestampPresentation =
  * Visibility handling requested by a timestamp source.
  */
 export const TIMESTAMP_VISIBILITY_POLICY = {
-    PRESERVE_PAGE_SUPPRESSION: "preserve-page-suppression",
-    IGNORE_PAGE_SUPPRESSION: "ignore-page-suppression",
+    PRESERVE_PAGE_SUPPRESSION: 'preserve-page-suppression',
+    IGNORE_PAGE_SUPPRESSION: 'ignore-page-suppression',
 } as const;
 
 /**
  * Source kind carried by a timestamp candidate.
  */
-export type TimestampSourceKind =
-    (typeof TIMESTAMP_SOURCE_KIND)[keyof typeof TIMESTAMP_SOURCE_KIND];
+export type TimestampSourceKind = (typeof TIMESTAMP_SOURCE_KIND)[keyof typeof TIMESTAMP_SOURCE_KIND];
 
 /**
  * Source attribute observed for adapter-specific eligibility changes.
  */
-export type TimestampSourceAttribute =
-    (typeof TIMESTAMP_SOURCE_ATTRIBUTE)[keyof typeof TIMESTAMP_SOURCE_ATTRIBUTE];
+export type TimestampSourceAttribute = (typeof TIMESTAMP_SOURCE_ATTRIBUTE)[keyof typeof TIMESTAMP_SOURCE_ATTRIBUTE];
 
 /**
  * DOM mutation kind forwarded to adapter-specific source invalidation.
  */
-export type TimestampMutationKind =
-    (typeof TIMESTAMP_MUTATION_KIND)[keyof typeof TIMESTAMP_MUTATION_KIND];
+export type TimestampMutationKind = (typeof TIMESTAMP_MUTATION_KIND)[keyof typeof TIMESTAMP_MUTATION_KIND];
 
 /**
  * Visibility handling policy carried by a timestamp candidate.
  */
-export type TimestampVisibilityPolicy =
-    (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
+export type TimestampVisibilityPolicy = (typeof TIMESTAMP_VISIBILITY_POLICY)[keyof typeof TIMESTAMP_VISIBILITY_POLICY];
 
 /**
  * Fields shared by validated-string and derived timestamp candidates.
@@ -220,8 +215,7 @@ export interface DerivedUnixMillisecondsTimestampCandidate
 /**
  * Canonical candidate emitted by a timestamp source rule.
  */
-export type TimestampCandidate =
-    | ValidatedStringTimestampCandidate
+export type TimestampCandidate = | ValidatedStringTimestampCandidate
     | DerivedUnixMillisecondsTimestampCandidate;
 
 /**
@@ -272,8 +266,7 @@ export interface TimestampMutationSourceResult {
 /**
  * Mutation sources with optional explicit handled/delegate semantics.
  */
-export type TimestampMutationSourceSelection =
-    | readonly Element[]
+export type TimestampMutationSourceSelection = | readonly Element[]
     | TimestampMutationSourceResult;
 
 /**
@@ -301,6 +294,7 @@ export interface TimestampSourceRule {
      * @param oldValue - Attribute value before the mutation.
      * @param context - Read-only page extraction context.
      * @param mutationKind - Kind of DOM mutation being mapped.
+     *
      * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
      * delegates to normal ancestor matching.
      */
@@ -318,6 +312,7 @@ export interface TimestampSourceRule {
      * @param element - Element whose direct child list changed.
      * @param addedNodes - Nodes added by the page-authored mutation.
      * @param removedNodes - Nodes removed by the page-authored mutation.
+     *
      * @returns - Exact sources, or an explicit handled/delegate result. An empty legacy array
      * delegates to normal ancestor matching.
      */
@@ -353,6 +348,7 @@ export interface TimestampSourceRule {
      *
      * @param candidate - Trusted-source candidate whose presentation is classified.
      * @param context - Current locales and retained page-text capabilities.
+     *
      * @returns - Whether the current page-owned label is recognized as relative.
      */
     readonly isRelativePresentation: (
@@ -365,6 +361,7 @@ export interface TimestampSourceRule {
      *
      * @param element - Discovered source that the candidate must retain by identity.
      * @param context - Current route and retained page-owned text capabilities.
+     *
      * @returns - Candidate for `element`, or null when this source tier is unusable.
      */
     extract(

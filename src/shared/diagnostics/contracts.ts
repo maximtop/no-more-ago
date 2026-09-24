@@ -6,13 +6,13 @@
  * Named event categories accepted across diagnostic boundaries.
  */
 export const DIAGNOSTIC_CATEGORY = {
-    LIFECYCLE: "lifecycle",
-    ADAPTER: "adapter",
-    MUTATION: "mutation",
-    TIMING: "timing",
-    SETTINGS: "settings",
-    SKIP: "skip",
-    ERROR: "error",
+    LIFECYCLE: 'lifecycle',
+    ADAPTER: 'adapter',
+    MUTATION: 'mutation',
+    TIMING: 'timing',
+    SETTINGS: 'settings',
+    SKIP: 'skip',
+    ERROR: 'error',
 } as const;
 
 /**
@@ -31,7 +31,7 @@ export const DIAGNOSTIC_CATEGORIES = [
 /**
  * Hostname used for background-only diagnostic events.
  */
-export const DIAGNOSTIC_INTERNAL_HOSTNAME = "no-more-ago.invalid" as const;
+export const DIAGNOSTIC_INTERNAL_HOSTNAME = 'no-more-ago.invalid' as const;
 
 /**
  * Finite diagnostic event category.
@@ -42,12 +42,12 @@ export type DiagnosticCategory = (typeof DIAGNOSTIC_CATEGORIES)[number];
  * Named page groups retained without recording complete paths.
  */
 export const DIAGNOSTIC_PAGE_CATEGORY = {
-    REPOSITORY: "repository",
-    ISSUE: "issue",
-    PULL_REQUEST: "pull-request",
-    ACTIONS: "actions",
-    SETTINGS: "settings",
-    OTHER: "other",
+    REPOSITORY: 'repository',
+    ISSUE: 'issue',
+    PULL_REQUEST: 'pull-request',
+    ACTIONS: 'actions',
+    SETTINGS: 'settings',
+    OTHER: 'other',
 } as const;
 
 /**
@@ -71,9 +71,9 @@ export type DiagnosticPageCategory = (typeof DIAGNOSTIC_PAGE_CATEGORIES)[number]
  * Named coarse browser families permitted in diagnostics.
  */
 export const DIAGNOSTIC_BROWSER_FAMILY = {
-    CHROMIUM: "chromium",
-    FIREFOX: "firefox",
-    OTHER: "other",
+    CHROMIUM: 'chromium',
+    FIREFOX: 'firefox',
+    OTHER: 'other',
 } as const;
 
 /**
@@ -94,15 +94,15 @@ export type DiagnosticBrowserFamily = (typeof DIAGNOSTIC_BROWSER_FAMILIES)[numbe
  * Named allow-listed explanations that diagnostic producers may persist.
  */
 export const DIAGNOSTIC_REASON = {
-    ADAPTER_MATCHED: "adapter-matched",
-    ADAPTER_MISSING: "adapter-missing",
-    CANDIDATE_SKIPPED: "candidate-skipped",
-    INVALID_TIMESTAMP: "invalid-timestamp",
-    ALREADY_OWNED: "already-owned",
-    UNSUPPORTED: "unsupported",
-    PROCESSING_FAILED: "processing-failed",
-    STORAGE_FAILED: "storage-failed",
-    SETTINGS_UPDATED: "settings-updated",
+    ADAPTER_MATCHED: 'adapter-matched',
+    ADAPTER_MISSING: 'adapter-missing',
+    CANDIDATE_SKIPPED: 'candidate-skipped',
+    INVALID_TIMESTAMP: 'invalid-timestamp',
+    ALREADY_OWNED: 'already-owned',
+    UNSUPPORTED: 'unsupported',
+    PROCESSING_FAILED: 'processing-failed',
+    STORAGE_FAILED: 'storage-failed',
+    SETTINGS_UPDATED: 'settings-updated',
 } as const;
 
 /**
@@ -124,21 +124,21 @@ export const DIAGNOSTIC_REASONS = [
  * Optional event fields accepted from content-runtime messages.
  */
 export const DIAGNOSTIC_EVENT_OPTIONAL_KEYS = [
-    "count",
-    "durationMs",
-    "reason",
-    "adapterVersion",
-    "extensionVersion",
-    "browserFamily",
-    "stack",
-    "sourceTimestamp",
+    'count',
+    'durationMs',
+    'reason',
+    'adapterVersion',
+    'extensionVersion',
+    'browserFamily',
+    'stack',
+    'sourceTimestamp',
 ] as const;
 
 /**
  * Complete event fields accepted from content-runtime messages.
  */
 export const DIAGNOSTIC_EVENT_INPUT_KEYS = [
-    "category",
+    'category',
     ...DIAGNOSTIC_EVENT_OPTIONAL_KEYS,
 ] as const;
 
@@ -146,17 +146,17 @@ export const DIAGNOSTIC_EVENT_INPUT_KEYS = [
  * Required fields added before a diagnostic event is persisted.
  */
 export const DIAGNOSTIC_EVENT_REQUIRED_KEYS = [
-    "category",
-    "timestamp",
-    "hostname",
-    "pageCategory",
-    "incognito",
+    'category',
+    'timestamp',
+    'hostname',
+    'pageCategory',
+    'incognito',
 ] as const;
 
 /**
  * Fields accepted in diagnostic environment metadata.
  */
-export const DIAGNOSTIC_ENVIRONMENT_KEYS = ["browserFamily", "extensionVersion"] as const;
+export const DIAGNOSTIC_ENVIRONMENT_KEYS = ['browserFamily', 'extensionVersion'] as const;
 
 /**
  * Redacted stack-frame syntax accepted by the persistent journal.

@@ -2,34 +2,39 @@
  * @file Owns popup state, its mutations, and live background refreshes.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
 import {
-    createUnavailablePopupState,
-    type PopupState,
-} from "../shared/messaging/view-state";
+    useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+
+import { downloadDiagnosticsSnapshot } from '../shared/diagnostics/download';
 import {
     INERT_SETTINGS_CHANGED_SUBSCRIBER,
     type SubscribeSettingsChanged,
-} from "../shared/messaging/settings-notifications";
-import { useSettingsChanged } from "../shared/ui/use-settings-changed";
+} from '../shared/messaging/settings-notifications';
+import {
+    createUnavailablePopupState,
+    type PopupState,
+} from '../shared/messaging/view-state';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
 import {
     MUTATION_NOTICE,
     settleMutation,
     type MutationNotice,
-} from "../shared/ui/persistence-notice";
-import type { DownloadRuntime } from "../shared/diagnostics/archive";
-import { downloadDiagnosticsSnapshot } from "../shared/diagnostics/download";
-import type { MessageKey } from "../shared/i18n/translator";
-import { readWithDeadline } from "../shared/ui/read-with-deadline";
-import { createPopupClient, type PopupClient } from "./client";
+} from '../shared/ui/persistence-notice';
+import { readWithDeadline } from '../shared/ui/read-with-deadline';
+import { useSettingsChanged } from '../shared/ui/use-settings-changed';
+
+import { createPopupClient, type PopupClient } from './client';
+
+import type { DownloadRuntime } from '../shared/diagnostics/archive';
+import type { MessageKey } from '../shared/i18n/translator';
 
 /**
  * Named popup notices: every shared mutation outcome plus an external change.
  */
 export const POPUP_NOTICE = {
     ...MUTATION_NOTICE,
-    EXTERNAL_CHANGE: "external-change",
+    EXTERNAL_CHANGE: 'external-change',
 } as const;
 
 /**
@@ -90,6 +95,7 @@ export interface PopupController {
      * Changes global activation.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - Promise settled after the outcome has been applied.
      */
     changeGlobal(enabled: boolean): Promise<void>;
@@ -98,6 +104,7 @@ export interface PopupController {
      * Changes processing for the current hostname under the active mode.
      *
      * @param enabled - Whether processing should apply to the hostname.
+     *
      * @returns - Promise settled after the outcome has been applied.
      */
     changeSite(enabled: boolean): Promise<void>;
@@ -131,6 +138,7 @@ export interface PopupController {
  * Creates the popup controller.
  *
  * @param options - Client, preloaded state, and notification subscriber.
+ *
  * @returns - Popup state together with its mutation commands.
  */
 export function usePopupController(options: PopupControllerOptions = {}): PopupController {
@@ -209,6 +217,7 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
      * Saves global activation from the popup.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     const changeGlobal = async (enabled: boolean): Promise<void> => {
@@ -228,6 +237,7 @@ export function usePopupController(options: PopupControllerOptions = {}): PopupC
      * Saves processing for the current hostname under the rendered scope mode.
      *
      * @param enabled - Whether processing should apply to the hostname.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     const changeSite = async (enabled: boolean): Promise<void> => {

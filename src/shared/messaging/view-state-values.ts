@@ -6,29 +6,29 @@
  * Named popup statuses shared by state producers, validators, and UI consumers.
  */
 export const POPUP_STATUS = {
-    ACTIVE: "active",
-    GLOBAL_DISABLED: "global-disabled",
-    SITE_EXCLUDED: "site-excluded",
-    SITE_NOT_SELECTED: "site-not-selected",
-    INACCESSIBLE: "inaccessible",
-    RUNTIME_FAILED: "runtime-failed",
-    SETTINGS_UNAVAILABLE: "settings-unavailable",
+    ACTIVE: 'active',
+    GLOBAL_DISABLED: 'global-disabled',
+    SITE_EXCLUDED: 'site-excluded',
+    SITE_NOT_SELECTED: 'site-not-selected',
+    INACCESSIBLE: 'inaccessible',
+    RUNTIME_FAILED: 'runtime-failed',
+    SETTINGS_UNAVAILABLE: 'settings-unavailable',
 } as const;
 
 /**
  * UI surfaces that request distinct site-setting projections.
  */
 export const SITE_SETTINGS_SURFACE = {
-    POPUP: "popup",
-    SITES: "sites",
+    POPUP: 'popup',
+    SITES: 'sites',
 } as const;
 
 /**
  * Availability discriminants shared by all state projections.
  */
 export const STATE_AVAILABILITY = {
-    READY: "ready",
-    UNAVAILABLE: "unavailable",
+    READY: 'ready',
+    UNAVAILABLE: 'unavailable',
 } as const;
 
 /**
@@ -63,12 +63,12 @@ export const POPUP_UNAVAILABLE_STATUSES = [
  * Named runtime failures that may accompany a ready popup projection.
  */
 export const POPUP_RUNTIME_FAILURE = {
-    CURRENT_TAB_QUERY: "current-tab-query",
-    REGISTRATION: "registration",
-    MATCHING_TABS_QUERY: "matching-tabs-query",
-    CURRENT_TAB_INJECT: "current-tab-inject",
-    CURRENT_TAB_TEARDOWN: "current-tab-teardown",
-    DOCUMENT_STATUS: "document-status",
+    CURRENT_TAB_QUERY: 'current-tab-query',
+    REGISTRATION: 'registration',
+    MATCHING_TABS_QUERY: 'matching-tabs-query',
+    CURRENT_TAB_INJECT: 'current-tab-inject',
+    CURRENT_TAB_TEARDOWN: 'current-tab-teardown',
+    DOCUMENT_STATUS: 'document-status',
 } as const;
 
 /**
@@ -87,8 +87,8 @@ export const POPUP_RUNTIME_FAILURES = [
  * Settings failures shared by unavailable view projections.
  */
 export const SETTINGS_STATE_FAILURE = {
-    SETTINGS_LOAD: "settings-load",
-    FAIL_CLOSED_CLEANUP: "fail-closed-cleanup",
+    SETTINGS_LOAD: 'settings-load',
+    FAIL_CLOSED_CLEANUP: 'fail-closed-cleanup',
 } as const;
 
 /**
@@ -103,8 +103,8 @@ export const SETTINGS_STATE_FAILURES = [
  * Named errors shared by settings persistence commands.
  */
 export const SETTINGS_PERSISTENCE_ERROR = {
-    SAVE_FAILED: "save-failed",
-    SETTINGS_UNAVAILABLE: "settings-unavailable",
+    SAVE_FAILED: 'save-failed',
+    SETTINGS_UNAVAILABLE: 'settings-unavailable',
 } as const;
 
 /**
@@ -120,9 +120,9 @@ export const SETTINGS_PERSISTENCE_ERRORS = [
  */
 export const SITE_SETTINGS_ERROR = {
     ...SETTINGS_PERSISTENCE_ERROR,
-    INVALID_HOSTNAME: "invalid-hostname",
-    LIST_FULL: "list-full",
-    SCOPE_CHANGED: "scope-changed",
+    INVALID_HOSTNAME: 'invalid-hostname',
+    LIST_FULL: 'list-full',
+    SCOPE_CHANGED: 'scope-changed',
 } as const;
 
 /**
@@ -140,9 +140,9 @@ export const SITE_SETTINGS_ERRORS = [
  */
 export const DISPLAY_SETTINGS_ERROR = {
     ...SETTINGS_PERSISTENCE_ERROR,
-    INVALID_FORMAT: "invalid-format",
-    INVALID_TIME_ZONE: "invalid-time-zone",
-    INVALID_DISPLAY_SETTINGS: "invalid-display-settings",
+    INVALID_FORMAT: 'invalid-format',
+    INVALID_TIME_ZONE: 'invalid-time-zone',
+    INVALID_DISPLAY_SETTINGS: 'invalid-display-settings',
 } as const;
 
 /**
@@ -159,8 +159,8 @@ export const DISPLAY_SETTINGS_ERRORS = [
  * Named failure reasons reported when a matching tab cannot be refreshed.
  */
 export const REFRESH_FAILURE_REASON = {
-    MATCHING_TABS_QUERY: "matching-tabs-query",
-    TAB_UPDATE: "tab-update",
+    MATCHING_TABS_QUERY: 'matching-tabs-query',
+    TAB_UPDATE: 'tab-update',
 } as const;
 
 /**

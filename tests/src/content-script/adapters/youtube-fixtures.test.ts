@@ -2,51 +2,54 @@
  * @file Exercises trusted YouTube watch sources through the public document boundary.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { youtubePlayerResponseAssignment } from "./youtube-test-data";
+import {
+    afterEach, beforeAll, beforeEach, describe, expect, it, vi,
+} from 'vitest';
 
-import { defaultRegistry } from "../../../../src/content-script/adapters/registry";
 import { GENERIC_TIME_RULE_ID } from
-    "../../../../src/content-script/adapters/generic-time";
-import { youtubeAdapter } from "../../../../src/content-script/adapters/youtube";
+    '../../../../src/content-script/adapters/generic-time';
+import { defaultRegistry } from '../../../../src/content-script/adapters/registry';
+import { youtubeAdapter } from '../../../../src/content-script/adapters/youtube';
 import { processDocument } from
-    "../../../../src/content-script/transformation/process-document";
+    '../../../../src/content-script/transformation/process-document';
 import { restoreExactTimes } from
-    "../../../../src/content-script/transformation/render-exact-time";
-import { GITHUB_ADAPTER_ID } from "../../../../src/shared/adapters/github-contract";
+    '../../../../src/content-script/transformation/render-exact-time';
+import { GITHUB_ADAPTER_ID } from '../../../../src/shared/adapters/github-contract';
 import {
     YOUTUBE_ADAPTER_ID,
     YOUTUBE_PLAYER_RESPONSE_RULE_ID,
-} from "../../../../src/shared/adapters/youtube-contract";
+} from '../../../../src/shared/adapters/youtube-contract';
 
-const WATCH_URL = new URL("https://www.youtube.com/watch?v=testVID0001");
-const OFFLINE_FETCH_ERROR = "Network access is forbidden in YouTube fixtures";
+import { youtubePlayerResponseAssignment } from './youtube-test-data';
+
+const WATCH_URL = new URL('https://www.youtube.com/watch?v=testVID0001');
+const OFFLINE_FETCH_ERROR = 'Network access is forbidden in YouTube fixtures';
 const forbiddenFetch = vi.fn<typeof fetch>(() => {
     throw new Error(OFFLINE_FETCH_ERROR);
 });
 
-describe("offline YouTube watch fixture", () => {
-    let calendarFixture = "";
-    let localSourcesFixture = "";
+describe('offline YouTube watch fixture', () => {
+    let calendarFixture = '';
+    let localSourcesFixture = '';
 
     beforeAll(async () => {
         [calendarFixture, localSourcesFixture] = await Promise.all([
             readFile(
-                "tests/src/content-script/fixtures/youtube/watch-calendar-date.html",
-                "utf8",
+                'tests/src/content-script/fixtures/youtube/watch-calendar-date.html',
+                'utf8',
             ),
             readFile(
-                "tests/src/content-script/fixtures/youtube/watch-local-sources.html",
-                "utf8",
+                'tests/src/content-script/fixtures/youtube/watch-local-sources.html',
+                'utf8',
             ),
         ]);
     });
 
     beforeEach(() => {
         forbiddenFetch.mockClear();
-        vi.stubGlobal("fetch", forbiddenFetch);
+        vi.stubGlobal('fetch', forbiddenFetch);
     });
 
     afterEach(() => {
@@ -54,7 +57,7 @@ describe("offline YouTube watch fixture", () => {
         vi.unstubAllGlobals();
         vi.restoreAllMocks();
         restoreExactTimes(document);
-        document.documentElement.innerHTML = "<head></head><body></body>";
+        document.documentElement.innerHTML = '<head></head><body></body>';
         expect(fetchCallCount).toBe(0);
     });
 
@@ -78,9 +81,9 @@ describe("offline YouTube watch fixture", () => {
      * @returns - Approved page-owned publication label.
      */
     function requireWatchSource(): Element {
-        const source = document.getElementById("watch-publication");
+        const source = document.getElementById('watch-publication');
         if (!source) {
-            throw new Error("Expected watch publication label");
+            throw new Error('Expected watch publication label');
         }
         return source;
     }
@@ -93,7 +96,7 @@ describe("offline YouTube watch fixture", () => {
     function requirePlayerScript(): HTMLScriptElement {
         const script = document.scripts[0];
         if (!script) {
-            throw new Error("Expected local player-response assignment");
+            throw new Error('Expected local player-response assignment');
         }
         return script;
     }
@@ -107,8 +110,8 @@ describe("offline YouTube watch fixture", () => {
      */
     function setPlayerAssignment(
         publication: unknown,
-        videoId: unknown = "testVID0001",
-        externalVideoId: unknown = "testVID0001",
+        videoId: unknown = 'testVID0001',
+        externalVideoId: unknown = 'testVID0001',
     ): void {
         const script = requirePlayerScript();
         script.textContent = youtubePlayerResponseAssignment(
@@ -118,270 +121,270 @@ describe("offline YouTube watch fixture", () => {
         );
     }
 
-    it("uses valid loaded data without invoking metadata extraction", () => {
+    it('uses valid loaded data without invoking metadata extraction', () => {
         loadLocalSourcesFixture();
-        const metadataExtract = vi.spyOn(youtubeAdapter, "extract");
+        const metadataExtract = vi.spyOn(youtubeAdapter, 'extract');
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
             display: {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm XXX",
-                timeZone: { mode: "iana", identifier: "Pacific/Honolulu" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm XXX',
+                timeZone: { mode: 'iana', identifier: 'Pacific/Honolulu' },
             },
         });
 
         expect(metadataExtract).not.toHaveBeenCalled();
-        expect(outputs[0]?.dateTime).toBe("2026-08-29T10:15:00+03:00");
-        expect(outputs[0]?.textContent).toBe("2026-08-28 21:15 -10:00");
+        expect(outputs[0]?.dateTime).toBe('2026-08-29T10:15:00+03:00');
+        expect(outputs[0]?.textContent).toBe('2026-08-28 21:15 -10:00');
     });
 
-    it("leaves an absolute watch label unchanged despite valid loaded data", () => {
+    it('leaves an absolute watch label unchanged despite valid loaded data', () => {
         loadLocalSourcesFixture();
         const source = requireWatchSource();
-        source.textContent = "Aug 29, 2026";
+        source.textContent = 'Aug 29, 2026';
         const original = source.outerHTML;
 
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
         });
 
         expect(outputs).toEqual([]);
         expect(source.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
-    it("invokes metadata extraction once after loaded data is invalid", () => {
+    it('invokes metadata extraction once after loaded data is invalid', () => {
         loadLocalSourcesFixture();
-        setPlayerAssignment("invalid");
-        const metadataExtract = vi.spyOn(youtubeAdapter, "extract");
+        setPlayerAssignment('invalid');
+        const metadataExtract = vi.spyOn(youtubeAdapter, 'extract');
 
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-GB"],
+            locales: ['en-GB'],
         });
 
         expect(metadataExtract).toHaveBeenCalledOnce();
-        expect(outputs[0]?.dateTime).toBe("2024-02-29");
+        expect(outputs[0]?.dateTime).toBe('2024-02-29');
     });
 
     it.each([
-        { mode: "utc" as const },
-        { mode: "iana" as const, identifier: "Pacific/Honolulu" },
-        { mode: "iana" as const, identifier: "Pacific/Kiritimati" },
-    ])("keeps a loaded calendar date invariant under $mode presentation", (timeZone) => {
+        { mode: 'utc' as const },
+        { mode: 'iana' as const, identifier: 'Pacific/Honolulu' },
+        { mode: 'iana' as const, identifier: 'Pacific/Kiritimati' },
+    ])('keeps a loaded calendar date invariant under $mode presentation', (timeZone) => {
         loadLocalSourcesFixture();
-        setPlayerAssignment("2026-08-29");
+        setPlayerAssignment('2026-08-29');
         document.head.querySelector('meta[itemprop="datePublished"]')
-            ?.setAttribute("content", "2024-02-29T23:45:00-10:00");
+            ?.setAttribute('content', '2024-02-29T23:45:00-10:00');
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-GB"],
-            display: { formatMode: "system", timeZone },
+            locales: ['en-GB'],
+            display: { formatMode: 'system', timeZone },
         });
-        const expected = new Intl.DateTimeFormat(["en-GB"], {
-            dateStyle: "medium",
-            timeZone: "UTC",
-        }).format(new Date("2026-08-29T12:00:00.000Z"));
+        const expected = new Intl.DateTimeFormat(['en-GB'], {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+        }).format(new Date('2026-08-29T12:00:00.000Z'));
 
-        expect(outputs[0]?.dateTime).toBe("2026-08-29");
+        expect(outputs[0]?.dateTime).toBe('2026-08-29');
         expect(outputs[0]?.textContent).toBe(expected);
     });
 
     it.each([
         {
-            name: "mixed custom pattern",
+            name: 'mixed custom pattern',
             pattern: "yyyy/MM/dd 'at' HH:mm XXX",
-            expected: "2024/02/29",
+            expected: '2024/02/29',
         },
         {
-            name: "time-only custom pattern",
-            pattern: "HH:mm XXX",
-            expected: new Intl.DateTimeFormat(["en-GB"], {
-                dateStyle: "medium",
-                timeZone: "UTC",
-            }).format(new Date("2024-02-29T12:00:00.000Z")),
+            name: 'time-only custom pattern',
+            pattern: 'HH:mm XXX',
+            expected: new Intl.DateTimeFormat(['en-GB'], {
+                dateStyle: 'medium',
+                timeZone: 'UTC',
+            }).format(new Date('2024-02-29T12:00:00.000Z')),
         },
-    ])("renders a loaded calendar date through a $name", ({ pattern, expected }) => {
+    ])('renders a loaded calendar date through a $name', ({ pattern, expected }) => {
         loadLocalSourcesFixture();
-        setPlayerAssignment("2024-02-29");
+        setPlayerAssignment('2024-02-29');
         const source = requireWatchSource();
 
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-GB"],
+            locales: ['en-GB'],
             display: {
-                formatMode: "custom",
+                formatMode: 'custom',
                 pattern,
-                timeZone: { mode: "iana", identifier: "Pacific/Kiritimati" },
+                timeZone: { mode: 'iana', identifier: 'Pacific/Kiritimati' },
             },
         });
 
         expect(outputs).toHaveLength(1);
-        expect(outputs[0]?.dateTime).toBe("2024-02-29");
+        expect(outputs[0]?.dateTime).toBe('2024-02-29');
         expect(outputs[0]?.textContent).toBe(expected);
-        expect(source.textContent.trim()).toBe("3 months ago");
+        expect(source.textContent.trim()).toBe('3 months ago');
     });
 
-    it("falls through from invalid loaded data to zoned metadata", () => {
+    it('falls through from invalid loaded data to zoned metadata', () => {
         loadLocalSourcesFixture();
-        setPlayerAssignment("not-a-timestamp");
+        setPlayerAssignment('not-a-timestamp');
         document.head.querySelector('meta[itemprop="datePublished"]')
-            ?.setAttribute("content", "2026-08-29T10:15:00+03:00");
+            ?.setAttribute('content', '2026-08-29T10:15:00+03:00');
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
             display: {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm XXX",
-                timeZone: { mode: "iana", identifier: "Pacific/Honolulu" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm XXX',
+                timeZone: { mode: 'iana', identifier: 'Pacific/Honolulu' },
             },
         });
 
-        expect(outputs[0]?.dateTime).toBe("2026-08-29T10:15:00+03:00");
-        expect(outputs[0]?.textContent).toBe("2026-08-28 21:15 -10:00");
+        expect(outputs[0]?.dateTime).toBe('2026-08-29T10:15:00+03:00');
+        expect(outputs[0]?.textContent).toBe('2026-08-28 21:15 -10:00');
     });
 
-    it.each(["missing", "duplicate", "mismatched", "changed"] as const)(
-        "falls through after a %s loaded assignment",
+    it.each(['missing', 'duplicate', 'mismatched', 'changed'] as const)(
+        'falls through after a %s loaded assignment',
         (condition) => {
             loadLocalSourcesFixture();
             const script = requirePlayerScript();
-            if (condition === "missing") {
+            if (condition === 'missing') {
                 script.remove();
-            } else if (condition === "duplicate") {
-                const duplicate = document.createElement("script");
+            } else if (condition === 'duplicate') {
+                const duplicate = document.createElement('script');
                 document.head.append(duplicate);
                 duplicate.textContent = script.textContent;
-            } else if (condition === "mismatched") {
-                setPlayerAssignment("2026-08-29", "testVID0002");
+            } else if (condition === 'mismatched') {
+                setPlayerAssignment('2026-08-29', 'testVID0002');
             } else {
                 expect(processDocument({
                     url: WATCH_URL,
                     root: document,
-                    locales: ["en-US"],
+                    locales: ['en-US'],
                 })[0]?.dateTime)
-                    .toBe("2026-08-29T10:15:00+03:00");
-                setPlayerAssignment("changed-to-invalid");
+                    .toBe('2026-08-29T10:15:00+03:00');
+                setPlayerAssignment('changed-to-invalid');
             }
 
             const outputs = processDocument({
                 url: WATCH_URL,
                 root: document,
-                locales: ["en-GB"],
+                locales: ['en-GB'],
             });
 
-            expect(outputs[0]?.dateTime).toBe("2024-02-29");
+            expect(outputs[0]?.dateTime).toBe('2024-02-29');
         },
     );
 
-    it("reprocesses stable loaded data with updated presentation settings", () => {
+    it('reprocesses stable loaded data with updated presentation settings', () => {
         loadLocalSourcesFixture();
         const first = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
             display: {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm XXX",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm XXX',
+                timeZone: { mode: 'utc' },
             },
         });
         const second = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
             display: {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm XXX",
-                timeZone: { mode: "iana", identifier: "Pacific/Honolulu" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm XXX',
+                timeZone: { mode: 'iana', identifier: 'Pacific/Honolulu' },
             },
         });
 
-        expect(first[0]?.dateTime).toBe("2026-08-29T10:15:00+03:00");
+        expect(first[0]?.dateTime).toBe('2026-08-29T10:15:00+03:00');
         expect(second[0]).toBe(first[0]);
-        expect(second[0]?.dateTime).toBe("2026-08-29T10:15:00+03:00");
-        expect(second[0]?.textContent).toBe("2026-08-28 21:15 -10:00");
+        expect(second[0]?.dateTime).toBe('2026-08-29T10:15:00+03:00');
+        expect(second[0]?.textContent).toBe('2026-08-28 21:15 -10:00');
     });
 
-    it("uses locale, date, time, and UTC for system instant presentation", () => {
+    it('uses locale, date, time, and UTC for system instant presentation', () => {
         loadLocalSourcesFixture();
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-GB"],
-            display: { formatMode: "system", timeZone: { mode: "utc" } },
+            locales: ['en-GB'],
+            display: { formatMode: 'system', timeZone: { mode: 'utc' } },
         });
-        const expected = new Intl.DateTimeFormat(["en-GB"], {
-            dateStyle: "medium",
-            timeStyle: "short",
-            timeZone: "UTC",
-        }).format(new Date("2026-08-29T07:15:00.000Z"));
+        const expected = new Intl.DateTimeFormat(['en-GB'], {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'UTC',
+        }).format(new Date('2026-08-29T07:15:00.000Z'));
 
-        expect(outputs[0]?.dateTime).toBe("2026-08-29T10:15:00+03:00");
+        expect(outputs[0]?.dateTime).toBe('2026-08-29T10:15:00+03:00');
         expect(outputs[0]?.textContent).toBe(expected);
     });
 
     it.each([
-        { mode: "system" as const },
-        { mode: "utc" as const },
-        { mode: "iana" as const, identifier: "Pacific/Honolulu" },
-        { mode: "iana" as const, identifier: "Pacific/Kiritimati" },
-    ])("renders the same leap-day under $mode time-zone selection", (timeZone) => {
+        { mode: 'system' as const },
+        { mode: 'utc' as const },
+        { mode: 'iana' as const, identifier: 'Pacific/Honolulu' },
+        { mode: 'iana' as const, identifier: 'Pacific/Kiritimati' },
+    ])('renders the same leap-day under $mode time-zone selection', (timeZone) => {
         loadFixture();
-        const source = document.getElementById("watch-publication");
+        const source = document.getElementById('watch-publication');
         const original = source?.outerHTML;
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-GB"],
-            display: { formatMode: "system", timeZone },
+            locales: ['en-GB'],
+            display: { formatMode: 'system', timeZone },
         });
-        const expected = new Intl.DateTimeFormat(["en-GB"], {
-            dateStyle: "medium",
-            timeZone: "UTC",
-        }).format(new Date("2024-02-29T12:00:00.000Z"));
+        const expected = new Intl.DateTimeFormat(['en-GB'], {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+        }).format(new Date('2024-02-29T12:00:00.000Z'));
 
         expect(outputs).toHaveLength(1);
-        expect(outputs[0]?.dateTime).toBe("2024-02-29");
+        expect(outputs[0]?.dateTime).toBe('2024-02-29');
         expect(outputs[0]?.textContent).toBe(expected);
-        expect(source?.textContent).toBe("3 months ago");
-        expect(source?.hasAttribute("hidden")).toBe(true);
+        expect(source?.textContent).toBe('3 months ago');
+        expect(source?.hasAttribute('hidden')).toBe(true);
 
         restoreExactTimes(document);
         expect(source?.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
-    it("renders and restores an ordinary calendar date", () => {
+    it('renders and restores an ordinary calendar date', () => {
         loadFixture();
         const metadata = document.head.querySelector('meta[itemprop="datePublished"]');
-        const source = document.getElementById("watch-publication");
+        const source = document.getElementById('watch-publication');
         if (!metadata || !source) {
-            throw new Error("Expected watch fixture sources");
+            throw new Error('Expected watch fixture sources');
         }
-        metadata.setAttribute("content", "2026-08-29");
+        metadata.setAttribute('content', '2026-08-29');
         const original = source.outerHTML;
         const outputs = processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
-            display: { formatMode: "system", timeZone: { mode: "utc" } },
+            locales: ['en-US'],
+            display: { formatMode: 'system', timeZone: { mode: 'utc' } },
         });
-        const expected = new Intl.DateTimeFormat(["en-US"], {
-            dateStyle: "medium",
-            timeZone: "UTC",
-        }).format(new Date("2026-08-29T12:00:00.000Z"));
+        const expected = new Intl.DateTimeFormat(['en-US'], {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+        }).format(new Date('2026-08-29T12:00:00.000Z'));
 
         expect(outputs).toHaveLength(1);
-        expect(outputs[0]?.dateTime).toBe("2026-08-29");
+        expect(outputs[0]?.dateTime).toBe('2026-08-29');
         expect(outputs[0]?.textContent).toBe(expected);
 
         restoreExactTimes(document);
@@ -389,9 +392,9 @@ describe("offline YouTube watch fixture", () => {
     });
 
     it.each([
-        "2026-08-29",
-        "2026-08-29T10:15:00+03:00",
-    ])("restores a loaded semantic source exactly for %s", (rawDatetime) => {
+        '2026-08-29',
+        '2026-08-29T10:15:00+03:00',
+    ])('restores a loaded semantic source exactly for %s', (rawDatetime) => {
         loadLocalSourcesFixture();
         setPlayerAssignment(rawDatetime);
         const source = requireWatchSource();
@@ -400,134 +403,134 @@ describe("offline YouTube watch fixture", () => {
         expect(processDocument({
             url: WATCH_URL,
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
         })).toHaveLength(1);
         restoreExactTimes(document);
 
         expect(source.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
     it.each([
-        ["invalid metadata", "not-a-timestamp"],
-        ["missing metadata", null],
-    ])("leaves the source exact with invalid loaded and %s", (_name, metadataValue) => {
+        ['invalid metadata', 'not-a-timestamp'],
+        ['missing metadata', null],
+    ])('leaves the source exact with invalid loaded and %s', (_name, metadataValue) => {
         loadLocalSourcesFixture();
-        setPlayerAssignment("invalid-loaded-value");
+        setPlayerAssignment('invalid-loaded-value');
         const metadata = document.head.querySelector('meta[itemprop="datePublished"]');
         if (metadataValue === null) {
             metadata?.remove();
         } else {
-            metadata?.setAttribute("content", metadataValue);
+            metadata?.setAttribute('content', metadataValue);
         }
         const source = requireWatchSource();
         const original = source.outerHTML;
 
-        expect(processDocument({ url: WATCH_URL, root: document, locales: ["en-GB"] }))
+        expect(processDocument({ url: WATCH_URL, root: document, locales: ['en-GB'] }))
             .toEqual([]);
         expect(source.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
     it.each([
-        "2023-02-29",
-        "2024-02-30",
-        "2024-2-29",
-        " 2024-02-29",
-        "2024-02-29 ",
-        "2024-02-29\u0000",
-        "2024-02-29\u009f",
-        "2024-02-29T00:00:00",
-        "2024-02-29T00:00:00+25:00",
-    ])("leaves the exact label unchanged for invalid content %j", (rawDatetime) => {
+        '2023-02-29',
+        '2024-02-30',
+        '2024-2-29',
+        ' 2024-02-29',
+        '2024-02-29 ',
+        '2024-02-29\u0000',
+        '2024-02-29\u009f',
+        '2024-02-29T00:00:00',
+        '2024-02-29T00:00:00+25:00',
+    ])('leaves the exact label unchanged for invalid content %j', (rawDatetime) => {
         loadFixture();
         const metadata = document.head.querySelector('meta[itemprop="datePublished"]');
-        const source = document.getElementById("watch-publication");
+        const source = document.getElementById('watch-publication');
         if (!metadata || !source) {
-            throw new Error("Expected watch fixture sources");
+            throw new Error('Expected watch fixture sources');
         }
-        metadata.setAttribute("content", rawDatetime);
+        metadata.setAttribute('content', rawDatetime);
         const original = source.outerHTML;
 
-        expect(processDocument({ url: WATCH_URL, root: document, locales: ["en-GB"] }))
+        expect(processDocument({ url: WATCH_URL, root: document, locales: ['en-GB'] }))
             .toEqual([]);
         expect(source.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
     it.each([
         {
-            name: "relative visible text",
+            name: 'relative visible text',
             apply: () => undefined,
         },
         {
-            name: "date-looking visible text",
+            name: 'date-looking visible text',
             apply: (source: Element) => {
-                source.textContent = "2024-02-29";
+                source.textContent = '2024-02-29';
             },
         },
         {
-            name: "instant-looking visible text",
+            name: 'instant-looking visible text',
             apply: (source: Element) => {
-                source.textContent = "2024-02-29T00:00:00Z";
+                source.textContent = '2024-02-29T00:00:00Z';
             },
         },
         {
-            name: "datetime attribute",
+            name: 'datetime attribute',
             apply: (source: Element) => {
-                source.setAttribute("datetime", "2024-02-29");
+                source.setAttribute('datetime', '2024-02-29');
             },
         },
         {
-            name: "aria-label attribute",
+            name: 'aria-label attribute',
             apply: (source: Element) => {
-                source.setAttribute("aria-label", "2024-02-29T00:00:00Z");
+                source.setAttribute('aria-label', '2024-02-29T00:00:00Z');
             },
         },
         {
-            name: "data attribute",
+            name: 'data attribute',
             apply: (source: Element) => {
-                source.setAttribute("data-date", "2024-02-29");
+                source.setAttribute('data-date', '2024-02-29');
             },
         },
         {
-            name: "uploadDate metadata",
+            name: 'uploadDate metadata',
             apply: (source: Element) => {
-                const metadata = source.ownerDocument.createElement("meta");
-                metadata.setAttribute("itemprop", "uploadDate");
-                metadata.setAttribute("content", "2024-02-29");
+                const metadata = source.ownerDocument.createElement('meta');
+                metadata.setAttribute('itemprop', 'uploadDate');
+                metadata.setAttribute('content', '2024-02-29');
                 source.ownerDocument.head.append(metadata);
             },
         },
-    ])("does not infer a publication date from $name", ({ apply }) => {
+    ])('does not infer a publication date from $name', ({ apply }) => {
         loadFixture();
         document.head.querySelector('meta[itemprop="datePublished"]')?.remove();
-        const source = document.getElementById("watch-publication");
+        const source = document.getElementById('watch-publication');
         if (!source) {
-            throw new Error("Expected watch publication label");
+            throw new Error('Expected watch publication label');
         }
         apply(source);
         const original = source.outerHTML;
 
-        expect(processDocument({ url: WATCH_URL, root: document, locales: ["en-GB"] }))
+        expect(processDocument({ url: WATCH_URL, root: document, locales: ['en-GB'] }))
             .toEqual([]);
         expect(source.outerHTML).toBe(original);
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
-    it("keeps specialized sources ahead of the generic fallback", () => {
+    it('keeps specialized sources ahead of the generic fallback', () => {
         expect(defaultRegistry.matching(
-            new URL("https://www.youtube.com/watch?v=testVID0001"),
+            new URL('https://www.youtube.com/watch?v=testVID0001'),
         ).map((rule) => rule.id)).toEqual([
             YOUTUBE_PLAYER_RESPONSE_RULE_ID,
             YOUTUBE_ADAPTER_ID,
             GENERIC_TIME_RULE_ID,
         ]);
         expect(defaultRegistry.matching(
-            new URL("https://github.com/example/repo"),
+            new URL('https://github.com/example/repo'),
         ).map((rule) => rule.id)).toEqual([GITHUB_ADAPTER_ID, GENERIC_TIME_RULE_ID]);
         expect(defaultRegistry.matching(
-            new URL("https://example.test/path"),
+            new URL('https://example.test/path'),
         ).map((rule) => rule.id)).toEqual([GENERIC_TIME_RULE_ID]);
     });
 });

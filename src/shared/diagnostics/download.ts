@@ -2,13 +2,14 @@
  * @file One diagnostics download flow and its notices, shared by both surfaces.
  */
 
-import { CLIENT_RESULT_KIND } from "../client-result";
+import { CLIENT_RESULT_KIND } from '../client-result';
 import {
     DIAGNOSTICS_ERROR,
     type DiagnosticsClearError,
     type DiagnosticsSnapshot,
     type DiagnosticsSnapshotError,
-} from "../messaging/contracts";
+} from '../messaging/contracts';
+
 import {
     DIAGNOSTIC_ARCHIVE_ERROR,
     DiagnosticArchiveError,
@@ -16,34 +17,34 @@ import {
     downloadDiagnosticsZip,
     type DiagnosticArchiveErrorCode,
     type DownloadRuntime,
-} from "./archive";
-import type { MessageKey } from "../i18n/translator";
+} from './archive';
+
+import type { MessageKey } from '../i18n/translator';
 
 /**
  * Key used after a diagnostics archive is handed to the browser.
  */
-export const DIAGNOSTICS_DOWNLOADED_KEY: MessageKey = "diagnostics_downloaded";
+export const DIAGNOSTICS_DOWNLOADED_KEY: MessageKey = 'diagnostics_downloaded';
 
 /**
  * Key used after diagnostic entries are removed successfully.
  */
-export const DIAGNOSTICS_CLEARED_KEY: MessageKey = "diagnostics_cleared";
+export const DIAGNOSTICS_CLEARED_KEY: MessageKey = 'diagnostics_cleared';
 
 /**
  * Diagnostics snapshot or the reason it could not be read.
  */
-export type DiagnosticsSnapshotResult =
-    | {
-        /**
-         * Indicates that a validated diagnostic snapshot was returned.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type DiagnosticsSnapshotResult = | {
+    /**
+     * Indicates that a validated diagnostic snapshot was returned.
+     */
+    readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
-        /**
-         * Validated diagnostic snapshot ready for export.
-         */
-        readonly snapshot: DiagnosticsSnapshot;
-    }
+    /**
+     * Validated diagnostic snapshot ready for export.
+     */
+    readonly snapshot: DiagnosticsSnapshot;
+}
     | {
         /**
          * Indicates that no diagnostic snapshot could be returned.
@@ -60,16 +61,17 @@ export type DiagnosticsSnapshotResult =
  * Message mapping for every supported outcome.
  */
 const DIAGNOSTICS_ERROR_KEYS = {
-    [DIAGNOSTICS_ERROR.DISABLED]: "diagnostics_error_disabled",
-    [DIAGNOSTICS_ERROR.EMPTY]: "diagnostics_error_empty",
-    [DIAGNOSTICS_ERROR.STORAGE_FAILED]: "diagnostics_error_unreadable",
-    [DIAGNOSTICS_ERROR.UNAVAILABLE]: "diagnostics_error_unavailable",
+    [DIAGNOSTICS_ERROR.DISABLED]: 'diagnostics_error_disabled',
+    [DIAGNOSTICS_ERROR.EMPTY]: 'diagnostics_error_empty',
+    [DIAGNOSTICS_ERROR.STORAGE_FAILED]: 'diagnostics_error_unreadable',
+    [DIAGNOSTICS_ERROR.UNAVAILABLE]: 'diagnostics_error_unavailable',
 } as const satisfies Record<DiagnosticsSnapshotError | DiagnosticsClearError, MessageKey>;
 
 /**
  * Maps a diagnostics service failure to its message key.
  *
  * @param error - Stable service failure returned by the background page.
+ *
  * @returns - Message key describing the failure.
  */
 export function diagnosticsErrorKey(
@@ -82,6 +84,7 @@ export function diagnosticsErrorKey(
  * Reports whether a diagnostics notice key describes a completed action.
  *
  * @param notice - Latest diagnostics notice key.
+ *
  * @returns - Whether the notice is a success rather than a failure.
  */
 export function isDiagnosticsSuccessNotice(notice: MessageKey): boolean {
@@ -92,9 +95,9 @@ export function isDiagnosticsSuccessNotice(notice: MessageKey): boolean {
  * Message key describing each stable archive failure.
  */
 const ARCHIVE_ERROR_KEY: Readonly<Record<DiagnosticArchiveErrorCode, MessageKey>> = Object.freeze({
-    [DIAGNOSTIC_ARCHIVE_ERROR.EMPTY]: "diagnostics_error_archive_empty",
-    [DIAGNOSTIC_ARCHIVE_ERROR.COMPRESSION_FAILED]: "diagnostics_error_archive_create",
-    [DIAGNOSTIC_ARCHIVE_ERROR.DOWNLOAD_FAILED]: "diagnostics_error_archive_download",
+    [DIAGNOSTIC_ARCHIVE_ERROR.EMPTY]: 'diagnostics_error_archive_empty',
+    [DIAGNOSTIC_ARCHIVE_ERROR.COMPRESSION_FAILED]: 'diagnostics_error_archive_create',
+    [DIAGNOSTIC_ARCHIVE_ERROR.DOWNLOAD_FAILED]: 'diagnostics_error_archive_download',
 });
 
 /**
@@ -102,6 +105,7 @@ const ARCHIVE_ERROR_KEY: Readonly<Record<DiagnosticArchiveErrorCode, MessageKey>
  *
  * @param result - Snapshot read from the background, or the reason it failed.
  * @param runtime - Browser download primitives, or undefined outside a document.
+ *
  * @returns - Message key describing the outcome.
  */
 export function downloadDiagnosticsSnapshot(
@@ -112,7 +116,7 @@ export function downloadDiagnosticsSnapshot(
         return diagnosticsErrorKey(result.error);
     }
     if (!runtime) {
-        return "diagnostics_error_no_downloads";
+        return 'diagnostics_error_no_downloads';
     }
     try {
         downloadDiagnosticsZip(createDiagnosticsZip(result.snapshot), runtime);
@@ -120,6 +124,6 @@ export function downloadDiagnosticsSnapshot(
     } catch (error) {
         return error instanceof DiagnosticArchiveError
             ? ARCHIVE_ERROR_KEY[error.code]
-            : "diagnostics_error_archive";
+            : 'diagnostics_error_archive';
     }
 }

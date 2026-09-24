@@ -2,6 +2,13 @@
  * @file GitHub adapter that discovers and extracts trusted timestamp candidates.
  */
 
+import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from '../../shared/adapters/github-contract';
+
+import { discoverElements } from './discover-elements';
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -10,15 +17,9 @@ import {
     ADJACENT_TIME_PRESENTATION,
     type TimestampSourceRule,
     type TimestampSourceKind,
-} from "./types";
-import { GITHUB_ADAPTER_ID, matchesGitHubUrl } from "../../shared/adapters/github-contract";
-import { discoverElements } from "./discover-elements";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
-const GITHUB_TIMESTAMP_SELECTOR = "relative-time, time-ago, time-until" as const;
+const GITHUB_TIMESTAMP_SELECTOR = 'relative-time, time-ago, time-until' as const;
 
 const APPROVED_KINDS = new Set<TimestampSourceKind>([
     TIMESTAMP_SOURCE_KIND.RELATIVE_TIME,
@@ -30,6 +31,7 @@ const APPROVED_KINDS = new Set<TimestampSourceKind>([
  * Checks whether an element has one of GitHub's approved timestamp source shapes.
  *
  * @param element - Candidate GitHub timestamp element.
+ *
  * @returns - Whether the element can be extracted by this adapter.
  */
 function isGitHubTimestampElement(element: Element): boolean {
@@ -62,12 +64,12 @@ export const githubAdapter = {
         if (!APPROVED_KINDS.has(sourceKind)) {
             return null;
         }
-        const format = element.getAttribute("format")?.trim().toLowerCase();
-        if (format === "datetime") {
+        const format = element.getAttribute('format')?.trim().toLowerCase();
+        if (format === 'datetime') {
             return null;
         }
-        const rawDatetime = element.getAttribute("datetime");
-        if (!rawDatetime || rawDatetime.trim() === "") {
+        const rawDatetime = element.getAttribute('datetime');
+        if (!rawDatetime || rawDatetime.trim() === '') {
             return null;
         }
         return rawDatetime

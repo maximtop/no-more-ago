@@ -6,27 +6,26 @@
  * Result kinds shared by popup and options clients and their consumers.
  */
 export const CLIENT_RESULT_KIND = {
-    RESPONSE: "response",
-    AMBIGUOUS: "ambiguous",
-    ERROR: "error",
+    RESPONSE: 'response',
+    AMBIGUOUS: 'ambiguous',
+    ERROR: 'error',
 } as const;
 
 /**
  * Outcome of one settings mutation: the background response, or the state
  * reread after that response was lost.
  */
-export type MutationResult<TResponse, TState> =
-    | {
-        /**
-         * Indicates that the background answered the command.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type MutationResult<TResponse, TState> = | {
+    /**
+     * Indicates that the background answered the command.
+     */
+    readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
-        /**
-         * Result of the command as the background reported it.
-         */
-        readonly response: TResponse;
-    }
+    /**
+     * Result of the command as the background reported it.
+     */
+    readonly response: TResponse;
+}
     | {
         /**
          * Indicates that command completion could not be determined directly.
@@ -49,6 +48,7 @@ export type MutationResult<TResponse, TState> =
  * @param send - Sends the mutation and resolves with the background response.
  * @param reread - Reads the surface's current state after a lost response.
  * @param accept - Optional discriminant check selecting this surface's response.
+ *
  * @returns - The background response, or an ambiguous outcome with the reread state.
  */
 export async function runMutation<TResponse, TState, TAccepted extends TResponse = TResponse>(
@@ -78,6 +78,7 @@ export async function runMutation<TResponse, TState, TAccepted extends TResponse
  * Reads current state after a mutation response is lost.
  *
  * @param reread - Reads the surface's current state.
+ *
  * @returns - An ambiguous result carrying the state when the reread succeeds.
  */
 async function rereadAfterAmbiguousResponse<TResponse, TState>(

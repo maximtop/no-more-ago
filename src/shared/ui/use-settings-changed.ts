@@ -2,8 +2,9 @@
  * @file React subscription to committed settings changes with own-write suppression.
  */
 
-import { useEffect, useRef, useState } from "react";
-import type { SubscribeSettingsChanged } from "../messaging/settings-notifications";
+import { useEffect, useRef, useState } from 'react';
+
+import type { SubscribeSettingsChanged } from '../messaging/settings-notifications';
 
 /**
  * Inputs of the settings change subscription.
@@ -48,7 +49,9 @@ export interface SettingsChangedOptions {
  * @param options - Subscriber, rendered revision, in-flight flag, and callback.
  */
 export function useSettingsChanged(options: SettingsChangedOptions): void {
-    const { subscribe, revision, inFlight, onExternalChange } = options;
+    const {
+        subscribe, revision, inFlight, onExternalChange,
+    } = options;
     const [pending, setPending] = useState<number>();
     const callback = useRef(onExternalChange);
     useEffect(() => {
@@ -56,9 +59,9 @@ export function useSettingsChanged(options: SettingsChangedOptions): void {
     }, [onExternalChange]);
     useEffect(() => {
         const subscription = subscribe((announced) => {
-            setPending((current) => current === undefined
+            setPending((current) => (current === undefined
                 ? announced
-                : Math.max(current, announced));
+                : Math.max(current, announced)));
         });
         return () => {
             subscription.unsubscribe();

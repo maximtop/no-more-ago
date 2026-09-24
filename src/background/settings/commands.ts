@@ -2,26 +2,10 @@
  * @file Serialized settings mutations and their runtime side effects.
  */
 
-import type {
-    SettingsPersistence,
-    SettingsWriteFailure,
-    SettingsWriteResult,
-    SettingsWriteSuccess,
-} from "./service";
-import type { Appearance, DisplaySettings } from "../../shared/settings/snapshot";
-import { isCanonicalHostname } from "../../shared/settings/hostname";
-import type { SiteScopeMode } from "../../shared/settings/site-scope";
-import type { ApplicationLifecycle } from "../application/lifecycle";
-import type { DiagnosticsService } from "../diagnostics/service";
-import { deriveDisplayState } from "../projection/display-state";
-import type { DocumentRefresh } from "./document-refresh";
-import type { StateProjection } from "../projection/state-projection";
-import { ACTIVATION_POLICY } from "../runtime/document-activation";
 import {
-    APPLICATION_PHASE,
-    LIFECYCLE_REASON,
-    type SettingsBroadcast,
-} from "../application/contracts";
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from '../../shared/diagnostics/contracts';
 import {
     DISPLAY_SETTINGS_ERROR,
     SETTINGS_PERSISTENCE_ERROR,
@@ -30,12 +14,23 @@ import {
     STATE_AVAILABILITY,
     type SettingsPersistenceError,
     type SiteSettingsSurface,
-} from "../../shared/messaging/view-state-values";
+} from '../../shared/messaging/view-state-values';
+import { isCanonicalHostname } from '../../shared/settings/hostname';
+import {
+    APPLICATION_PHASE,
+    LIFECYCLE_REASON,
+    type SettingsBroadcast,
+} from '../application/contracts';
+import { deriveDisplayState } from '../projection/display-state';
+import { ACTIVATION_POLICY } from '../runtime/document-activation';
+
+import type { DocumentRefresh } from './document-refresh';
 import type {
-    RefreshFailure,
-    PopupState,
-    SitesState,
-} from "../../shared/messaging/view-state";
+    SettingsPersistence,
+    SettingsWriteFailure,
+    SettingsWriteResult,
+    SettingsWriteSuccess,
+} from './service';
 import type {
     ResetAllSettingsResponse,
     SetAppearanceResponse,
@@ -44,11 +39,17 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SetSiteScopeModeResponse,
-} from "../../shared/messaging/responses";
-import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_REASON,
-} from "../../shared/diagnostics/contracts";
+} from '../../shared/messaging/responses';
+import type {
+    RefreshFailure,
+    PopupState,
+    SitesState,
+} from '../../shared/messaging/view-state';
+import type { SiteScopeMode } from '../../shared/settings/site-scope';
+import type { Appearance, DisplaySettings } from '../../shared/settings/snapshot';
+import type { ApplicationLifecycle } from '../application/lifecycle';
+import type { DiagnosticsService } from '../diagnostics/service';
+import type { StateProjection } from '../projection/state-projection';
 
 /**
  * Outcome of one serialized write: the committed revision or the error to report.
@@ -129,6 +130,7 @@ export class SettingsCommands {
      * Persists diagnostic logging and refreshes matching enabled-site tabs.
      *
      * @param enabled - Requested diagnostic logging state.
+     *
      * @returns - Persisted state and document refresh failures.
      */
     public async setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
@@ -154,8 +156,7 @@ export class SettingsCommands {
                 }
             },
         );
-        const state = await this.finish(outcome, () =>
-            this.diagnostics.debugState(this.lifecycle.state));
+        const state = await this.finish(outcome, () => this.diagnostics.debugState(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
             return {
                 ok: false,
@@ -175,6 +176,7 @@ export class SettingsCommands {
      * Validates and persists display settings, then refreshes enabled-site tabs.
      *
      * @param display - Typed display settings payload.
+     *
      * @returns - Persisted display state and document refresh failures.
      */
     public async setDisplaySettings(
@@ -183,12 +185,11 @@ export class SettingsCommands {
         let refreshFailures: readonly RefreshFailure[] = [];
         const outcome = await this.runWrite(
             () => this.settings.setDisplaySettings(display),
-            (write) =>
-                write.error === DISPLAY_SETTINGS_ERROR.INVALID_FORMAT
+            (write) => (write.error === DISPLAY_SETTINGS_ERROR.INVALID_FORMAT
                 || write.error === DISPLAY_SETTINGS_ERROR.INVALID_TIME_ZONE
                 || write.error === DISPLAY_SETTINGS_ERROR.INVALID_DISPLAY_SETTINGS
-                    ? write.error
-                    : undefined,
+                ? write.error
+                : undefined),
             async (write) => {
                 this.lifecycle.advanceReconcileRevision(write.snapshot.revision);
                 if (write.changed) {
@@ -208,13 +209,16 @@ export class SettingsCommands {
                 state,
             };
         }
-        return { ok: true, acceptedRevision: outcome.acceptedRevision, state, refreshFailures };
+        return {
+            ok: true, acceptedRevision: outcome.acceptedRevision, state, refreshFailures,
+        };
     }
 
     /**
      * Persists the appearance applied to both extension surfaces.
      *
      * @param appearance - Requested appearance.
+     *
      * @returns - Persisted display state carrying the appearance.
      */
     public async setAppearance(appearance: Appearance): Promise<SetAppearanceResponse> {
@@ -285,9 +289,7 @@ export class SettingsCommands {
             this.projection.clear();
             await this.projection.seed(this.lifecycle.state);
         });
-        const state = await this.lifecycle.enqueue(() =>
-            Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
-        );
+        const state = await this.lifecycle.enqueue(() => Promise.resolve(this.projection.deriveSites(this.lifecycle.state)));
         this.announce(acceptedRevision);
         if (acceptedRevision !== undefined && state.availability === STATE_AVAILABILITY.READY) {
             return { ok: true, acceptedRevision, state };
@@ -304,6 +306,7 @@ export class SettingsCommands {
      *
      * @param enabled - Requested global activation state.
      * @param surface - Response projection requested by the caller.
+     *
      * @returns - Persisted global state and the popup or sites projection.
      */
     public async setGlobalEnabled(
@@ -327,19 +330,28 @@ export class SettingsCommands {
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
             const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: false, error, surface, state: state as PopupState }
-                : { ok: false, error, surface, state: state as SitesState };
+                ? {
+                    ok: false, error, surface, state: state as PopupState,
+                }
+                : {
+                    ok: false, error, surface, state: state as SitesState,
+                };
         }
-        const acceptedRevision = outcome.acceptedRevision;
+        const { acceptedRevision } = outcome;
         return surface === SITE_SETTINGS_SURFACE.POPUP
-            ? { ok: true, acceptedRevision, surface, state: state as PopupState }
-            : { ok: true, acceptedRevision, surface, state: state as SitesState };
+            ? {
+                ok: true, acceptedRevision, surface, state: state as PopupState,
+            }
+            : {
+                ok: true, acceptedRevision, surface, state: state as SitesState,
+            };
     }
 
     /**
      * Persists the active scope mode and reconciles every matching document.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - Persisted sites state for the settings page.
      */
     public async setSiteScopeMode(mode: SiteScopeMode): Promise<SetSiteScopeModeResponse> {
@@ -348,8 +360,7 @@ export class SettingsCommands {
             () => undefined,
             (write) => this.reconcileSites(write),
         );
-        const state = await this.finish(outcome, () =>
-            this.projection.deriveSites(this.lifecycle.state));
+        const state = await this.finish(outcome, () => this.projection.deriveSites(this.lifecycle.state));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
             return {
                 ok: false,
@@ -368,6 +379,7 @@ export class SettingsCommands {
      * @param enabled - Whether processing should apply to the hostname.
      * @param mode - Scope mode the caller rendered when it made the decision.
      * @param surface - Response projection requested by the caller.
+     *
      * @returns - Persisted update and popup or sites state.
      */
     public async setSiteEnabled(
@@ -384,30 +396,41 @@ export class SettingsCommands {
                 : this.projection.deriveSites(this.lifecycle.state);
             const error = SITE_SETTINGS_ERROR.INVALID_HOSTNAME;
             return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: false, error, surface, state: state as PopupState }
-                : { ok: false, error, surface, state: state as SitesState };
+                ? {
+                    ok: false, error, surface, state: state as PopupState,
+                }
+                : {
+                    ok: false, error, surface, state: state as SitesState,
+                };
         }
         const outcome = await this.runWrite(
             () => this.settings.setSiteEnabled(hostname, enabled, mode),
-            (write) =>
-                write.error === SITE_SETTINGS_ERROR.INVALID_HOSTNAME
+            (write) => (write.error === SITE_SETTINGS_ERROR.INVALID_HOSTNAME
                 || write.error === SITE_SETTINGS_ERROR.LIST_FULL
                 || write.error === SITE_SETTINGS_ERROR.SCOPE_CHANGED
-                    ? write.error
-                    : undefined,
+                ? write.error
+                : undefined),
             (write) => this.reconcileSites(write, [hostname]),
         );
         const state = await this.finish(outcome, () => this.deriveSurface(surface));
         if (outcome.error !== undefined || outcome.acceptedRevision === undefined) {
             const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
-                ? { ok: false, error, surface, state: state as PopupState }
-                : { ok: false, error, surface, state: state as SitesState };
+                ? {
+                    ok: false, error, surface, state: state as PopupState,
+                }
+                : {
+                    ok: false, error, surface, state: state as SitesState,
+                };
         }
-        const acceptedRevision = outcome.acceptedRevision;
+        const { acceptedRevision } = outcome;
         return surface === SITE_SETTINGS_SURFACE.POPUP
-            ? { ok: true, acceptedRevision, surface, state: state as PopupState }
-            : { ok: true, acceptedRevision, surface, state: state as SitesState };
+            ? {
+                ok: true, acceptedRevision, surface, state: state as PopupState,
+            }
+            : {
+                ok: true, acceptedRevision, surface, state: state as SitesState,
+            };
     }
 
     /**
@@ -419,6 +442,7 @@ export class SettingsCommands {
      * @param domainError - Maps a rejected write to a command-specific error, or
      * undefined when the rejection is a persistence failure.
      * @param onCommitted - Command-specific runtime effect for a committed write.
+     *
      * @returns - Committed revision or the error to report.
      */
     private async runWrite<TError extends string>(
@@ -470,6 +494,7 @@ export class SettingsCommands {
      *
      * @param outcome - Outcome of the serialized write.
      * @param derive - Projection derived under the lifecycle queue.
+     *
      * @returns - Derived projection.
      */
     private async finish<TState>(
@@ -486,6 +511,7 @@ export class SettingsCommands {
      *
      * @param write - Committed site-scope write.
      * @param hostnames - Hostnames whose documents must be revisited, when limited.
+     *
      * @returns - Promise settled after reconciliation or revision advance.
      */
     private async reconcileSites(
@@ -508,6 +534,7 @@ export class SettingsCommands {
      * Derives the popup or sites projection requested by a caller.
      *
      * @param surface - Requested response surface.
+     *
      * @returns - Popup or sites projection.
      */
     private deriveSurface(surface: SiteSettingsSurface): Promise<PopupState | SitesState> {

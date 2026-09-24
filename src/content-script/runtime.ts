@@ -2,21 +2,6 @@
  * @file Coordinates the document controller with persisted settings and runtime messages.
  */
 
-import type { AdapterRegistry } from "./adapters/registry";
-import {
-    createBlueskyAppView,
-    type BlueskyAppView,
-} from "./adapters/bluesky-appview";
-import { createBlueskyCoordinator } from "./adapters/bluesky-coordinator";
-import { matchesBlueskyUrl } from "./adapters/bluesky";
-import {
-    DocumentTransformationController,
-    type DocumentTransformationControllerInput,
-} from "./transformation/document-transformation-controller";
-import type { DocumentDiagnosticSink } from "./diagnostics";
-import type {
-    DocumentTransformationParticipantFactory,
-} from "./transformation/document-transformation-participant";
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
     DOCUMENT_PHASE,
@@ -32,19 +17,36 @@ import {
     type DebugPolicyUpdateAcknowledgement,
     type DocumentPhase,
     type PresentationUpdateAcknowledgement,
-} from "../shared/messaging/document-messages";
-import type { DocumentState } from "../shared/messaging/document-state";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+} from '../shared/messaging/document-messages';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
 import {
     DEFAULT_DISPLAY_SETTINGS,
     type DisplaySettings,
-} from "../shared/settings/snapshot";
-import type { DocumentRouteHandoffClassifier } from "./transformation/route-handoff";
+} from '../shared/settings/snapshot';
+
+import { matchesBlueskyUrl } from './adapters/bluesky';
+import {
+    createBlueskyAppView,
+    type BlueskyAppView,
+} from './adapters/bluesky-appview';
+import { createBlueskyCoordinator } from './adapters/bluesky-coordinator';
+import {
+    DocumentTransformationController,
+    type DocumentTransformationControllerInput,
+} from './transformation/document-transformation-controller';
+
+import type { AdapterRegistry } from './adapters/registry';
+import type { DocumentDiagnosticSink } from './diagnostics';
+import type {
+    DocumentTransformationParticipantFactory,
+} from './transformation/document-transformation-participant';
+import type { DocumentRouteHandoffClassifier } from './transformation/route-handoff';
+import type { DocumentState } from '../shared/messaging/document-state';
 
 /**
  * Global symbol used to retain the single content-runtime instance for a document.
  */
-export const DOCUMENT_RUNTIME_SLOT = Symbol.for("no-more-ago.document-runtime");
+export const DOCUMENT_RUNTIME_SLOT = Symbol.for('no-more-ago.document-runtime');
 
 /**
  * Subset of the extension runtime API used to receive content-script commands.
@@ -229,6 +231,7 @@ function synchronizeActivity(slot: RuntimeSlot): void {
  * @param slot - Singleton runtime state for the current document.
  * @param display - Validated presentation settings to expose.
  * @param revision - Accepted settings revision.
+ *
  * @returns - Whether label expansion was enabled and previously skipped sources need discovery.
  */
 function applyPresentation(slot: RuntimeSlot, display: DisplaySettings, revision: number): boolean {
@@ -279,6 +282,7 @@ function applyDebugPolicy(slot: RuntimeSlot, enabled: boolean, revision: number)
  * Samples and reconciles the current route without trusting message payload data.
  *
  * @param slot - Singleton runtime state for the current document.
+ *
  * @returns - Whether reconciliation succeeded and activation may proceed.
  */
 function reconcileCurrentRoute(slot: RuntimeSlot): boolean {
@@ -301,10 +305,10 @@ function reconcileCurrentRoute(slot: RuntimeSlot): boolean {
  */
 function maybeStart(slot: RuntimeSlot, generation: number): void {
     if (
-        slot.phase !== DOCUMENT_PHASE.WAITING ||
-        slot.generation !== generation ||
-        slot.presentation === undefined ||
-        slot.policyEnabled === false
+        slot.phase !== DOCUMENT_PHASE.WAITING
+        || slot.generation !== generation
+        || slot.presentation === undefined
+        || slot.policyEnabled === false
     ) {
         return;
     }
@@ -387,14 +391,14 @@ function beginHydration(
                 const previousPresentationRevision = slot.presentationRevision ?? -1;
                 let discoverAbsolute = false;
                 if (
-                    slot.presentationRevision === undefined ||
-                    response.revision >= slot.presentationRevision
+                    slot.presentationRevision === undefined
+                    || response.revision >= slot.presentationRevision
                 ) {
                     discoverAbsolute = applyPresentation(slot, response.display, response.revision);
                 }
                 if (
-                    slot.phase === DOCUMENT_PHASE.ACTIVE &&
-                    response.revision > previousPresentationRevision
+                    slot.phase === DOCUMENT_PHASE.ACTIVE
+                    && response.revision > previousPresentationRevision
                 ) {
                     slot.controller.reformatOwned(discoverAbsolute);
                 }
@@ -466,7 +470,7 @@ function activate(
         return;
     }
     slot.generation += 1;
-    const generation = slot.generation;
+    const { generation } = slot;
     slot.phase = DOCUMENT_PHASE.WAITING;
     slot.presentation = undefined;
     slot.presentationRevision = undefined;
@@ -521,6 +525,7 @@ function teardown(slot: RuntimeSlot): void {
  * Creates an acknowledgement for the policy revision retained by the runtime.
  *
  * @param revision - Retained settings revision, or null for an unversioned fail-closed refresh.
+ *
  * @returns - Policy reconciliation acknowledgement.
  */
 function policyAcknowledgement(
@@ -539,6 +544,7 @@ function policyAcknowledgement(
  * @param slot - Singleton runtime state for the current document.
  * @param revision - Persisted settings revision, or null while settings are unavailable.
  * @param enabled - Effective top-level activation policy carried by the command.
+ *
  * @returns - Revision retained for acknowledgement.
  */
 function reconcilePolicy(
@@ -592,6 +598,7 @@ function reconcilePolicy(
  * Creates the acknowledgement for an applied presentation revision.
  *
  * @param revision - Presentation revision successfully applied.
+ *
  * @returns - Runtime acknowledgement for that presentation revision.
  */
 function presentationAcknowledgement(revision: number): PresentationUpdateAcknowledgement {
@@ -602,6 +609,7 @@ function presentationAcknowledgement(revision: number): PresentationUpdateAcknow
  * Creates the acknowledgement for an applied diagnostic-policy revision.
  *
  * @param revision - Diagnostic-policy revision successfully applied.
+ *
  * @returns - Runtime acknowledgement for that diagnostic-policy revision.
  */
 function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgement {
@@ -625,6 +633,7 @@ function debugAcknowledgement(revision: number): DebugPolicyUpdateAcknowledgemen
  * @param input.reportDiagnostic - Background diagnostic event reporter.
  * @param input.onActivityChanged - Optional site lifecycle listener.
  * @param input.messages - Runtime message event source.
+ *
  * @returns - Installed singleton runtime handle.
  */
 export function installContentRuntime(input: {
@@ -655,16 +664,15 @@ export function installContentRuntime(input: {
         refreshPolicy(existing);
         return existing.handle;
     }
-    const participantFactory: DocumentTransformationParticipantFactory | undefined =
-        matchesBlueskyUrl(input.url)
-            ? (host) => createBlueskyCoordinator({
-                document: input.document,
-                url: input.url,
-                appView: input.blueskyAppView ?? createBlueskyAppView(),
-                getDiagnosticSink: host.getDiagnosticSink,
-                onSourcesChanged: host.onSourcesChanged,
-            })
-            : undefined;
+    const participantFactory: DocumentTransformationParticipantFactory | undefined = matchesBlueskyUrl(input.url)
+        ? (host) => createBlueskyCoordinator({
+            document: input.document,
+            url: input.url,
+            appView: input.blueskyAppView ?? createBlueskyAppView(),
+            getDiagnosticSink: host.getDiagnosticSink,
+            onSourcesChanged: host.onSourcesChanged,
+        })
+        : undefined;
     const slot = {} as RuntimeSlot;
     const processInput: DocumentTransformationControllerInput = {
         url: input.url,
@@ -730,14 +738,14 @@ export function installContentRuntime(input: {
                 return undefined;
             }
             if (
-                slot.presentationRevision !== undefined &&
-                message.revision < slot.presentationRevision
+                slot.presentationRevision !== undefined
+                && message.revision < slot.presentationRevision
             ) {
                 return undefined;
             }
             if (
-                slot.presentationRevision !== undefined &&
-                message.revision === slot.presentationRevision
+                slot.presentationRevision !== undefined
+                && message.revision === slot.presentationRevision
             ) {
                 const response = presentationAcknowledgement(message.revision);
                 sendResponse?.(response);

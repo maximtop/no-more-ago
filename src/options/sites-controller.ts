@@ -2,41 +2,42 @@
  * @file Owns loading and mutation state for the options-page site settings.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import { useCallback, useEffect, useState } from 'react';
+
 import {
     createUnavailableSitesState,
     type SitesState,
-} from "../shared/messaging/view-state";
-import { SITE_SCOPE_MODE, type SiteScopeMode } from "../shared/settings/site-scope";
-import { settleMutation, type MutationNotice } from "../shared/ui/persistence-notice";
-import { readWithDeadline } from "../shared/ui/read-with-deadline";
-import type { SitesClient } from "./client";
+} from '../shared/messaging/view-state';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
+import { SITE_SCOPE_MODE, type SiteScopeMode } from '../shared/settings/site-scope';
+import { settleMutation, type MutationNotice } from '../shared/ui/persistence-notice';
+import { readWithDeadline } from '../shared/ui/read-with-deadline';
+
+import type { SitesClient } from './client';
 
 /**
  * Named mutations the Sites section can have in flight.
  */
 export const SITES_BUSY_KIND = {
-    SITE: "site",
-    SCOPE: "scope",
-    GLOBAL: "global",
+    SITE: 'site',
+    SCOPE: 'scope',
+    GLOBAL: 'global',
 } as const;
 
 /**
  * Mutation currently in flight on the Sites section.
  */
-export type SitesBusy =
-    | {
-        /**
-         * One hostname's processing state is being saved.
-         */
-        readonly kind: typeof SITES_BUSY_KIND.SITE;
+export type SitesBusy = | {
+    /**
+     * One hostname's processing state is being saved.
+     */
+    readonly kind: typeof SITES_BUSY_KIND.SITE;
 
-        /**
-         * Hostname being saved.
-         */
-        readonly hostname: string;
-    }
+    /**
+     * Hostname being saved.
+     */
+    readonly hostname: string;
+}
     | {
         /**
          * The scope mode is being saved.
@@ -99,6 +100,7 @@ export interface SitesController {
      * Changes global activation.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     changeGlobal(enabled: boolean): Promise<void>;
@@ -107,6 +109,7 @@ export interface SitesController {
      * Changes the active scope mode without touching either hostname list.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     changeScopeMode(mode: SiteScopeMode): Promise<void>;
@@ -116,6 +119,7 @@ export interface SitesController {
      *
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
+     *
      * @returns - Whether the background confirmed the change.
      */
     changeSiteProcessing(hostname: string, enabled: boolean): Promise<boolean>;
@@ -150,6 +154,7 @@ export interface SitesController {
  *
  * @param current - Rendered projection.
  * @param next - Reread projection.
+ *
  * @returns - Whether the reread is at least as new as the rendered projection.
  */
 function isNewer(current: SitesState | undefined, next: SitesState): boolean {
@@ -162,6 +167,7 @@ function isNewer(current: SitesState | undefined, next: SitesState): boolean {
  * Selects the hostname list the active scope mode owns.
  *
  * @param state - Current sites projection.
+ *
  * @returns - Active hostnames, or an empty list while settings are unavailable.
  */
 function activeHostnamesOf(state: SitesState | undefined): readonly string[] {
@@ -177,6 +183,7 @@ function activeHostnamesOf(state: SitesState | undefined): readonly string[] {
  * Creates the site-settings controller for the options page.
  *
  * @param options - Controller dependencies and optional preloaded state.
+ *
  * @returns - Current site settings together with mutation and reset commands.
  */
 export function useSitesController(options: SitesControllerOptions): SitesController {
@@ -246,6 +253,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
      *
      * @param hostname - Canonical hostname whose processing state changes.
      * @param enabled - Whether processing should apply to the hostname.
+     *
      * @returns - Whether the background confirmed the change.
      */
     const changeSiteProcessing = async (hostname: string, enabled: boolean): Promise<boolean> => {
@@ -266,6 +274,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
      * Saves the scope mode.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     const changeScopeMode = async (mode: SiteScopeMode): Promise<void> => {
@@ -283,6 +292,7 @@ export function useSitesController(options: SitesControllerOptions): SitesContro
      * Saves global activation.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     const changeGlobal = async (enabled: boolean): Promise<void> => {

@@ -2,7 +2,8 @@
  * @file Commander-based parsing for development and release build commands.
  */
 
-import { Argument, Command } from "commander";
+import { Argument, Command } from 'commander';
+
 import {
     BROWSERS,
     BROWSER,
@@ -11,7 +12,7 @@ import {
     isBrowser,
     type Browser,
     type BuildMode,
-} from "./contracts.ts";
+} from './contracts.ts';
 
 /**
  * Validated build request passed from the command-line adapter to the build pipeline.
@@ -39,7 +40,7 @@ export interface BuildRequest {
  * @returns - Commander argument restricted to supported browser targets.
  */
 function browserArgument(): Argument {
-    return new Argument("[browser]", "browser artifact to build").choices(BROWSERS);
+    return new Argument('[browser]', 'browser artifact to build').choices(BROWSERS);
 }
 
 /**
@@ -48,6 +49,7 @@ function browserArgument(): Argument {
  * @param mode - Command-selected development or release mode.
  * @param browser - Optional browser selected by the command.
  * @param watch - Whether continuous development compilation was requested.
+ *
  * @returns - Complete request consumed by the build pipeline.
  */
 export function createBuildRequest(
@@ -75,8 +77,8 @@ export function createBuildRequest(
 export function parseBuildCli(): BuildRequest {
     let request: BuildRequest | undefined;
     const program = new Command()
-        .name("pnpm")
-        .description("Build No More Ago browser extension artifacts.")
+        .name('pnpm')
+        .description('Build No More Ago browser extension artifacts.')
         .showSuggestionAfterError()
         .showHelpAfterError()
         .exitOverride((error) => {
@@ -87,9 +89,9 @@ export function parseBuildCli(): BuildRequest {
 
     program
         .command(BUILD_MODE.DEV)
-        .description("build development artifacts")
+        .description('build development artifacts')
         .addArgument(browserArgument())
-        .option("--watch", "watch one browser target for changes")
+        .option('--watch', 'watch one browser target for changes')
         .action((browser: string | undefined, options: { readonly watch?: boolean }) => {
             const watch = options.watch === true;
             request = createBuildRequest(BUILD_MODE.DEV, browser, watch);
@@ -97,7 +99,7 @@ export function parseBuildCli(): BuildRequest {
 
     program
         .command(BUILD_MODE.RELEASE)
-        .description("build release artifacts")
+        .description('build release artifacts')
         .addArgument(browserArgument())
         .action((browser: string | undefined) => {
             request = createBuildRequest(BUILD_MODE.RELEASE, browser, false);

@@ -2,6 +2,8 @@
  * @file Receives Facebook payload records and schedules exact-source reconciliation.
  */
 
+import { isFacebookTimestampElement } from '../adapters/facebook';
+
 import {
     FACEBOOK_PAYLOAD_LIMIT,
     FACEBOOK_PAYLOAD_SCRIPT_SELECTOR,
@@ -9,8 +11,7 @@ import {
     createFacebookPayloadBridgeControlMessage,
     isFacebookPayloadBridgeReadyMessage,
     readFacebookPayloadMessage,
-} from "./contracts";
-import { isFacebookTimestampElement } from "../adapters/facebook";
+} from './contracts';
 import {
     FACEBOOK_TIMESTAMP_RECORD_CHANGE,
     clearFacebookTimestampRecords,
@@ -19,9 +20,9 @@ import {
     ingestFacebookPayloadScripts,
     storeFacebookTimestampUpdate,
     type FacebookTimestampRecordChange,
-} from "./timestamp-store";
+} from './timestamp-store';
 
-const FACEBOOK_PAYLOAD_RUNTIME_SLOT = Symbol.for("no-more-ago.facebook-payload-runtime");
+const FACEBOOK_PAYLOAD_RUNTIME_SLOT = Symbol.for('no-more-ago.facebook-payload-runtime');
 
 /**
  * Lifecycle handle for the isolated Facebook payload consumer.
@@ -69,6 +70,7 @@ interface FacebookPayloadRuntimeSlot {
  * Collects the exact Facebook payload scripts introduced or populated by one mutation.
  *
  * @param record - Mutation whose local script candidates are requested.
+ *
  * @returns - Matching script elements without a document-wide rescan.
  */
 function payloadScriptCandidates(record: MutationRecord): readonly HTMLScriptElement[] {
@@ -107,6 +109,7 @@ function payloadScriptCandidates(record: MutationRecord): readonly HTMLScriptEle
  * Collects Facebook tracking links affected by one DOM mutation.
  *
  * @param record - Mutation to inspect.
+ *
  * @returns - Local candidate anchors for retrying pending associations.
  */
 function trackedLinkCandidates(record: MutationRecord): readonly Element[] {
@@ -147,6 +150,7 @@ function trackedLinkCandidates(record: MutationRecord): readonly Element[] {
  * @param input.window - Window receiving main-world bridge messages.
  * @param input.document - Facebook document whose records and scripts are consumed.
  * @param input.onSourcesChanged - Reconciles only sources affected by record changes.
+ *
  * @returns - Idempotent lifecycle handle for the document.
  */
 export function installFacebookPayloadRuntime(input: {
@@ -315,10 +319,10 @@ export function installFacebookPayloadRuntime(input: {
         }
         slot.enabled = enabled;
         if (enabled) {
-            input.window.addEventListener("message", messageListener);
+            input.window.addEventListener('message', messageListener);
             observer.observe(input.document, {
                 attributes: true,
-                attributeFilter: ["href"],
+                attributeFilter: ['href'],
                 characterData: true,
                 childList: true,
                 subtree: true,
@@ -328,7 +332,7 @@ export function installFacebookPayloadRuntime(input: {
             return;
         }
         postControl(false);
-        input.window.removeEventListener("message", messageListener);
+        input.window.removeEventListener('message', messageListener);
         observer.disconnect();
         pendingChanges.clear();
         clearFacebookTimestampRecords(input.document);

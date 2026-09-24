@@ -2,7 +2,15 @@
  * @file Generic source rule for standard light-DOM time elements.
  */
 
-import { isHttpUrl } from "../../shared/url/http";
+import { isHttpUrl } from '../../shared/url/http';
+import { OWNED_OUTPUT_ATTRIBUTE } from '../ownership-markers';
+
+import { discoverElements } from './discover-elements';
+import { isHtmlElement } from './html-element';
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
 import {
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -10,24 +18,18 @@ import {
     TIMESTAMP_VISIBILITY_POLICY,
     ADJACENT_TIME_PRESENTATION,
     type TimestampSourceRule,
-} from "./types";
-import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
-import { discoverElements } from "./discover-elements";
-import { isHtmlElement } from "./html-element";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
 /**
  * Stable identifier for the generic standard-time source rule.
  */
-export const GENERIC_TIME_RULE_ID = "generic-time" as const;
+export const GENERIC_TIME_RULE_ID = 'generic-time' as const;
 
 /**
  * Recognizes a standard HTML time element without relying on realm-specific constructors.
  *
  * @param element - Candidate element from the processed document.
+ *
  * @returns - Whether the candidate is a standard HTML time element.
  */
 function isStandardTimeElement(element: Element): boolean {
@@ -39,6 +41,7 @@ function isStandardTimeElement(element: Element): boolean {
  * Recognizes a page-owned generic timestamp source rather than generated output.
  *
  * @param element - Candidate source element.
+ *
  * @returns - Whether the element can be processed by the generic rule.
  */
 function isGenericTimeSource(element: Element): boolean {
@@ -49,26 +52,28 @@ function isGenericTimeSource(element: Element): boolean {
  * Finds ordinary light-DOM time elements in a bounded root.
  *
  * @param root - Element or parent node to inspect.
+ *
  * @returns - Standard time elements without extension output markers.
  */
 function discoverStandardTimes(root: ParentNode): readonly Element[] {
-    return discoverElements(root, "time", isGenericTimeSource);
+    return discoverElements(root, 'time', isGenericTimeSource);
 }
 
 /**
  * Extracts a generic candidate from exactly one non-empty datetime attribute.
  *
  * @param element - Element discovered by this source rule.
+ *
  * @returns - Trusted generic candidate, or null when the element is unsuitable.
  */
 function extractStandardTime(
     element: Element,
-): ReturnType<TimestampSourceRule["extract"]> {
+): ReturnType<TimestampSourceRule['extract']> {
     if (!isStandardTimeElement(element)) {
         return null;
     }
-    const rawDatetime = element.getAttribute("datetime");
-    if (!rawDatetime || rawDatetime.trim() === "") {
+    const rawDatetime = element.getAttribute('datetime');
+    if (!rawDatetime || rawDatetime.trim() === '') {
         return null;
     }
     return {

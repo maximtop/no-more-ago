@@ -2,40 +2,47 @@
  * @file Composes the settings shell, navigation, and feature sections of the options page.
  */
 
-import { Alert, DirectionProvider, MantineProvider, Text } from "@mantine/core";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import {
+    Alert, DirectionProvider, MantineProvider, Text,
+} from '@mantine/core';
+import {
+    useCallback, useEffect, useMemo, useRef, useState, type ReactElement,
+} from 'react';
+
+import { t, uiDirection } from '../shared/i18n/translator';
+import {
+    INERT_SETTINGS_CHANGED_SUBSCRIBER,
+    type SubscribeSettingsChanged,
+} from '../shared/messaging/settings-notifications';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
+import {
+    createDefaultSiteReportReporter,
+    type SiteReportReporter,
+} from '../shared/reporting/site-report';
+import { APPEARANCE } from '../shared/settings/snapshot';
+import { BrandMark } from '../shared/ui/brand-mark';
+import { NO_MORE_AGO_THEME, forcedColorScheme } from '../shared/ui/theme';
+import { useSettingsChanged } from '../shared/ui/use-settings-changed';
+
+import { AppearanceControl } from './appearance-control';
+import { createSitesClient, type SitesClient } from './client';
+import { useDiagnosticsController } from './diagnostics-controller';
+import { DiagnosticsSection } from './diagnostics-section';
+import { useDisplayController } from './display-controller';
+import { DisplaySection } from './display-section';
+import { ResetControl, resetNoticeKey } from './reset-control';
+import { useResetController } from './reset-controller';
+import { SETTINGS_SECTION, SettingsNavigation } from './settings-navigation';
+import { useSitesController } from './sites-controller';
+import { SitesSection } from './sites-section';
+import { OptionsUnavailablePanel } from './unavailable-panel';
+
+import type { DownloadRuntime } from '../shared/diagnostics/archive';
 import type {
     DebugState,
     DisplayState,
     SitesState,
-} from "../shared/messaging/view-state";
-import {
-    INERT_SETTINGS_CHANGED_SUBSCRIBER,
-    type SubscribeSettingsChanged,
-} from "../shared/messaging/settings-notifications";
-import { APPEARANCE } from "../shared/settings/snapshot";
-import { BrandMark } from "../shared/ui/brand-mark";
-import { t, uiDirection } from "../shared/i18n/translator";
-import { NO_MORE_AGO_THEME, forcedColorScheme } from "../shared/ui/theme";
-import { useSettingsChanged } from "../shared/ui/use-settings-changed";
-import type { DownloadRuntime } from "../shared/diagnostics/archive";
-import {
-    createDefaultSiteReportReporter,
-    type SiteReportReporter,
-} from "../shared/reporting/site-report";
-import { AppearanceControl } from "./appearance-control";
-import { createSitesClient, type SitesClient } from "./client";
-import { useDiagnosticsController } from "./diagnostics-controller";
-import { DiagnosticsSection } from "./diagnostics-section";
-import { useDisplayController } from "./display-controller";
-import { DisplaySection } from "./display-section";
-import { ResetControl, resetNoticeKey } from "./reset-control";
-import { useResetController } from "./reset-controller";
-import { SETTINGS_SECTION, SettingsNavigation } from "./settings-navigation";
-import { useSitesController } from "./sites-controller";
-import { SitesSection } from "./sites-section";
-import { OptionsUnavailablePanel } from "./unavailable-panel";
+} from '../shared/messaging/view-state';
 
 /**
  * Optional dependencies and preloaded state for the options UI.
@@ -91,6 +98,7 @@ type Projection = SitesState | DisplayState | DebugState | undefined;
  * Finds the newest settings revision among the projections this page renders.
  *
  * @param states - Sites, display, and debug projections, when loaded.
+ *
  * @returns - Highest ready revision, or null while none is ready.
  */
 function highestKnownRevision(...states: readonly Projection[]): number | null {
@@ -108,6 +116,7 @@ function highestKnownRevision(...states: readonly Projection[]): number | null {
  *
  * @param state - Projection to check.
  * @param highest - Newest ready revision on the page.
+ *
  * @returns - Whether the projection must be reread.
  */
 function isBehind(state: Projection, highest: number): boolean {
@@ -126,6 +135,7 @@ function isBehind(state: Projection, highest: number): boolean {
  * @param props.reporter - Site-report service override.
  * @param props.subscribe - Settings change subscriber override.
  * @param props.version - Installed extension version.
+ *
  * @returns - The options React view.
  */
 export function OptionsApp({
@@ -155,7 +165,9 @@ export function OptionsApp({
         initialState: initialDebugState,
         archiveRuntime,
     });
-    const reset = useResetController({ client, sites, display, diagnostics });
+    const reset = useResetController({
+        client, sites, display, diagnostics,
+    });
     const [externalChange, setExternalChange] = useState(false);
     const ownWriteInFlight = sites.busy !== undefined
         || display.saving
@@ -228,15 +240,15 @@ export function OptionsApp({
                 <div className="options">
                     <header className="options-header">
                         <BrandMark size={30} />
-                        <span className="options-brand">{t("extension_name")}</span>
+                        <span className="options-brand">{t('extension_name')}</span>
                         <span className="options-header-spacer" />
                         <AppearanceControl controller={display} />
                         {version ? <span className="nma-eyebrow">v{version}</span> : null}
                     </header>
-                    <main aria-label={t("options_document_title")}>
+                    <main aria-label={t('options_document_title')}>
                         {sites.loading || !sites.state ? (
                             <Text role="status" className="options-content">
-                                {t("options_loading")}
+                                {t('options_loading')}
                             </Text>
                         ) : sites.state.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                             <OptionsUnavailablePanel
@@ -249,7 +261,7 @@ export function OptionsApp({
                             <SettingsNavigation
                                 banner={externalChange ? (
                                     <Alert role="status" color="gray" mb="md">
-                                        {t("settings_updated_elsewhere")}
+                                        {t('settings_updated_elsewhere')}
                                     </Alert>
                                 ) : null}
                                 panels={{

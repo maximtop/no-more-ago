@@ -2,35 +2,38 @@
  * @file Verifies background application document-state policy projection.
  */
 
-import { describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
 import {
     BackgroundApplication,
     type BackgroundApplicationOptions,
-} from "../../../src/background/application";
-import { SettingsService } from "../../../src/background/settings/service";
-import type {
-    ActivationReconcileResult,
-} from "../../../src/background/runtime/document-activation";
+} from '../../../src/background/application';
 import {
     ACTIVATION_POLICY,
     REGISTRATION_OUTCOME,
-} from "../../../src/background/runtime/document-activation";
-import type { TabsRuntime } from "../../../src/background/runtime/tabs";
+} from '../../../src/background/runtime/document-activation';
+import { SettingsService } from '../../../src/background/settings/service';
 import {
     SITE_SETTINGS_SURFACE,
     STATE_AVAILABILITY,
-} from "../../../src/shared/messaging/view-state-values";
-import {
-    createSettingsSnapshot,
-    SETTINGS_STORAGE_KEY,
-    type SettingsSnapshot,
-} from "../../../src/shared/settings/snapshot";
+} from '../../../src/shared/messaging/view-state-values';
 import {
     DEFAULT_SITE_SCOPE,
     SITE_SCOPE_MODE,
     type SiteScopePolicy,
-} from "../../../src/shared/settings/site-scope";
+} from '../../../src/shared/settings/site-scope';
+import {
+    createSettingsSnapshot,
+    SETTINGS_STORAGE_KEY,
+    type SettingsSnapshot,
+} from '../../../src/shared/settings/snapshot';
+
+import type {
+    ActivationReconcileResult,
+} from '../../../src/background/runtime/document-activation';
+import type { TabsRuntime } from '../../../src/background/runtime/tabs';
 
 const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
     mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
@@ -51,6 +54,7 @@ const reconciled: ActivationReconcileResult = {
  * Creates an application with an in-memory settings store.
  *
  * @param initial - Values returned by the settings store.
+ *
  * @returns - Configured application facade.
  */
 function application(
@@ -65,7 +69,7 @@ function application(
         getAllFrames: vi.fn(async () => []),
         sendMessage: vi.fn(async () => undefined),
     };
-    const coordinator: BackgroundApplicationOptions["coordinator"] = {
+    const coordinator: BackgroundApplicationOptions['coordinator'] = {
         reconcile: vi.fn(async () => reconciled),
     };
     return new BackgroundApplication({
@@ -75,29 +79,29 @@ function application(
     });
 }
 
-describe("BackgroundApplication document state", () => {
-    it("uses the top-level tab URL rather than the frame URL for policy", async () => {
+describe('BackgroundApplication document state', () => {
+    it('uses the top-level tab URL rather than the frame URL for policy', async () => {
         const app = application();
         const state = await app.getDocumentState({
-            url: "https://cross-origin.example/frame",
-            tab: { url: "https://example.test/page" },
+            url: 'https://cross-origin.example/frame',
+            tab: { url: 'https://example.test/page' },
         });
 
         expect(state.availability).toBe(STATE_AVAILABILITY.READY);
         expect(state.enabled).toBe(true);
     });
 
-    it("rejects a disabled top-level site while accepting a frame URL", async () => {
+    it('rejects a disabled top-level site while accepting a frame URL', async () => {
         const app = application({
             [SETTINGS_STORAGE_KEY]: createSettingsSnapshot({
                 revision: 4,
                 globalEnabled: true,
-                siteScope: excluding("example.test"),
+                siteScope: excluding('example.test'),
             }),
         });
         const state = await app.getDocumentState({
-            url: "https://frame.example/frame",
-            tab: { url: "https://example.test/page" },
+            url: 'https://frame.example/frame',
+            tab: { url: 'https://example.test/page' },
         });
 
         expect(state.availability).toBe(STATE_AVAILABILITY.READY);
@@ -105,12 +109,12 @@ describe("BackgroundApplication document state", () => {
     });
 
     it.each([
-        ["HTTPS://Example.TEST:443/page", "example.test"],
-        ["https://例え.テスト/page", "xn--r8jz45g.xn--zckzah"],
-        ["https://192.0.2.1:8443/page", "192.0.2.1"],
-        ["https://[2001:db8::1]/page", "[2001:db8::1]"],
-        ["https://example.test./page", "example.test."],
-    ])("applies policy through the canonical top-level URL %s", async (url, hostname) => {
+        ['HTTPS://Example.TEST:443/page', 'example.test'],
+        ['https://例え.テスト/page', 'xn--r8jz45g.xn--zckzah'],
+        ['https://192.0.2.1:8443/page', '192.0.2.1'],
+        ['https://[2001:db8::1]/page', '[2001:db8::1]'],
+        ['https://example.test./page', 'example.test.'],
+    ])('applies policy through the canonical top-level URL %s', async (url, hostname) => {
         const app = application({
             [SETTINGS_STORAGE_KEY]: createSettingsSnapshot({
                 revision: 2,
@@ -124,8 +128,8 @@ describe("BackgroundApplication document state", () => {
         expect(state.enabled).toBe(false);
     });
 
-    it.each(["ftp://example.test/page", "not-a-url"])(
-        "fails closed for unsupported top-level URL %s",
+    it.each(['ftp://example.test/page', 'not-a-url'])(
+        'fails closed for unsupported top-level URL %s',
         async (url) => {
             const app = application();
             const state = await app.getDocumentState({ tab: { url } });
@@ -135,7 +139,7 @@ describe("BackgroundApplication document state", () => {
         },
     );
 
-    it("routes a site disable through affected-host document reconciliation", async () => {
+    it('routes a site disable through affected-host document reconciliation', async () => {
         let stored: Record<string, SettingsSnapshot | undefined> = {};
         const storage = {
             get: vi.fn(() => Promise.resolve(stored)),
@@ -150,7 +154,7 @@ describe("BackgroundApplication document state", () => {
             sendMessage: vi.fn(() => Promise.resolve(undefined)),
         };
         const reconcile = vi.fn((input: Parameters<
-            BackgroundApplicationOptions["coordinator"]["reconcile"]
+            BackgroundApplicationOptions['coordinator']['reconcile']
         >[0]) => Promise.resolve({
             revision: input.revision,
             policy: input.policy,
@@ -166,7 +170,7 @@ describe("BackgroundApplication document state", () => {
         });
 
         const response = await app.setSiteEnabled(
-            "example.test",
+            'example.test',
             false,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             SITE_SETTINGS_SURFACE.SITES,
@@ -176,18 +180,18 @@ describe("BackgroundApplication document state", () => {
         expect(reconcile).toHaveBeenLastCalledWith({
             revision: 1,
             policy: ACTIVATION_POLICY.ENABLED,
-            siteScope: excluding("example.test"),
-            affectedHostnames: ["example.test"],
+            siteScope: excluding('example.test'),
+            affectedHostnames: ['example.test'],
         });
     });
 
-    it("reconciles reset defaults at a revision newer than the active documents", async () => {
+    it('reconciles reset defaults at a revision newer than the active documents', async () => {
         let stored: Record<string, SettingsSnapshot | undefined> = {
             [SETTINGS_STORAGE_KEY]: createSettingsSnapshot({
                 revision: 7,
                 globalEnabled: true,
-                siteScope: excluding("example.test"),
-                display: { formatMode: "system", timeZone: { mode: "utc" } },
+                siteScope: excluding('example.test'),
+                display: { formatMode: 'system', timeZone: { mode: 'utc' } },
                 debugEnabled: true,
             }),
         };
@@ -204,7 +208,7 @@ describe("BackgroundApplication document state", () => {
             sendMessage: vi.fn(() => Promise.resolve(undefined)),
         };
         const reconcile = vi.fn((input: Parameters<
-            BackgroundApplicationOptions["coordinator"]["reconcile"]
+            BackgroundApplicationOptions['coordinator']['reconcile']
         >[0]) => Promise.resolve({
             revision: input.revision,
             policy: input.policy,
@@ -239,7 +243,7 @@ describe("BackgroundApplication document state", () => {
     });
 });
 
-describe("BackgroundApplication settings notifications", () => {
+describe('BackgroundApplication settings notifications', () => {
     /**
      * Creates an application over in-memory storage with an observable broadcast.
      *
@@ -278,7 +282,7 @@ describe("BackgroundApplication settings notifications", () => {
         };
     }
 
-    it("clears the diagnostic journal when a document of another schema is discarded", async () => {
+    it('clears the diagnostic journal when a document of another schema is discarded', async () => {
         const legacy = {
             ...createSettingsSnapshot({ revision: 9, globalEnabled: true }),
             schemaVersion: 5,
@@ -304,7 +308,7 @@ describe("BackgroundApplication settings notifications", () => {
             readStored: vi.fn(async () => ({ ok: true as const, entries: [] })),
             clearEntries: vi.fn(async () => ({ ok: true as const })),
         };
-        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         const app = new BackgroundApplication({
             settings: new SettingsService(storage),
             coordinator: { reconcile: vi.fn(async () => reconciled) },
@@ -319,13 +323,13 @@ describe("BackgroundApplication settings notifications", () => {
         expect(journal.setEnabled).not.toHaveBeenCalled();
     });
 
-    it("announces the committed revision after each accepted mutation", async () => {
+    it('announces the committed revision after each accepted mutation', async () => {
         const { app, announced } = notifying();
 
         await app.setGlobalEnabled(false, SITE_SETTINGS_SURFACE.SITES);
         await app.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
         await app.setSiteEnabled(
-            "github.com",
+            'github.com',
             true,
             SITE_SCOPE_MODE.SELECTED_ONLY,
             SITE_SETTINGS_SURFACE.SITES,
@@ -334,10 +338,10 @@ describe("BackgroundApplication settings notifications", () => {
         expect(announced).toEqual([1, 2, 3]);
     });
 
-    it("switches the scope mode and reports both retained lists", async () => {
+    it('switches the scope mode and reports both retained lists', async () => {
         const { app } = notifying();
         await app.setSiteEnabled(
-            "excluded.test",
+            'excluded.test',
             false,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             SITE_SETTINGS_SURFACE.SITES,
@@ -345,7 +349,7 @@ describe("BackgroundApplication settings notifications", () => {
         await app.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
 
         const response = await app.setSiteEnabled(
-            "allowed.test",
+            'allowed.test',
             true,
             SITE_SCOPE_MODE.SELECTED_ONLY,
             SITE_SETTINGS_SURFACE.SITES,
@@ -354,8 +358,8 @@ describe("BackgroundApplication settings notifications", () => {
         expect(response.ok).toBe(true);
         expect(response.state).toMatchObject({
             scopeMode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            excludedSites: ["excluded.test"],
-            allowedSites: ["allowed.test"],
+            excludedSites: ['excluded.test'],
+            allowedSites: ['allowed.test'],
         });
     });
 });

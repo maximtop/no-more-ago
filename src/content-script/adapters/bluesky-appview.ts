@@ -2,14 +2,15 @@
  * @file Anonymous, fixed-origin boundary for public Bluesky AppView lookups.
  */
 
-import * as v from "valibot";
+import * as v from 'valibot';
+
+import { parseExplicitZoneDatetime } from '../../shared/date/parse-explicit-zone-datetime';
 
 import {
     isValidBlueskyDid,
     isValidBlueskyPostUri,
     normalizeBlueskyHandle,
-} from "./bluesky-identity";
-import { parseExplicitZoneDatetime } from "../../shared/date/parse-explicit-zone-datetime";
+} from './bluesky-identity';
 
 const BLUESKY_REQUEST_TIMEOUT_MS = 10_000;
 const requiredStringSchema = v.pipe(v.string(), v.nonEmpty());
@@ -29,28 +30,28 @@ const quoteRecordSchema = v.object({
     indexedAt: requiredStringSchema,
 });
 const plainQuoteSchema = v.object({
-    $type: v.literal("app.bsky.embed.record#view"),
+    $type: v.literal('app.bsky.embed.record#view'),
     record: quoteRecordSchema,
 });
 const mediaQuoteSchema = v.object({
-    $type: v.literal("app.bsky.embed.recordWithMedia#view"),
+    $type: v.literal('app.bsky.embed.recordWithMedia#view'),
     record: v.object({ record: quoteRecordSchema }),
 });
 
 /**
  * Fixed public origin used for every anonymous Bluesky lookup.
  */
-export const BLUESKY_PUBLIC_APPVIEW_ORIGIN = "https://public.api.bsky.app" as const;
+export const BLUESKY_PUBLIC_APPVIEW_ORIGIN = 'https://public.api.bsky.app' as const;
 
 /**
  * XRPC method used to resolve public actors to DIDs.
  */
-export const BLUESKY_PROFILE_METHOD = "app.bsky.actor.getProfiles" as const;
+export const BLUESKY_PROFILE_METHOD = 'app.bsky.actor.getProfiles' as const;
 
 /**
  * XRPC method used to resolve public post views.
  */
-export const BLUESKY_POST_METHOD = "app.bsky.feed.getPosts" as const;
+export const BLUESKY_POST_METHOD = 'app.bsky.feed.getPosts' as const;
 
 /**
  * Maximum number of repeated values accepted by either public batch method.
@@ -61,8 +62,8 @@ export const BLUESKY_BATCH_LIMIT = 25 as const;
  * Outcomes exposed by the fail-closed AppView boundary.
  */
 export const BLUESKY_LOOKUP_STATUS = {
-    SUCCESS: "success",
-    FAILURE: "failure",
+    SUCCESS: 'success',
+    FAILURE: 'failure',
 } as const;
 
 /**
@@ -108,18 +109,17 @@ export interface BlueskyPostRecord extends BlueskyQuoteRecord {
 /**
  * Typed success or expected failure returned by a public lookup.
  */
-export type BlueskyLookupResult<T> =
-    | {
-        /**
-         * Successful response discriminant.
-         */
-        readonly status: typeof BLUESKY_LOOKUP_STATUS.SUCCESS;
+export type BlueskyLookupResult<T> = | {
+    /**
+     * Successful response discriminant.
+     */
+    readonly status: typeof BLUESKY_LOOKUP_STATUS.SUCCESS;
 
-        /**
-         * Valid, unambiguous records found in requested-value order.
-         */
-        readonly records: readonly T[];
-    }
+    /**
+     * Valid, unambiguous records found in requested-value order.
+     */
+    readonly records: readonly T[];
+}
     | {
         /**
          * Expected transport or response failure discriminant.
@@ -136,6 +136,7 @@ export interface BlueskyAppView {
      *
      * @param actors - One bounded batch of public actors.
      * @param signal - Document-lifecycle cancellation signal.
+     *
      * @returns - Valid mappings or a typed request failure.
      */
     getProfiles(
@@ -148,6 +149,7 @@ export interface BlueskyAppView {
      *
      * @param uris - One bounded batch of AT post URIs.
      * @param signal - Document-lifecycle cancellation signal.
+     *
      * @returns - Valid post records or a typed request failure.
      */
     getPosts(
@@ -169,6 +171,7 @@ function lookupFailure(): { readonly status: typeof BLUESKY_LOOKUP_STATUS.FAILUR
  * Checks the direct-call batch boundary before performing fetch.
  *
  * @param values - Repeated query values supplied by the coordinator.
+ *
  * @returns - Whether the batch is non-empty, bounded, and contains no empty value.
  */
 function isValidBatch(values: readonly string[]): boolean {
@@ -185,12 +188,13 @@ function isValidBatch(values: readonly string[]): boolean {
  * @param queryName - Fixed repeated query parameter name.
  * @param values - Bounded public identity values.
  * @param signal - Document-lifecycle cancellation signal.
+ *
  * @returns - Parsed JSON body, or null for every expected request failure.
  */
 async function requestJson(
     fetchImplementation: typeof fetch,
     method: typeof BLUESKY_PROFILE_METHOD | typeof BLUESKY_POST_METHOD,
-    queryName: "actors" | "uris",
+    queryName: 'actors' | 'uris',
     values: readonly string[],
     signal: AbortSignal,
 ): Promise<unknown> {
@@ -216,7 +220,7 @@ async function requestJson(
         requestController.abort();
         resolveCancellation?.();
     };
-    signal.addEventListener("abort", cancel, { once: true });
+    signal.addEventListener('abort', cancel, { once: true });
     const timeoutId = globalThis.setTimeout(cancel, BLUESKY_REQUEST_TIMEOUT_MS);
     if (signal.aborted) {
         cancel();
@@ -224,11 +228,11 @@ async function requestJson(
     const request = (async (): Promise<unknown> => {
         try {
             const response = await fetchImplementation(url, {
-                method: "GET",
-                cache: "no-store",
-                credentials: "omit",
-                redirect: "error",
-                referrerPolicy: "no-referrer",
+                method: 'GET',
+                cache: 'no-store',
+                credentials: 'omit',
+                redirect: 'error',
+                referrerPolicy: 'no-referrer',
                 signal: requestController.signal,
             });
             if (!response.ok || response.redirected) {
@@ -243,7 +247,7 @@ async function requestJson(
         return await Promise.race([request, cancellation]);
     } finally {
         globalThis.clearTimeout(timeoutId);
-        signal.removeEventListener("abort", cancel);
+        signal.removeEventListener('abort', cancel);
     }
 }
 
@@ -252,6 +256,7 @@ async function requestJson(
  *
  * @param body - Untrusted AppView JSON body.
  * @param actors - Requested public actor values.
+ *
  * @returns - Successful records, or null when the top-level body is malformed.
  */
 function parseProfiles(
@@ -272,7 +277,7 @@ function parseProfiles(
     });
     const records: BlueskyProfileRecord[] = [];
     for (const actor of actors) {
-        const normalizedActor = actor.startsWith("did:")
+        const normalizedActor = actor.startsWith('did:')
             ? null
             : normalizeBlueskyHandle(actor);
         const matches = profiles.filter((profile) => {
@@ -296,6 +301,7 @@ function parseProfiles(
  * Parses one supported quote view without invalidating its outer post.
  *
  * @param value - Untrusted post embed value.
+ *
  * @returns - Valid quote timestamp record, or undefined when unsupported.
  */
 function parseQuote(value: unknown): BlueskyQuoteRecord | undefined {
@@ -321,6 +327,7 @@ function parseQuote(value: unknown): BlueskyQuoteRecord | undefined {
  *
  * @param body - Untrusted AppView JSON body.
  * @param uris - Requested exact AT post URIs.
+ *
  * @returns - Successful records, or null when the top-level body is malformed.
  */
 function parsePosts(
@@ -356,6 +363,7 @@ function parsePosts(
  * Creates the sole production boundary for anonymous public Bluesky lookups.
  *
  * @param fetchImplementation - Fetch capability, injectable for offline tests.
+ *
  * @returns - Fixed-origin AppView lookup capability.
  */
 export function createBlueskyAppView(
@@ -366,7 +374,7 @@ export function createBlueskyAppView(
             const body = await requestJson(
                 fetchImplementation,
                 BLUESKY_PROFILE_METHOD,
-                "actors",
+                'actors',
                 actors,
                 signal,
             );
@@ -382,7 +390,7 @@ export function createBlueskyAppView(
             const body = await requestJson(
                 fetchImplementation,
                 BLUESKY_POST_METHOD,
-                "uris",
+                'uris',
                 uris,
                 signal,
             );

@@ -7,10 +7,11 @@
  *
  * @param container - Mounted container.
  * @param label - Visible button label.
+ *
  * @returns - Matching button, or undefined when none matches.
  */
 export function findButton(container: HTMLElement, label: string): HTMLButtonElement | undefined {
-    return [...container.querySelectorAll("button")].find(
+    return [...container.querySelectorAll('button')].find(
         (button) => button.textContent === label,
     );
 }
@@ -20,6 +21,7 @@ export function findButton(container: HTMLElement, label: string): HTMLButtonEle
  *
  * @param container - Mounted container.
  * @param label - Accessible name of the control.
+ *
  * @returns - Matching input, or undefined when none matches.
  */
 export function findSwitch(container: HTMLElement, label: string): HTMLInputElement | undefined {
@@ -32,11 +34,11 @@ export function findSwitch(container: HTMLElement, label: string): HTMLInputElem
  * Installs the `matchMedia` stub Mantine's color-scheme manager expects in JSDOM.
  */
 export function installMatchMedia(): void {
-    Object.defineProperty(window, "matchMedia", {
+    Object.defineProperty(window, 'matchMedia', {
         configurable: true,
         value: () => ({
             matches: false,
-            media: "",
+            media: '',
             onchange: null,
             addListener: () => undefined,
             removeListener: () => undefined,

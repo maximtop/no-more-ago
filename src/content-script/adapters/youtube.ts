@@ -3,33 +3,34 @@
  */
 
 import {
+    YOUTUBE_ADAPTER_ID,
+    YOUTUBE_PLAYER_RESPONSE_RULE_ID,
+    getYouTubeWatchVideoId,
+    matchesYouTubeWatchUrl,
+} from '../../shared/adapters/youtube-contract';
+
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
+import {
     ADJACENT_TIME_PRESENTATION,
     TIMESTAMP_SOURCE_KIND,
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampCandidate,
     type TimestampSourceRule,
-} from "./types";
-import {
-    YOUTUBE_ADAPTER_ID,
-    YOUTUBE_PLAYER_RESPONSE_RULE_ID,
-    getYouTubeWatchVideoId,
-    matchesYouTubeWatchUrl,
-} from "../../shared/adapters/youtube-contract";
-import { readYouTubePlayerResponsePublication } from "./youtube-player-response";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
+import { readYouTubePlayerResponsePublication } from './youtube-player-response';
 
-const WATCH_PUBLICATION_SELECTOR =
-    "ytd-watch-metadata #info-strings > yt-formatted-string";
+const WATCH_PUBLICATION_SELECTOR = 'ytd-watch-metadata #info-strings > yt-formatted-string';
 const DATE_PUBLISHED_SELECTOR = 'meta[itemprop="datePublished"][content]';
 
 /**
  * Discovers approved watch publication labels within one supplied root.
  *
  * @param root - Document or subtree whose approved labels may be processed.
+ *
  * @returns - Approved publication labels bounded to the supplied root.
  */
 export function discoverYouTubeWatchPublicationSources(root: ParentNode): readonly Element[] {
@@ -45,6 +46,7 @@ export function discoverYouTubeWatchPublicationSources(root: ParentNode): readon
  * Checks whether an element is an approved canonical Watch publication label.
  *
  * @param element - Candidate page-owned source.
+ *
  * @returns - Whether the element matches the approved Watch label selector.
  */
 export function isYouTubeWatchPublicationSource(element: Element): boolean {
@@ -57,6 +59,7 @@ export function isYouTubeWatchPublicationSource(element: Element): boolean {
  * @param ruleId - Rule that supplied the publication value.
  * @param source - Exact approved page-owned label to transform.
  * @param rawDatetime - Exact publication value supplied by the approved source.
+ *
  * @returns - Candidate carrying the combined YouTube publication semantic.
  */
 function createPublicationCandidate(
@@ -134,8 +137,8 @@ export const youtubeAdapter: TimestampSourceRule = {
         if (metadata.length !== 1) {
             return null;
         }
-        const rawDatetime = metadata[0]?.getAttribute("content");
-        if (rawDatetime === undefined || rawDatetime === null || rawDatetime === "") {
+        const rawDatetime = metadata[0]?.getAttribute('content');
+        if (rawDatetime === undefined || rawDatetime === null || rawDatetime === '') {
             return null;
         }
         return createPublicationCandidate(YOUTUBE_ADAPTER_ID, element, rawDatetime);

@@ -2,13 +2,14 @@
  * @file Starts the page-local runtime with the current document, URL, and Chrome messaging API.
  */
 
-import { installContentRuntime } from "./runtime";
-import { installFacebookPayloadRuntime } from "./facebook/payload-runtime";
-import { isFacebookUrl } from "../shared/url/facebook";
-import { GET_DOCUMENT_STATE_MESSAGE } from "../shared/messaging/contracts";
-import { DIAGNOSTIC_EVENT_MESSAGE } from "../shared/messaging/document-messages";
+import { GET_DOCUMENT_STATE_MESSAGE } from '../shared/messaging/contracts';
+import { DIAGNOSTIC_EVENT_MESSAGE } from '../shared/messaging/document-messages';
+import { isFacebookUrl } from '../shared/url/facebook';
+
 import { classifyYouTubeWatchRouteHandoff } from
-    "./adapters/youtube-watch-route-handoff";
+    './adapters/youtube-watch-route-handoff';
+import { installFacebookPayloadRuntime } from './facebook/payload-runtime';
+import { installContentRuntime } from './runtime';
 
 const documentUrl = new URL(window.location.href);
 const runtimeComposition: {
@@ -30,18 +31,16 @@ runtimeComposition.content = installContentRuntime({
     urlProvider: () => new URL(window.location.href),
     routeEvents: {
         addListener: (listener) => {
-            window.addEventListener("popstate", listener);
+            window.addEventListener('popstate', listener);
         },
     },
     routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
     locales: navigator.languages,
     localesProvider: () => navigator.languages,
-    ...(typeof chrome.runtime.sendMessage === "function"
+    ...(typeof chrome.runtime.sendMessage === 'function'
         ? {
-            loadDocumentState: () =>
-                chrome.runtime.sendMessage({ type: GET_DOCUMENT_STATE_MESSAGE }),
-            reportDiagnostic: (event: Record<string, unknown>) =>
-                chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
+            loadDocumentState: () => chrome.runtime.sendMessage({ type: GET_DOCUMENT_STATE_MESSAGE }),
+            reportDiagnostic: (event: Record<string, unknown>) => chrome.runtime.sendMessage({ type: DIAGNOSTIC_EVENT_MESSAGE, event }),
         }
         : {}),
     ...(facebookRuntime === undefined

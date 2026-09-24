@@ -2,55 +2,57 @@
  * @file Proves the five recorded Bluesky surfaces through the public document controller.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    beforeAll, beforeEach, describe, expect, it, vi,
+} from 'vitest';
 
+import {
+    BLUESKY_TARGET_ROLE,
+    discoverBlueskyRelativeTargets,
+    type BlueskyRelativeTarget,
+} from '../../../../src/content-script/adapters/bluesky';
 import {
     BLUESKY_LOOKUP_STATUS,
     type BlueskyAppView,
     type BlueskyLookupResult,
     type BlueskyPostRecord,
     type BlueskyProfileRecord,
-} from "../../../../src/content-script/adapters/bluesky-appview";
+} from '../../../../src/content-script/adapters/bluesky-appview';
 import {
     createBlueskyCoordinator,
-} from "../../../../src/content-script/adapters/bluesky-coordinator";
-import {
-    BLUESKY_TARGET_ROLE,
-    discoverBlueskyRelativeTargets,
-    type BlueskyRelativeTarget,
-} from "../../../../src/content-script/adapters/bluesky";
+} from '../../../../src/content-script/adapters/bluesky-coordinator';
 import {
     DocumentTransformationController,
-} from "../../../../src/content-script/transformation/document-transformation-controller";
+} from '../../../../src/content-script/transformation/document-transformation-controller';
+
 import type {
     DocumentTransformationParticipantFactory,
-} from "../../../../src/content-script/transformation/document-transformation-participant";
+} from '../../../../src/content-script/transformation/document-transformation-participant';
 
 const FIXTURE_NAMES = [
-    "feed.html",
-    "profile.html",
-    "post.html",
-    "thread.html",
-    "quoted-post.html",
+    'feed.html',
+    'profile.html',
+    'post.html',
+    'thread.html',
+    'quoted-post.html',
 ] as const;
 const fixtures = new Map<string, string>();
-const QUOTE_URI = "at://did:plc:quoted/app.bsky.feed.post/3quoted" as const;
-const QUOTE_INDEXED_AT = "2026-08-30T09:00:00.000Z" as const;
-const REPLACEMENT_QUOTE_INDEXED_AT = "2026-08-29T08:00:00.000Z" as const;
+const QUOTE_URI = 'at://did:plc:quoted/app.bsky.feed.post/3quoted' as const;
+const QUOTE_INDEXED_AT = '2026-08-30T09:00:00.000Z' as const;
+const REPLACEMENT_QUOTE_INDEXED_AT = '2026-08-29T08:00:00.000Z' as const;
 const timestamps: ReadonlyMap<string, string> = new Map([
-    ["3feedalpha", "2026-08-31T10:01:00.000Z"],
-    ["3feedbravo", "2026-08-31T10:02:00.000Z"],
-    ["3profilealpha", "2026-08-31T10:03:00.000Z"],
-    ["3replyalpha", "2026-08-31T10:04:00.000Z"],
-    ["3replybravo", "2026-08-31T10:05:00.000Z"],
-    ["3threadroot", "2026-08-31T10:06:00.000Z"],
-    ["3threadreplyone", "2026-08-31T10:07:00.000Z"],
-    ["3threadreplytwo", "2026-08-31T10:08:00.000Z"],
-    ["3quotedouter", "2026-08-31T10:09:00.000Z"],
-    ["3quotedreplacement", "2026-08-31T12:30:00.000Z"],
+    ['3feedalpha', '2026-08-31T10:01:00.000Z'],
+    ['3feedbravo', '2026-08-31T10:02:00.000Z'],
+    ['3profilealpha', '2026-08-31T10:03:00.000Z'],
+    ['3replyalpha', '2026-08-31T10:04:00.000Z'],
+    ['3replybravo', '2026-08-31T10:05:00.000Z'],
+    ['3threadroot', '2026-08-31T10:06:00.000Z'],
+    ['3threadreplyone', '2026-08-31T10:07:00.000Z'],
+    ['3threadreplytwo', '2026-08-31T10:08:00.000Z'],
+    ['3quotedouter', '2026-08-31T10:09:00.000Z'],
+    ['3quotedreplacement', '2026-08-31T12:30:00.000Z'],
 ] as const);
 
 /**
@@ -82,7 +84,7 @@ function createDeferred<T>(): Deferred<T> {
         promise,
         resolve: (value) => {
             if (!settle) {
-                throw new Error("Deferred resolver unavailable");
+                throw new Error('Deferred resolver unavailable');
             }
             settle(value);
         },
@@ -93,22 +95,24 @@ function createDeferred<T>(): Deferred<T> {
  * Returns a stable fictional DID for one permalink actor.
  *
  * @param actor - Actor requested through the profile method.
+ *
  * @returns - Matching fictional DID.
  */
 function didForActor(actor: string): string {
-    return actor.startsWith("did:")
+    return actor.startsWith('did:')
         ? actor
-        : `did:plc:${actor.replace(/[^A-Za-z0-9]/gu, "")}`;
+        : `did:plc:${actor.replace(/[^A-Za-z0-9]/gu, '')}`;
 }
 
 /**
  * Extracts the record key from one coordinator-authored AT post URI.
  *
  * @param uri - Exact requested AT post URI.
+ *
  * @returns - Final record-key segment.
  */
 function recordKeyFromUri(uri: string): string {
-    return uri.slice(uri.lastIndexOf("/") + 1);
+    return uri.slice(uri.lastIndexOf('/') + 1);
 }
 
 /**
@@ -136,6 +140,7 @@ class FixtureAppView implements BlueskyAppView {
      * Resolves every fixture actor.
      *
      * @param actors - Requested fixture actors.
+     *
      * @returns - Matching actor-to-DID mappings.
      */
     async getProfiles(actors: readonly string[]) {
@@ -150,6 +155,7 @@ class FixtureAppView implements BlueskyAppView {
      * Resolves every fixture outer post from the deterministic timestamp map.
      *
      * @param uris - Requested fixture AT post URIs.
+     *
      * @returns - Matching outer records and optional hydrated quote.
      */
     async getPosts(uris: readonly string[]) {
@@ -161,9 +167,9 @@ class FixtureAppView implements BlueskyAppView {
             if (!indexedAt) {
                 continue;
             }
-            const quoteIndexedAt = recordKey === "3quotedouter"
+            const quoteIndexedAt = recordKey === '3quotedouter'
                 ? QUOTE_INDEXED_AT
-                : recordKey === "3quotedreplacement"
+                : recordKey === '3quotedreplacement'
                     ? REPLACEMENT_QUOTE_INDEXED_AT
                     : undefined;
             records.push({
@@ -217,17 +223,18 @@ interface DomSnapshot {
  * Captures page-owned nodes and values that rendering must not replace.
  *
  * @param descriptor - Pre-render source descriptor.
+ *
  * @returns - DOM identity and presentation snapshot.
  */
 function snapshotDom(descriptor: BlueskyRelativeTarget): DomSnapshot {
     const listener = vi.fn();
-    descriptor.source.addEventListener("fixture-probe", listener);
+    descriptor.source.addEventListener('fixture-probe', listener);
     return {
         descriptor,
         text: descriptor.target.data,
         attributes: [...descriptor.source.attributes].map(({ name, value }) => [name, value]),
         separator: descriptor.source.firstElementChild,
-        card: descriptor.source.closest("article"),
+        card: descriptor.source.closest('article'),
         listener,
     };
 }
@@ -236,23 +243,25 @@ function snapshotDom(descriptor: BlueskyRelativeTarget): DomSnapshot {
  * Returns expected custom UTC text for one fixture target.
  *
  * @param descriptor - Current fixture target.
+ *
  * @returns - Exact deterministic presentation text.
  */
 function expectedText(descriptor: BlueskyRelativeTarget): string {
     if (descriptor.role === BLUESKY_TARGET_ROLE.QUOTE) {
-        return "2026-08-30 09:00";
+        return '2026-08-30 09:00';
     }
     const value = timestamps.get(descriptor.outerIdentity.recordKey);
     if (!value) {
-        throw new Error("Missing fixture timestamp");
+        throw new Error('Missing fixture timestamp');
     }
-    return value.slice(0, 16).replace("T", " ");
+    return value.slice(0, 16).replace('T', ' ');
 }
 
 /**
  * Composes the Bluesky participant used by a deterministic controller fixture.
  *
  * @param appView - Fake public dataset.
+ *
  * @returns - Generic document-participant factory.
  */
 function participantFactoryFor(
@@ -260,7 +269,7 @@ function participantFactoryFor(
 ): DocumentTransformationParticipantFactory {
     return (host) => createBlueskyCoordinator({
         document,
-        url: new URL("https://bsky.app/"),
+        url: new URL('https://bsky.app/'),
         appView,
         getDiagnosticSink: host.getDiagnosticSink,
         onSourcesChanged: host.onSourcesChanged,
@@ -271,39 +280,40 @@ function participantFactoryFor(
  * Creates a fixture controller with deterministic custom UTC presentation.
  *
  * @param appView - Fake public dataset.
+ *
  * @returns - Inactive document controller.
  */
 function createController(appView: BlueskyAppView): DocumentTransformationController {
     return new DocumentTransformationController({
-        url: new URL("https://bsky.app/"),
+        url: new URL('https://bsky.app/'),
         root: document,
-        locales: ["en-US"],
+        locales: ['en-US'],
         display: {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd HH:mm",
-            timeZone: { mode: "utc" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm',
+            timeZone: { mode: 'utc' },
         },
         participantFactory: participantFactoryFor(appView),
     });
 }
 
-describe("Bluesky fixture surfaces", () => {
+describe('Bluesky fixture surfaces', () => {
     beforeAll(async () => {
         for (const name of FIXTURE_NAMES) {
             fixtures.set(name, await readFile(
                 `tests/src/content-script/fixtures/bluesky/${name}`,
-                "utf8",
+                'utf8',
             ));
         }
     });
 
     beforeEach(() => {
         document.head.innerHTML = '<base href="https://bsky.app/">';
-        document.body.innerHTML = "";
+        document.body.innerHTML = '';
     });
 
-    it.each(FIXTURE_NAMES)("renders and restores %s without replacing page DOM", async (name) => {
-        document.body.innerHTML = fixtures.get(name) ?? "";
+    it.each(FIXTURE_NAMES)('renders and restores %s without replacing page DOM', async (name) => {
+        document.body.innerHTML = fixtures.get(name) ?? '';
         const snapshots = discoverBlueskyRelativeTargets(document).map(snapshotDom);
         const appView = new FixtureAppView();
         const controller = createController(appView);
@@ -323,11 +333,11 @@ describe("Bluesky fixture surfaces", () => {
                     return [key, value];
                 })).toEqual(snapshot.attributes);
                 expect(descriptor.source.firstElementChild).toBe(snapshot.separator);
-                expect(descriptor.source.closest("article")).toBe(snapshot.card);
-                descriptor.source.dispatchEvent(new Event("fixture-probe"));
+                expect(descriptor.source.closest('article')).toBe(snapshot.card);
+                descriptor.source.dispatchEvent(new Event('fixture-probe'));
                 expect(snapshot.listener).toHaveBeenCalledTimes(1);
             }
-            expect(document.querySelector("time[data-no-more-ago-output]")).toBeNull();
+            expect(document.querySelector('time[data-no-more-ago-output]')).toBeNull();
         } finally {
             controller.teardown();
         }
@@ -336,12 +346,12 @@ describe("Bluesky fixture surfaces", () => {
         }
     });
 
-    it("leaves the expanded exact root byte-for-byte unchanged without requests", async () => {
-        const template = document.createElement("template");
-        template.innerHTML = fixtures.get("post.html") ?? "";
-        const exactRoot = template.content.querySelector("#expanded-root");
+    it('leaves the expanded exact root byte-for-byte unchanged without requests', async () => {
+        const template = document.createElement('template');
+        template.innerHTML = fixtures.get('post.html') ?? '';
+        const exactRoot = template.content.querySelector('#expanded-root');
         if (!exactRoot) {
-            throw new Error("Expected expanded exact root fixture");
+            throw new Error('Expected expanded exact root fixture');
         }
         document.body.replaceChildren(exactRoot);
         const before = document.body.innerHTML;
@@ -353,23 +363,23 @@ describe("Bluesky fixture surfaces", () => {
         await Promise.resolve();
 
         expect(document.body.innerHTML).toBe(before);
-        expect(document.querySelector("[data-no-more-ago-source]")).toBeNull();
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-source]')).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         expect(appView.profileCalls).toEqual([]);
         expect(appView.postCalls).toEqual([]);
         controller.teardown();
     });
 
-    it("uses one outer response for distinct outer and quote timestamps", async () => {
-        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+    it('uses one outer response for distinct outer and quote timestamps', async () => {
+        document.body.innerHTML = fixtures.get('quoted-post.html') ?? '';
         const targets = discoverBlueskyRelativeTargets(document);
         const appView = new FixtureAppView();
         const controller = createController(appView);
         controller.start();
         await vi.waitFor(() => {
             expect(targets.map(({ target }) => target.data)).toEqual([
-                "2026-08-31 10:09",
-                "2026-08-30 09:00",
+                '2026-08-31 10:09',
+                '2026-08-30 09:00',
             ]);
         });
 
@@ -379,113 +389,113 @@ describe("Bluesky fixture surfaces", () => {
         controller.teardown();
     });
 
-    it("re-resolves an outer post and its quote after the permalink changes", async () => {
-        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
-        const outer = document.getElementById("quoted-outer-time");
+    it('re-resolves an outer post and its quote after the permalink changes', async () => {
+        document.body.innerHTML = fixtures.get('quoted-post.html') ?? '';
+        const outer = document.getElementById('quoted-outer-time');
         const outerTarget = outer?.lastChild;
-        const quoteTarget = document.getElementById("quoted-inner-time")?.lastChild;
+        const quoteTarget = document.getElementById('quoted-inner-time')?.lastChild;
         if (!outer || !(outerTarget instanceof Text) || !(quoteTarget instanceof Text)) {
-            throw new Error("Expected quoted-post labels");
+            throw new Error('Expected quoted-post labels');
         }
         const appView = new FixtureAppView();
         const controller = createController(appView);
         controller.start();
         await vi.waitFor(() => {
-            expect(outerTarget.data).toBe("2026-08-31 10:09");
-            expect(quoteTarget.data).toBe("2026-08-30 09:00");
+            expect(outerTarget.data).toBe('2026-08-31 10:09');
+            expect(quoteTarget.data).toBe('2026-08-30 09:00');
         });
 
         outer.setAttribute(
-            "href",
-            "/profile/alice.example/post/3quotedreplacement",
+            'href',
+            '/profile/alice.example/post/3quotedreplacement',
         );
 
         await vi.waitFor(() => {
-            expect(outerTarget.data).toBe("2026-08-31 12:30");
-            expect(quoteTarget.data).toBe("2026-08-29 08:00");
+            expect(outerTarget.data).toBe('2026-08-31 12:30');
+            expect(quoteTarget.data).toBe('2026-08-29 08:00');
         });
         expect(appView.profileCalls).toHaveLength(1);
         expect(appView.postCalls).toHaveLength(2);
         controller.teardown();
     });
 
-    it("reassociates a quote when Bluesky replaces the outer permalink element", async () => {
-        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
-        const outer = document.getElementById("quoted-outer-time");
+    it('reassociates a quote when Bluesky replaces the outer permalink element', async () => {
+        document.body.innerHTML = fixtures.get('quoted-post.html') ?? '';
+        const outer = document.getElementById('quoted-outer-time');
         const oldOuterTarget = outer?.lastChild;
-        const quoteTarget = document.getElementById("quoted-inner-time")?.lastChild;
+        const quoteTarget = document.getElementById('quoted-inner-time')?.lastChild;
         if (!outer || !(oldOuterTarget instanceof Text) || !(quoteTarget instanceof Text)) {
-            throw new Error("Expected quoted-post labels");
+            throw new Error('Expected quoted-post labels');
         }
         const appView = new FixtureAppView();
         const controller = createController(appView);
         controller.start();
         await vi.waitFor(() => {
-            expect(oldOuterTarget.data).toBe("2026-08-31 10:09");
-            expect(quoteTarget.data).toBe("2026-08-30 09:00");
+            expect(oldOuterTarget.data).toBe('2026-08-31 10:09');
+            expect(quoteTarget.data).toBe('2026-08-30 09:00');
         });
 
         const replacement = outer.cloneNode(true) as Element;
-        replacement.setAttribute("href", "/profile/alice.example/post/3quotedreplacement");
+        replacement.setAttribute('href', '/profile/alice.example/post/3quotedreplacement');
         const replacementTarget = replacement.lastChild;
         if (!(replacementTarget instanceof Text)) {
-            throw new Error("Expected replacement outer label");
+            throw new Error('Expected replacement outer label');
         }
-        replacementTarget.data = "3h";
+        replacementTarget.data = '3h';
         outer.replaceWith(replacement);
 
         await vi.waitFor(() => {
-            expect(replacementTarget.data).toBe("2026-08-31 12:30");
-            expect(quoteTarget.data).toBe("2026-08-29 08:00");
+            expect(replacementTarget.data).toBe('2026-08-31 12:30');
+            expect(quoteTarget.data).toBe('2026-08-29 08:00');
         });
-        expect(oldOuterTarget.data).toBe("3h");
+        expect(oldOuterTarget.data).toBe('3h');
         expect(appView.postCalls).toHaveLength(2);
         controller.teardown();
     });
 
-    it("restores a label when Bluesky removes both metadata attributes in one batch", async () => {
-        document.body.innerHTML = fixtures.get("profile.html") ?? "";
-        const source = document.getElementById("profile-time");
+    it('restores a label when Bluesky removes both metadata attributes in one batch', async () => {
+        document.body.innerHTML = fixtures.get('profile.html') ?? '';
+        const source = document.getElementById('profile-time');
         const target = source?.lastChild;
         if (!source || !(target instanceof Text)) {
-            throw new Error("Expected profile fixture label");
+            throw new Error('Expected profile fixture label');
         }
         const controller = createController(new FixtureAppView());
         controller.start();
         await vi.waitFor(() => {
-            expect(target.data).toBe("2026-08-31 10:03");
+            expect(target.data).toBe('2026-08-31 10:03');
         });
 
-        source.removeAttribute("aria-label");
-        source.removeAttribute("data-tooltip");
+        source.removeAttribute('aria-label');
+        source.removeAttribute('data-tooltip');
 
         await vi.waitFor(() => {
-            expect(target.data).toBe("1d");
+            expect(target.data).toBe('1d');
         });
         controller.teardown();
     });
 
-    it.each(["unavailable", "ambiguous"])(
-        "changes only the outer label for an unavailable %s quote",
+    it.each(['unavailable', 'ambiguous'])(
+        'changes only the outer label for an unavailable %s quote',
         async (variant) => {
-            document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
-            if (variant === "ambiguous") {
-                const quote = document.getElementById("quoted-inner-time");
+            document.body.innerHTML = fixtures.get('quoted-post.html') ?? '';
+            if (variant === 'ambiguous') {
+                const quote = document.getElementById('quoted-inner-time');
                 quote?.parentElement?.append(quote.cloneNode(true));
             }
-            const originalQuote = document.getElementById("quoted-inner-time")?.lastChild;
-            const outer = document.getElementById("quoted-outer-time")?.lastChild;
+            const originalQuote = document.getElementById('quoted-inner-time')?.lastChild;
+            const outer = document.getElementById('quoted-outer-time')?.lastChild;
             if (!(originalQuote instanceof Text) || !(outer instanceof Text)) {
-                throw new Error("Expected quote fixture labels");
+                throw new Error('Expected quote fixture labels');
             }
             const appView = new FixtureAppView(false);
             const controller = createController(appView);
             controller.start();
             await vi.waitFor(() => {
-                expect(outer.data).toBe("2026-08-31 10:09");
+                expect(outer.data).toBe('2026-08-31 10:09');
             });
 
-            expect(originalQuote.data).toBe("1d");
+            expect(originalQuote.data).toBe('1d');
             expect(appView.profileCalls).toHaveLength(1);
             expect(appView.postCalls).toHaveLength(1);
             controller.teardown();
@@ -493,12 +503,12 @@ describe("Bluesky fixture surfaces", () => {
     );
 
     it(
-        "renders only the current post after pending identity, target, move, and replacement",
+        'renders only the current post after pending identity, target, move, and replacement',
         async () => {
             document.body.innerHTML = '<main><section id="first"></section>'
             + '<section id="second"></section></main>';
-            const profileWork: Array<Deferred<BlueskyLookupResult<BlueskyProfileRecord>>> = [];
-            const postWork: Array<Deferred<BlueskyLookupResult<BlueskyPostRecord>>> = [];
+            const profileWork: Deferred<BlueskyLookupResult<BlueskyProfileRecord>>[] = [];
+            const postWork: Deferred<BlueskyLookupResult<BlueskyPostRecord>>[] = [];
             const profileCalls: string[][] = [];
             const postCalls: string[][] = [];
             const appView: BlueskyAppView = {
@@ -518,40 +528,40 @@ describe("Bluesky fixture surfaces", () => {
             const controller = createController(appView);
             controller.start();
 
-            const article = document.createElement("article");
+            const article = document.createElement('article');
             article.innerHTML = `<a id="pending-source"
             href="/profile/first.example/post/3first"
             aria-label="localized" data-tooltip="localized">
             <span aria-hidden="true">· </span>2h</a>`;
-            document.getElementById("first")?.append(article);
+            document.getElementById('first')?.append(article);
             await vi.waitFor(() => {
                 expect(profileCalls).toHaveLength(1);
             });
-            const source = document.getElementById("pending-source");
+            const source = document.getElementById('pending-source');
             const oldTarget = source?.lastChild;
             if (!source || !(oldTarget instanceof Text)) {
-                throw new Error("Expected pending source");
+                throw new Error('Expected pending source');
             }
-            source.setAttribute("href", "/profile/second.example/post/3second");
-            const replacementTarget = document.createTextNode("4h");
+            source.setAttribute('href', '/profile/second.example/post/3second');
+            const replacementTarget = document.createTextNode('4h');
             oldTarget.replaceWith(replacementTarget);
-            document.getElementById("second")?.append(article);
+            document.getElementById('second')?.append(article);
             profileWork[0]?.resolve({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-                records: [{ actor: "first.example", did: "did:plc:first" }],
+                records: [{ actor: 'first.example', did: 'did:plc:first' }],
             });
             await vi.waitFor(() => {
                 expect(profileCalls).toHaveLength(2);
             });
             profileWork[1]?.resolve({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-                records: [{ actor: "second.example", did: "did:plc:second" }],
+                records: [{ actor: 'second.example', did: 'did:plc:second' }],
             });
             await vi.waitFor(() => {
                 expect(postCalls).toHaveLength(1);
             });
 
-            const currentArticle = document.createElement("article");
+            const currentArticle = document.createElement('article');
             currentArticle.innerHTML = `<a id="current-source"
             href="/profile/current.example/post/3current"
             aria-label="localized" data-tooltip="localized">
@@ -560,8 +570,8 @@ describe("Bluesky fixture surfaces", () => {
             postWork[0]?.resolve({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
                 records: [{
-                    uri: postCalls[0]?.[0] ?? "",
-                    indexedAt: "2026-08-31T08:00:00.000Z",
+                    uri: postCalls[0]?.[0] ?? '',
+                    indexedAt: '2026-08-31T08:00:00.000Z',
                 }],
             });
             await vi.waitFor(() => {
@@ -569,7 +579,7 @@ describe("Bluesky fixture surfaces", () => {
             });
             profileWork[2]?.resolve({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-                records: [{ actor: "current.example", did: "did:plc:current" }],
+                records: [{ actor: 'current.example', did: 'did:plc:current' }],
             });
             await vi.waitFor(() => {
                 expect(postCalls).toHaveLength(2);
@@ -577,36 +587,36 @@ describe("Bluesky fixture surfaces", () => {
             postWork[1]?.resolve({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
                 records: [{
-                    uri: postCalls[1]?.[0] ?? "",
-                    indexedAt: "2026-08-31T11:00:00.000Z",
+                    uri: postCalls[1]?.[0] ?? '',
+                    indexedAt: '2026-08-31T11:00:00.000Z',
                 }],
             });
-            const currentTarget = document.getElementById("current-source")?.lastChild;
+            const currentTarget = document.getElementById('current-source')?.lastChild;
             if (!(currentTarget instanceof Text)) {
-                throw new Error("Expected current target");
+                throw new Error('Expected current target');
             }
             await vi.waitFor(() => {
-                expect(currentTarget.data).toBe("2026-08-31 11:00");
+                expect(currentTarget.data).toBe('2026-08-31 11:00');
             });
 
             expect(article.isConnected).toBe(false);
             expect(source.isConnected).toBe(false);
-            expect(replacementTarget.data).toBe("4h");
-            expect(oldTarget.data).toBe("2h");
-            expect(document.getElementById("pending-source")).toBeNull();
+            expect(replacementTarget.data).toBe('4h');
+            expect(oldTarget.data).toBe('2h');
+            expect(document.getElementById('pending-source')).toBeNull();
             controller.teardown();
-            expect(currentTarget.data).toBe("now");
+            expect(currentTarget.data).toBe('now');
         },
     );
 
-    it("retargets a replaced quote card while its outer post is pending", async () => {
-        document.body.innerHTML = fixtures.get("quoted-post.html") ?? "";
+    it('retargets a replaced quote card while its outer post is pending', async () => {
+        document.body.innerHTML = fixtures.get('quoted-post.html') ?? '';
         const posts = createDeferred<BlueskyLookupResult<BlueskyPostRecord>>();
         const postCalls: string[][] = [];
         const appView: BlueskyAppView = {
             getProfiles: async (actors) => ({
                 status: BLUESKY_LOOKUP_STATUS.SUCCESS,
-                records: actors.map((actor) => ({ actor, did: "did:plc:outer" })),
+                records: actors.map((actor) => ({ actor, did: 'did:plc:outer' })),
             }),
             getPosts: async (uris) => {
                 postCalls.push([...uris]);
@@ -619,99 +629,99 @@ describe("Bluesky fixture surfaces", () => {
             expect(postCalls).toHaveLength(1);
         });
 
-        const oldCard = document.getElementById("quoted-card");
-        const oldTarget = document.getElementById("quoted-inner-time")?.lastChild;
+        const oldCard = document.getElementById('quoted-card');
+        const oldTarget = document.getElementById('quoted-inner-time')?.lastChild;
         if (!oldCard || !(oldTarget instanceof Text)) {
-            throw new Error("Expected pending quote card");
+            throw new Error('Expected pending quote card');
         }
         const replacementCard = oldCard.cloneNode(true) as Element;
-        replacementCard.id = "replacement-quote-card";
+        replacementCard.id = 'replacement-quote-card';
         oldCard.replaceWith(replacementCard);
         await Promise.resolve();
         await Promise.resolve();
         posts.resolve({
             status: BLUESKY_LOOKUP_STATUS.SUCCESS,
             records: [{
-                uri: postCalls[0]?.[0] ?? "",
-                indexedAt: "2026-08-31T10:09:00.000Z",
+                uri: postCalls[0]?.[0] ?? '',
+                indexedAt: '2026-08-31T10:09:00.000Z',
                 quote: { uri: QUOTE_URI, indexedAt: QUOTE_INDEXED_AT },
             }],
         });
-        const outerTarget = document.getElementById("quoted-outer-time")?.lastChild;
-        const newTarget = replacementCard.querySelector("#quoted-inner-time")?.lastChild;
+        const outerTarget = document.getElementById('quoted-outer-time')?.lastChild;
+        const newTarget = replacementCard.querySelector('#quoted-inner-time')?.lastChild;
         if (!(outerTarget instanceof Text) || !(newTarget instanceof Text)) {
-            throw new Error("Expected replacement quote labels");
+            throw new Error('Expected replacement quote labels');
         }
         await vi.waitFor(() => {
-            expect(outerTarget.data).toBe("2026-08-31 10:09");
-            expect(newTarget.data).toBe("2026-08-30 09:00");
+            expect(outerTarget.data).toBe('2026-08-31 10:09');
+            expect(newTarget.data).toBe('2026-08-30 09:00');
         });
 
         expect(oldCard.isConnected).toBe(false);
-        expect(oldTarget.data).toBe("1d");
+        expect(oldTarget.data).toBe('1d');
         expect(postCalls).toHaveLength(1);
         controller.teardown();
     });
 
     it(
-        "keeps the latest page label as restoration baseline across eligibility and restart",
+        'keeps the latest page label as restoration baseline across eligibility and restart',
         async () => {
-            document.body.innerHTML = fixtures.get("profile.html") ?? "";
+            document.body.innerHTML = fixtures.get('profile.html') ?? '';
             const appView = new FixtureAppView();
             const controller = createController(appView);
-            const source = document.getElementById("profile-time");
+            const source = document.getElementById('profile-time');
             const target = source?.lastChild;
             if (!source || !(target instanceof Text)) {
-                throw new Error("Expected profile fixture target");
+                throw new Error('Expected profile fixture target');
             }
             controller.start();
             await vi.waitFor(() => {
-                expect(target.data).toBe("2026-08-31 10:03");
+                expect(target.data).toBe('2026-08-31 10:03');
             });
 
-            target.data = "4h";
+            target.data = '4h';
             await vi.waitFor(() => {
-                expect(target.data).toBe("2026-08-31 10:03");
+                expect(target.data).toBe('2026-08-31 10:03');
             });
-            source.removeAttribute("aria-label");
+            source.removeAttribute('aria-label');
             await vi.waitFor(() => {
-                expect(target.data).toBe("4h");
+                expect(target.data).toBe('4h');
             });
-            source.setAttribute("aria-label", "new localized presentation");
+            source.setAttribute('aria-label', 'new localized presentation');
             await vi.waitFor(() => {
-                expect(target.data).toBe("2026-08-31 10:03");
+                expect(target.data).toBe('2026-08-31 10:03');
             });
-            expect(document.querySelectorAll("[data-no-more-ago-output]")).toHaveLength(0);
+            expect(document.querySelectorAll('[data-no-more-ago-output]')).toHaveLength(0);
 
             controller.teardown();
-            expect(target.data).toBe("4h");
+            expect(target.data).toBe('4h');
             controller.start();
             await vi.waitFor(() => {
-                expect(target.data).toBe("2026-08-31 10:03");
+                expect(target.data).toBe('2026-08-31 10:03');
             });
             expect(appView.profileCalls).toHaveLength(3);
             expect(appView.postCalls).toHaveLength(3);
             controller.teardown();
-            expect(target.data).toBe("4h");
+            expect(target.data).toBe('4h');
         },
     );
 
-    it("leaves a resolved label unchanged when formatting fails", async () => {
-        document.body.innerHTML = fixtures.get("profile.html") ?? "";
+    it('leaves a resolved label unchanged when formatting fails', async () => {
+        document.body.innerHTML = fixtures.get('profile.html') ?? '';
         const appView = new FixtureAppView();
-        const source = document.getElementById("profile-time");
+        const source = document.getElementById('profile-time');
         const target = source?.lastChild;
         if (!source || !(target instanceof Text)) {
-            throw new Error("Expected formatter-failure target");
+            throw new Error('Expected formatter-failure target');
         }
         const controller = new DocumentTransformationController({
-            url: new URL("https://bsky.app/"),
+            url: new URL('https://bsky.app/'),
             root: document,
-            locales: ["en-US"],
+            locales: ['en-US'],
             display: {
-                formatMode: "custom",
-                pattern: "yyyy ff",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy ff',
+                timeZone: { mode: 'utc' },
             },
             participantFactory: participantFactoryFor(appView),
         });
@@ -721,9 +731,9 @@ describe("Bluesky fixture surfaces", () => {
         });
         await Promise.resolve();
 
-        expect(target.data).toBe("1d");
-        expect(source.querySelector("button")).toBeNull();
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(target.data).toBe('1d');
+        expect(source.querySelector('button')).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
         controller.teardown();
     });
 });

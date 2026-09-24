@@ -2,9 +2,8 @@
  * @file Background view states projected for the popup and options surfaces.
  */
 
-import type { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import { APPEARANCE, type Appearance, type DisplaySettings } from "../settings/snapshot";
-import type { SiteScopeMode } from "../settings/site-scope";
+import { APPEARANCE, type Appearance, type DisplaySettings } from '../settings/snapshot';
+
 import {
     POPUP_STATUS,
     SETTINGS_STATE_FAILURE,
@@ -14,7 +13,10 @@ import {
     type RefreshFailureReason,
     type SettingsStateFailure,
     type UnavailablePopupStatus,
-} from "./view-state-values";
+} from './view-state-values';
+
+import type { UNAVAILABLE_TIME_ZONE_ERROR } from '../date/presentation-errors';
+import type { SiteScopeMode } from '../settings/site-scope';
 
 /**
  * Popup projection built from a loaded settings snapshot.
@@ -346,6 +348,7 @@ export interface RefreshFailure {
  *
  * @param failure - Settings failure that made the projection unavailable.
  * @param hostname - Active tab hostname, when it is still known.
+ *
  * @returns - Complete unavailable popup state.
  */
 export function createUnavailablePopupState(
@@ -371,6 +374,7 @@ export function createUnavailablePopupState(
  * Builds the fail-closed sites projection used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the projection unavailable.
+ *
  * @returns - Complete unavailable sites state.
  */
 export function createUnavailableSitesState(
@@ -391,6 +395,7 @@ export function createUnavailableSitesState(
  * Builds the fail-closed display projection used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the projection unavailable.
+ *
  * @returns - Complete unavailable display state.
  */
 export function createUnavailableDisplayState(
@@ -409,6 +414,7 @@ export function createUnavailableDisplayState(
  * Builds the fail-closed debug projection used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the projection unavailable.
+ *
  * @returns - Complete unavailable debug state.
  */
 export function createUnavailableDebugState(

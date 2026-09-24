@@ -2,12 +2,17 @@
  * @file Renders diagnostic logging, archive, and GitHub report controls.
  */
 
-import { Alert, Box, Button, Group, Stack, Switch, Text, Title } from "@mantine/core";
-import type { ReactElement } from "react";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
-import { t } from "../shared/i18n/translator";
-import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
-import { debugNoticeKey, type DiagnosticsController } from "./diagnostics-controller";
+import {
+    Alert, Box, Button, Group, Stack, Switch, Text, Title,
+} from '@mantine/core';
+
+import { isDiagnosticsSuccessNotice } from '../shared/diagnostics/download';
+import { t } from '../shared/i18n/translator';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
+
+import { debugNoticeKey, type DiagnosticsController } from './diagnostics-controller';
+
+import type { ReactElement } from 'react';
 
 /**
  * Properties for the diagnostics section.
@@ -24,6 +29,7 @@ export interface DiagnosticsSectionProps {
  *
  * @param props - Component properties.
  * @param props.controller - State and commands for diagnostics and reporting.
+ *
  * @returns - The diagnostics section.
  */
 export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): ReactElement {
@@ -35,30 +41,30 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
         <Stack gap="lg" component="section" aria-labelledby="diagnostics-heading">
             <Box>
                 <Title order={2} id="diagnostics-heading">
-                    {t("diagnostics_heading")}
+                    {t('diagnostics_heading')}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    {t("diagnostics_intro")}
+                    {t('diagnostics_intro')}
                 </Text>
             </Box>
-            {controller.loading ? <Text role="status">{t("diagnostics_loading")}</Text> : null}
+            {controller.loading ? <Text role="status">{t('diagnostics_loading')}</Text> : null}
             {!controller.loading && state?.availability === STATE_AVAILABILITY.UNAVAILABLE ? (
                 <Text role="status">
-                    {t("diagnostics_unavailable")}
+                    {t('diagnostics_unavailable')}
                 </Text>
             ) : null}
             {ready ? (
                 <Group justify="space-between" wrap="nowrap" className="nma-row">
                     <Box>
                         <Text size="sm" fw={600}>
-                            {t("debug_logs_label")}
+                            {t('debug_logs_label')}
                         </Text>
                         <Text size="xs" c="dimmed">
-                            {t("debug_logs_hint")}
+                            {t('debug_logs_hint')}
                         </Text>
                     </Box>
                     <Switch
-                        aria-label={t("debug_logs_label")}
+                        aria-label={t('debug_logs_label')}
                         checked={state.enabled}
                         aria-busy={controller.saving}
                         onChange={(event) => {
@@ -77,7 +83,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.diagnosticsBusy}
                     disabled={!enabled || controller.diagnosticsBusy}
                 >
-                    {t("diagnostics_download")}
+                    {t('diagnostics_download')}
                 </Button>
                 <Button
                     type="button"
@@ -88,7 +94,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.diagnosticsBusy}
                     disabled={!enabled || controller.diagnosticsBusy}
                 >
-                    {t("diagnostics_clear")}
+                    {t('diagnostics_clear')}
                 </Button>
                 <Button
                     type="button"
@@ -99,7 +105,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
                     loading={controller.reporting}
                     disabled={controller.reporting}
                 >
-                    {t("diagnostics_open_issue")}
+                    {t('diagnostics_open_issue')}
                 </Button>
             </Group>
             {debugNotice ? (
@@ -110,7 +116,7 @@ export function DiagnosticsSection({ controller }: DiagnosticsSectionProps): Rea
             {diagnosticsNotice ? (
                 <Alert
                     role="status"
-                    color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? "signal" : "red"}
+                    color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? 'signal' : 'red'}
                 >
                     {t(diagnosticsNotice)}
                 </Alert>

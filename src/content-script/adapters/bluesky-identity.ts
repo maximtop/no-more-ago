@@ -13,25 +13,26 @@ const RECORD_KEY_PATTERN = /^[A-Za-z0-9._~:-]+$/u;
 /**
  * AT Protocol collection containing Bluesky post records.
  */
-export const BLUESKY_POST_COLLECTION = "app.bsky.feed.post" as const;
+export const BLUESKY_POST_COLLECTION = 'app.bsky.feed.post' as const;
 
-const ESCAPED_POST_COLLECTION = BLUESKY_POST_COLLECTION.replaceAll(".", "\\.");
+const ESCAPED_POST_COLLECTION = BLUESKY_POST_COLLECTION.replaceAll('.', '\\.');
 const POST_URI_PATTERN = new RegExp(
     `^at://([^/]+)/${ESCAPED_POST_COLLECTION}/([^/]+)$`,
-    "u",
+    'u',
 );
 
 /**
  * Normalizes a valid DNS-style Bluesky handle.
  *
  * @param value - Untrusted handle value.
+ *
  * @returns - Lowercase handle, or null when invalid.
  */
 export function normalizeBlueskyHandle(value: string): string | null {
-    if (value.length > HANDLE_MAX_LENGTH || !value.includes(".")) {
+    if (value.length > HANDLE_MAX_LENGTH || !value.includes('.')) {
         return null;
     }
-    const labels = value.split(".");
+    const labels = value.split('.');
     if (labels.some(
         (label) => label.length === 0
             || label.length > HANDLE_LABEL_MAX_LENGTH
@@ -46,6 +47,7 @@ export function normalizeBlueskyHandle(value: string): string | null {
  * Checks one public decentralized identifier against the supported Bluesky contract.
  *
  * @param value - Untrusted DID value.
+ *
  * @returns - Whether the value is a bounded supported DID.
  */
 export function isValidBlueskyDid(value: string): boolean {
@@ -56,10 +58,11 @@ export function isValidBlueskyDid(value: string): boolean {
  * Normalizes an accepted public handle or preserves an accepted DID.
  *
  * @param value - Untrusted actor value.
+ *
  * @returns - Canonical public actor, or null when unsupported.
  */
 export function normalizeBlueskyActor(value: string): string | null {
-    return value.startsWith("did:")
+    return value.startsWith('did:')
         ? isValidBlueskyDid(value) ? value : null
         : normalizeBlueskyHandle(value);
 }
@@ -68,6 +71,7 @@ export function normalizeBlueskyActor(value: string): string | null {
  * Checks one AT Protocol record key against the supported post contract.
  *
  * @param value - Untrusted record key.
+ *
  * @returns - Whether the value is bounded and unambiguous.
  */
 export function isValidBlueskyRecordKey(value: string): boolean {
@@ -79,6 +83,7 @@ export function isValidBlueskyRecordKey(value: string): boolean {
  *
  * @param did - Valid Bluesky DID.
  * @param recordKey - Valid post record key.
+ *
  * @returns - Canonical public Bluesky post URI.
  */
 export function createBlueskyPostUri(did: string, recordKey: string): string {
@@ -89,6 +94,7 @@ export function createBlueskyPostUri(did: string, recordKey: string): string {
  * Checks one canonical public Bluesky post URI.
  *
  * @param value - Untrusted AT URI.
+ *
  * @returns - Whether the URI contains a valid DID and post record key.
  */
 export function isValidBlueskyPostUri(value: string): boolean {

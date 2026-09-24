@@ -2,15 +2,15 @@
  * @file Canonical settings types, domain validation, and default values.
  */
 
+import { validateCustomFormatPattern } from './custom-format';
 import {
     isPrecisionPolicyValid, samePrecisionPolicy, type PrecisionPolicy,
-} from "./precision-policy";
-import { validateCustomFormatPattern } from "./custom-format";
+} from './precision-policy';
 import {
     DEFAULT_SITE_SCOPE,
     parseSiteScopePolicy,
     type SiteScopePolicy,
-} from "./site-scope";
+} from './site-scope';
 
 /**
  * Current schema version written with extension settings.
@@ -21,9 +21,9 @@ export const SETTINGS_SCHEMA_VERSION = 2 as const;
  * Named appearance choices applied to the popup and the settings page.
  */
 export const APPEARANCE = {
-    SYSTEM: "system",
-    LIGHT: "light",
-    DARK: "dark",
+    SYSTEM: 'system',
+    LIGHT: 'light',
+    DARK: 'dark',
 } as const;
 
 /**
@@ -44,8 +44,8 @@ export type Appearance = (typeof APPEARANCES)[number];
  * Named date-format modes persisted in display settings.
  */
 export const FORMAT_MODE = {
-    SYSTEM: "system",
-    CUSTOM: "custom",
+    SYSTEM: 'system',
+    CUSTOM: 'custom',
 } as const;
 
 /**
@@ -57,9 +57,9 @@ export type FormatMode = (typeof FORMAT_MODE)[keyof typeof FORMAT_MODE];
  * Named time-zone modes persisted in display settings.
  */
 export const TIME_ZONE_MODE = {
-    SYSTEM: "system",
-    UTC: "utc",
-    IANA: "iana",
+    SYSTEM: 'system',
+    UTC: 'utc',
+    IANA: 'iana',
 } as const;
 
 /**
@@ -71,10 +71,10 @@ export type TimeZoneMode = (typeof TIME_ZONE_MODE)[keyof typeof TIME_ZONE_MODE];
  * Named storage paths a settings load can report.
  */
 export const SETTINGS_LOAD_SOURCE = {
-    DEFAULT: "default",
-    STORED: "stored",
-    RECOVERED: "recovered",
-    DISCARDED: "discarded",
+    DEFAULT: 'default',
+    STORED: 'stored',
+    RECOVERED: 'recovered',
+    DISCARDED: 'discarded',
 } as const;
 
 /**
@@ -86,8 +86,8 @@ export type SettingsLoadSource = (typeof SETTINGS_LOAD_SOURCE)[keyof typeof SETT
  * Named reasons a settings load fails closed.
  */
 export const SETTINGS_LOAD_ERROR = {
-    LOAD_FAILED: "load-failed",
-    INVALID_SETTINGS: "invalid-settings",
+    LOAD_FAILED: 'load-failed',
+    INVALID_SETTINGS: 'invalid-settings',
 } as const;
 
 /**
@@ -98,13 +98,12 @@ export type SettingsLoadError = (typeof SETTINGS_LOAD_ERROR)[keyof typeof SETTIN
 /**
  * The presentation choices persisted alongside the extension policy.
  */
-export type TimeZoneSelection =
-    | {
-        /**
-         * Uses the browser's current system time zone.
-         */
-        readonly mode: typeof TIME_ZONE_MODE.SYSTEM;
-    }
+export type TimeZoneSelection = | {
+    /**
+     * Uses the browser's current system time zone.
+     */
+    readonly mode: typeof TIME_ZONE_MODE.SYSTEM;
+}
     | {
         /**
          * Uses Coordinated Universal Time.
@@ -239,12 +238,12 @@ export interface SettingsSnapshotInput {
 /**
  * Storage key for the active settings snapshot.
  */
-export const SETTINGS_STORAGE_KEY = "settings" as const;
+export const SETTINGS_STORAGE_KEY = 'settings' as const;
 
 /**
  * Storage key reserved for the previous settings snapshot during a write.
  */
-export const SETTINGS_PREVIOUS_STORAGE_KEY = "settings.previous" as const;
+export const SETTINGS_PREVIOUS_STORAGE_KEY = 'settings.previous' as const;
 
 /**
  * Immutable system-format fallback used when no valid saved display choice exists.
@@ -270,25 +269,24 @@ export const DEFAULT_SETTINGS_SNAPSHOT: SettingsSnapshot = Object.freeze({
 /**
  * Result of loading storage, distinguishing a usable snapshot from a recoverable failure.
  */
-export type SettingsLoadResult =
-    | {
-        /**
-         * Indicates that an authoritative settings snapshot is available.
-         */
-        readonly ok: true;
+export type SettingsLoadResult = | {
+    /**
+     * Indicates that an authoritative settings snapshot is available.
+     */
+    readonly ok: true;
 
-        /**
-         * Validated settings snapshot selected by the load operation.
-         */
-        readonly snapshot: SettingsSnapshot;
+    /**
+     * Validated settings snapshot selected by the load operation.
+     */
+    readonly snapshot: SettingsSnapshot;
 
-        /**
-         * Storage path from which the authoritative snapshot was obtained.
-         * `discarded` means a document of another schema version was found
-         * and replaced by persisted defaults.
-         */
-        readonly source: SettingsLoadSource;
-    }
+    /**
+     * Storage path from which the authoritative snapshot was obtained.
+     * `discarded` means a document of another schema version was found
+     * and replaced by persisted defaults.
+     */
+    readonly source: SettingsLoadSource;
+}
     | {
         /**
          * Indicates that no trustworthy settings snapshot could be loaded.
@@ -307,13 +305,14 @@ const IANA_COMPONENT = /^[A-Za-z][A-Za-z0-9_.+-]*$/;
  * Rejects whitespace, control characters, traversal segments, and invalid IANA name components.
  *
  * @param identifier - IANA time-zone identifier supplied by the user.
+ *
  * @returns - Whether the value has a safe, structurally valid identifier shape.
  */
 export function isStructurallyValidTimeZoneIdentifier(identifier: string): boolean {
     if (identifier.length === 0 || identifier.trim() !== identifier) {
         return false;
     }
-    if (identifier.includes("\\") || /\s/u.test(identifier)) {
+    if (identifier.includes('\\') || /\s/u.test(identifier)) {
         return false;
     }
     for (const character of identifier) {
@@ -322,12 +321,11 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: string): boole
             return false;
         }
     }
-    const components = identifier.split("/");
+    const components = identifier.split('/');
     return (
-        components.length > 0 &&
-        components.every(
-            (component) =>
-                component !== "." && component !== ".." && IANA_COMPONENT.test(component),
+        components.length > 0
+        && components.every(
+            (component) => component !== '.' && component !== '..' && IANA_COMPONENT.test(component),
         )
     );
 }
@@ -336,6 +334,7 @@ export function isStructurallyValidTimeZoneIdentifier(identifier: string): boole
  * Checks domain constraints for a typed time-zone selection.
  *
  * @param value - Typed time-zone selection.
+ *
  * @returns - Whether the selection satisfies its domain constraints.
  */
 export function isTimeZoneSelection(value: TimeZoneSelection): boolean {
@@ -349,6 +348,7 @@ export function isTimeZoneSelection(value: TimeZoneSelection): boolean {
  * Returns an immutable time-zone selection after checking user-authored domain values.
  *
  * @param value - Typed time-zone selection.
+ *
  * @returns - Immutable validated selection, or null when invalid.
  */
 export function parseTimeZoneSelection(value: TimeZoneSelection): TimeZoneSelection | null {
@@ -364,6 +364,7 @@ export function parseTimeZoneSelection(value: TimeZoneSelection): TimeZoneSelect
  * Validates user-authored domain values inside typed display choices.
  *
  * @param value - Typed display settings.
+ *
  * @returns - Whether the settings satisfy their domain constraints.
  */
 export function isDisplaySettings(value: DisplaySettings): boolean {
@@ -374,6 +375,7 @@ export function isDisplaySettings(value: DisplaySettings): boolean {
  * Copies validated display choices into an immutable representation, or returns null.
  *
  * @param value - Typed display settings.
+ *
  * @returns - Immutable validated display settings, or null when invalid.
  */
 export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | null {
@@ -408,6 +410,7 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
  *
  * @param a - First display-settings value.
  * @param b - Second display-settings value.
+ *
  * @returns - Whether both values contain the same presentation choices.
  */
 export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boolean {
@@ -438,23 +441,24 @@ export function sameDisplaySettings(a: DisplaySettings, b: DisplaySettings): boo
  * Validates caller-supplied settings and freezes the canonical storage shape.
  *
  * @param input - Validated settings fields.
+ *
  * @returns - Frozen canonical settings snapshot.
  */
 export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSnapshot {
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) {
-        throw new TypeError("Invalid settings snapshot revision");
+        throw new TypeError('Invalid settings snapshot revision');
     }
     const siteScope = parseSiteScopePolicy(input.siteScope ?? DEFAULT_SITE_SCOPE);
     const display = parseDisplaySettings(input.display ?? DEFAULT_DISPLAY_SETTINGS);
     const appearance = input.appearance ?? APPEARANCE.SYSTEM;
     if (siteScope === null) {
-        throw new TypeError("Invalid site scope");
+        throw new TypeError('Invalid site scope');
     }
     if (display === null) {
-        throw new TypeError("Invalid display settings");
+        throw new TypeError('Invalid display settings');
     }
     if (!APPEARANCES.includes(appearance)) {
-        throw new TypeError("Invalid appearance");
+        throw new TypeError('Invalid appearance');
     }
     return Object.freeze({
         schemaVersion: SETTINGS_SCHEMA_VERSION,
@@ -471,6 +475,7 @@ export function createSettingsSnapshot(input: SettingsSnapshotInput): SettingsSn
  * Recognizes a stored value written by the current schema version.
  *
  * @param value - Value read from durable storage.
+ *
  * @returns - Whether the value is a snapshot of the current schema version.
  */
 export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnapshot {
@@ -481,6 +486,7 @@ export function isCurrentSettingsSnapshot(value: unknown): value is SettingsSnap
  * Migrates the published schema without resetting any existing preference or revision.
  *
  * @param value - Extension-owned persisted snapshot.
+ *
  * @returns - Current snapshot, migrated schema 1 snapshot, or undefined for unknown versions.
  */
 export function migrateSettingsSnapshot(value: unknown): SettingsSnapshot | undefined {

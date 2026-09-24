@@ -5,40 +5,41 @@ import {
     DOCUMENT_STATUS_MESSAGE,
     DOCUMENT_PHASE,
     readDocumentStatusPhase,
-} from "../../shared/messaging/document-messages";
+} from '../../shared/messaging/document-messages';
+import {
+    createUnavailablePopupState,
+    createUnavailableSitesState,
+    type PopupState,
+    type SitesState,
+} from '../../shared/messaging/view-state';
 import {
     POPUP_RUNTIME_FAILURE,
     POPUP_STATUS,
     STATE_AVAILABILITY,
     type PopupRuntimeFailure,
     type ReadyPopupStatus,
-} from "../../shared/messaging/view-state-values";
-import {
-    createUnavailablePopupState,
-    createUnavailableSitesState,
-    type PopupState,
-    type SitesState,
-} from "../../shared/messaging/view-state";
-import { parseHttpUrl } from "../../shared/url/http";
-import { isFacebookHostname } from "../../shared/url/facebook";
+} from '../../shared/messaging/view-state-values';
 import {
     SITE_SCOPE_MODE,
     isSiteProcessingEnabled,
     type SiteScopeMode,
-} from "../../shared/settings/site-scope";
-import type { SettingsSnapshot } from "../../shared/settings/snapshot";
-import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
-import type { ReconcileFailure } from "../runtime/document-activation";
+} from '../../shared/settings/site-scope';
+import { isFacebookHostname } from '../../shared/url/facebook';
+import { parseHttpUrl } from '../../shared/url/http';
+import { APPLICATION_PHASE } from '../application/contracts';
 import {
     RECONCILE_FAILURE_SCOPE,
     TAB_ACTION,
-} from "../runtime/document-activation";
-import type { ActivationManager } from "../application/activation-manager";
-import type { ApplicationStateView } from "../application/state";
-import { APPLICATION_PHASE } from "../application/contracts";
-import { settleBrowserOperation } from "../runtime/settle";
+} from '../runtime/document-activation';
 import { FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID } from
-    "../runtime/register-documents";
+    '../runtime/register-documents';
+import { settleBrowserOperation } from '../runtime/settle';
+
+import type { SettingsSnapshot } from '../../shared/settings/snapshot';
+import type { ActivationManager } from '../application/activation-manager';
+import type { ApplicationStateView } from '../application/state';
+import type { ReconcileFailure } from '../runtime/document-activation';
+import type { RuntimeTab, TabsRuntime } from '../runtime/tabs';
 
 /**
  * Maps a reconciliation failure to the popup failure vocabulary.
@@ -46,6 +47,7 @@ import { FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID } from
  * @param failures - Failures observed during the latest reconciliation.
  * @param tabId - Active tab identifier.
  * @param hostname - Active tab's canonical top-level hostname.
+ *
  * @returns - Popup failure for the tab, when one exists.
  */
 function failureFor(
@@ -79,6 +81,7 @@ function failureFor(
  * Maps a disabled hostname to the status explaining which list excluded it.
  *
  * @param mode - Active scope mode.
+ *
  * @returns - Ready popup status for a hostname the active mode does not cover.
  */
 function coverageStatus(mode: SiteScopeMode): ReadyPopupStatus {
@@ -106,6 +109,7 @@ export class StateProjection {
      *
      * @param tabs - Browser tab query and messaging boundary.
      * @param activation - Latest universal-runtime reconciliation.
+     *
      * @returns - A new state projection.
      */
     public constructor(
@@ -134,6 +138,7 @@ export class StateProjection {
      * Seeds the popup cache after initialization.
      *
      * @param state - Current application state.
+     *
      * @returns - Promise settled after the cache is seeded.
      */
     public async seed(state: ApplicationStateView): Promise<void> {
@@ -150,6 +155,7 @@ export class StateProjection {
      * Derives and caches popup state.
      *
      * @param state - Current application state.
+     *
      * @returns - Derived popup state.
      */
     public async deriveAndCachePopup(state: ApplicationStateView): Promise<PopupState> {
@@ -165,7 +171,7 @@ export class StateProjection {
      */
     public refreshCachedPopup(state: ApplicationStateView): void {
         const cached = this.popupCache;
-        const snapshot = state.snapshot;
+        const { snapshot } = state;
         if (!cached || cached.availability !== STATE_AVAILABILITY.READY || !snapshot) {
             return;
         }
@@ -216,10 +222,11 @@ export class StateProjection {
      * Derives popup state from active tab, settings, and frame-zero status.
      *
      * @param state - Current application state.
+     *
      * @returns - Derived popup state.
      */
     public async derivePopup(state: ApplicationStateView): Promise<PopupState> {
-        const snapshot = state.snapshot;
+        const { snapshot } = state;
         if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
             return this.unavailablePopup(state);
         }
@@ -299,10 +306,11 @@ export class StateProjection {
      * Derives the scope mode and both retained hostname lists.
      *
      * @param state - Current application state.
+     *
      * @returns - Derived sites state.
      */
     public deriveSites(state: ApplicationStateView): SitesState {
-        const snapshot = state.snapshot;
+        const { snapshot } = state;
         if (state.phase !== APPLICATION_PHASE.READY || !snapshot) {
             return this.unavailableSites(state);
         }
@@ -320,6 +328,7 @@ export class StateProjection {
      * Builds an unavailable popup state.
      *
      * @param state - Current application state.
+     *
      * @returns - Unavailable popup state.
      */
     public unavailablePopup(state: ApplicationStateView): PopupState {
@@ -348,6 +357,7 @@ export class StateProjection {
      * Builds an unavailable sites projection.
      *
      * @param state - Current application state.
+     *
      * @returns - Unavailable sites state.
      */
     private unavailableSites(state: ApplicationStateView): SitesState {
@@ -363,6 +373,7 @@ export class StateProjection {
      * @param outcome - Popup status and optional failure.
      * @param outcome.status - Ready popup status.
      * @param outcome.failure - Optional runtime failure.
+     *
      * @returns - Ready popup state.
      */
     private ready(

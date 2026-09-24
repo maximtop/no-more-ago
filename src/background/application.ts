@@ -9,4 +9,4 @@ export {
     type ApplicationPhase,
     type BackgroundApplicationOptions,
     type LifecycleReason,
-} from "./application/background-application";
+} from './application/background-application';

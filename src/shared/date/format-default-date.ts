@@ -2,22 +2,24 @@
  * @file Formats trusted instants using system or user-selected timezone presentation.
  */
 
-import { format, intlFormat } from "date-fns";
-import { tz } from "@date-fns/tz";
-import { DATE_PRECISION, precisionForAge } from "../settings/precision-policy";
-import { projectPrecisionPattern } from "./precision-pattern";
-import { resolveDateLocale } from "./date-locale";
-import {
-    INVALID_DATE_FORMAT_ERROR,
-    UNAVAILABLE_TIME_ZONE_ERROR,
-    type DatePresentationError,
-} from "./presentation-errors";
+import { tz } from '@date-fns/tz';
+import { format, intlFormat } from 'date-fns';
+
+import { DATE_PRECISION, precisionForAge } from '../settings/precision-policy';
 import {
     DEFAULT_DISPLAY_SETTINGS,
     FORMAT_MODE,
     TIME_ZONE_MODE,
     type DisplaySettings,
-} from "../settings/snapshot";
+} from '../settings/snapshot';
+
+import { resolveDateLocale } from './date-locale';
+import { projectPrecisionPattern } from './precision-pattern';
+import {
+    INVALID_DATE_FORMAT_ERROR,
+    UNAVAILABLE_TIME_ZONE_ERROR,
+    type DatePresentationError,
+} from './presentation-errors';
 
 /**
  * Date text together with the time-zone metadata needed to explain a fallback to callers.
@@ -44,10 +46,11 @@ export type TimeZoneAvailability = (identifier: string) => boolean;
  *
  * @param instant - Valid timestamp to format.
  * @param locales - Preferred locale tags in display order.
+ *
  * @returns - Localized date and time in the system time zone.
  */
 function systemFormat(instant: Date, locales: readonly string[]): string {
-    const options = { dateStyle: "medium", timeStyle: "short" } as const;
+    const options = { dateStyle: 'medium', timeStyle: 'short' } as const;
     return locales.length === 0
         ? intlFormat(instant, options)
         : intlFormat(instant, options, { locale: [...locales] });
@@ -57,6 +60,7 @@ function systemFormat(instant: Date, locales: readonly string[]): string {
  * Uses Intl.DateTimeFormat construction to confirm a named zone is supported at runtime.
  *
  * @param identifier - Structurally valid IANA time-zone identifier.
+ *
  * @returns - Whether the current runtime can format in that zone.
  */
 export function isTimeZoneAvailable(identifier: string): boolean {
@@ -74,6 +78,7 @@ export function isTimeZoneAvailable(identifier: string): boolean {
  *
  * @param instant - Valid timestamp to format.
  * @param locales - Preferred locale tags in display order.
+ *
  * @returns - Safely formatted date and time using system presentation.
  */
 export function formatDefaultDate(instant: Date, locales: readonly string[]): string {
@@ -89,6 +94,7 @@ export function formatDefaultDate(instant: Date, locales: readonly string[]): st
  * @param display - Validated format and time-zone choices.
  * @param available - Capability check for named time zones.
  * @param nowMilliseconds - Shared age snapshot for a complete processing batch.
+ *
  * @returns - Formatted text and effective zone, or an explicit presentation error.
  */
 export function formatDateWithPresentation(
@@ -110,14 +116,14 @@ export function formatDateWithPresentation(
         }
         const zone = display.timeZone;
         const unavailable = zone.mode === TIME_ZONE_MODE.IANA && !available(zone.identifier);
-        const timeZone = zone.mode === TIME_ZONE_MODE.UTC ? "UTC"
+        const timeZone = zone.mode === TIME_ZONE_MODE.UTC ? 'UTC'
             : zone.mode === TIME_ZONE_MODE.IANA && !unavailable ? zone.identifier : undefined;
         const options: Intl.DateTimeFormatOptions = precision === DATE_PRECISION.YEAR
-            ? { year: "numeric" }
+            ? { year: 'numeric' }
             : {
-                dateStyle: "medium",
+                dateStyle: 'medium',
                 ...(precision === DATE_PRECISION.DAY ? {} : {
-                    timeStyle: precision === DATE_PRECISION.SECONDS ? "medium" : "short",
+                    timeStyle: precision === DATE_PRECISION.SECONDS ? 'medium' : 'short',
                 }),
             };
         return {
@@ -137,9 +143,9 @@ export function formatDateWithPresentation(
         }
         try {
             const options = {
-                dateStyle: "medium",
-                timeStyle: "short",
-                timeZone: zone.mode === TIME_ZONE_MODE.UTC ? "UTC" : zone.identifier,
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: zone.mode === TIME_ZONE_MODE.UTC ? 'UTC' : zone.identifier,
             } as const;
             return {
                 text:
@@ -167,18 +173,17 @@ export function formatDateWithPresentation(
                 error: UNAVAILABLE_TIME_ZONE_ERROR,
             };
         } catch {
-            return { text: "", error: INVALID_DATE_FORMAT_ERROR };
+            return { text: '', error: INVALID_DATE_FORMAT_ERROR };
         }
     }
     try {
-        const locale = resolveDateLocale(locales).locale;
-        const options =
-            zone.mode === TIME_ZONE_MODE.SYSTEM
-                ? { locale }
-                : { locale, in: tz(zone.mode === TIME_ZONE_MODE.UTC ? "UTC" : zone.identifier) };
+        const { locale } = resolveDateLocale(locales);
+        const options = zone.mode === TIME_ZONE_MODE.SYSTEM
+            ? { locale }
+            : { locale, in: tz(zone.mode === TIME_ZONE_MODE.UTC ? 'UTC' : zone.identifier) };
         const text = format(instant, display.pattern, options);
-        return text.trim().length > 0 ? { text } : { text: "", error: INVALID_DATE_FORMAT_ERROR };
+        return text.trim().length > 0 ? { text } : { text: '', error: INVALID_DATE_FORMAT_ERROR };
     } catch {
-        return { text: "", error: INVALID_DATE_FORMAT_ERROR };
+        return { text: '', error: INVALID_DATE_FORMAT_ERROR };
     }
 }

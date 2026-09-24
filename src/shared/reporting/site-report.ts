@@ -5,39 +5,38 @@
 /**
  * GitHub issue composer used for site reports.
  */
-export const SITE_REPORT_DESTINATION =
-    "https://github.com/maximtop/no-more-ago/issues/new" as const;
+export const SITE_REPORT_DESTINATION = 'https://github.com/maximtop/no-more-ago/issues/new' as const;
 
 /**
  * Issue-form template selected in the GitHub composer.
  */
-export const SITE_REPORT_TEMPLATE = "site-report.yml" as const;
+export const SITE_REPORT_TEMPLATE = 'site-report.yml' as const;
 
 /**
  * Reasons supported by the site-report form.
  */
 export const SITE_REPORT_REASONS = [
-    "Add support for this site",
-    "Dates are not working correctly",
+    'Add support for this site',
+    'Dates are not working correctly',
 ] as const;
 
 /**
  * Browser labels supported by the site-report form.
  */
-export const SITE_REPORT_BROWSERS = ["Chrome", "Edge", "Firefox", "Other"] as const;
+export const SITE_REPORT_BROWSERS = ['Chrome', 'Edge', 'Firefox', 'Other'] as const;
 
 /**
  * Named site-report failures shown by extension views.
  */
 export const SITE_REPORT_ERROR = {
-    BUSY: "busy",
-    INVALID_CONTEXT: "invalid-context",
-    BROWSER_UNAVAILABLE: "browser-unavailable",
-    MISSING_TAB: "missing-tab",
-    RESTRICTED_PAGE: "restricted-page",
-    HOSTNAME_MISMATCH: "hostname-mismatch",
-    PRIVATE_WINDOW: "private-window",
-    OPEN_FAILED: "open-failed",
+    BUSY: 'busy',
+    INVALID_CONTEXT: 'invalid-context',
+    BROWSER_UNAVAILABLE: 'browser-unavailable',
+    MISSING_TAB: 'missing-tab',
+    RESTRICTED_PAGE: 'restricted-page',
+    HOSTNAME_MISMATCH: 'hostname-mismatch',
+    PRIVATE_WINDOW: 'private-window',
+    OPEN_FAILED: 'open-failed',
 } as const;
 
 /**
@@ -112,18 +111,17 @@ export type SiteReportError = (typeof SITE_REPORT_ERRORS)[number];
 /**
  * Result of opening the site-report composer.
  */
-export type SiteReportResult =
-    | {
-        /**
-         * Marks a successfully opened report.
-         */
-        readonly ok: true;
+export type SiteReportResult = | {
+    /**
+     * Marks a successfully opened report.
+     */
+    readonly ok: true;
 
-        /**
-         * GitHub composer URL opened for the user.
-         */
-        readonly url: string;
-    }
+    /**
+     * GitHub composer URL opened for the user.
+     */
+    readonly url: string;
+}
     | {
         /**
          * Marks a report that could not be opened.
@@ -246,15 +244,16 @@ export interface SiteReportReporter {
  *
  * @param value - Page URL to validate.
  * @param hostname - Expected canonical hostname.
+ *
  * @returns - Whether the URL is safe to include in the report.
  */
 function isReportableUrl(value: string, hostname: string): boolean {
     try {
         const url = new URL(value);
         return (
-            (url.protocol === "http:" || url.protocol === "https:")
-            && url.username === ""
-            && url.password === ""
+            (url.protocol === 'http:' || url.protocol === 'https:')
+            && url.username === ''
+            && url.password === ''
             && url.hostname === hostname
         );
     } catch {
@@ -269,6 +268,7 @@ function isReportableUrl(value: string, hostname: string): boolean {
  * hostname, so a report never publishes an unrelated page address.
  *
  * @param context - Site-report fields to serialize.
+ *
  * @returns - GitHub issue URL, or null when the page URL cannot be published.
  */
 export function composeSiteReportUrl(context: SiteReportContext): string | null {
@@ -280,20 +280,20 @@ export function composeSiteReportUrl(context: SiteReportContext): string | null 
         return null;
     }
     const url = new URL(SITE_REPORT_DESTINATION);
-    url.searchParams.set("template", SITE_REPORT_TEMPLATE);
+    url.searchParams.set('template', SITE_REPORT_TEMPLATE);
     if (value.reason !== undefined) {
-        url.searchParams.set("reason", value.reason);
+        url.searchParams.set('reason', value.reason);
     }
     // The hostname only guards that the URL belongs to the reported site; the
     // form carries the URL alone, because the host is readable from it.
     if (value.currentUrl !== undefined) {
-        url.searchParams.set("current_url", value.currentUrl);
+        url.searchParams.set('current_url', value.currentUrl);
     }
     if (value.extensionVersion !== undefined) {
-        url.searchParams.set("extension_version", value.extensionVersion);
+        url.searchParams.set('extension_version', value.extensionVersion);
     }
     if (value.browser !== undefined) {
-        url.searchParams.set("browser", value.browser);
+        url.searchParams.set('browser', value.browser);
     }
     return url.toString();
 }
@@ -302,25 +302,27 @@ export function composeSiteReportUrl(context: SiteReportContext): string | null 
  * Maps a user agent to the browser label expected by the issue form.
  *
  * @param userAgent - Browser user-agent value.
+ *
  * @returns - Supported browser label.
  */
 export function browserContextFromUserAgent(userAgent: string | undefined): SiteReportBrowser {
     if (userAgent === undefined) {
-        return "Other";
+        return 'Other';
     }
     if (/Firefox\//u.test(userAgent)) {
-        return "Firefox";
+        return 'Firefox';
     }
     if (/Edg\//u.test(userAgent)) {
-        return "Edge";
+        return 'Edge';
     }
-    return /(?:Chrome|Chromium)\//u.test(userAgent) ? "Chrome" : "Other";
+    return /(?:Chrome|Chromium)\//u.test(userAgent) ? 'Chrome' : 'Other';
 }
 
 /**
  * Reads the current extension version.
  *
  * @param runtime - Browser runtime dependency.
+ *
  * @returns - Valid extension version, or null when unavailable.
  */
 function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
@@ -335,6 +337,7 @@ function extensionVersion(runtime: SiteReportBrowserRuntime): string | null {
  * Creates site-report actions over browser APIs.
  *
  * @param runtime - Browser APIs used to collect context and open tabs.
+ *
  * @returns - Site-report action service.
  */
 export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): SiteReportReporter {
@@ -345,7 +348,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
      *
      * @returns - Report environment, or null when the extension version is unknown.
      */
-    const environment = (): Pick<SiteReportContext, "extensionVersion" | "browser"> | null => {
+    const environment = (): Pick<SiteReportContext, 'extensionVersion' | 'browser'> | null => {
         const version = extensionVersion(runtime);
         return version === null
             ? null
@@ -360,6 +363,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
      *
      * @param url - Report URL.
      * @param windowId - Window that receives the tab, when known.
+     *
      * @returns - Whether the tab was opened.
      */
     const open = async (url: string, windowId?: number): Promise<SiteReportResult> => {
@@ -399,10 +403,10 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
                 } catch {
                     return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
-                if (url.protocol !== "http:" && url.protocol !== "https:") {
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
                     return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
-                if (url.username !== "" || url.password !== "") {
+                if (url.username !== '' || url.password !== '') {
                     return { ok: false, error: SITE_REPORT_ERROR.RESTRICTED_PAGE };
                 }
                 if (url.hostname !== state.hostname) {
@@ -463,7 +467,7 @@ export function createSiteReportReporter(runtime: SiteReportBrowserRuntime): Sit
  * @returns - Site-report service for extension views.
  */
 export function createDefaultSiteReportReporter(): SiteReportReporter {
-    if (typeof chrome === "undefined") {
+    if (typeof chrome === 'undefined') {
         return createSiteReportReporter({});
     }
     return createSiteReportReporter({
@@ -472,7 +476,7 @@ export function createDefaultSiteReportReporter(): SiteReportReporter {
             create: (properties) => chrome.tabs.create(properties),
         },
         runtime: { getManifest: () => chrome.runtime.getManifest() },
-        ...(typeof navigator === "undefined"
+        ...(typeof navigator === 'undefined'
             ? {}
             : {
                 navigator: {

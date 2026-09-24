@@ -3,33 +3,35 @@
  */
 
 import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from '../../shared/diagnostics/contracts';
+import { SETTINGS_STATE_FAILURE } from '../../shared/messaging/view-state-values';
+import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from '../../shared/settings/site-scope';
+import {
     SETTINGS_LOAD_SOURCE,
     type SettingsLoadResult,
     type SettingsSnapshot,
-} from "../../shared/settings/snapshot";
+} from '../../shared/settings/snapshot';
 import {
     ACTIVATION_POLICY,
     type ActivationPolicy,
     type ActivationReconcileResult,
-} from "../runtime/document-activation";
-import type { SettingsLoader } from "../settings/service";
-import { DEFAULT_SITE_SCOPE, type SiteScopePolicy } from "../../shared/settings/site-scope";
-import type { ActivationManager } from "./activation-manager";
+} from '../runtime/document-activation';
+
 import {
     APPLICATION_PHASE,
     LIFECYCLE_REASON,
     type ApplicationFailure,
     type ApplicationPhase,
     type LifecycleReason,
-} from "./contracts";
-import type { ApplicationStateView } from "./state";
-import type { DiagnosticsService } from "../diagnostics/service";
-import type { StateProjection } from "../projection/state-projection";
-import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_REASON,
-} from "../../shared/diagnostics/contracts";
-import { SETTINGS_STATE_FAILURE } from "../../shared/messaging/view-state-values";
+} from './contracts';
+
+import type { ActivationManager } from './activation-manager';
+import type { ApplicationStateView } from './state';
+import type { DiagnosticsService } from '../diagnostics/service';
+import type { StateProjection } from '../projection/state-projection';
+import type { SettingsLoader } from '../settings/service';
 
 /**
  * Owns authoritative application state and serialized lifecycle transitions.
@@ -154,6 +156,7 @@ export class ApplicationLifecycle {
      * Serializes an operation after all earlier background work.
      *
      * @param operation - Asynchronous state-changing operation.
+     *
      * @returns - Promise carrying the operation result.
      */
     public enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -189,6 +192,7 @@ export class ApplicationLifecycle {
      * Enters fail-closed mode after settings become unavailable.
      *
      * @param inspectCleanup - Whether cleanup failures replace the settings failure.
+     *
      * @returns - Promise settled after fail-closed runtime reconciliation.
      */
     public async enterFailedClosed(inspectCleanup = false): Promise<void> {
@@ -235,6 +239,7 @@ export class ApplicationLifecycle {
      * @param revision - Associated settings revision.
      * @param siteScope - Active scope mode and hostname lists.
      * @param affectedHostnames - Optional hostnames limiting reconciliation.
+     *
      * @returns - Reconciliation result.
      */
     public async reconcile(
@@ -257,6 +262,7 @@ export class ApplicationLifecycle {
      * Ensures settings and runtime activation are ready for a lifecycle reason.
      *
      * @param reason - Lifecycle event requiring initialized state.
+     *
      * @returns - Promise settled after settings and activation are ready.
      */
     public ensureReady(reason: LifecycleReason = LIFECYCLE_REASON.COLD_WORKER): Promise<void> {
@@ -325,6 +331,7 @@ export class ApplicationLifecycle {
      * Queues a browser lifecycle event and ensures it is reconciled.
      *
      * @param reason - Browser lifecycle event to reconcile.
+     *
      * @returns - Promise settled when the event has been processed.
      */
     public requestLifecycle(

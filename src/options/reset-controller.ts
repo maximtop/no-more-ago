@@ -2,24 +2,26 @@
  * @file Coordinates the one cross-feature action that restores every option to defaults.
  */
 
-import { useRef, useState } from "react";
-import { CLIENT_RESULT_KIND } from "../shared/client-result";
+import { useRef, useState } from 'react';
+
+import { CLIENT_RESULT_KIND } from '../shared/client-result';
 import {
     SETTINGS_PERSISTENCE_ERROR,
     STATE_AVAILABILITY,
-} from "../shared/messaging/view-state-values";
-import type { StateAvailability } from "../shared/messaging/view-state-values";
-import type { SitesClient } from "./client";
-import type { DiagnosticsController } from "./diagnostics-controller";
-import type { DisplayController } from "./display-controller";
-import type { SitesController } from "./sites-controller";
+} from '../shared/messaging/view-state-values';
+
+import type { SitesClient } from './client';
+import type { DiagnosticsController } from './diagnostics-controller';
+import type { DisplayController } from './display-controller';
+import type { SitesController } from './sites-controller';
+import type { StateAvailability } from '../shared/messaging/view-state-values';
 
 /**
  * Named outcomes of resetting all settings.
  */
 export const RESET_NOTICE = {
     SAVE_FAILED: SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
-    AMBIGUOUS: "ambiguous",
+    AMBIGUOUS: 'ambiguous',
 } as const;
 
 /**
@@ -88,10 +90,13 @@ export interface ResetController {
  * Creates the reset coordinator for all options-page feature controllers.
  *
  * @param options Client and feature controllers affected by a full reset.
+ *
  * @returns Current reset state together with the reset command.
  */
 export function useResetController(options: ResetControllerOptions): ResetController {
-    const { client, sites, display, diagnostics } = options;
+    const {
+        client, sites, display, diagnostics,
+    } = options;
     const [resetting, setResetting] = useState(false);
     const [notice, setNotice] = useState<ResetNotice>();
     const [origin, setOrigin] = useState<ResetOrigin>(
@@ -144,5 +149,7 @@ export function useResetController(options: ResetControllerOptions): ResetContro
         setResetting(false);
     };
 
-    return { resetting, notice, origin, reset };
+    return {
+        resetting, notice, origin, reset,
+    };
 }

@@ -58,6 +58,7 @@ export interface TabsRuntime {
      * Finds every currently reachable frame in a tab.
      *
      * @param tabId - Tab whose frames should be enumerated.
+     *
      * @returns - Reachable frame identifiers, including the top-level frame.
      */
     getAllFrames(tabId: number): Promise<readonly RuntimeFrame[]>;
