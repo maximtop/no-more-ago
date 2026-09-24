@@ -148,9 +148,11 @@ has an obvious, simpler standard-library replacement.
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
 ├── .env.example                # Variable names for the local store commands
-├── eslint.config.ts            # Lint, style, and JSDoc rules
+├── eslint.config.mjs           # Common lint, style, and JSDoc rules
+├── eslint.local.mjs            # Ignores and rules that only this repository needs
 ├── rspack.config.ts            # Browser bundle entry points
-├── tsconfig.json               # Strict TypeScript configuration
+├── tsconfig.base.json          # Common strict TypeScript options
+├── tsconfig.json               # Repository-specific TypeScript options
 └── vitest.config.ts            # JSDOM test configuration
 ~~~
 
@@ -426,17 +428,16 @@ Known architectural exclusions to improve when their area changes:
   coordination, and domain transformations into focused modules as they grow.
 - Prefer cohesive feature boundaries over moving a large implementation
   unchanged into a generic helper or controller file.
-- Document files, functions, classes, methods, interfaces, type properties,
-  class properties, exported variables, and named arrow functions declared
-  inside a function body according to the ESLint JSDoc rules. Describe every
-  parameter and return value. Anonymous callbacks passed as arguments need no
-  block.
+- Document files, functions, classes, methods, interfaces, interface
+  properties, type aliases, and top-level arrow functions according to the
+  ESLint JSDoc rules. Describe every parameter, and add `@throws` to a function
+  that throws. Anonymous callbacks passed as arguments need no block.
 - Model a controller that coordinates loading, committed state, drafts,
   in-flight commands, and notices as an XState machine (`setup().createMachine`
   driven by `useMachine`) so every legal combination and transition has one
   owner; keep plain `useState` for a single independent value.
 - Use four-space indentation, braces for every control-flow body, and no
-  single-line brace blocks. Keep code and comments at or below 100 characters.
+  single-line brace blocks. Keep code and comments at or below 120 characters.
 - Prefer descriptive names and small functions over explanatory comments.
 - Remove unused fields, parameters, branches, abstractions, and compatibility
   paths as soon as they stop serving observable behavior.
