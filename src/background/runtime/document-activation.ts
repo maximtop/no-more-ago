@@ -6,72 +6,74 @@
 import {
     CONTENT_SCRIPT_FILE,
     FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
-} from "../../shared/extension-files";
-import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
-import { isFacebookUrl } from "../../shared/url/facebook";
-import {
-    DEFAULT_SITE_SCOPE,
-    isSiteProcessingEnabled,
-    type SiteScopePolicy,
-} from "../../shared/settings/site-scope";
+} from '../../shared/extension-files';
 import {
     isDocumentPolicyAcknowledgement,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
     type ReconcileDocumentPolicyMessage,
-} from "../../shared/messaging/document-messages";
-import type { RuntimeFrame, RuntimeTab, TabsRuntime } from "./tabs";
-import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from "./scripting";
+} from '../../shared/messaging/document-messages';
+import {
+    DEFAULT_SITE_SCOPE,
+    isSiteProcessingEnabled,
+    type SiteScopePolicy,
+} from '../../shared/settings/site-scope';
+import { isFacebookUrl } from '../../shared/url/facebook';
+import { HTTP_MATCH_PATTERNS, parseHttpUrl } from '../../shared/url/http';
+
 import {
     DOCUMENT_RUNTIME_REGISTRATIONS,
     registrationMatches,
-} from "./register-documents";
-import { settleBrowserOperation } from "./settle";
+} from './register-documents';
+import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from './scripting';
+import { settleBrowserOperation } from './settle';
+
+import type { RuntimeFrame, RuntimeTab, TabsRuntime } from './tabs';
 
 /**
  * Global activation policy values.
  */
 export const ACTIVATION_POLICY = {
-    ENABLED: "enabled",
-    DISABLED: "disabled",
-    UNKNOWN: "unknown",
+    ENABLED: 'enabled',
+    DISABLED: 'disabled',
+    UNKNOWN: 'unknown',
 } as const;
 
 /**
  * Registration operation outcomes.
  */
 export const REGISTRATION_OUTCOME = {
-    UNCHANGED: "unchanged",
-    REGISTERED: "registered",
-    UPDATED: "updated",
-    UNREGISTERED: "unregistered",
-    FAILED: "failed",
+    UNCHANGED: 'unchanged',
+    REGISTERED: 'registered',
+    UPDATED: 'updated',
+    UNREGISTERED: 'unregistered',
+    FAILED: 'failed',
 } as const;
 
 /**
  * Reconciliation failure scopes.
  */
 export const RECONCILE_FAILURE_SCOPE = {
-    REGISTRATION: "registration",
-    MATCHING_TABS_QUERY: "matching-tabs-query",
-    TAB: "tab",
+    REGISTRATION: 'registration',
+    MATCHING_TABS_QUERY: 'matching-tabs-query',
+    TAB: 'tab',
 } as const;
 
 /**
  * Registration operations retained in reconciliation failures.
  */
 export const REGISTRATION_OPERATION = {
-    GET: "get",
-    REGISTER: "register",
-    UPDATE: "update",
-    UNREGISTER: "unregister",
+    GET: 'get',
+    REGISTER: 'register',
+    UPDATE: 'update',
+    UNREGISTER: 'unregister',
 } as const;
 
 /**
  * Tab actions retained in reconciliation failures and outcomes.
  */
 export const TAB_ACTION = {
-    INJECT: "inject",
-    TEARDOWN: "teardown",
+    INJECT: 'inject',
+    TEARDOWN: 'teardown',
 } as const;
 
 /**
@@ -82,8 +84,7 @@ export type ActivationPolicy = (typeof ACTIVATION_POLICY)[keyof typeof ACTIVATIO
 /**
  * Registration operation outcome.
  */
-export type RegistrationOutcome =
-    (typeof REGISTRATION_OUTCOME)[keyof typeof REGISTRATION_OUTCOME];
+export type RegistrationOutcome = (typeof REGISTRATION_OUTCOME)[keyof typeof REGISTRATION_OUTCOME];
 
 /**
  * Outcome retained for one independently reconciled registration.
@@ -103,23 +104,22 @@ export interface RegistrationResult {
 /**
  * Reconciliation failure retained with independent successes.
  */
-export type ReconcileFailure =
-    | {
-        /**
-         * Identifies a registration operation failure.
-         */
-        readonly scope: typeof RECONCILE_FAILURE_SCOPE.REGISTRATION;
+export type ReconcileFailure = | {
+    /**
+     * Identifies a registration operation failure.
+     */
+    readonly scope: typeof RECONCILE_FAILURE_SCOPE.REGISTRATION;
 
-        /**
-         * Failed registration operation.
-         */
-        readonly operation: (typeof REGISTRATION_OPERATION)[keyof typeof REGISTRATION_OPERATION];
+    /**
+     * Failed registration operation.
+     */
+    readonly operation: (typeof REGISTRATION_OPERATION)[keyof typeof REGISTRATION_OPERATION];
 
-        /**
-         * Registration whose operation failed, when the failure was registration-specific.
-         */
-        readonly registrationId?: string;
-    }
+    /**
+     * Registration whose operation failed, when the failure was registration-specific.
+     */
+    readonly registrationId?: string;
+}
     | {
         /**
          * Identifies a matching-tab query failure.
@@ -241,6 +241,7 @@ interface TabOutcomeSink {
      * Adds one tab operation outcome.
      *
      * @param value - Outcome to retain.
+     *
      * @returns - Ignored collection result.
      */
     push(value: TabOutcome): unknown;
@@ -262,6 +263,40 @@ interface DocumentActivationDependencies {
 }
 
 /**
+ * Bounds one idempotent registration write and observes a successful late completion.
+ *
+ * @param operation - Registration mutation to invoke once.
+ * @param onLateWrite - Callback requesting convergence after a timed-out write succeeds.
+ *
+ * @returns - Whether the write completed successfully before the deadline.
+ */
+async function settleRegistrationWrite(
+    operation: () => Promise<void>,
+    onLateWrite?: () => void,
+): Promise<boolean> {
+    let pending: Promise<void>;
+    try {
+        pending = Promise.resolve(operation());
+    } catch {
+        return false;
+    }
+    let deadlineElapsed = false;
+    void pending.then(
+        () => {
+            if (deadlineElapsed) {
+                onLateWrite?.();
+            }
+        },
+        () => undefined,
+    );
+    const result = await settleBrowserOperation(() => pending);
+    if (!result.ok) {
+        deadlineElapsed = true;
+    }
+    return result.ok;
+}
+
+/**
  * Reconciles one registration without coupling its outcome to sibling registrations.
  *
  * @param scripting - Scripting API boundary.
@@ -269,6 +304,7 @@ interface DocumentActivationDependencies {
  * @param enabled - Whether global processing is enabled.
  * @param failures - Failure collection to append to.
  * @param onLateWrite - Optional convergence request after a timed-out write succeeds.
+ *
  * @returns - Registration operation outcome.
  */
 async function registration(
@@ -317,9 +353,9 @@ async function registration(
         ? REGISTRATION_OPERATION.UPDATE
         : REGISTRATION_OPERATION.REGISTER;
     const written = await settleRegistrationWrite(
-        () => found
+        () => (found
             ? scripting.updateContentScripts([{ ...expected }])
-            : scripting.registerContentScripts([{ ...expected }]),
+            : scripting.registerContentScripts([{ ...expected }])),
         onLateWrite,
     );
     if (written) {
@@ -340,6 +376,7 @@ async function registration(
  *
  * @param results - Per-registration outcomes from the current pass.
  * @param enabled - Whether registrations were being installed or removed.
+ *
  * @returns - Aggregate outcome retained for existing projections.
  */
 function aggregateRegistrationOutcome(
@@ -363,43 +400,11 @@ function aggregateRegistrationOutcome(
 }
 
 /**
- * Bounds one idempotent registration write and observes a successful late completion.
- *
- * @param operation - Registration mutation to invoke once.
- * @param onLateWrite - Callback requesting convergence after a timed-out write succeeds.
- * @returns - Whether the write completed successfully before the deadline.
- */
-async function settleRegistrationWrite(
-    operation: () => Promise<void>,
-    onLateWrite?: () => void,
-): Promise<boolean> {
-    let pending: Promise<void>;
-    try {
-        pending = Promise.resolve(operation());
-    } catch {
-        return false;
-    }
-    let deadlineElapsed = false;
-    void pending.then(
-        () => {
-            if (deadlineElapsed) {
-                onLateWrite?.();
-            }
-        },
-        () => undefined,
-    );
-    const result = await settleBrowserOperation(() => pending);
-    if (!result.ok) {
-        deadlineElapsed = true;
-    }
-    return result.ok;
-}
-
-/**
  * Queries and validates HTTP(S) tabs.
  *
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
+ *
  * @returns - Distinct HTTP(S) runtime tabs.
  */
 async function httpTabs(
@@ -431,6 +436,7 @@ async function httpTabs(
  * @param tabId - Target top-level tab identifier.
  * @param frameId - Exact reachable frame receiving the command.
  * @param message - Effective policy and associated settings revision.
+ *
  * @returns - Whether a document runtime acknowledged the exact revision.
  */
 async function deliverPolicy(
@@ -451,6 +457,7 @@ async function deliverPolicy(
  *
  * @param tabs - Tabs and frame browser boundary.
  * @param tabId - Tab whose frames are requested.
+ *
  * @returns - Distinct reachable frames, or null when enumeration fails.
  */
 async function enumerateFrames(
@@ -478,6 +485,7 @@ async function enumerateFrames(
  * @param tabId - Tab whose Facebook frames receive the bridge.
  * @param enabled - Whether the top-level site's effective policy is enabled.
  * @param frames - Reachable frames, or null when enumeration failed.
+ *
  * @returns - Whether every required bridge injection completed.
  */
 async function ensureFacebookBridge(
@@ -519,6 +527,7 @@ async function ensureFacebookBridge(
  * @param tabId - Target tab identifier.
  * @param frames - Exact frame identifiers receiving the command.
  * @param message - Effective policy command.
+ *
  * @returns - Acknowledgement state keyed by frame identifier.
  */
 async function deliverPolicyToFrames(
@@ -545,6 +554,7 @@ async function deliverPolicyToFrames(
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
  * @param records - Tab outcome collection to append to.
+ *
  * @returns - Promise settled after both operations.
  */
 async function refresh(
@@ -606,7 +616,9 @@ async function refresh(
             action: TAB_ACTION.INJECT,
         });
     }
-    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.INJECT, ok });
+    records.push({
+        tabId: tab.id, hostname, action: TAB_ACTION.INJECT, ok,
+    });
 }
 
 /**
@@ -618,6 +630,7 @@ async function refresh(
  * @param tabs - Tabs API boundary.
  * @param failures - Failure collection to append to.
  * @param records - Tab outcome collection to append to.
+ *
  * @returns - Promise settled after the broadcast.
  */
 async function teardown(
@@ -646,7 +659,9 @@ async function teardown(
             action: TAB_ACTION.TEARDOWN,
         });
     }
-    records.push({ tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok });
+    records.push({
+        tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok,
+    });
 }
 
 /**
@@ -677,6 +692,7 @@ export class DocumentActivationCoordinator {
      * Creates a coordinator over browser API boundaries.
      *
      * @param input - Browser scripting and tabs boundaries.
+     *
      * @returns - A coordinator over those boundaries.
      */
     public constructor(
@@ -718,16 +734,15 @@ export class DocumentActivationCoordinator {
         while (this.registrationRepairRequested) {
             this.registrationRepairRequested = false;
             const generation = this.registrationGeneration;
-            await Promise.all(DOCUMENT_RUNTIME_REGISTRATIONS.map((expected) =>
-                registration(
-                    this.input.scripting,
-                    expected,
-                    this.registrationEnabled,
-                    [],
-                    () => {
-                        this.requestRegistrationRepair(generation);
-                    },
-                )));
+            await Promise.all(DOCUMENT_RUNTIME_REGISTRATIONS.map((expected) => registration(
+                this.input.scripting,
+                expected,
+                this.registrationEnabled,
+                [],
+                () => {
+                    this.requestRegistrationRepair(generation);
+                },
+            )));
         }
     }
 
@@ -735,6 +750,7 @@ export class DocumentActivationCoordinator {
      * Reconciles registration and selected top-level documents.
      *
      * @param input - Reconciliation policy and optional host filter.
+     *
      * @returns - Complete reconciliation result.
      */
     public async reconcile(
@@ -744,7 +760,8 @@ export class DocumentActivationCoordinator {
         const records: TabOutcome[] = [];
         const enabled = input.policy === ACTIVATION_POLICY.ENABLED;
         this.registrationEnabled = enabled;
-        const registrationGeneration = ++this.registrationGeneration;
+        this.registrationGeneration += 1;
+        const { registrationGeneration } = this;
         const registrations = await Promise.all(
             DOCUMENT_RUNTIME_REGISTRATIONS.map(async (expected) => ({
                 id: expected.id,

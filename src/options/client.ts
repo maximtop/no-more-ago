@@ -4,6 +4,7 @@
  * @file Typed client for options-page requests and background responses.
  */
 
+import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from '../shared/client-result';
 import {
     GET_DISPLAY_STATE_MESSAGE,
     GET_DEBUG_STATE_MESSAGE,
@@ -22,12 +23,10 @@ import {
     type DiagnosticsClearError,
     type GetDiagnosticsSnapshotResponse,
     type BackgroundMessage,
-} from "../shared/messaging/contracts";
-import type {
-    DebugState,
-    DisplayState,
-    SitesState,
-} from "../shared/messaging/view-state";
+} from '../shared/messaging/contracts';
+import { SITE_SETTINGS_SURFACE } from '../shared/messaging/view-state-values';
+
+import type { DiagnosticsSnapshotResult } from '../shared/diagnostics/download';
 import type {
     ResetAllSettingsResponse,
     SetAppearanceResponse,
@@ -36,12 +35,14 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SetSiteScopeModeResponse,
-} from "../shared/messaging/responses";
-import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
-import type { Appearance, DisplaySettings } from "../shared/settings/snapshot";
-import type { SiteScopeMode } from "../shared/settings/site-scope";
-import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from "../shared/client-result";
-import type { DiagnosticsSnapshotResult } from "../shared/diagnostics/download";
+} from '../shared/messaging/responses';
+import type {
+    DebugState,
+    DisplayState,
+    SitesState,
+} from '../shared/messaging/view-state';
+import type { SiteScopeMode } from '../shared/settings/site-scope';
+import type { Appearance, DisplaySettings } from '../shared/settings/snapshot';
 
 /**
  * Sends an options-page request to the extension runtime.
@@ -105,18 +106,17 @@ export type DebugSetResult = MutationResult<SetDebugEnabledResponse, DebugState>
 /**
  * Result of resetting all persisted settings.
  */
-export type SitesResetResult =
-    | {
-        /**
-         * Indicates that the background returned a validated reset response.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type SitesResetResult = | {
+    /**
+     * Indicates that the background returned a validated reset response.
+     */
+    readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
-        /**
-         * Validated result of resetting all settings.
-         */
-        readonly response: ResetAllSettingsResponse;
-    }
+    /**
+     * Validated result of resetting all settings.
+     */
+    readonly response: ResetAllSettingsResponse;
+}
     | {
         /**
          * Indicates that reset completion could not be determined directly.
@@ -127,13 +127,12 @@ export type SitesResetResult =
 /**
  * Result of removing stored diagnostic entries.
  */
-export type DiagnosticsClearResult =
-    | {
-        /**
-         * Indicates that diagnostics were cleared successfully.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
-    }
+export type DiagnosticsClearResult = | {
+    /**
+     * Indicates that diagnostics were cleared successfully.
+     */
+    readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+}
     | {
         /**
          * Indicates that diagnostics could not be cleared.
@@ -173,7 +172,7 @@ export class SitesClient {
         const response = await this.transport.sendMessage({ type: GET_SITES_STATE_MESSAGE });
         const state = response as SitesState | undefined;
         if (!state) {
-            throw new Error("Missing Sites state response");
+            throw new Error('Missing Sites state response');
         }
         return state;
     }
@@ -187,7 +186,7 @@ export class SitesClient {
         const response = await this.transport.sendMessage({ type: GET_DISPLAY_STATE_MESSAGE });
         const state = response as DisplayState | undefined;
         if (!state) {
-            throw new Error("Missing Display state response");
+            throw new Error('Missing Display state response');
         }
         return state;
     }
@@ -201,7 +200,7 @@ export class SitesClient {
         const response = await this.transport.sendMessage({ type: GET_DEBUG_STATE_MESSAGE });
         const state = response as DebugState | undefined;
         if (!state) {
-            throw new Error("Missing Debug state response");
+            throw new Error('Missing Debug state response');
         }
         return state;
     }
@@ -232,6 +231,7 @@ export class SitesClient {
      * @param hostname - Exact hostname whose setting should change.
      * @param enabled - Whether processing should be enabled for the hostname.
      * @param mode - Scope mode rendered when the decision was made.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setSiteEnabled(
@@ -248,9 +248,9 @@ export class SitesClient {
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
             () => this.getState(),
-            (response: SetSiteEnabledResponse):
-                response is SitesSurfaceResponse<SetSiteEnabledResponse> =>
-                response.surface === SITE_SETTINGS_SURFACE.SITES,
+            (response: SetSiteEnabledResponse): response is SitesSurfaceResponse<SetSiteEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.SITES
+            ),
         );
     }
 
@@ -258,6 +258,7 @@ export class SitesClient {
      * Changes the active scope mode.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setSiteScopeMode(mode: SiteScopeMode): Promise<SitesScopeSetResult> {
@@ -271,6 +272,7 @@ export class SitesClient {
      * Changes global activation and receives this surface's projection back.
      *
      * @param enabled - Requested global activation state.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setGlobalEnabled(enabled: boolean): Promise<SitesGlobalSetResult> {
@@ -281,9 +283,9 @@ export class SitesClient {
                 surface: SITE_SETTINGS_SURFACE.SITES,
             }),
             () => this.getState(),
-            (response: SetGlobalEnabledResponse):
-                response is SitesSurfaceResponse<SetGlobalEnabledResponse> =>
-                response.surface === SITE_SETTINGS_SURFACE.SITES,
+            (response: SetGlobalEnabledResponse): response is SitesSurfaceResponse<SetGlobalEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.SITES
+            ),
         );
     }
 
@@ -291,6 +293,7 @@ export class SitesClient {
      * Changes whether diagnostic logging is enabled.
      *
      * @param enabled - Whether diagnostic logging should be enabled.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setDebugEnabled(enabled: boolean): Promise<DebugSetResult> {
@@ -304,6 +307,7 @@ export class SitesClient {
      * Saves display-format settings.
      *
      * @param display - Display settings to persist.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setDisplaySettings(display: DisplaySettings): Promise<DisplaySetResult> {
@@ -317,6 +321,7 @@ export class SitesClient {
      * Saves the appearance applied to both surfaces.
      *
      * @param appearance - Appearance to persist.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setAppearance(appearance: Appearance): Promise<AppearanceSetResult> {
@@ -373,16 +378,17 @@ export class SitesClient {
  * Creates an options client using an injected transport or the extension runtime.
  *
  * @param transport - Optional transport for tests or embedded callers.
+ *
  * @returns - A client whose default transport rejects when the extension runtime is unavailable.
  */
 export function createSitesClient(transport?: SitesTransport): SitesClient {
     if (transport) {
         return new SitesClient(transport);
     }
-    if (typeof chrome !== "undefined") {
+    if (typeof chrome !== 'undefined') {
         return new SitesClient(chrome.runtime);
     }
     return new SitesClient({
-        sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")),
+        sendMessage: () => Promise.reject(new Error('Extension runtime is unavailable')),
     });
 }

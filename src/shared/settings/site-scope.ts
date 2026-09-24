@@ -2,14 +2,14 @@
  * @file Site-scope policy values, activation decisions, and list transitions.
  */
 
-import { isCanonicalHostname } from "./hostname";
+import { isCanonicalHostname } from './hostname';
 
 /**
  * Named scope modes shared by settings, projections, and both UI surfaces.
  */
 export const SITE_SCOPE_MODE = {
-    ALL_EXCEPT_EXCLUDED: "all-except-excluded",
-    SELECTED_ONLY: "selected-only",
+    ALL_EXCEPT_EXCLUDED: 'all-except-excluded',
+    SELECTED_ONLY: 'selected-only',
 } as const;
 
 /**
@@ -63,6 +63,7 @@ export const DEFAULT_SITE_SCOPE: SiteScopePolicy = Object.freeze({
  * Recognizes a scope mode in free text such as a form control value.
  *
  * @param value - Candidate scope mode text.
+ *
  * @returns - The matching scope mode, or undefined when the text is not one.
  */
 export function parseSiteScopeMode(value: string): SiteScopeMode | undefined {
@@ -74,6 +75,7 @@ export function parseSiteScopeMode(value: string): SiteScopeMode | undefined {
  *
  * @param scope - Persisted scope policy.
  * @param hostname - Canonical hostname whose processing state is requested.
+ *
  * @returns - Whether processing applies to the hostname under this policy.
  */
 export function isSiteProcessingEnabled(scope: SiteScopePolicy, hostname: string): boolean {
@@ -87,6 +89,7 @@ export function isSiteProcessingEnabled(scope: SiteScopePolicy, hostname: string
  * and dropping duplicates.
  *
  * @param values - Candidate hostname list.
+ *
  * @returns - Frozen deduplicated list, or null when the list is not acceptable.
  */
 function copyHostnames(values: readonly string[]): readonly string[] | null {
@@ -101,6 +104,7 @@ function copyHostnames(values: readonly string[]): readonly string[] | null {
  * Validates a typed scope policy and returns an immutable copy.
  *
  * @param value - Typed scope policy.
+ *
  * @returns - Immutable validated policy, or null when an entry or a list size is invalid.
  */
 export function parseSiteScopePolicy(value: SiteScopePolicy): SiteScopePolicy | null {
@@ -120,6 +124,7 @@ export function parseSiteScopePolicy(value: SiteScopePolicy): SiteScopePolicy | 
  *
  * @param hosts - Current hostname list.
  * @param hostname - Canonical hostname to include.
+ *
  * @returns - List containing the hostname exactly once.
  */
 function withHostname(hosts: readonly string[], hostname: string): readonly string[] {
@@ -131,6 +136,7 @@ function withHostname(hosts: readonly string[], hostname: string): readonly stri
  *
  * @param hosts - Current hostname list.
  * @param hostname - Canonical hostname to remove.
+ *
  * @returns - List without the hostname.
  */
 function withoutHostname(hosts: readonly string[], hostname: string): readonly string[] {
@@ -142,6 +148,7 @@ function withoutHostname(hosts: readonly string[], hostname: string): readonly s
  *
  * @param scope - Current scope policy.
  * @param hostname - Canonical hostname about to be added.
+ *
  * @returns - Whether adding the hostname would exceed the list bound.
  */
 export function isSiteListFull(scope: SiteScopePolicy, hostname: string): boolean {
@@ -158,6 +165,7 @@ export function isSiteListFull(scope: SiteScopePolicy, hostname: string): boolea
  * @param scope - Current scope policy.
  * @param hostname - Canonical hostname whose processing state changes.
  * @param enabled - Whether processing should apply to the hostname.
+ *
  * @returns - Immutable policy reflecting the requested decision.
  */
 export function withSiteProcessing(

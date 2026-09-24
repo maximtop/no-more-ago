@@ -2,37 +2,41 @@
  * @file Owns debug logging, diagnostic archives, and site-report actions for options.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    createUnavailableDebugState,
-    type DebugState,
-} from "../shared/messaging/view-state";
-import {
-    SETTINGS_PERSISTENCE_ERROR,
-    STATE_AVAILABILITY,
-} from "../shared/messaging/view-state-values";
-import { CLIENT_RESULT_KIND } from "../shared/client-result";
-import type { DownloadRuntime } from "../shared/diagnostics/archive";
+    useCallback, useEffect, useRef, useState,
+} from 'react';
+
+import { CLIENT_RESULT_KIND } from '../shared/client-result';
 import {
     DIAGNOSTICS_CLEARED_KEY,
     diagnosticsErrorKey,
     downloadDiagnosticsSnapshot,
-} from "../shared/diagnostics/download";
-import type { MessageKey } from "../shared/i18n/translator";
+} from '../shared/diagnostics/download';
+import {
+    createUnavailableDebugState,
+    type DebugState,
+} from '../shared/messaging/view-state';
+import {
+    SETTINGS_PERSISTENCE_ERROR,
+    STATE_AVAILABILITY,
+} from '../shared/messaging/view-state-values';
 import {
     SITE_REPORT_ERROR,
     type SiteReportError,
     type SiteReportReporter,
-} from "../shared/reporting/site-report";
-import type { SitesClient } from "./client";
+} from '../shared/reporting/site-report';
+
+import type { SitesClient } from './client';
+import type { DownloadRuntime } from '../shared/diagnostics/archive';
+import type { MessageKey } from '../shared/i18n/translator';
 
 /**
  * Named outcomes of a Debug logs mutation.
  */
 export const DEBUG_NOTICE = {
     SAVE_FAILED: SETTINGS_PERSISTENCE_ERROR.SAVE_FAILED,
-    INTERRUPTED: "interrupted",
-    UNKNOWN: "unknown",
+    INTERRUPTED: 'interrupted',
+    UNKNOWN: 'unknown',
 } as const;
 
 /**
@@ -44,15 +48,16 @@ export type DebugNotice = (typeof DEBUG_NOTICE)[keyof typeof DEBUG_NOTICE] | und
  * Message mapping for every supported outcome.
  */
 const DEBUG_NOTICE_KEYS = {
-    [DEBUG_NOTICE.SAVE_FAILED]: "debug_error_save_failed",
-    [DEBUG_NOTICE.INTERRUPTED]: "debug_error_interrupted",
-    [DEBUG_NOTICE.UNKNOWN]: "debug_error_unknown",
+    [DEBUG_NOTICE.SAVE_FAILED]: 'debug_error_save_failed',
+    [DEBUG_NOTICE.INTERRUPTED]: 'debug_error_interrupted',
+    [DEBUG_NOTICE.UNKNOWN]: 'debug_error_unknown',
 } as const satisfies Record<Exclude<DebugNotice, undefined>, MessageKey>;
 
 /**
  * Maps a Debug logs outcome to the message key describing it.
  *
  * @param notice - Outcome reported after changing the Debug logs setting.
+ *
  * @returns - Message key, or undefined when there is no notice to show.
  */
 export function debugNoticeKey(notice: DebugNotice): MessageKey | undefined {
@@ -132,6 +137,7 @@ export interface DiagnosticsController {
      * Changes whether bounded diagnostic logging is enabled.
      *
      * @param enabled - Whether diagnostic logging should be enabled.
+     *
      * @returns - A promise that settles after the command outcome has been applied.
      */
     changeDebug(enabled: boolean): Promise<void>;
@@ -181,20 +187,21 @@ export interface DiagnosticsController {
  * Message mapping for every supported outcome.
  */
 const SITE_REPORT_ERROR_KEYS = {
-    [SITE_REPORT_ERROR.MISSING_TAB]: "report_error_context",
-    [SITE_REPORT_ERROR.RESTRICTED_PAGE]: "report_error_context",
-    [SITE_REPORT_ERROR.HOSTNAME_MISMATCH]: "report_error_context",
-    [SITE_REPORT_ERROR.PRIVATE_WINDOW]: "report_error_context",
-    [SITE_REPORT_ERROR.BROWSER_UNAVAILABLE]: "report_error_browser",
-    [SITE_REPORT_ERROR.INVALID_CONTEXT]: "report_error_context",
-    [SITE_REPORT_ERROR.BUSY]: "report_error_busy_options",
-    [SITE_REPORT_ERROR.OPEN_FAILED]: "report_error_generic",
+    [SITE_REPORT_ERROR.MISSING_TAB]: 'report_error_context',
+    [SITE_REPORT_ERROR.RESTRICTED_PAGE]: 'report_error_context',
+    [SITE_REPORT_ERROR.HOSTNAME_MISMATCH]: 'report_error_context',
+    [SITE_REPORT_ERROR.PRIVATE_WINDOW]: 'report_error_context',
+    [SITE_REPORT_ERROR.BROWSER_UNAVAILABLE]: 'report_error_browser',
+    [SITE_REPORT_ERROR.INVALID_CONTEXT]: 'report_error_context',
+    [SITE_REPORT_ERROR.BUSY]: 'report_error_busy_options',
+    [SITE_REPORT_ERROR.OPEN_FAILED]: 'report_error_generic',
 } as const satisfies Record<SiteReportError, MessageKey>;
 
 /**
  * Maps a site-report failure to the guidance key shown in settings.
  *
  * @param error - Failure returned by the site-report service.
+ *
  * @returns - Message key displayed to the user.
  */
 function siteReportErrorKey(error: SiteReportError): MessageKey {
@@ -205,12 +212,15 @@ function siteReportErrorKey(error: SiteReportError): MessageKey {
  * Creates the diagnostics controller for the options page.
  *
  * @param options - Controller dependencies and optional preloaded state.
+ *
  * @returns - Current diagnostics state together with logging, archive, and report commands.
  */
 export function useDiagnosticsController(
     options: DiagnosticsControllerOptions,
 ): DiagnosticsController {
-    const { client, reporter, initialState, archiveRuntime } = options;
+    const {
+        client, reporter, initialState, archiveRuntime,
+    } = options;
     const [state, setState] = useState<DebugState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);
     const [saving, setSaving] = useState(false);
@@ -225,7 +235,7 @@ export function useDiagnosticsController(
 
     useEffect(() => {
         if (initialState) {
-            return;
+            return undefined;
         }
         let mounted = true;
         void client
@@ -253,6 +263,7 @@ export function useDiagnosticsController(
      * Persists the Debug logs toggle and applies the outcome.
      *
      * @param enabled - Requested logging state.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     const changeDebug = async (enabled: boolean): Promise<void> => {
@@ -365,7 +376,7 @@ export function useDiagnosticsController(
                 setReportNotice(siteReportErrorKey(result.error));
             }
         } catch {
-            setReportNotice("report_error_generic");
+            setReportNotice('report_error_generic');
         } finally {
             reportInFlight.current = false;
             setReporting(false);

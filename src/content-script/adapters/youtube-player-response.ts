@@ -2,10 +2,10 @@
  * @file Bounded document-local reader for loaded YouTube player publication data.
  */
 
-import * as v from "valibot";
+import * as v from 'valibot';
 
-const PLAYER_RESPONSE_PREFIX = "var ytInitialPlayerResponse = ";
-const PLAYER_RESPONSE_SUFFIX = ";";
+const PLAYER_RESPONSE_PREFIX = 'var ytInitialPlayerResponse = ';
+const PLAYER_RESPONSE_SUFFIX = ';';
 
 /**
  * Maximum assignment text retained or parsed by the reader.
@@ -66,6 +66,7 @@ export interface YouTubePlayerResponseReader {
      *
      * @param document - Current loaded page document.
      * @param expectedVideoId - Canonical ID from the current processing URL.
+     *
      * @returns - Exact publication string or null.
      */
     read(document: Document, expectedVideoId: string): string | null;
@@ -88,6 +89,7 @@ const playerResponseSchema = v.object({
  * Enumerates scripts beginning with the recognized assignment prefix in one bounded root.
  *
  * @param root - Current document or bounded added root.
+ *
  * @returns - Matching scripts in DOM query order.
  */
 export function findYouTubePlayerResponseScripts(
@@ -96,12 +98,12 @@ export function findYouTubePlayerResponseScripts(
     const scripts: HTMLScriptElement[] = [];
     if (
         root.nodeType === Node.ELEMENT_NODE
-        && (root as Element).matches("script")
+        && (root as Element).matches('script')
         && (root as HTMLScriptElement).textContent.startsWith(PLAYER_RESPONSE_PREFIX)
     ) {
         scripts.push(root as HTMLScriptElement);
     }
-    for (const script of root.querySelectorAll("script")) {
+    for (const script of root.querySelectorAll('script')) {
         if (script.textContent.startsWith(PLAYER_RESPONSE_PREFIX)) {
             scripts.push(script);
         }
@@ -114,6 +116,7 @@ export function findYouTubePlayerResponseScripts(
  *
  * @param sourceText - Exact candidate assignment text.
  * @param parseJson - Narrow JSON parser capability.
+ *
  * @returns - Minimal publication record or null when rejected.
  */
 function parseAssignment(
@@ -149,6 +152,7 @@ function parseAssignment(
  * Creates an isolated reader with one cached assignment record per document.
  *
  * @param parseJson - JSON parser used for new or changed assignment text.
+ *
  * @returns - Document-scoped publication reader.
  */
 export function createYouTubePlayerResponseReader(
@@ -195,6 +199,7 @@ const defaultPlayerResponseReader = createYouTubePlayerResponseReader();
  *
  * @param document - Current loaded page document.
  * @param expectedVideoId - Canonical ID from the current processing URL.
+ *
  * @returns - Exact publication string or null.
  */
 export function readYouTubePlayerResponsePublication(

@@ -6,10 +6,10 @@
  * Named output precision levels, ordered from coarse to fine.
  */
 export const DATE_PRECISION = {
-    YEAR: "year",
-    DAY: "day",
-    MINUTES: "minutes",
-    SECONDS: "seconds",
+    YEAR: 'year',
+    DAY: 'day',
+    MINUTES: 'minutes',
+    SECONDS: 'seconds',
 } as const;
 
 /**
@@ -85,6 +85,7 @@ export const DEFAULT_PRECISION_POLICY: PrecisionPolicy = Object.freeze({
  * Validates user-authored range bounds without revalidating internal object shapes.
  *
  * @param policy - Typed policy from the settings form.
+ *
  * @returns - Whether thresholds and precision choices satisfy the domain.
  */
 export function isPrecisionPolicyValid(policy: PrecisionPolicy): boolean {
@@ -107,6 +108,7 @@ export function isPrecisionPolicyValid(policy: PrecisionPolicy): boolean {
  *
  * @param a - First policy, or the default policy when omitted.
  * @param b - Second policy, or the default policy when omitted.
+ *
  * @returns - Whether both policies describe the same choices.
  */
 export function samePrecisionPolicy(
@@ -125,6 +127,7 @@ export function samePrecisionPolicy(
  * @param instant - Trusted timestamp.
  * @param policy - Optional display policy; omission preserves the saved format.
  * @param now - Current instant in Unix milliseconds.
+ *
  * @returns - Precision limit, or undefined when age selection is disabled.
  */
 export function precisionForAge(

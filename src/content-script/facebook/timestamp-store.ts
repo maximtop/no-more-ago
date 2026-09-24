@@ -9,15 +9,15 @@ import {
     FACEBOOK_TRACKING_QUERY_PARAMETER,
     type FacebookTimestampPayloadUpdate,
     type FacebookTimestampRecord,
-} from "./contracts";
-import { extractFacebookTimestampUpdate } from "./payload-parser";
+} from './contracts';
+import { extractFacebookTimestampUpdate } from './payload-parser';
 
 /**
  * Observable association changes consumed by targeted Facebook reconciliation.
  */
 export const FACEBOOK_TIMESTAMP_RECORD_CHANGE = {
-    AVAILABLE: "available",
-    INVALIDATED: "invalidated",
+    AVAILABLE: 'available',
+    INVALIDATED: 'invalidated',
 } as const;
 
 /**
@@ -41,25 +41,24 @@ export interface FacebookTimestampRecordChange {
  * Internal retained association states.
  */
 const FACEBOOK_TIMESTAMP_ASSOCIATION_STATE = {
-    RECORD: "record",
-    CONFLICT: "conflict",
+    RECORD: 'record',
+    CONFLICT: 'conflict',
 } as const;
 
 /**
  * Retained usable record or fail-closed conflict marker.
  */
-type FacebookTimestampAssociation =
-    | {
-        /**
-         * Identifies an available association.
-         */
-        readonly state: typeof FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD;
+type FacebookTimestampAssociation = | {
+    /**
+     * Identifies an available association.
+     */
+    readonly state: typeof FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD;
 
-        /**
-         * Minimal timestamp record associated with the token.
-         */
-        readonly record: FacebookTimestampRecord;
-    }
+    /**
+     * Minimal timestamp record associated with the token.
+     */
+    readonly record: FacebookTimestampRecord;
+}
     | {
         /**
          * Identifies a token rejected after contradictory evidence.
@@ -88,6 +87,7 @@ const stores = new WeakMap<Document, FacebookTimestampStore>();
  * Returns the mutable store owned by one document.
  *
  * @param document - Document whose Facebook payload state is requested.
+ *
  * @returns - Existing or newly created timestamp store.
  */
 function getStore(document: Document): FacebookTimestampStore {
@@ -133,23 +133,24 @@ function enforceAssociationLimit(
  * Extracts the tracking token from an eligible Facebook link URL.
  *
  * @param element - Candidate page-owned anchor.
+ *
  * @returns - Exact encrypted tracking token, or null when the link is unsuitable.
  */
 export function getFacebookTrackingToken(element: Element): string | null {
     if (
-        element.namespaceURI !== "http://www.w3.org/1999/xhtml"
-        || element.localName !== "a"
+        element.namespaceURI !== 'http://www.w3.org/1999/xhtml'
+        || element.localName !== 'a'
     ) {
         return null;
     }
-    const href = element.getAttribute("href");
+    const href = element.getAttribute('href');
     if (!href) {
         return null;
     }
     try {
         const token = new URL(href, element.ownerDocument.baseURI)
             .searchParams.get(FACEBOOK_TRACKING_QUERY_PARAMETER);
-        return token && token.trim() !== "" ? token : null;
+        return token && token.trim() !== '' ? token : null;
     } catch {
         return null;
     }
@@ -160,6 +161,7 @@ export function getFacebookTrackingToken(element: Element): string | null {
  *
  * @param document - Document receiving the update.
  * @param update - Structurally validated records and same-payload conflicts.
+ *
  * @returns - Availability changes requiring targeted source reconciliation.
  */
 export function storeFacebookTimestampUpdate(
@@ -180,45 +182,43 @@ export function storeFacebookTimestampUpdate(
     }
     for (const record of update.records) {
         const existing = store.associations.get(record.trackingToken);
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
-            continue;
-        }
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD) {
-            if (existing.record.rawDatetime === record.rawDatetime) {
-                continue;
+        const isRejected = existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT;
+        const isUnchanged = existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD
+            && existing.record.rawDatetime === record.rawDatetime;
+        if (!isRejected && !isUnchanged) {
+            if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD) {
+                store.associations.set(record.trackingToken, {
+                    state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
+                });
+                changed.set(record.trackingToken, {
+                    trackingToken: record.trackingToken,
+                    state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+                });
+            } else {
+                store.associations.set(record.trackingToken, {
+                    state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD,
+                    record,
+                });
+                changed.set(record.trackingToken, {
+                    trackingToken: record.trackingToken,
+                    state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
+                });
+                enforceAssociationLimit(store, changed);
             }
-            store.associations.set(record.trackingToken, {
-                state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
-            });
-            changed.set(record.trackingToken, {
-                trackingToken: record.trackingToken,
-                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
-            });
-            continue;
         }
-        store.associations.set(record.trackingToken, {
-            state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.RECORD,
-            record,
-        });
-        changed.set(record.trackingToken, {
-            trackingToken: record.trackingToken,
-            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.AVAILABLE,
-        });
-        enforceAssociationLimit(store, changed);
     }
     for (const trackingToken of update.invalidatedTrackingTokens) {
         const existing = store.associations.get(trackingToken);
-        if (existing?.state === FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
-            continue;
+        if (existing?.state !== FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT) {
+            store.associations.set(trackingToken, {
+                state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
+            });
+            changed.set(trackingToken, {
+                trackingToken,
+                state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
+            });
+            enforceAssociationLimit(store, changed);
         }
-        store.associations.set(trackingToken, {
-            state: FACEBOOK_TIMESTAMP_ASSOCIATION_STATE.CONFLICT,
-        });
-        changed.set(trackingToken, {
-            trackingToken,
-            state: FACEBOOK_TIMESTAMP_RECORD_CHANGE.INVALIDATED,
-        });
-        enforceAssociationLimit(store, changed);
     }
     return [...changed.values()];
 }
@@ -228,6 +228,7 @@ export function storeFacebookTimestampUpdate(
  *
  * @param document - Facebook document whose scripts are inspected.
  * @param scripts - Exact mutated scripts, or all matching scripts during startup.
+ *
  * @returns - Availability changes produced by newly parsed scripts.
  */
 export function ingestFacebookPayloadScripts(
@@ -241,17 +242,15 @@ export function ingestFacebookPayloadScripts(
             (element): element is HTMLScriptElement => element instanceof HTMLScriptElement,
         );
     for (const element of candidates) {
-        if (!(element instanceof HTMLScriptElement) || store.parsedScripts.has(element)) {
-            continue;
-        }
-        const payloadText = element.textContent;
-        if (payloadText.trim() === "") {
-            continue;
-        }
-        store.parsedScripts.add(element);
-        const update = extractFacebookTimestampUpdate(payloadText);
-        for (const change of storeFacebookTimestampUpdate(document, update)) {
-            changed.set(change.trackingToken, change);
+        if (element instanceof HTMLScriptElement && !store.parsedScripts.has(element)) {
+            const payloadText = element.textContent;
+            if (payloadText.trim() !== '') {
+                store.parsedScripts.add(element);
+                const update = extractFacebookTimestampUpdate(payloadText);
+                for (const change of storeFacebookTimestampUpdate(document, update)) {
+                    changed.set(change.trackingToken, change);
+                }
+            }
         }
     }
     return [...changed.values()];
@@ -261,6 +260,7 @@ export function ingestFacebookPayloadScripts(
  * Returns the exact Story record associated with one page-owned timestamp link.
  *
  * @param element - Candidate Facebook timestamp link.
+ *
  * @returns - Matching record, or null when the payload provides no unambiguous proof.
  */
 export function getFacebookTimestampRecord(element: Element): FacebookTimestampRecord | null {
@@ -278,6 +278,7 @@ export function getFacebookTimestampRecord(element: Element): FacebookTimestampR
  *
  * @param document - Facebook document to search.
  * @param tokens - Exact tracking tokens whose records changed.
+ *
  * @returns - Page-owned anchors suitable for targeted reconciliation.
  */
 export function findFacebookTimestampSources(

@@ -6,17 +6,16 @@
  * Supported LinkedIn logical ID kinds.
  */
 export const LINKEDIN_ID_KIND = {
-    ACTIVITY: "activity",
-    UGC_POST: "ugcPost",
-    SHARE: "share",
-    COMMENT: "comment",
+    ACTIVITY: 'activity',
+    UGC_POST: 'ugcPost',
+    SHARE: 'share',
+    COMMENT: 'comment',
 } as const;
 
 /**
  * Supported LinkedIn logical ID kind.
  */
-export type LinkedInIdKind =
-    (typeof LINKEDIN_ID_KIND)[keyof typeof LINKEDIN_ID_KIND];
+export type LinkedInIdKind = (typeof LINKEDIN_ID_KIND)[keyof typeof LINKEDIN_ID_KIND];
 
 /**
  * Strict logical ID parsed from adapter-approved evidence.
@@ -35,47 +34,48 @@ export interface LinkedInLogicalId {
 
 const MAX_LINKEDIN_ID_DIGITS = 20;
 const DECIMAL_TOKEN = `[1-9]\\d{0,${String(MAX_LINKEDIN_ID_DIGITS - 1)}}`;
-const POST_ID_KIND_TOKEN = "activity|ugcPost|share";
-const LEFT_TOKEN_BOUNDARY = "(?:^|[^0-9A-Za-z_])";
-const DECIMAL_PATTERN = new RegExp(`^${DECIMAL_TOKEN}$`, "u");
+const POST_ID_KIND_TOKEN = 'activity|ugcPost|share';
+const LEFT_TOKEN_BOUNDARY = '(?:^|[^0-9A-Za-z_])';
+const DECIMAL_PATTERN = new RegExp(`^${DECIMAL_TOKEN}$`, 'u');
 const STRICT_POST_URN_PATTERN = new RegExp(
     `^urn:li:(${POST_ID_KIND_TOKEN}):(${DECIMAL_TOKEN})$`,
-    "u",
+    'u',
 );
 const DIRECT_URN_PATTERN = new RegExp(
     `${LEFT_TOKEN_BOUNDARY}urn:li:(${POST_ID_KIND_TOKEN}):`
         + `(${DECIMAL_TOKEN})(?=$|[/?#&,)\\]])`,
-    "gu",
+    'gu',
 );
 const NAMED_ID_PATTERN = new RegExp(
     `\\b(${POST_ID_KIND_TOKEN}|comment)Id=(${DECIMAL_TOKEN})(?=$|[,)])`,
-    "gu",
+    'gu',
 );
 const COMMENT_URN_PATTERN = new RegExp(
     `${LEFT_TOKEN_BOUNDARY}urn:li:comment:\\(`
         + `(?:(?:urn:li:)?(?:${POST_ID_KIND_TOKEN}):)?`
         + `${DECIMAL_TOKEN},(${DECIMAL_TOKEN})\\)(?![0-9A-Za-z_])`,
-    "gu",
+    'gu',
 );
 const COMMENT_URN_CONTEXT_PATTERN = new RegExp(
     `${LEFT_TOKEN_BOUNDARY}urn:li:comment:\\(`
         + `(?:(?:urn:li:)?(${POST_ID_KIND_TOKEN}):)`
         + `(${DECIMAL_TOKEN}),(${DECIMAL_TOKEN})\\)(?![0-9A-Za-z_])`,
-    "gu",
+    'gu',
 );
 const NAMED_COMMENT_CONTEXT_PATTERN = new RegExp(
     `commentId=(${DECIMAL_TOKEN}),\\s*thread=urn:li:`
         + `(${POST_ID_KIND_TOKEN}):(${DECIMAL_TOKEN})(?=$|[,)])`,
-    "gu",
+    'gu',
 );
-const LINKEDIN_TIMESTAMP_BITS = 22n;
+const LINKEDIN_TIMESTAMP_DIVISOR = 2n ** 22n;
 const MAX_SAFE_INTEGER_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
-const MAX_UNSIGNED_64_BIT_INTEGER = (1n << 64n) - 1n;
+const MAX_UNSIGNED_64_BIT_INTEGER = 2n ** 64n - 1n;
 
 /**
  * Decodes a URL-encoded evidence value without making malformed encoding fatal.
  *
  * @param value - Raw page attribute value.
+ *
  * @returns - Raw and successfully decoded forms without duplicates.
  */
 function getEvidenceForms(value: string): readonly string[] {
@@ -110,6 +110,7 @@ function addId(
  * Parses every supported logical ID explicitly present in one evidence value.
  *
  * @param value - Adapter-approved URL, URN, component-key, or data-anchor value.
+ *
  * @returns - Deduplicated logical IDs in first-seen order.
  */
 export function parseLinkedInIds(value: string): readonly LinkedInLogicalId[] {
@@ -143,6 +144,7 @@ export function parseLinkedInIds(value: string): readonly LinkedInLogicalId[] {
  * Parses one complete supported post URN without accepting surrounding text.
  *
  * @param value - Candidate complete LinkedIn post URN.
+ *
  * @returns - Strict post ID, or null for any unsupported grammar.
  */
 export function parseLinkedInPostUrn(value: string): LinkedInLogicalId | null {
@@ -156,6 +158,7 @@ export function parseLinkedInPostUrn(value: string): LinkedInLogicalId | null {
  * Parses target IDs while excluding only structurally proven comment-thread context.
  *
  * @param value - Adapter-approved non-href evidence value.
+ *
  * @returns - Deduplicated target IDs with composite parent threads removed.
  */
 export function parseLinkedInTargetIds(value: string): readonly LinkedInLogicalId[] {
@@ -184,6 +187,7 @@ export function parseLinkedInTargetIds(value: string): readonly LinkedInLogicalI
  * Decodes the upper timestamp bits of one strict LinkedIn logical ID.
  *
  * @param id - Strict logical ID parsed from page evidence.
+ *
  * @returns - Exact safe Unix milliseconds, or null outside the numeric domain.
  */
 export function decodeLinkedInIdMilliseconds(id: LinkedInLogicalId): number | null {
@@ -199,7 +203,7 @@ export function decodeLinkedInIdMilliseconds(id: LinkedInLogicalId): number | nu
     if (numericId > MAX_UNSIGNED_64_BIT_INTEGER) {
         return null;
     }
-    const epoch = numericId >> LINKEDIN_TIMESTAMP_BITS;
+    const epoch = numericId / LINKEDIN_TIMESTAMP_DIVISOR;
     if (epoch <= 0n || epoch > MAX_SAFE_INTEGER_BIGINT) {
         return null;
     }

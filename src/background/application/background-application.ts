@@ -2,35 +2,28 @@
  * @file Public background application facade.
  */
 
-import type { DiagnosticSender } from "../../shared/diagnostics/events";
-import type { ActivationReconcileResult } from "../runtime/document-activation";
-import type {
-    Appearance,
-    DisplaySettings,
-    SettingsSnapshot,
-} from "../../shared/settings/snapshot";
-import type { SiteScopeMode } from "../../shared/settings/site-scope";
-import { ActivationManager } from "./activation-manager";
-import { ApplicationLifecycle } from "./lifecycle";
+import { DiagnosticsService } from '../diagnostics/service';
+import { deriveDisplayState } from '../projection/display-state';
+import { deriveDocumentState } from '../projection/document-state';
+import { StateProjection } from '../projection/state-projection';
+import { SettingsCommands } from '../settings/commands';
+import { DocumentRefresh } from '../settings/document-refresh';
+
+import { ActivationManager } from './activation-manager';
 import {
     LIFECYCLE_REASON,
     type ApplicationPhase,
     type BackgroundApplicationOptions,
     type LifecycleReason,
-} from "./contracts";
-import { DiagnosticsService } from "../diagnostics/service";
-import { deriveDisplayState } from "../projection/display-state";
-import { DocumentRefresh } from "../settings/document-refresh";
+} from './contracts';
+import { ApplicationLifecycle } from './lifecycle';
+
+import type { DiagnosticSender } from '../../shared/diagnostics/events';
 import type {
     ClearDiagnosticsResponse,
     GetDiagnosticsSnapshotResponse,
-} from "../../shared/messaging/contracts";
-import type {
-    DebugState,
-    DisplayState,
-    PopupState,
-    SitesState,
-} from "../../shared/messaging/view-state";
+} from '../../shared/messaging/contracts';
+import type { DocumentState } from '../../shared/messaging/document-state';
 import type {
     ResetAllSettingsResponse,
     SetAppearanceResponse,
@@ -39,12 +32,21 @@ import type {
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
     SetSiteScopeModeResponse,
-} from "../../shared/messaging/responses";
-import type { SiteSettingsSurface } from "../../shared/messaging/view-state-values";
-import { SettingsCommands } from "../settings/commands";
-import { StateProjection } from "../projection/state-projection";
-import { deriveDocumentState } from "../projection/document-state";
-import type { DocumentState } from "../../shared/messaging/document-state";
+} from '../../shared/messaging/responses';
+import type {
+    DebugState,
+    DisplayState,
+    PopupState,
+    SitesState,
+} from '../../shared/messaging/view-state';
+import type { SiteSettingsSurface } from '../../shared/messaging/view-state-values';
+import type { SiteScopeMode } from '../../shared/settings/site-scope';
+import type {
+    Appearance,
+    DisplaySettings,
+    SettingsSnapshot,
+} from '../../shared/settings/snapshot';
+import type { ActivationReconcileResult } from '../runtime/document-activation';
 
 export type {
     ActivationCoordinator,
@@ -53,7 +55,7 @@ export type {
     BackgroundApplicationOptions,
     LifecycleReason,
     SettingsBroadcast,
-} from "./contracts";
+} from './contracts';
 
 /**
  * Stable public facade coordinating focused background services.
@@ -139,6 +141,7 @@ export class BackgroundApplication {
      * Ensures settings and runtime activation are ready.
      *
      * @param reason - Lifecycle event requiring initialized state.
+     *
      * @returns - Promise settled after initialization and reconciliation.
      */
     public ensureReady(reason: LifecycleReason = LIFECYCLE_REASON.COLD_WORKER): Promise<void> {
@@ -149,6 +152,7 @@ export class BackgroundApplication {
      * Queues a browser lifecycle event and reconciles it.
      *
      * @param reason - Browser lifecycle event to reconcile.
+     *
      * @returns - Promise settled after the event is processed.
      */
     public requestLifecycle(
@@ -164,9 +168,7 @@ export class BackgroundApplication {
      */
     public async getPopupState(): Promise<PopupState> {
         await this.prepareQuery();
-        return this.lifecycle.enqueue(() =>
-            this.projection.deriveAndCachePopup(this.lifecycle.state),
-        );
+        return this.lifecycle.enqueue(() => this.projection.deriveAndCachePopup(this.lifecycle.state));
     }
 
     /**
@@ -176,9 +178,7 @@ export class BackgroundApplication {
      */
     public async getSitesState(): Promise<SitesState> {
         await this.prepareQuery();
-        return this.lifecycle.enqueue(() =>
-            Promise.resolve(this.projection.deriveSites(this.lifecycle.state)),
-        );
+        return this.lifecycle.enqueue(() => Promise.resolve(this.projection.deriveSites(this.lifecycle.state)));
     }
 
     /**
@@ -188,9 +188,7 @@ export class BackgroundApplication {
      */
     public async getDebugState(): Promise<DebugState> {
         await this.prepareQuery();
-        return this.lifecycle.enqueue(() =>
-            Promise.resolve(this.diagnostics.debugState(this.lifecycle.state)),
-        );
+        return this.lifecycle.enqueue(() => Promise.resolve(this.diagnostics.debugState(this.lifecycle.state)));
     }
 
     /**
@@ -218,6 +216,7 @@ export class BackgroundApplication {
      *
      * @param input - Untrusted document diagnostic payload.
      * @param sender - WebExtension sender metadata.
+     *
      * @returns - Whether a valid enabled event was accepted.
      */
     public recordDocumentEvent(
@@ -231,13 +230,12 @@ export class BackgroundApplication {
      * Returns top-level policy and presentation state for one document frame.
      *
      * @param sender - Browser sender metadata, including the top-level tab URL.
+     *
      * @returns Fail-closed or ready document state.
      */
     public async getDocumentState(sender: DiagnosticSender): Promise<DocumentState> {
         await this.prepareQuery();
-        return this.lifecycle.enqueue(() =>
-            Promise.resolve(deriveDocumentState(this.lifecycle.state, sender)),
-        );
+        return this.lifecycle.enqueue(() => Promise.resolve(deriveDocumentState(this.lifecycle.state, sender)));
     }
 
     /**
@@ -247,15 +245,14 @@ export class BackgroundApplication {
      */
     public async getDisplayState(): Promise<DisplayState> {
         await this.prepareQuery();
-        return this.lifecycle.enqueue(() =>
-            Promise.resolve(deriveDisplayState(this.lifecycle.state)),
-        );
+        return this.lifecycle.enqueue(() => Promise.resolve(deriveDisplayState(this.lifecycle.state)));
     }
 
     /**
      * Persists diagnostic logging and refreshes enabled documents.
      *
      * @param enabled - Requested diagnostic logging state.
+     *
      * @returns - Persisted state and refresh failures.
      */
     public setDebugEnabled(enabled: boolean): Promise<SetDebugEnabledResponse> {
@@ -266,6 +263,7 @@ export class BackgroundApplication {
      * Validates and persists display settings.
      *
      * @param display - Typed display settings payload.
+     *
      * @returns - Persisted display state and refresh failures.
      */
     public setDisplaySettings(display: DisplaySettings): Promise<SetDisplaySettingsResponse> {
@@ -276,6 +274,7 @@ export class BackgroundApplication {
      * Persists the appearance applied to both extension surfaces.
      *
      * @param appearance - Requested appearance.
+     *
      * @returns - Persisted display state carrying the appearance.
      */
     public setAppearance(appearance: Appearance): Promise<SetAppearanceResponse> {
@@ -286,6 +285,7 @@ export class BackgroundApplication {
      * Persists the active site scope mode and reconciles matching documents.
      *
      * @param mode - Requested scope mode.
+     *
      * @returns - Persisted sites state.
      */
     public setSiteScopeMode(mode: SiteScopeMode): Promise<SetSiteScopeModeResponse> {
@@ -306,6 +306,7 @@ export class BackgroundApplication {
      *
      * @param enabled - Requested global activation state.
      * @param surface - Response projection requested by the caller.
+     *
      * @returns - Persisted global state and the popup or sites projection.
      */
     public setGlobalEnabled(
@@ -323,6 +324,7 @@ export class BackgroundApplication {
      * @param enabled - Whether processing should apply to the hostname.
      * @param mode - Scope mode the caller rendered when it made the decision.
      * @param surface - Response projection requested by the caller.
+     *
      * @returns - Persisted update and popup or sites projection.
      */
     public setSiteEnabled(

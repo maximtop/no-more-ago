@@ -11,6 +11,7 @@ export interface TimestampExtractionPolicy {
      *
      * @param ruleId - Stable source-rule identifier.
      * @param source - Exact discovered source.
+     *
      * @returns - Whether extraction is allowed.
      */
     allowsRule(ruleId: string, source: Element): boolean;
@@ -57,6 +58,7 @@ export interface DocumentRouteHandoffPolicy extends TimestampExtractionPolicy {
      * @param input.currentUrl - Cloned current route URL.
      * @param input.generation - Current controller lifecycle generation.
      * @param input.requestReconciliation - Requests one full current-context pass.
+     *
      * @returns - Disposable active session.
      */
     activate(input: {
@@ -86,21 +88,20 @@ export interface DocumentRouteHandoffPolicy extends TimestampExtractionPolicy {
  * Complete route-policy transition operations.
  */
 export const DOCUMENT_ROUTE_HANDOFF_TRANSITION = {
-    NOOP: "noop",
-    CLEAR: "clear",
-    REPLACE: "replace",
+    NOOP: 'noop',
+    CLEAR: 'clear',
+    REPLACE: 'replace',
 } as const;
 
 /**
  * Total operation applied to retained route provenance after a changed URL.
  */
-export type DocumentRouteHandoffTransition =
-    | {
-        /**
-         * Updates the retained URL without restarting extraction or route observation.
-         */
-        readonly kind: typeof DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP;
-    }
+export type DocumentRouteHandoffTransition = | {
+    /**
+     * Updates the retained URL without restarting extraction or route observation.
+     */
+    readonly kind: typeof DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP;
+}
     | {
         /**
          * Removes the retained optional policy.

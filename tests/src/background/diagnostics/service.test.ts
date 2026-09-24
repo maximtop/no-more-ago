@@ -2,45 +2,49 @@
  * @file Verifies top-level authorization for frame diagnostics.
  */
 
-import { describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
-import { DiagnosticsService } from "../../../../src/background/diagnostics/service";
-import type { DiagnosticJournal } from "../../../../src/background/diagnostics/journal";
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
+import { DiagnosticsService } from '../../../../src/background/diagnostics/service';
 import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
-} from "../../../../src/shared/diagnostics/contracts";
-import { createSettingsSnapshot } from "../../../../src/shared/settings/snapshot";
-import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
+} from '../../../../src/shared/diagnostics/contracts';
+import { SITE_SCOPE_MODE } from '../../../../src/shared/settings/site-scope';
+import { createSettingsSnapshot } from '../../../../src/shared/settings/snapshot';
+
+import type { DiagnosticJournal } from '../../../../src/background/diagnostics/journal';
 
 /**
  * Creates a diagnostics service and observable journal.
  *
  * @param excludedSites - Top-level hostnames excluded from processing.
+ *
  * @returns - Service, state, and journal append spy.
  */
 function fixture(excludedSites: readonly string[] = []) {
     const append = vi.fn(async () => undefined);
     const journal = { append } as unknown as DiagnosticJournal;
-    const service = new DiagnosticsService(journal, { browserFamily: "other" });
+    const service = new DiagnosticsService(journal, { browserFamily: 'other' });
     const snapshot = createSettingsSnapshot({
         revision: 1,
         globalEnabled: true,
         siteScope: { mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, excludedSites, allowedSites: [] },
         debugEnabled: true,
     });
-    const state = { phase: "ready" as const, snapshot, failure: undefined };
+    const state = { phase: 'ready' as const, snapshot, failure: undefined };
     return { append, service, state };
 }
 
-describe("DiagnosticsService frame authorization", () => {
-    it("accepts a child frame using the top-level tab policy", async () => {
+describe('DiagnosticsService frame authorization', () => {
+    it('accepts a child frame using the top-level tab policy', async () => {
         const fixtureValue = fixture();
         const accepted = await fixtureValue.service.record(
-            { category: "timing", count: 1 },
+            { category: 'timing', count: 1 },
             {
-                url: "https://frame.example/path",
-                tab: { url: "https://top.example/path", incognito: false },
+                url: 'https://frame.example/path',
+                tab: { url: 'https://top.example/path', incognito: false },
             },
             fixtureValue.state,
         );
@@ -48,17 +52,17 @@ describe("DiagnosticsService frame authorization", () => {
         expect(accepted).toBe(true);
         expect(fixtureValue.append).toHaveBeenCalledTimes(1);
         expect(fixtureValue.append).toHaveBeenCalledWith(
-            expect.objectContaining({ hostname: "frame.example" }),
+            expect.objectContaining({ hostname: 'frame.example' }),
         );
     });
 
-    it("rejects frames when the top-level site is disabled", async () => {
-        const fixtureValue = fixture(["top.example"]);
+    it('rejects frames when the top-level site is disabled', async () => {
+        const fixtureValue = fixture(['top.example']);
         const accepted = await fixtureValue.service.record(
-            { category: "timing", count: 1 },
+            { category: 'timing', count: 1 },
             {
-                url: "https://frame.example/path",
-                tab: { url: "https://top.example/path" },
+                url: 'https://frame.example/path',
+                tab: { url: 'https://top.example/path' },
             },
             fixtureValue.state,
         );
@@ -67,18 +71,18 @@ describe("DiagnosticsService frame authorization", () => {
         expect(fixtureValue.append).not.toHaveBeenCalled();
     });
 
-    it("passes sanitized invalid timestamp evidence to the enabled journal", async () => {
+    it('passes sanitized invalid timestamp evidence to the enabled journal', async () => {
         const fixtureValue = fixture();
         const accepted = await fixtureValue.service.record(
             {
                 category: DIAGNOSTIC_CATEGORY.SKIP,
                 reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
                 count: 1,
-                sourceTimestamp: "123456789",
+                sourceTimestamp: '123456789',
             },
             {
-                url: "https://web.telegram.org/k/?private=query#fragment",
-                tab: { url: "https://web.telegram.org/k/", incognito: false },
+                url: 'https://web.telegram.org/k/?private=query#fragment',
+                tab: { url: 'https://web.telegram.org/k/', incognito: false },
             },
             fixtureValue.state,
         );
@@ -87,45 +91,45 @@ describe("DiagnosticsService frame authorization", () => {
         expect(fixtureValue.append).toHaveBeenCalledWith(expect.objectContaining({
             category: DIAGNOSTIC_CATEGORY.SKIP,
             reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-            hostname: "web.telegram.org",
-            sourceTimestamp: "123456789",
+            hostname: 'web.telegram.org',
+            sourceTimestamp: '123456789',
         }));
         expect(JSON.stringify(fixtureValue.append.mock.calls))
             .not.toMatch(/private|query|fragment/u);
     });
 });
 
-describe("DiagnosticsService recovery reads", () => {
-    it("reads retained entries while settings are unavailable", async () => {
+describe('DiagnosticsService recovery reads', () => {
+    it('reads retained entries while settings are unavailable', async () => {
         const entries = [{
-            category: "lifecycle",
+            category: 'lifecycle',
             timestamp: 1,
-            hostname: "github.com",
-            pageCategory: "repository",
+            hostname: 'github.com',
+            pageCategory: 'repository',
             incognito: false,
         }];
-        const readSnapshot = vi.fn(async () => ({ ok: false, error: "disabled" } as const));
+        const readSnapshot = vi.fn(async () => ({ ok: false, error: 'disabled' } as const));
         const readStored = vi.fn(async () => ({ ok: true, entries } as const));
         const journal = { readSnapshot, readStored } as unknown as DiagnosticJournal;
-        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+        const service = new DiagnosticsService(journal, { browserFamily: 'other' });
 
         await expect(service.readSnapshot({
-            phase: "failed-closed" as const,
+            phase: 'failed-closed' as const,
             snapshot: undefined,
-            failure: "settings-load",
+            failure: 'settings-load',
         })).resolves.toMatchObject({ ok: true, snapshot: { entries } });
         expect(readSnapshot).not.toHaveBeenCalled();
     });
 
-    it("still reports disabled logging while settings are available", async () => {
+    it('still reports disabled logging while settings are available', async () => {
         const readStored = vi.fn();
         const journal = { readSnapshot: vi.fn(), readStored } as unknown as DiagnosticJournal;
-        const service = new DiagnosticsService(journal, { browserFamily: "other" });
+        const service = new DiagnosticsService(journal, { browserFamily: 'other' });
         const snapshot = createSettingsSnapshot({ revision: 1, globalEnabled: true });
 
         await expect(
-            service.readSnapshot({ phase: "ready" as const, snapshot, failure: undefined }),
-        ).resolves.toEqual({ ok: false, error: "disabled" });
+            service.readSnapshot({ phase: 'ready' as const, snapshot, failure: undefined }),
+        ).resolves.toEqual({ ok: false, error: 'disabled' });
         expect(readStored).not.toHaveBeenCalled();
     });
 });

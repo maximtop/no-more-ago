@@ -2,8 +2,8 @@
  * @file Read-only lifecycle state shared by background collaborators.
  */
 
-import type { SettingsSnapshot } from "../../shared/settings/snapshot";
-import type { ApplicationFailure, ApplicationPhase } from "./contracts";
+import type { ApplicationFailure, ApplicationPhase } from './contracts';
+import type { SettingsSnapshot } from '../../shared/settings/snapshot';
 
 /**
  * Current authoritative lifecycle and settings state.

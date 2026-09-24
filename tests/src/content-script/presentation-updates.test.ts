@@ -2,22 +2,26 @@
  * @file Verifies synchronous presentation updates in the document runtime.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
-import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from "../../../src/content-script/runtime";
+import {
+    afterEach, beforeEach, describe, expect, it, vi,
+} from 'vitest';
+
 import { classifyYouTubeWatchRouteHandoff } from
-    "../../../src/content-script/adapters/youtube-watch-route-handoff";
+    '../../../src/content-script/adapters/youtube-watch-route-handoff';
+import { DOCUMENT_RUNTIME_SLOT, installContentRuntime } from '../../../src/content-script/runtime';
 import {
     PRESENTATION_UPDATED_MESSAGE,
     UPDATE_PRESENTATION_MESSAGE,
-} from "../../../src/shared/messaging/document-messages";
-import { STATE_AVAILABILITY } from "../../../src/shared/messaging/view-state-values";
-import type { DisplaySettings } from "../../../src/shared/settings/snapshot";
-import { youtubePlayerResponseAssignment } from "./adapters/youtube-test-data";
+} from '../../../src/shared/messaging/document-messages';
+import { STATE_AVAILABILITY } from '../../../src/shared/messaging/view-state-values';
 
-const WATCH_URL = "https://www.youtube.com/watch?v=testVID0001";
+import { youtubePlayerResponseAssignment } from './adapters/youtube-test-data';
+
+import type { DisplaySettings } from '../../../src/shared/settings/snapshot';
+
+const WATCH_URL = 'https://www.youtube.com/watch?v=testVID0001';
 const forbiddenFetch = vi.fn<typeof fetch>(() => {
-    throw new Error("Network access is forbidden in presentation tests");
+    throw new Error('Network access is forbidden in presentation tests');
 });
 
 /**
@@ -50,10 +54,10 @@ function createMessages() {
 }
 
 const documentState = {
-    availability: "ready" as const,
+    availability: 'ready' as const,
     revision: 1,
     enabled: true,
-    display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
+    display: { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } },
     debugEnabled: false,
 };
 
@@ -61,12 +65,15 @@ const documentState = {
  * Installs one canonical Watch source with identity-bound loaded publication data.
  *
  * @param publication - Explicit loaded publication value.
+ *
  * @returns - Page-owned Watch label.
+ *
+ * @throws If the label is missing.
  */
 function setWatchMarkup(publication: string): Element {
     document.head.innerHTML = `<script>${youtubePlayerResponseAssignment(
         publication,
-        "testVID0001",
+        'testVID0001',
     )}</script>`;
     document.body.innerHTML = `
         <ytd-watch-metadata>
@@ -74,9 +81,9 @@ function setWatchMarkup(publication: string): Element {
                 <yt-formatted-string>3 months ago</yt-formatted-string>
             </div>
         </ytd-watch-metadata>`;
-    const source = document.querySelector("yt-formatted-string");
+    const source = document.querySelector('yt-formatted-string');
     if (!source) {
-        throw new Error("Expected Watch publication label");
+        throw new Error('Expected Watch publication label');
     }
     return source;
 }
@@ -86,6 +93,7 @@ function setWatchMarkup(publication: string): Element {
  *
  * @param display - Presentation snapshot to hydrate.
  * @param revision - Monotonic settings revision.
+ *
  * @returns - Ready enabled document state.
  */
 function watchState(display: DisplaySettings, revision = 1) {
@@ -110,27 +118,28 @@ async function flushRuntime(): Promise<void> {
  * Requires the generated Watch publication output.
  *
  * @returns - Current extension-owned time element.
+ *
+ * @throws If no output was generated.
  */
 function requireWatchOutput(): HTMLTimeElement {
-    const output = document.querySelector("time[data-no-more-ago-output]");
+    const output = document.querySelector('time[data-no-more-ago-output]');
     if (!(output instanceof HTMLTimeElement)) {
-        throw new Error("Expected Watch publication output");
+        throw new Error('Expected Watch publication output');
     }
     return output;
 }
 
-describe("document presentation updates", () => {
+describe('document presentation updates', () => {
     beforeEach(() => {
         const current = (document as unknown as Record<symbol, {
             handle?: { teardown(): void };
         } | undefined>)[DOCUMENT_RUNTIME_SLOT];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
-        document.head.innerHTML = "";
-        document.body.innerHTML =
-            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
+        document.head.innerHTML = '';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
         forbiddenFetch.mockClear();
-        vi.stubGlobal("fetch", forbiddenFetch);
+        vi.stubGlobal('fetch', forbiddenFetch);
     });
 
     afterEach(() => {
@@ -144,12 +153,12 @@ describe("document presentation updates", () => {
         expect(fetchCallCount).toBe(0);
     });
 
-    it("applies a newer display revision and acknowledges synchronously", async () => {
+    it('applies a newer display revision and acknowledges synchronously', async () => {
         const source = createMessages();
         installContentRuntime({
             document,
-            url: new URL("https://example.test/page"),
-            locales: ["en-US"],
+            url: new URL('https://example.test/page'),
+            locales: ['en-US'],
             loadDocumentState: async () => documentState,
             messages: source,
         });
@@ -159,21 +168,21 @@ describe("document presentation updates", () => {
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
             display: {
-                formatMode: "custom",
-                pattern: "yyyy",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy',
+                timeZone: { mode: 'utc' },
             },
         });
 
         expect(response).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
     });
 
-    it("ignores stale presentation revisions", async () => {
+    it('ignores stale presentation revisions', async () => {
         const source = createMessages();
         installContentRuntime({
             document,
-            url: new URL("https://example.test/page"),
-            locales: ["en-US"],
+            url: new URL('https://example.test/page'),
+            locales: ['en-US'],
             loadDocumentState: async () => documentState,
             messages: source,
         });
@@ -183,28 +192,28 @@ describe("document presentation updates", () => {
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 0,
             display: {
-                formatMode: "custom",
-                pattern: "yyyy",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy',
+                timeZone: { mode: 'utc' },
             },
         });
 
         expect(response).toBeUndefined();
-        expect(document.querySelector("[data-no-more-ago-output]")?.textContent).not.toBe("2026");
+        expect(document.querySelector('[data-no-more-ago-output]')?.textContent).not.toBe('2026');
     });
 
-    it("reformats a Hacker News label in place and keeps its link", async () => {
-        document.body.innerHTML = `<span class="age" title="2026-08-28T10:09:07.000000Z">`
-            + `<a id="hn-link" href="item?id=1">1 hour ago</a></span>`;
+    it('reformats a Hacker News label in place and keeps its link', async () => {
+        document.body.innerHTML = '<span class="age" title="2026-08-28T10:09:07.000000Z">'
+            + '<a id="hn-link" href="item?id=1">1 hour ago</a></span>';
         const source = createMessages();
-        const link = document.getElementById("hn-link");
+        const link = document.getElementById('hn-link');
         if (!(link instanceof HTMLAnchorElement)) {
-            throw new Error("Expected Hacker News link");
+            throw new Error('Expected Hacker News link');
         }
         installContentRuntime({
             document,
-            url: new URL("https://news.ycombinator.com/item?id=1"),
-            locales: ["en-US"],
+            url: new URL('https://news.ycombinator.com/item?id=1'),
+            locales: ['en-US'],
             loadDocumentState: async () => documentState,
             messages: source,
         });
@@ -213,77 +222,77 @@ describe("document presentation updates", () => {
         const response = source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
-            display: { formatMode: "custom", pattern: "yyyy", timeZone: { mode: "utc" } },
+            display: { formatMode: 'custom', pattern: 'yyyy', timeZone: { mode: 'utc' } },
         });
         expect(response).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
-        expect(link.textContent).toBe("2026");
-        expect(document.getElementById("hn-link")).toBe(link);
+        expect(link.textContent).toBe('2026');
+        expect(document.getElementById('hn-link')).toBe(link);
     });
 
-    it("applies hydrated and revised calendar presentation to the same output", async () => {
-        const pageSource = setWatchMarkup("2024-02-29");
+    it('applies hydrated and revised calendar presentation to the same output', async () => {
+        const pageSource = setWatchMarkup('2024-02-29');
         const source = createMessages();
         installContentRuntime({
             document,
             url: new URL(WATCH_URL),
             urlProvider: () => new URL(WATCH_URL),
             routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-            locales: ["en-GB"],
+            locales: ['en-GB'],
             loadDocumentState: async () => watchState({
-                formatMode: "custom",
-                pattern: "yyyy/MM/dd HH:mm XXX",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy/MM/dd HH:mm XXX',
+                timeZone: { mode: 'utc' },
             }),
             messages: source,
         });
         await flushRuntime();
 
         const output = requireWatchOutput();
-        expect(output.dateTime).toBe("2024-02-29");
-        expect(output.textContent).toBe("2024/02/29");
-        pageSource.textContent = "2 months ago";
+        expect(output.dateTime).toBe('2024-02-29');
+        expect(output.textContent).toBe('2024/02/29');
+        pageSource.textContent = '2 months ago';
         await flushRuntime();
 
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
             display: {
-                formatMode: "custom",
+                formatMode: 'custom',
                 pattern: "dd/MM/yyyy 'at' HH:mm",
-                timeZone: { mode: "iana", identifier: "Pacific/Kiritimati" },
+                timeZone: { mode: 'iana', identifier: 'Pacific/Kiritimati' },
             },
         })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
         expect(requireWatchOutput()).toBe(output);
-        expect(output.dateTime).toBe("2024-02-29");
-        expect(output.textContent).toBe("29/02/2024");
-        expect(pageSource.textContent).toBe("2 months ago");
+        expect(output.dateTime).toBe('2024-02-29');
+        expect(output.textContent).toBe('29/02/2024');
+        expect(pageSource.textContent).toBe('2 months ago');
 
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 3,
             display: {
-                formatMode: "custom",
-                pattern: "HH:mm XXX",
-                timeZone: { mode: "iana", identifier: "Pacific/Honolulu" },
+                formatMode: 'custom',
+                pattern: 'HH:mm XXX',
+                timeZone: { mode: 'iana', identifier: 'Pacific/Honolulu' },
             },
         })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 3 });
-        const expectedFallback = new Intl.DateTimeFormat(["en-GB"], {
-            dateStyle: "medium",
-            timeZone: "UTC",
-        }).format(new Date("2024-02-29T12:00:00.000Z"));
+        const expectedFallback = new Intl.DateTimeFormat(['en-GB'], {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+        }).format(new Date('2024-02-29T12:00:00.000Z'));
         expect(requireWatchOutput()).toBe(output);
-        expect(output.dateTime).toBe("2024-02-29");
+        expect(output.dateTime).toBe('2024-02-29');
         expect(output.textContent).toBe(expectedFallback);
-        expect(output.textContent.trim()).not.toBe("");
-        expect(output.textContent).not.toContain(":");
+        expect(output.textContent.trim()).not.toBe('');
+        expect(output.textContent).not.toContain(':');
 
         const stale = source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
             display: {
-                formatMode: "custom",
-                pattern: "yyyy",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy',
+                timeZone: { mode: 'utc' },
             },
         });
         expect(stale).toBeUndefined();
@@ -291,39 +300,39 @@ describe("document presentation updates", () => {
         expect(output.textContent).toBe(expectedFallback);
     });
 
-    it("keeps instant time-zone presentation live while reusing output", async () => {
-        setWatchMarkup("2026-08-29T10:15:00+03:00");
+    it('keeps instant time-zone presentation live while reusing output', async () => {
+        setWatchMarkup('2026-08-29T10:15:00+03:00');
         const source = createMessages();
         installContentRuntime({
             document,
             url: new URL(WATCH_URL),
             urlProvider: () => new URL(WATCH_URL),
             routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
-            locales: ["en-GB"],
+            locales: ['en-GB'],
             loadDocumentState: async () => watchState({
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm',
+                timeZone: { mode: 'utc' },
             }),
             messages: source,
         });
         await flushRuntime();
 
         const output = requireWatchOutput();
-        expect(output.dateTime).toBe("2026-08-29T10:15:00+03:00");
-        expect(output.textContent).toBe("2026-08-29 07:15");
+        expect(output.dateTime).toBe('2026-08-29T10:15:00+03:00');
+        expect(output.textContent).toBe('2026-08-29 07:15');
 
         expect(source.dispatch({
             type: UPDATE_PRESENTATION_MESSAGE,
             revision: 2,
             display: {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm",
-                timeZone: { mode: "iana", identifier: "Pacific/Honolulu" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm',
+                timeZone: { mode: 'iana', identifier: 'Pacific/Honolulu' },
             },
         })).toEqual({ type: PRESENTATION_UPDATED_MESSAGE, revision: 2 });
         expect(requireWatchOutput()).toBe(output);
-        expect(output.dateTime).toBe("2026-08-29T10:15:00+03:00");
-        expect(output.textContent).toBe("2026-08-28 21:15");
+        expect(output.dateTime).toBe('2026-08-29T10:15:00+03:00');
+        expect(output.textContent).toBe('2026-08-28 21:15');
     });
 });

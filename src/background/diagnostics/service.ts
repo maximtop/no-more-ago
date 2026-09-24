@@ -3,37 +3,38 @@
  */
 
 import {
+    DIAGNOSTIC_BROWSER_FAMILY,
+    DIAGNOSTIC_BROWSER_FAMILIES,
+    DIAGNOSTIC_INTERNAL_HOSTNAME,
+    DIAGNOSTIC_PAGE_CATEGORY,
+} from '../../shared/diagnostics/contracts';
+import {
     createDiagnosticEvent,
     sanitizeDiagnosticEvent,
     type DiagnosticBrowserFamily,
     type DiagnosticEvent,
     type DiagnosticEventInput,
     type DiagnosticSender,
-} from "../../shared/diagnostics/events";
-import {
-    DIAGNOSTIC_BROWSER_FAMILY,
-    DIAGNOSTIC_BROWSER_FAMILIES,
-    DIAGNOSTIC_INTERNAL_HOSTNAME,
-    DIAGNOSTIC_PAGE_CATEGORY,
-} from "../../shared/diagnostics/contracts";
-import { SAFE_EXTENSION_VERSION_PATTERN } from "../../shared/extension-version";
-import type { DiagnosticJournalStore } from "../diagnostics/journal";
-import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
-import { parseHttpUrl } from "../../shared/url/http";
-import type { BackgroundApplicationOptions } from "../application/contracts";
-import type { ApplicationStateView } from "../application/state";
-import { APPLICATION_PHASE } from "../application/contracts";
-import { STATE_AVAILABILITY } from "../../shared/messaging/view-state-values";
+} from '../../shared/diagnostics/events';
+import { SAFE_EXTENSION_VERSION_PATTERN } from '../../shared/extension-version';
 import {
     DIAGNOSTICS_ERROR,
     type ClearDiagnosticsResponse,
     type DiagnosticsEnvironment,
     type GetDiagnosticsSnapshotResponse,
-} from "../../shared/messaging/contracts";
+} from '../../shared/messaging/contracts';
 import {
     createUnavailableDebugState,
     type DebugState,
-} from "../../shared/messaging/view-state";
+} from '../../shared/messaging/view-state';
+import { STATE_AVAILABILITY } from '../../shared/messaging/view-state-values';
+import { isSiteProcessingEnabled } from '../../shared/settings/site-scope';
+import { parseHttpUrl } from '../../shared/url/http';
+import { APPLICATION_PHASE } from '../application/contracts';
+
+import type { DiagnosticJournalStore } from './journal';
+import type { BackgroundApplicationOptions } from '../application/contracts';
+import type { ApplicationStateView } from '../application/state';
 
 const BROWSER_FAMILY_SET = new Set<string>(DIAGNOSTIC_BROWSER_FAMILIES);
 
@@ -49,7 +50,7 @@ export class DiagnosticsService {
     /**
      * Trusted browser and extension metadata.
      */
-    private readonly environment: BackgroundApplicationOptions["diagnosticEnvironment"];
+    private readonly environment: BackgroundApplicationOptions['diagnosticEnvironment'];
 
     /**
      * Creates a diagnostics service.
@@ -59,7 +60,7 @@ export class DiagnosticsService {
      */
     public constructor(
         journal: DiagnosticJournalStore | undefined,
-        environment: BackgroundApplicationOptions["diagnosticEnvironment"],
+        environment: BackgroundApplicationOptions['diagnosticEnvironment'],
     ) {
         this.journal = journal;
         this.environment = environment;
@@ -69,6 +70,7 @@ export class DiagnosticsService {
      * Builds the diagnostic logging view state.
      *
      * @param state - Current lifecycle state.
+     *
      * @returns - Diagnostic logging state.
      */
     public debugState(state: ApplicationStateView): DebugState {
@@ -88,6 +90,7 @@ export class DiagnosticsService {
      * them for a problem report.
      *
      * @param state - Current lifecycle state.
+     *
      * @returns - Persisted diagnostics or a contained availability error.
      */
     public async readSnapshot(
@@ -116,6 +119,7 @@ export class DiagnosticsService {
      * Clears retained entries while diagnostic collection remains enabled.
      *
      * @param state - Current lifecycle state.
+     *
      * @returns - Clear result or a contained availability error.
      */
     public async clearEntries(state: ApplicationStateView): Promise<ClearDiagnosticsResponse> {
@@ -136,6 +140,7 @@ export class DiagnosticsService {
      * Enables or disables persistent collection without surfacing journal failures.
      *
      * @param enabled - Requested collection state.
+     *
      * @returns - Promise settled after the journal attempt.
      */
     public async setEnabled(enabled: boolean): Promise<void> {
@@ -185,6 +190,7 @@ export class DiagnosticsService {
      * @param input - Untrusted document diagnostic payload.
      * @param sender - WebExtension sender metadata.
      * @param state - Current lifecycle state.
+     *
      * @returns - Whether a valid event from an enabled top-level site was accepted.
      */
     public async record(
@@ -192,7 +198,7 @@ export class DiagnosticsService {
         sender: DiagnosticSender & { readonly frameId?: unknown },
         state: ApplicationStateView,
     ): Promise<boolean> {
-        const snapshot = state.snapshot;
+        const { snapshot } = state;
         if (
             state.phase !== APPLICATION_PHASE.READY
             || !snapshot?.debugEnabled
@@ -221,6 +227,7 @@ export class DiagnosticsService {
      * Replaces document-supplied environment metadata with trusted values.
      *
      * @param event - Sanitized document diagnostic event.
+     *
      * @returns - Event with trusted extension metadata.
      */
     private trust(event: DiagnosticEvent): DiagnosticEvent {
@@ -229,11 +236,11 @@ export class DiagnosticsService {
         delete trusted.extensionVersion;
         delete trusted.browserFamily;
         const version = this.environment?.extensionVersion;
-        if (typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)) {
+        if (typeof version === 'string' && SAFE_EXTENSION_VERSION_PATTERN.test(version)) {
             trusted.extensionVersion = version;
         }
         const family = this.environment?.browserFamily;
-        if (typeof family === "string" && BROWSER_FAMILY_SET.has(family)) {
+        if (typeof family === 'string' && BROWSER_FAMILY_SET.has(family)) {
             trusted.browserFamily = family;
         }
         return Object.freeze(trusted);
@@ -246,14 +253,13 @@ export class DiagnosticsService {
      */
     private exportEnvironment(): DiagnosticsEnvironment {
         const family = this.environment?.browserFamily;
-        const browserFamily: DiagnosticBrowserFamily =
-            typeof family === "string" && BROWSER_FAMILY_SET.has(family)
-                ? family
-                : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
+        const browserFamily: DiagnosticBrowserFamily = typeof family === 'string' && BROWSER_FAMILY_SET.has(family)
+            ? family
+            : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
         const version = this.environment?.extensionVersion;
         return {
             browserFamily,
-            ...(typeof version === "string" && SAFE_EXTENSION_VERSION_PATTERN.test(version)
+            ...(typeof version === 'string' && SAFE_EXTENSION_VERSION_PATTERN.test(version)
                 ? { extensionVersion: version }
                 : {}),
         };

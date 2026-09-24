@@ -2,44 +2,42 @@
  * @file Minimal cross-world contract for trusted Facebook story timestamps.
  */
 
-import * as v from "valibot";
+import * as v from 'valibot';
 
 /**
  * Source marker retained on Facebook bridge messages.
  */
-export const FACEBOOK_PAYLOAD_MESSAGE_SOURCE = "no-more-ago:facebook-payload" as const;
+export const FACEBOOK_PAYLOAD_MESSAGE_SOURCE = 'no-more-ago:facebook-payload' as const;
 
 /**
  * Message type used when the main-world bridge finds story timestamp records.
  */
-export const FACEBOOK_PAYLOAD_RECORDS_MESSAGE = "story-timestamp-records" as const;
+export const FACEBOOK_PAYLOAD_RECORDS_MESSAGE = 'story-timestamp-records' as const;
 
 /**
  * Message type emitted when the main-world bridge is ready for lifecycle control.
  */
-export const FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE = "payload-bridge-ready" as const;
+export const FACEBOOK_PAYLOAD_BRIDGE_READY_MESSAGE = 'payload-bridge-ready' as const;
 
 /**
  * Message type used by the isolated runtime to enable or disable bridge inspection.
  */
-export const FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE = "payload-bridge-control" as const;
+export const FACEBOOK_PAYLOAD_BRIDGE_CONTROL_MESSAGE = 'payload-bridge-control' as const;
 
 /**
  * Legacy main-world singleton key retained only for one-way upgrade cleanup.
  */
-export const FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY =
-    "no-more-ago.facebook-payload-bridge" as const;
+export const FACEBOOK_PAYLOAD_BRIDGE_LEGACY_SLOT_KEY = 'no-more-ago.facebook-payload-bridge' as const;
 
 /**
  * Current main-world singleton key shared with bridge tests and duplicate installations.
  */
-export const FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY =
-    "no-more-ago.facebook-payload-bridge-v3" as const;
+export const FACEBOOK_PAYLOAD_BRIDGE_SLOT_KEY = 'no-more-ago.facebook-payload-bridge-v3' as const;
 
 /**
  * Facebook query parameter carrying an encrypted story tracking token.
  */
-export const FACEBOOK_TRACKING_QUERY_PARAMETER = "__cft__[0]" as const;
+export const FACEBOOK_TRACKING_QUERY_PARAMETER = '__cft__[0]' as const;
 
 /**
  * Facebook anchors that can carry the opaque Story timestamp association.
@@ -49,8 +47,7 @@ export const FACEBOOK_TRACKED_LINK_SELECTOR = "a[href*='__cft__']" as const;
 /**
  * Initial Facebook payload scripts eligible for bounded ingestion.
  */
-export const FACEBOOK_PAYLOAD_SCRIPT_SELECTOR =
-    "script[type='application/json'][data-sjs]" as const;
+export const FACEBOOK_PAYLOAD_SCRIPT_SELECTOR = "script[type='application/json'][data-sjs]" as const;
 
 /**
  * Bounded processing contract shared by Facebook payload boundaries.
@@ -180,10 +177,10 @@ const payloadMessageSchema = v.pipe(
         invalidatedTrackingTokens: v.array(trackingTokenSchema),
         invalidateAll: v.boolean(),
     }),
-    v.check((update) => update.invalidateAll
+    v.check((update) => (update.invalidateAll
         ? update.records.length === 0 && update.invalidatedTrackingTokens.length === 0
         : update.records.length + update.invalidatedTrackingTokens.length
-            <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE),
+            <= FACEBOOK_PAYLOAD_LIMIT.MAX_RECORDS_PER_UPDATE)),
 );
 
 /**
@@ -207,6 +204,7 @@ const bridgeControlMessageSchema = v.object({
  * Reads one bounded payload message posted by the page world.
  *
  * @param value - Message supplied by the page.
+ *
  * @returns - Message with only contract fields retained, or null when unusable.
  */
 export function readFacebookPayloadMessage(value: unknown): FacebookPayloadMessage | null {
@@ -218,6 +216,7 @@ export function readFacebookPayloadMessage(value: unknown): FacebookPayloadMessa
  * Reads one main-world bridge readiness announcement posted by the page world.
  *
  * @param value - Message supplied by the page.
+ *
  * @returns - Whether the message announces the Facebook bridge.
  */
 export function isFacebookPayloadBridgeReadyMessage(value: unknown): boolean {
@@ -228,6 +227,7 @@ export function isFacebookPayloadBridgeReadyMessage(value: unknown): boolean {
  * Reads the requested inspection state from one page-posted lifecycle command.
  *
  * @param value - Message supplied by the page.
+ *
  * @returns - Requested state, or null when the message is not a lifecycle command.
  */
 export function readFacebookBridgeControlEnabled(value: unknown): boolean | null {
@@ -239,6 +239,7 @@ export function readFacebookBridgeControlEnabled(value: unknown): boolean | null
  * Creates a bounded cross-world message from one extracted update.
  *
  * @param update - Valid records and invalidations to transfer into the isolated world.
+ *
  * @returns - Canonical Facebook payload message.
  */
 export function createFacebookPayloadMessage(
@@ -269,6 +270,7 @@ export function createFacebookPayloadBridgeReadyMessage(): FacebookPayloadBridge
  * Creates one canonical isolated-world bridge lifecycle command.
  *
  * @param enabled - Whether selected response inspection may run.
+ *
  * @returns - Facebook bridge control message.
  */
 export function createFacebookPayloadBridgeControlMessage(

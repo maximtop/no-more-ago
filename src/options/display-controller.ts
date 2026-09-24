@@ -2,26 +2,29 @@
  * @file Owns editable display settings and their persistence lifecycle as a state machine.
  */
 
-import { isPrecisionPolicyValid, type PrecisionPolicy } from "../shared/settings/precision-policy";
-import { useMachine } from "@xstate/react";
-import { assertEvent, assign, fromPromise, setup, waitFor, type SnapshotFrom } from "xstate";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+import { useMachine } from '@xstate/react';
+import {
+    assertEvent, assign, fromPromise, setup, waitFor, type SnapshotFrom,
+} from 'xstate';
+
+import { CLIENT_RESULT_KIND } from '../shared/client-result';
 import {
     createUnavailableDisplayState,
     type DisplayState,
-} from "../shared/messaging/view-state";
-import { CLIENT_RESULT_KIND } from "../shared/client-result";
+} from '../shared/messaging/view-state';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
+import {
+    DISPLAY_SETTINGS_ERROR,
+    type DisplaySettingsError,
+} from '../shared/messaging/view-state-values';
+import { isPrecisionPolicyValid, type PrecisionPolicy } from '../shared/settings/precision-policy';
 import {
     FORMAT_MODE,
     TIME_ZONE_MODE,
     sameDisplaySettings,
     type Appearance,
-} from "../shared/settings/snapshot";
-import {
-    DISPLAY_SETTINGS_ERROR,
-    type DisplaySettingsError,
-} from "../shared/messaging/view-state-values";
-import type { AppearanceSetResult, DisplaySetResult, SitesClient } from "./client";
+} from '../shared/settings/snapshot';
+
 import {
     DISPLAY_NOTICE,
     customPatternError,
@@ -30,7 +33,9 @@ import {
     validateIdentifier,
     type DisplayDraft,
     type DisplayNotice,
-} from "./display-form";
+} from './display-form';
+
+import type { AppearanceSetResult, DisplaySetResult, SitesClient } from './client';
 
 /**
  * Dependencies and optional initial state for display settings.
@@ -86,7 +91,7 @@ export interface DisplayController {
      *
      * @param mode - New date-format mode.
      */
-    setFormatMode(mode: DisplayDraft["formatMode"]): void;
+    setFormatMode(mode: DisplayDraft['formatMode']): void;
 
     /**
      * Changes the retained custom date-format pattern.
@@ -107,7 +112,7 @@ export interface DisplayController {
      *
      * @param mode - New time-zone mode.
      */
-    setTimeZoneMode(mode: DisplayDraft["timeZoneMode"]): void;
+    setTimeZoneMode(mode: DisplayDraft['timeZoneMode']): void;
 
     /**
      * Changes the retained IANA time-zone identifier.
@@ -130,6 +135,7 @@ export interface DisplayController {
      * Saves a new appearance immediately, leaving any unsaved display draft untouched.
      *
      * @param appearance - New appearance choice.
+     *
      * @returns - A promise that settles after the outcome has been applied.
      */
     changeAppearance(appearance: Appearance): Promise<void>;
@@ -165,29 +171,28 @@ export interface DisplayController {
  * Events the display machine reacts to.
  */
 const DISPLAY_EVENT = {
-    EDIT: "EDIT",
-    SAVE: "SAVE",
-    CHANGE_APPEARANCE: "CHANGE_APPEARANCE",
-    RELOAD: "RELOAD",
-    BEGIN_RESET: "BEGIN_RESET",
-    RELOAD_AFTER_RESET: "RELOAD_AFTER_RESET",
+    EDIT: 'EDIT',
+    SAVE: 'SAVE',
+    CHANGE_APPEARANCE: 'CHANGE_APPEARANCE',
+    RELOAD: 'RELOAD',
+    BEGIN_RESET: 'BEGIN_RESET',
+    RELOAD_AFTER_RESET: 'RELOAD_AFTER_RESET',
 } as const;
 
 /**
  * Event sent to the display machine by one of the controller commands.
  */
-type DisplayEvent =
-    | {
-        /**
-         * The user changed the draft.
-         */
-        readonly type: typeof DISPLAY_EVENT.EDIT;
+type DisplayEvent = | {
+    /**
+     * The user changed the draft.
+     */
+    readonly type: typeof DISPLAY_EVENT.EDIT;
 
-        /**
-         * Fields that changed.
-         */
-        readonly patch: Partial<DisplayDraft>;
-    }
+    /**
+     * Fields that changed.
+     */
+    readonly patch: Partial<DisplayDraft>;
+}
     | {
         /**
          * The user asked to persist the draft.
@@ -273,6 +278,7 @@ const DEFAULT_DISPLAY_DRAFT = draftFromDisplay({
  * Maps a rejected display command to the notice shown beside the form.
  *
  * @param error - Error returned by the display-settings command.
+ *
  * @returns - Notice describing the rejection.
  */
 function displayNoticeForError(error: DisplaySettingsError): DisplayNotice {
@@ -295,6 +301,7 @@ function displayNoticeForError(error: DisplaySettingsError): DisplayNotice {
  * Reports whether the draft differs from the committed display settings.
  *
  * @param context - Current machine context.
+ *
  * @returns - Whether the user has unsaved edits.
  */
 function isDirty(context: DisplayContext): boolean {
@@ -308,6 +315,7 @@ function isDirty(context: DisplayContext): boolean {
  *
  * @param current - Rendered projection.
  * @param next - Projection returned by the command or reread.
+ *
  * @returns - Whether the projection is at least as new as the rendered one.
  */
 function accepts(current: DisplayState | undefined, next: DisplayState): boolean {
@@ -321,6 +329,7 @@ function accepts(current: DisplayState | undefined, next: DisplayState): boolean
  *
  * @param state - Projection to edit.
  * @param current - Draft rendered so far.
+ *
  * @returns - Draft matching the projection's committed display, or the current draft.
  */
 function draftFor(
@@ -336,11 +345,14 @@ function draftFor(
  * Returns the draft while the form is ready, where it always exists.
  *
  * @param context - Current machine context.
+ *
  * @returns - Current draft.
+ *
+ * @throws If the ready form holds no draft.
  */
 function requireDraft(context: DisplayContext): DisplayDraft {
     if (context.draft === undefined) {
-        throw new Error("The display form has no draft while it is ready");
+        throw new Error('The display form has no draft while it is ready');
     }
     return context.draft;
 }
@@ -350,12 +362,13 @@ function requireDraft(context: DisplayContext): DisplayDraft {
  *
  * @param context - Current machine context.
  * @param result - Save result returned by the client.
+ *
  * @returns - Committed state, draft, and notice after the save.
  */
 function settleSave(
     context: DisplayContext,
     result: DisplaySetResult,
-): Pick<DisplayContext, "state" | "draft" | "notice"> {
+): Pick<DisplayContext, 'state' | 'draft' | 'notice'> {
     if (result.kind !== CLIENT_RESULT_KIND.RESPONSE) {
         if (result.state === undefined) {
             return {
@@ -397,12 +410,13 @@ function settleSave(
  *
  * @param context - Current machine context.
  * @param next - Projection returned by the reread.
+ *
  * @returns - Committed state, draft, and notice after the reread.
  */
 function settleReload(
     context: DisplayContext,
     next: DisplayState,
-): Pick<DisplayContext, "state" | "draft" | "notice"> {
+): Pick<DisplayContext, 'state' | 'draft' | 'notice'> {
     const kept = { state: context.state, draft: context.draft, notice: context.notice };
     // An older projection is dropped: one lost message does not mean
     // processing stopped, and the next announcement retries.
@@ -431,12 +445,13 @@ function settleReload(
  *
  * @param context - Current machine context.
  * @param result - Save result returned by the client.
+ *
  * @returns - Committed state and failure flag after the save.
  */
 function settleAppearance(
     context: DisplayContext,
     result: AppearanceSetResult,
-): Pick<DisplayContext, "state" | "appearanceFailed"> {
+): Pick<DisplayContext, 'state' | 'appearanceFailed'> {
     const next = result.kind === CLIENT_RESULT_KIND.RESPONSE ? result.response.state : result.state;
     const failed = result.kind === CLIENT_RESULT_KIND.RESPONSE
         ? !result.response.ok
@@ -451,6 +466,7 @@ function settleAppearance(
  * Reports whether a projection is the fail-closed one.
  *
  * @param state - Projection to inspect.
+ *
  * @returns - Whether the projection is unavailable.
  */
 function isUnavailable(state: DisplayState | undefined): boolean {
@@ -480,8 +496,7 @@ const displayMachine = setup({
         stateReady: ({ context }) => context.state?.availability === STATE_AVAILABILITY.READY,
         stateLoaded: ({ context }) => context.state !== undefined,
         loadsWhenMissing: ({ context }) => context.loadWhenMissing,
-        invalidPrecision: ({ context }) =>
-            !isPrecisionPolicyValid(requireDraft(context).precisionPolicy),
+        invalidPrecision: ({ context }) => !isPrecisionPolicyValid(requireDraft(context).precisionPolicy),
         invalidPattern: ({ context }) => {
             const draft = requireDraft(context);
             return draft.formatMode === FORMAT_MODE.CUSTOM
@@ -513,17 +528,20 @@ const displayMachine = setup({
             notice: context.afterReset ? DISPLAY_NOTICE.UNKNOWN : undefined,
             afterReset: false,
         })),
-        settleSave: assign(({ context }, params: { readonly result: DisplaySetResult }) =>
-            settleSave(context, params.result)),
+        settleSave: assign(({ context }, params: { readonly result: DisplaySetResult }) => (
+            settleSave(context, params.result)
+        )),
         failSave: assign({
             state: createUnavailableDisplayState(),
             notice: DISPLAY_NOTICE.UNKNOWN,
         }),
-        settleReload: assign(({ context }, params: { readonly next: DisplayState }) =>
-            settleReload(context, params.next)),
+        settleReload: assign(({ context }, params: { readonly next: DisplayState }) => (
+            settleReload(context, params.next)
+        )),
         startAppearance: assign({ appearanceFailed: false }),
-        settleAppearance: assign(({ context }, params: { readonly result: AppearanceSetResult }) =>
-            settleAppearance(context, params.result)),
+        settleAppearance: assign(({ context }, params: { readonly result: AppearanceSetResult }) => (
+            settleAppearance(context, params.result)
+        )),
         failAppearance: assign({ appearanceFailed: true }),
         beginReset: assign({
             draft: DEFAULT_DISPLAY_DRAFT,
@@ -532,7 +550,7 @@ const displayMachine = setup({
         }),
     },
 }).createMachine({
-    id: "display",
+    id: 'display',
     context: ({ input }) => ({
         client: input.client,
         loadWhenMissing: input.loadWhenMissing,
@@ -544,147 +562,148 @@ const displayMachine = setup({
         appearanceFailed: false,
         afterReset: false,
     }),
-    initial: "deciding",
+    initial: 'deciding',
     states: {
         // Picks the first state from the preloaded projection, if any.
         deciding: {
             always: [
-                { guard: "stateReady", target: "ready" },
-                { guard: "stateLoaded", target: "unavailable" },
-                { guard: "loadsWhenMissing", target: "loading" },
-                { target: "blank" },
+                { guard: 'stateReady', target: 'ready' },
+                { guard: 'stateLoaded', target: 'unavailable' },
+                { guard: 'loadsWhenMissing', target: 'loading' },
+                { target: 'blank' },
             ],
         },
         // Nothing preloaded and nothing requested: waits for a reread or a reset.
         blank: {
             on: {
-                [DISPLAY_EVENT.RELOAD]: { target: "loading" },
-                [DISPLAY_EVENT.BEGIN_RESET]: { target: "resetting", actions: "beginReset" },
+                [DISPLAY_EVENT.RELOAD]: { target: 'loading' },
+                [DISPLAY_EVENT.BEGIN_RESET]: { target: 'resetting', actions: 'beginReset' },
             },
         },
         // Initial read, post-reset read, or a reread while nothing is ready.
         loading: {
             invoke: {
-                src: "loadDisplay",
+                src: 'loadDisplay',
                 input: ({ context }) => ({ client: context.client }),
                 onDone: [
                     {
                         guard: ({ event }) => isUnavailable(event.output),
                         actions: {
-                            type: "adoptLoaded",
+                            type: 'adoptLoaded',
                             params: ({ event }) => ({ state: event.output }),
                         },
-                        target: "unavailable",
+                        target: 'unavailable',
                     },
                     {
                         actions: {
-                            type: "adoptLoaded",
+                            type: 'adoptLoaded',
                             params: ({ event }) => ({ state: event.output }),
                         },
-                        target: "ready",
+                        target: 'ready',
                     },
                 ],
-                onError: { actions: "failLoad", target: "unavailable" },
+                onError: { actions: 'failLoad', target: 'unavailable' },
             },
         },
         // The page reset every setting; the default projection is reread on request.
         resetting: {
             on: {
-                [DISPLAY_EVENT.RELOAD_AFTER_RESET]: { target: "loading" },
+                [DISPLAY_EVENT.RELOAD_AFTER_RESET]: { target: 'loading' },
             },
         },
         unavailable: {
             on: {
-                [DISPLAY_EVENT.RELOAD]: { target: "loading" },
-                [DISPLAY_EVENT.BEGIN_RESET]: { target: "resetting", actions: "beginReset" },
+                [DISPLAY_EVENT.RELOAD]: { target: 'loading' },
+                [DISPLAY_EVENT.BEGIN_RESET]: { target: 'resetting', actions: 'beginReset' },
             },
         },
         // A ready projection: the form, the appearance picker, and live rereads
         // run independently, and any of them can find settings gone.
         ready: {
-            type: "parallel",
+            type: 'parallel',
             on: {
                 [DISPLAY_EVENT.EDIT]: {
-                    actions: { type: "edit", params: ({ event }) => ({ patch: event.patch }) },
+                    actions: { type: 'edit', params: ({ event }) => ({ patch: event.patch }) },
                 },
-                [DISPLAY_EVENT.BEGIN_RESET]: { target: "resetting", actions: "beginReset" },
+                [DISPLAY_EVENT.BEGIN_RESET]: { target: 'resetting', actions: 'beginReset' },
             },
             states: {
                 form: {
-                    initial: "idle",
+                    initial: 'idle',
                     states: {
                         idle: {
                             on: {
                                 [DISPLAY_EVENT.SAVE]: [
                                     {
-                                        guard: "invalidPrecision",
+                                        guard: 'invalidPrecision',
                                         actions: {
-                                            type: "reject",
+                                            type: 'reject',
                                             params: { notice: DISPLAY_NOTICE.INVALID_PRECISION },
                                         },
                                     },
                                     {
-                                        guard: "invalidPattern",
+                                        guard: 'invalidPattern',
                                         actions: {
-                                            type: "reject",
+                                            type: 'reject',
                                             params: { notice: DISPLAY_NOTICE.INVALID_FORMAT },
                                         },
                                     },
                                     {
-                                        guard: "invalidIdentifier",
+                                        guard: 'invalidIdentifier',
                                         actions: {
-                                            type: "reject",
+                                            type: 'reject',
                                             params: { notice: DISPLAY_NOTICE.INVALID_TIME_ZONE },
                                         },
                                     },
-                                    { target: "saving", actions: "clearNotice" },
+                                    { target: 'saving', actions: 'clearNotice' },
                                 ],
                             },
                         },
                         saving: {
                             invoke: {
-                                src: "saveDisplay",
+                                src: 'saveDisplay',
                                 input: ({ context }) => ({
                                     client: context.client,
                                     draft: requireDraft(context),
                                 }),
                                 onDone: [
                                     {
-                                        guard: ({ context, event }) =>
-                                            isUnavailable(settleSave(context, event.output).state),
+                                        guard: ({ context, event }) => (
+                                            isUnavailable(settleSave(context, event.output).state)
+                                        ),
                                         actions: {
-                                            type: "settleSave",
+                                            type: 'settleSave',
                                             params: ({ event }) => ({ result: event.output }),
                                         },
-                                        target: "#display.unavailable",
+                                        target: '#display.unavailable',
                                     },
                                     {
                                         actions: {
-                                            type: "settleSave",
+                                            type: 'settleSave',
                                             params: ({ event }) => ({ result: event.output }),
                                         },
-                                        target: "idle",
+                                        target: 'idle',
                                     },
                                 ],
-                                onError: { actions: "failSave", target: "#display.unavailable" },
+                                onError: { actions: 'failSave', target: '#display.unavailable' },
                             },
                         },
                     },
                 },
                 appearance: {
-                    initial: "idle",
+                    initial: 'idle',
                     states: {
                         idle: {
                             on: {
                                 [DISPLAY_EVENT.CHANGE_APPEARANCE]: {
-                                    target: "saving",
-                                    actions: "startAppearance",
+                                    target: 'saving',
+                                    actions: 'startAppearance',
                                 },
                             },
                         },
                         saving: {
                             invoke: {
-                                src: "saveAppearance",
+                                src: 'saveAppearance',
                                 input: ({ context, event }) => {
                                     assertEvent(event, DISPLAY_EVENT.CHANGE_APPEARANCE);
                                     return { client: context.client, appearance: event.appearance };
@@ -695,36 +714,36 @@ const displayMachine = setup({
                                             settleAppearance(context, event.output).state,
                                         ),
                                         actions: {
-                                            type: "settleAppearance",
+                                            type: 'settleAppearance',
                                             params: ({ event }) => ({ result: event.output }),
                                         },
-                                        target: "#display.unavailable",
+                                        target: '#display.unavailable',
                                     },
                                     {
                                         actions: {
-                                            type: "settleAppearance",
+                                            type: 'settleAppearance',
                                             params: ({ event }) => ({ result: event.output }),
                                         },
-                                        target: "idle",
+                                        target: 'idle',
                                     },
                                 ],
-                                onError: { actions: "failAppearance", target: "idle" },
+                                onError: { actions: 'failAppearance', target: 'idle' },
                             },
                         },
                     },
                 },
                 sync: {
-                    initial: "idle",
+                    initial: 'idle',
                     states: {
                         idle: {
                             on: {
-                                [DISPLAY_EVENT.RELOAD]: { target: "reloading" },
+                                [DISPLAY_EVENT.RELOAD]: { target: 'reloading' },
                             },
                         },
                         // A failed reread keeps the rendered projection.
                         reloading: {
                             invoke: {
-                                src: "loadDisplay",
+                                src: 'loadDisplay',
                                 input: ({ context }) => ({ client: context.client }),
                                 onDone: [
                                     {
@@ -732,20 +751,20 @@ const displayMachine = setup({
                                             settleReload(context, event.output).state,
                                         ),
                                         actions: {
-                                            type: "settleReload",
+                                            type: 'settleReload',
                                             params: ({ event }) => ({ next: event.output }),
                                         },
-                                        target: "#display.unavailable",
+                                        target: '#display.unavailable',
                                     },
                                     {
                                         actions: {
-                                            type: "settleReload",
+                                            type: 'settleReload',
                                             params: ({ event }) => ({ next: event.output }),
                                         },
-                                        target: "idle",
+                                        target: 'idle',
                                     },
                                 ],
-                                onError: { target: "idle" },
+                                onError: { target: 'idle' },
                             },
                         },
                     },
@@ -764,37 +783,41 @@ type DisplaySnapshot = SnapshotFrom<typeof displayMachine>;
  * Reports whether a display save is in flight.
  *
  * @param snapshot - Machine snapshot.
+ *
  * @returns - Whether the form is saving.
  */
 function isSaving(snapshot: DisplaySnapshot): boolean {
-    return snapshot.matches({ ready: { form: "saving" } });
+    return snapshot.matches({ ready: { form: 'saving' } });
 }
 
 /**
  * Reports whether an appearance save is in flight.
  *
  * @param snapshot - Machine snapshot.
+ *
  * @returns - Whether the appearance picker is saving.
  */
 function isAppearanceSaving(snapshot: DisplaySnapshot): boolean {
-    return snapshot.matches({ ready: { appearance: "saving" } });
+    return snapshot.matches({ ready: { appearance: 'saving' } });
 }
 
 /**
  * Reports whether a read of the projection is in flight.
  *
  * @param snapshot - Machine snapshot.
+ *
  * @returns - Whether the machine is loading or rereading.
  */
 function isReading(snapshot: DisplaySnapshot): boolean {
-    return snapshot.matches("loading")
-        || snapshot.matches({ ready: { sync: "reloading" } });
+    return snapshot.matches('loading')
+        || snapshot.matches({ ready: { sync: 'reloading' } });
 }
 
 /**
  * Creates the display-settings controller for the options page.
  *
  * @param options - Controller dependencies and preload behavior.
+ *
  * @returns - Current display form state together with edit, save, and reset commands.
  */
 export function useDisplayController(options: DisplayControllerOptions): DisplayController {
@@ -806,11 +829,14 @@ export function useDisplayController(options: DisplayControllerOptions): Display
      * A stopped machine has nothing left to apply, so that also resolves.
      *
      * @param active - Whether the awaited activity is still in flight.
+     *
      * @returns - A promise that settles after the activity ended.
      */
-    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> =>
-        waitFor(actor, (current) => !active(current), { timeout: Infinity })
-            .then(() => undefined, () => undefined);
+    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> => waitFor(
+        actor,
+        (current) => !active(current),
+        { timeout: Infinity },
+    ).then(() => undefined, () => undefined);
 
     /**
      * Applies one draft edit and clears the current notice.
@@ -824,7 +850,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
     return {
         state: context.state,
         draft: context.draft,
-        loading: snapshot.matches("loading") || snapshot.matches("resetting"),
+        loading: snapshot.matches('loading') || snapshot.matches('resetting'),
         saving: isSaving(snapshot),
         appearanceSaving: isAppearanceSaving(snapshot),
         appearanceFailed: context.appearanceFailed,
@@ -857,7 +883,7 @@ export function useDisplayController(options: DisplayControllerOptions): Display
         },
         reloadAfterReset: () => {
             send({ type: DISPLAY_EVENT.RELOAD_AFTER_RESET });
-            return settled((current) => current.matches("loading"));
+            return settled((current) => current.matches('loading'));
         },
         reload: () => {
             send({ type: DISPLAY_EVENT.RELOAD });

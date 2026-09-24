@@ -2,7 +2,7 @@
  * @file Verifies how background reads replies from frames that may hold no runtime.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 import {
     DEBUG_POLICY_UPDATED_MESSAGE,
@@ -14,10 +14,10 @@ import {
     isDocumentPolicyAcknowledgement,
     isPresentationAcknowledgement,
     readDocumentStatusPhase,
-} from "../../../../src/shared/messaging/document-messages";
+} from '../../../../src/shared/messaging/document-messages';
 
-describe("document policy acknowledgement", () => {
-    it("accepts only the exact retained revision", () => {
+describe('document policy acknowledgement', () => {
+    it('accepts only the exact retained revision', () => {
         const reply = { type: DOCUMENT_POLICY_RECONCILED_MESSAGE, revision: 7 };
 
         expect(isDocumentPolicyAcknowledgement(reply, 7)).toBe(true);
@@ -28,14 +28,14 @@ describe("document policy acknowledgement", () => {
         )).toBe(true);
     });
 
-    it("rejects a frame that returned no reply", () => {
+    it('rejects a frame that returned no reply', () => {
         expect(isDocumentPolicyAcknowledgement(undefined, 7)).toBe(false);
         expect(isDocumentPolicyAcknowledgement(undefined, null)).toBe(false);
     });
 });
 
-describe("presentation and diagnostic acknowledgements", () => {
-    it("accepts only the acknowledgement sent for the exact revision", () => {
+describe('presentation and diagnostic acknowledgements', () => {
+    it('accepts only the acknowledgement sent for the exact revision', () => {
         expect(isPresentationAcknowledgement(
             { type: PRESENTATION_UPDATED_MESSAGE, revision: 3 },
             3,
@@ -51,7 +51,7 @@ describe("presentation and diagnostic acknowledgements", () => {
         expect(isPresentationAcknowledgement(undefined, 3)).toBe(false);
     });
 
-    it("keeps diagnostic acknowledgements distinct from presentation replies", () => {
+    it('keeps diagnostic acknowledgements distinct from presentation replies', () => {
         expect(isDebugPolicyAcknowledgement(
             { type: DEBUG_POLICY_UPDATED_MESSAGE, revision: 4 },
             4,
@@ -64,8 +64,8 @@ describe("presentation and diagnostic acknowledgements", () => {
     });
 });
 
-describe("document status reply", () => {
-    it("reads the reported phase and reports an absent runtime", () => {
+describe('document status reply', () => {
+    it('reads the reported phase and reports an absent runtime', () => {
         expect(readDocumentStatusPhase({
             type: DOCUMENT_STATUS_MESSAGE,
             phase: DOCUMENT_PHASE.ACTIVE,

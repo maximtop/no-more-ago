@@ -2,8 +2,8 @@
  * @file Generic lifecycle contract for document-scoped asynchronous timestamp sources.
  */
 
-import type { TimestampSourceRule } from "../adapters/types";
-import type { DocumentDiagnosticSink } from "../diagnostics";
+import type { TimestampSourceRule } from '../adapters/types';
+import type { DocumentDiagnosticSink } from '../diagnostics';
 
 /**
  * Host capabilities available to one document-scoped participant.

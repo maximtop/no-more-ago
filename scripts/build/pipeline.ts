@@ -2,14 +2,18 @@
  * @file Runs one-shot and watch builds for browser-extension artifacts.
  */
 
-import { mkdirSync } from "node:fs";
-import { setImmediate } from "node:timers";
-import path from "node:path";
-import rspack from "@rspack/core";
-import { createRspackConfig } from "../../rspack.config.ts";
-import type { BuildRequest } from "./cli.ts";
-import { writeArtifactZip } from "./artifacts.ts";
-import { BUILD_MODE, type Browser, type BuildMode } from "./contracts.ts";
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { setImmediate } from 'node:timers';
+
+import rspack from '@rspack/core';
+
+import { createRspackConfig } from '../../rspack.config.ts';
+
+import { writeArtifactZip } from './artifacts.ts';
+import { BUILD_MODE, type Browser, type BuildMode } from './contracts.ts';
+
+import type { BuildRequest } from './cli.ts';
 
 /**
  * Structured progress event emitted by the build process.
@@ -82,6 +86,7 @@ const createCompiler = rspack as unknown as (config: unknown) => Compiler;
  * Converts compiler callbacks into a single closed one-shot compilation.
  *
  * @param compiler - Rspack compiler to execute and close.
+ *
  * @returns - Promise settled when compilation and cleanup finish.
  */
 function runCompiler(compiler: Compiler): Promise<void> {
@@ -108,6 +113,7 @@ function runCompiler(compiler: Compiler): Promise<void> {
  * @param workspaceRoot - Absolute project root.
  * @param mode - Development or release mode.
  * @param browser - Browser target being built.
+ *
  * @returns - Unpacked output and matching ZIP paths.
  */
 function artifactPaths(
@@ -115,7 +121,7 @@ function artifactPaths(
     mode: BuildMode,
     browser: Browser,
 ): { readonly directory: string; readonly zip: string } {
-    const modeRoot = path.join(workspaceRoot, "dist", mode);
+    const modeRoot = path.join(workspaceRoot, 'dist', mode);
     return {
         directory: path.join(modeRoot, browser),
         zip: path.join(modeRoot, `${browser}.zip`),
@@ -154,6 +160,7 @@ async function buildBrowser(
  * @param workspaceRoot - Absolute project root.
  * @param browser - Browser target being watched.
  * @param events - Build progress observer.
+ *
  * @returns - Promise settled after the watcher receives a termination signal.
  */
 function watchBrowser(
@@ -190,11 +197,11 @@ function watchBrowser(
             finish();
         });
     };
-    process.once("SIGINT", stop);
-    process.once("SIGTERM", stop);
-    done.finally(() => {
-        process.off("SIGINT", stop);
-        process.off("SIGTERM", stop);
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+    void done.finally(() => {
+        process.off('SIGINT', stop);
+        process.off('SIGTERM', stop);
     });
     compiler.watch({}, (error, stats) => {
         if (stopping) {
@@ -203,20 +210,22 @@ function watchBrowser(
         const compilationError = error
             ?? (stats?.hasErrors() ? new Error(stats.toString({ errors: true })) : undefined);
         if (compilationError) {
+            sequence += 1;
             events({
-                type: "build",
-                status: "failed",
-                sequence: ++sequence,
+                type: 'build',
+                status: 'failed',
+                sequence,
                 error: compilationError.message,
             });
             return;
         }
         try {
             writeArtifactZip(output.directory, output.zip);
+            sequence += 1;
             const event = {
-                type: "build",
-                status: "success",
-                sequence: ++sequence,
+                type: 'build',
+                status: 'success',
+                sequence,
                 browser,
                 mode: BUILD_MODE.DEV,
             };
@@ -226,16 +235,17 @@ function watchBrowser(
                 }
             });
         } catch (buildError) {
+            sequence += 1;
             events({
-                type: "build",
-                status: "failed",
-                sequence: ++sequence,
+                type: 'build',
+                status: 'failed',
+                sequence,
                 error: buildError instanceof Error ? buildError.message : String(buildError),
             });
         }
     });
     events({
-        type: "ready",
+        type: 'ready',
         pid: process.pid,
         browser,
         mode: BUILD_MODE.DEV,
@@ -250,6 +260,7 @@ function watchBrowser(
  * @param options.workspaceRoot - Project root containing build inputs.
  * @param options.request - Validated build request.
  * @param options.events - Optional progress observer.
+ *
  * @returns - Promise settled after the build or watch session ends.
  */
 export async function runBuildCommand({
@@ -261,7 +272,7 @@ export async function runBuildCommand({
     if (request.watch) {
         const browser = request.browsers[0];
         if (request.mode !== BUILD_MODE.DEV || request.browsers.length !== 1 || !browser) {
-            throw new Error("Watch requires one development browser");
+            throw new Error('Watch requires one development browser');
         }
         await watchBrowser(root, browser, events);
         return;

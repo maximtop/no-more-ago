@@ -2,21 +2,22 @@
  * @file Strict parser for HTML global date-and-time values.
  */
 
-import { isValid, parseISO } from "date-fns";
+import { isValid, parseISO } from 'date-fns';
 
 /**
  * Strict syntax for an HTML global date-and-time with an explicit offset.
  */
 const HTML_GLOBAL_DATE_TIME = new RegExp(
-    "^(\\d{4,})-(\\d{2})-(\\d{2})(?:T| )"
-    + "(\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?"
-    + "(Z|[+-]\\d{2}:?\\d{2})$",
+    '^(\\d{4,})-(\\d{2})-(\\d{2})(?:T| )'
+    + '(\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?'
+    + '(Z|[+-]\\d{2}:?\\d{2})$',
 );
 
 /**
  * Detects ASCII and C1 controls that are not allowed in datetime values.
  *
  * @param value - Candidate datetime value.
+ *
  * @returns - Whether the value contains a control character.
  */
 function hasControlCharacter(value: string): boolean {
@@ -33,6 +34,7 @@ function hasControlCharacter(value: string): boolean {
  * Rejects HTML-specific ranges that date-fns intentionally normalizes.
  *
  * @param match - Match result from the HTML global datetime grammar.
+ *
  * @returns - Whether the year, hour, and offset obey the HTML grammar.
  */
 function hasValidHtmlRanges(match: RegExpMatchArray): boolean {
@@ -42,14 +44,14 @@ function hasValidHtmlRanges(match: RegExpMatchArray): boolean {
     if (!Number.isSafeInteger(year) || year === 0 || hour > 23 || zone === undefined) {
         return false;
     }
-    if (zone !== "Z") {
-        const digits = zone.slice(1).replace(":", "");
+    if (zone !== 'Z') {
+        const digits = zone.slice(1).replace(':', '');
         const offsetHours = Number(digits.slice(0, 2));
         const offsetMinutes = Number(digits.slice(2));
         if (
-            offsetHours > 23 ||
-            offsetMinutes > 59 ||
-            (zone.startsWith("-") && offsetHours === 0 && offsetMinutes === 0)
+            offsetHours > 23
+            || offsetMinutes > 59
+            || (zone.startsWith('-') && offsetHours === 0 && offsetMinutes === 0)
         ) {
             return false;
         }
@@ -61,6 +63,7 @@ function hasValidHtmlRanges(match: RegExpMatchArray): boolean {
  * Parses an HTML global date-and-time into an absolute instant.
  *
  * @param value - Candidate datetime attribute value.
+ *
  * @returns - Parsed instant, or null when the value is incomplete, ambiguous, or invalid.
  */
 export function parseHtmlGlobalDatetime(value: string): Date | null {
@@ -81,7 +84,7 @@ export function parseHtmlGlobalDatetime(value: string): Date | null {
         }
         const parserValue = yearText.length === 4
             ? value
-            : `+${yearText.padStart(6, "0")}${value.slice(yearText.length)}`;
+            : `+${yearText.padStart(6, '0')}${value.slice(yearText.length)}`;
         const instant = parseISO(parserValue);
         return isValid(instant) ? instant : null;
     } catch {

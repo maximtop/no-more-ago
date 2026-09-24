@@ -5,10 +5,11 @@
 import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
-} from "../ownership-markers";
-import type { OwnedDomMutationSink } from "./owned-dom-mutations";
+} from '../ownership-markers';
 
-export { OWNED_OUTPUT_ATTRIBUTE, OWNED_SOURCE_ATTRIBUTE } from "../ownership-markers";
+import type { OwnedDomMutationSink } from './owned-dom-mutations';
+
+export { OWNED_OUTPUT_ATTRIBUTE, OWNED_SOURCE_ATTRIBUTE } from '../ownership-markers';
 
 /**
  * Private ownership record pairing one source element with its generated time node and marker
@@ -63,18 +64,19 @@ const SOURCE_MARKER = /^(visible|hidden):(.+)$/;
  * Decodes a source marker only when it carries the extension's expected ownership prefix and token.
  *
  * @param value - Candidate ownership marker value.
+ *
  * @returns - Decoded ownership token, or null when the marker is foreign or malformed.
  */
 function parseSourceMarker(
     value: string | null,
-): { state: "visible" | "hidden"; token: string } | null {
+): { state: 'visible' | 'hidden'; token: string } | null {
     const match = value?.match(SOURCE_MARKER);
     if (!match) {
         return null;
     }
     const state = match[1];
     const token = match[2];
-    if ((state !== "visible" && state !== "hidden") || !token) {
+    if ((state !== 'visible' && state !== 'hidden') || !token) {
         return null;
     }
     return { state, token };
@@ -84,6 +86,7 @@ function parseSourceMarker(
  * Retrieves the ownership records associated with a document.
  *
  * @param document - Document whose ownership registry is requested.
+ *
  * @returns - Mutable ownership records retained for the document.
  */
 function getRecords(document: Document): Map<Element, OwnedPairRecord> {
@@ -100,11 +103,12 @@ function getRecords(document: Document): Map<Element, OwnedPairRecord> {
  * Generates an opaque token that prevents unrelated page nodes from claiming extension ownership.
  *
  * @param document - Document whose crypto source generates the token.
+ *
  * @returns - New opaque ownership token.
  */
 function createToken(document: Document): string | null {
     const crypto = document.defaultView?.crypto;
-    if (!crypto || typeof crypto.randomUUID !== "function") {
+    if (!crypto || typeof crypto.randomUUID !== 'function') {
         return null;
     }
     return crypto.randomUUID();
@@ -114,16 +118,18 @@ function createToken(document: Document): string | null {
  * Builds the marker that lets restoration verify an unchanged source element.
  *
  * @param record - Ownership record for the source-output pair.
+ *
  * @returns - Exact marker expected on the source element.
  */
 function expectedSourceMarker(record: OwnedPairRecord): string {
-    return `${record.sourceWasHidden ? "hidden" : "visible"}:${record.token}`;
+    return `${record.sourceWasHidden ? 'hidden' : 'visible'}:${record.token}`;
 }
 
 /**
  * Builds the marker that lets restoration verify an extension-owned output node.
  *
  * @param record - Ownership record for the source-output pair.
+ *
  * @returns - Exact marker expected on the generated output.
  */
 function expectedOutputMarker(record: OwnedPairRecord): string {
@@ -142,15 +148,15 @@ function updateOutput(
     datetime: string,
     text: string,
 ): void {
-    output.dateTime = datetime;
-    output.textContent = text;
-    output.style.display = "";
+    Object.assign(output, { dateTime: datetime, textContent: text });
+    output.style.removeProperty('display');
 }
 
 /**
  * Resolves a generated output node back to its source only after marker verification succeeds.
  *
  * @param node - Candidate generated output node.
+ *
  * @returns - Verified connected source element, or null when ownership fails.
  */
 export function getOwnedSourceForOutput(node: Node): Element | null {
@@ -164,8 +170,8 @@ export function getOwnedSourceForOutput(node: Node): Element | null {
     }
     for (const record of records.values()) {
         if (
-            record.output === node &&
-            record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
+            record.output === node
+            && record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
         ) {
             return record.source;
         }
@@ -216,7 +222,7 @@ export function releaseSourceHiddenForReconciliation(
         return;
     }
     mutations?.beforeOwnedSourceHiddenChange(source, false);
-    source.removeAttribute("hidden");
+    source.removeAttribute('hidden');
     record.sourceHiddenByExtension = false;
 }
 
@@ -225,6 +231,7 @@ export function releaseSourceHiddenForReconciliation(
  * document. It never scans the DOM and never discovers new candidates.
  *
  * @param document - Document whose owned sources are requested.
+ *
  * @returns - Connected and marker-verified source entries.
  */
 export function getOwnedSourceEntries(document: Document): readonly OwnedSourceEntry[] {
@@ -234,18 +241,14 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
     }
     const entries: OwnedSourceEntry[] = [];
     for (const record of records.values()) {
-        if (!record.source.isConnected || !record.output.isConnected) {
-            continue;
-        }
         if (
-            record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE) !== expectedSourceMarker(record)
+            record.source.isConnected
+            && record.output.isConnected
+            && record.source.getAttribute(OWNED_SOURCE_ATTRIBUTE) === expectedSourceMarker(record)
+            && record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record)
         ) {
-            continue;
+            entries.push({ source: record.source, output: record.output });
         }
-        if (record.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(record)) {
-            continue;
-        }
-        entries.push({ source: record.source, output: record.output });
     }
     return entries;
 }
@@ -257,6 +260,7 @@ export function getOwnedSourceEntries(document: Document): readonly OwnedSourceE
  * @param datetime - Trusted source datetime for the generated time element.
  * @param text - Exact formatted date text to display.
  * @param mutations - Optional sink for renderer-authored DOM mutations.
+ *
  * @returns - Verified generated time element, or null on an ownership conflict.
  */
 function renderOwnedTime(
@@ -272,10 +276,10 @@ function renderOwnedTime(
     if (existing) {
         const sourceMarker = parseSourceMarker(source.getAttribute(OWNED_SOURCE_ATTRIBUTE));
         if (
-            existing.source !== source ||
-            sourceMarker === null ||
-            `${sourceMarker.state}:${sourceMarker.token}` !== expectedSourceMarker(existing) ||
-            existing.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(existing)
+            existing.source !== source
+            || sourceMarker === null
+            || `${sourceMarker.state}:${sourceMarker.token}` !== expectedSourceMarker(existing)
+            || existing.output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) !== expectedOutputMarker(existing)
         ) {
             return null;
         }
@@ -283,11 +287,11 @@ function renderOwnedTime(
             return null;
         }
         if (
-            !source.hasAttribute("hidden")
+            !source.hasAttribute('hidden')
             && !existing.sourceWasHidden
         ) {
             mutations?.beforeOwnedSourceHiddenChange(source, true);
-            source.setAttribute("hidden", "");
+            source.setAttribute('hidden', '');
             existing.sourceHiddenByExtension = true;
         }
         if (source.nextElementSibling !== existing.output) {
@@ -305,10 +309,10 @@ function renderOwnedTime(
         return null;
     }
 
-    const sourceWasHidden = source.hasAttribute("hidden");
+    const sourceWasHidden = source.hasAttribute('hidden');
     const record: OwnedPairRecord = {
         source,
-        output: document.createElement("time"),
+        output: document.createElement('time'),
         token,
         sourceWasHidden,
         sourceHiddenByExtension: false,
@@ -319,7 +323,7 @@ function renderOwnedTime(
     source.setAttribute(OWNED_SOURCE_ATTRIBUTE, expectedSourceMarker(record));
     if (!sourceWasHidden) {
         mutations?.beforeOwnedSourceHiddenChange(source, true);
-        source.setAttribute("hidden", "");
+        source.setAttribute('hidden', '');
         record.sourceHiddenByExtension = true;
     }
     records.set(source, record);
@@ -334,6 +338,7 @@ function renderOwnedTime(
  * @param datetime - Trusted source datetime to preserve on the generated node.
  * @param text - Exact formatted date text to display.
  * @param mutations - Optional sink for renderer-authored DOM mutations.
+ *
  * @returns - Verified generated time element, or null on an ownership conflict.
  */
 export function renderExactTime(
@@ -354,8 +359,7 @@ export function renderExactTime(
  */
 function restoreRecord(record: OwnedPairRecord, mutations?: OwnedDomMutationSink): void {
     const { source, output } = record;
-    const validOutput =
-        output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
+    const validOutput = output.getAttribute(OWNED_OUTPUT_ATTRIBUTE) === expectedOutputMarker(record);
     if (validOutput && output.isConnected && mutations) {
         mutations.beforeOwnedOutputRemoval(output);
     }
@@ -363,7 +367,7 @@ function restoreRecord(record: OwnedPairRecord, mutations?: OwnedDomMutationSink
         source.removeAttribute(OWNED_SOURCE_ATTRIBUTE);
         if (record.sourceHiddenByExtension) {
             mutations?.beforeOwnedSourceHiddenChange(source, false);
-            source.removeAttribute("hidden");
+            source.removeAttribute('hidden');
         }
     }
     if (validOutput) {
@@ -408,10 +412,9 @@ export function restoreExactTimes(root: ParentNode, mutations?: OwnedDomMutation
     }
 
     for (const [source, record] of records) {
-        if (rootNode.nodeType !== 9 && source !== rootNode && !rootNode.contains(source)) {
-            continue;
+        if (rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)) {
+            restoreRecord(record, mutations);
+            records.delete(source);
         }
-        restoreRecord(record, mutations);
-        records.delete(source);
     }
 }

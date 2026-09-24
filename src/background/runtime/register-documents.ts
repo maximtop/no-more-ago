@@ -3,28 +3,29 @@
  *
  * @file Dynamic registration for all HTTP(S) document frames.
  */
-import type {
-    RegisteredContentScriptReference,
-    RegisteredContentScriptSpec,
-} from "./scripting";
-import { SCRIPT_EXECUTION_WORLD } from "./scripting";
 import {
     CONTENT_SCRIPT_FILE,
     FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
-} from "../../shared/extension-files";
-import { HTTP_MATCH_PATTERNS } from "../../shared/url/http";
-import { FACEBOOK_MATCH_PATTERNS } from "../../shared/url/facebook";
+} from '../../shared/extension-files';
+import { FACEBOOK_MATCH_PATTERNS } from '../../shared/url/facebook';
+import { HTTP_MATCH_PATTERNS } from '../../shared/url/http';
+
+import { SCRIPT_EXECUTION_WORLD } from './scripting';
+
+import type {
+    RegisteredContentScriptReference,
+    RegisteredContentScriptSpec,
+} from './scripting';
 
 /**
  * Stable browser registration identifier.
  */
-export const DOCUMENT_RUNTIME_REGISTRATION_ID = "no-more-ago-documents" as const;
+export const DOCUMENT_RUNTIME_REGISTRATION_ID = 'no-more-ago-documents' as const;
 
 /**
  * Stable Facebook main-world bridge registration identifier.
  */
-export const FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID =
-    "no-more-ago-facebook-payload-bridge" as const;
+export const FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID = 'no-more-ago-facebook-payload-bridge' as const;
 
 /**
  * Universal persistent registration specification.
@@ -33,7 +34,7 @@ export const DOCUMENT_RUNTIME_REGISTRATION: RegisteredContentScriptSpec = {
     id: DOCUMENT_RUNTIME_REGISTRATION_ID,
     matches: [...HTTP_MATCH_PATTERNS],
     js: [CONTENT_SCRIPT_FILE],
-    runAt: "document_start",
+    runAt: 'document_start',
     allFrames: true,
     persistAcrossSessions: true,
     world: SCRIPT_EXECUTION_WORLD.ISOLATED,
@@ -46,7 +47,7 @@ export const FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION: RegisteredContentScriptSpec =
     id: FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
     matches: [...FACEBOOK_MATCH_PATTERNS],
     js: [FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE],
-    runAt: "document_start",
+    runAt: 'document_start',
     allFrames: true,
     persistAcrossSessions: true,
     world: SCRIPT_EXECUTION_WORLD.MAIN,
@@ -65,6 +66,7 @@ export const DOCUMENT_RUNTIME_REGISTRATIONS = [
  *
  * @param existing - Registration returned by the browser.
  * @param expected - Canonical registration specification.
+ *
  * @returns - Whether all relevant fields match.
  */
 export function registrationMatches(
@@ -76,10 +78,10 @@ export function registrationMatches(
      *
      * @param left - List reported by the browser, when any.
      * @param right - Expected list.
+     *
      * @returns - Whether the lists are equal or the reported one is absent.
      */
-    const same = (left: readonly string[] | undefined, right: readonly string[]): boolean =>
-        left === undefined
+    const same = (left: readonly string[] | undefined, right: readonly string[]): boolean => left === undefined
         || (
             left.length === right.length
             && left.every((value, index) => value === right[index])
@@ -90,10 +92,10 @@ export function registrationMatches(
      *
      * @param left - Value reported by the browser, when any.
      * @param right - Expected value.
+     *
      * @returns - Whether the values are equal or the reported one is absent.
      */
-    const optionalMatches = <T>(left: T | undefined, right: T): boolean =>
-        left === undefined || left === right;
+    const optionalMatches = <T>(left: T | undefined, right: T): boolean => left === undefined || left === right;
     return existing.id === expected.id
         && same(existing.matches, expected.matches)
         && same(existing.js, expected.js)

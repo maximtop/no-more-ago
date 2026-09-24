@@ -2,42 +2,44 @@
  * @file Exercises the complete offline Facebook eligibility and lifecycle matrix.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync } from 'node:fs';
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+    afterEach, describe, expect, it, vi,
+} from 'vitest';
 
 import {
     createFacebookPayloadMessage,
     type FacebookTimestampRecord,
-} from "../../../../src/content-script/facebook/contracts";
+} from '../../../../src/content-script/facebook/contracts';
 import { extractFacebookTimestampUpdate } from
-    "../../../../src/content-script/facebook/payload-parser";
+    '../../../../src/content-script/facebook/payload-parser';
 import {
     installFacebookPayloadRuntime,
     type FacebookPayloadRuntimeHandle,
-} from "../../../../src/content-script/facebook/payload-runtime";
+} from '../../../../src/content-script/facebook/payload-runtime';
 import { clearFacebookTimestampRecords } from
-    "../../../../src/content-script/facebook/timestamp-store";
+    '../../../../src/content-script/facebook/timestamp-store';
 import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
-} from "../../../../src/content-script/ownership-markers";
+} from '../../../../src/content-script/ownership-markers';
 import {
     DOCUMENT_RUNTIME_SLOT,
     installContentRuntime,
     type ContentRuntimeHandle,
-} from "../../../../src/content-script/runtime";
+} from '../../../../src/content-script/runtime';
 import {
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
-} from "../../../../src/shared/messaging/document-messages";
+} from '../../../../src/shared/messaging/document-messages';
 import { STATE_AVAILABILITY } from
-    "../../../../src/shared/messaging/view-state-values";
+    '../../../../src/shared/messaging/view-state-values';
 
-const FACEBOOK_URL = new URL("https://www.facebook.com/fixture-feed");
-const INITIAL_TIMESTAMP = "1787933301" as const;
-const DYNAMIC_TIMESTAMP = "1787343300" as const;
-const INITIAL_TEXT = "2026-08-28 16:08:21" as const;
+const FACEBOOK_URL = new URL('https://www.facebook.com/fixture-feed');
+const INITIAL_TIMESTAMP = '1787933301' as const;
+const DYNAMIC_TIMESTAMP = '1787343300' as const;
+const INITIAL_TEXT = '2026-08-28 16:08:21' as const;
 const OWNED_SELECTOR = `[${OWNED_SOURCE_ATTRIBUTE}], [${OWNED_OUTPUT_ATTRIBUTE}]`;
 
 let contentRuntime: ContentRuntimeHandle | undefined;
@@ -47,10 +49,11 @@ let payloadRuntime: FacebookPayloadRuntimeHandle | undefined;
  * Reads one deterministic Facebook fixture adjacent to this test directory.
  *
  * @param name - Fixture filename.
+ *
  * @returns - Fixture contents.
  */
 function fixture(name: string): string {
-    return readFileSync(`tests/src/content-script/fixtures/facebook/${name}`, "utf8");
+    return readFileSync(`tests/src/content-script/fixtures/facebook/${name}`, 'utf8');
 }
 
 /**
@@ -59,14 +62,14 @@ function fixture(name: string): string {
  * @param includeInitialPayload - Whether initial Story evidence is present.
  */
 function loadFixture(includeInitialPayload = true): void {
-    document.body.innerHTML = fixture("eligibility-matrix.html");
+    document.body.innerHTML = fixture('eligibility-matrix.html');
     if (!includeInitialPayload) {
         return;
     }
-    const payload = document.createElement("script");
-    payload.type = "application/json";
-    payload.dataset.sjs = "1";
-    payload.textContent = fixture("initial-payload.json");
+    const payload = document.createElement('script');
+    payload.type = 'application/json';
+    payload.dataset.sjs = '1';
+    payload.textContent = fixture('initial-payload.json');
     document.body.prepend(payload);
 }
 
@@ -74,7 +77,10 @@ function loadFixture(includeInitialPayload = true): void {
  * Returns one required fixture element.
  *
  * @param id - Fixture element identifier.
+ *
  * @returns - Connected fixture element.
+ *
+ * @throws If the element is missing.
  */
 function requiredElement(id: string): HTMLElement {
     const element = document.getElementById(id);
@@ -114,6 +120,7 @@ function messages() {
  *
  * @param enabled - Effective global and site policy.
  * @param revision - Settings revision.
+ *
  * @returns - Ready state with deterministic UTC formatting.
  */
 function state(enabled: boolean, revision: number) {
@@ -122,9 +129,9 @@ function state(enabled: boolean, revision: number) {
         revision,
         enabled,
         display: {
-            formatMode: "custom" as const,
-            pattern: "yyyy-MM-dd HH:mm:ss",
-            timeZone: { mode: "utc" as const },
+            formatMode: 'custom' as const,
+            pattern: 'yyyy-MM-dd HH:mm:ss',
+            timeZone: { mode: 'utc' as const },
         },
         debugEnabled: false,
     };
@@ -135,6 +142,7 @@ function state(enabled: boolean, revision: number) {
  *
  * @param revision - Settings revision carried by the command.
  * @param enabled - Effective document activation policy.
+ *
  * @returns - Complete document-policy command.
  */
 function policy(revision: number, enabled: boolean) {
@@ -145,6 +153,7 @@ function policy(revision: number, enabled: boolean) {
  * Creates the expected acknowledgement for one policy revision.
  *
  * @param revision - Retained settings revision.
+ *
  * @returns - Complete policy acknowledgement.
  */
 function policyAcknowledgement(revision: number) {
@@ -174,7 +183,7 @@ function installRuntimes(
     contentRuntime = installContentRuntime({
         document,
         url: FACEBOOK_URL,
-        locales: ["en-US"],
+        locales: ['en-US'],
         loadDocumentState: loadState,
         reportDiagnostic,
         onActivityChanged: (active) => {
@@ -188,13 +197,14 @@ function installRuntimes(
  * Dispatches trusted records parsed from one response fixture.
  *
  * @param name - Response fixture filename.
+ *
  * @returns - Minimal parsed records sent across the bridge boundary.
  */
 function dispatchFixtureRecords(
     name: string,
 ): Promise<readonly FacebookTimestampRecord[]> {
     const update = extractFacebookTimestampUpdate(fixture(name));
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent('message', {
         data: createFacebookPayloadMessage(update),
         origin: window.location.origin,
         source: window,
@@ -220,7 +230,10 @@ async function flushRuntime(): Promise<void> {
  * Returns the generated output adjacent to a required source.
  *
  * @param source - Page-owned timestamp source.
+ *
  * @returns - Extension-owned exact time output.
+ *
+ * @throws If the source has no generated output.
  */
 function outputFor(source: Element): HTMLTimeElement {
     const output = source.nextElementSibling;
@@ -242,48 +255,48 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe("Facebook offline fixture matrix", () => {
-    it("renders only proven Story sources and preserves rejected look-alikes", async () => {
+describe('Facebook offline fixture matrix', () => {
+    it('renders only proven Story sources and preserves rejected look-alikes', async () => {
         loadFixture();
-        vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
-        const fetchSpy = vi.spyOn(globalThis, "fetch");
+        vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
+        const fetchSpy = vi.spyOn(globalThis, 'fetch');
         const diagnostics = vi.fn<
             (event: Record<string, unknown>) => Promise<unknown>
         >(() => Promise.resolve(undefined));
         const source = messages();
-        const actor = requiredElement("actor-link");
+        const actor = requiredElement('actor-link');
         const rejectedIds = [
-            "actor-link",
-            "media-link",
-            "comment-link",
-            "reel-link",
-            "nested-story-timestamp",
-            "empty-token",
+            'actor-link',
+            'media-link',
+            'comment-link',
+            'reel-link',
+            'nested-story-timestamp',
+            'empty-token',
         ] as const;
         const rejected = rejectedIds.map(requiredElement);
         const originalMarkup = rejected.map((element) => element.outerHTML);
         const actorClick = vi.fn((event: Event) => {
             event.preventDefault();
         });
-        actor.addEventListener("click", actorClick);
+        actor.addEventListener('click', actorClick);
 
         installRuntimes(source, () => Promise.resolve(state(true, 1)), diagnostics);
         await flushRuntime();
 
-        const initial = requiredElement("initial-timestamp");
+        const initial = requiredElement('initial-timestamp');
         await vi.waitFor(() => {
             expect(outputFor(initial).dateTime).toBe(INITIAL_TIMESTAMP);
         });
         expect(outputFor(initial).textContent).toBe(INITIAL_TEXT);
         expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
 
-        await expect(dispatchFixtureRecords("dynamic-response.txt")).resolves.toEqual([{
-            trackingToken: "dynamic-story-token-000000000002",
+        await expect(dispatchFixtureRecords('dynamic-response.txt')).resolves.toEqual([{
+            trackingToken: 'dynamic-story-token-000000000002',
             rawDatetime: DYNAMIC_TIMESTAMP,
         }]);
         await flushRuntime();
 
-        const dynamic = requiredElement("dynamic-timestamp");
+        const dynamic = requiredElement('dynamic-timestamp');
         expect(dynamic.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
         expect(dynamic.nextElementSibling?.hasAttribute(OWNED_OUTPUT_ATTRIBUTE))
             .not.toBe(true);
@@ -297,31 +310,31 @@ describe("Facebook offline fixture matrix", () => {
             expect(element.outerHTML).toBe(originalMarkup[index]);
             expect(element.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
         }
-        actor.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        actor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         expect(actorClick).toHaveBeenCalledOnce();
         expect(fetchSpy).not.toHaveBeenCalled();
         expect(diagnostics).not.toHaveBeenCalled();
     });
 
-    it.each(["evidence-first", "source-first"] as const)(
-        "keeps a textless dynamic source unowned in %s order",
+    it.each(['evidence-first', 'source-first'] as const)(
+        'keeps a textless dynamic source unowned in %s order',
         async (order) => {
             loadFixture(false);
-            vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
+            vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
             const source = messages();
-            const dynamicPost = requiredElement("dynamic-post");
-            if (order === "evidence-first") {
+            const dynamicPost = requiredElement('dynamic-post');
+            if (order === 'evidence-first') {
                 dynamicPost.remove();
             }
             installRuntimes(source, () => Promise.resolve(state(true, 1)));
             await flushRuntime();
-            await dispatchFixtureRecords("dynamic-response.txt");
-            if (order === "evidence-first") {
-                requiredElement("fixture-feed").prepend(dynamicPost);
+            await dispatchFixtureRecords('dynamic-response.txt');
+            if (order === 'evidence-first') {
+                requiredElement('fixture-feed').prepend(dynamicPost);
             }
             await flushRuntime();
 
-            const dynamic = requiredElement("dynamic-timestamp");
+            const dynamic = requiredElement('dynamic-timestamp');
             expect(dynamic.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
             expect(document.querySelectorAll(
                 `[${OWNED_OUTPUT_ATTRIBUTE}][datetime="${DYNAMIC_TIMESTAMP}"]`,
@@ -329,16 +342,16 @@ describe("Facebook offline fixture matrix", () => {
         },
     );
 
-    it("keeps batches, re-renders, repairs, and repeated mutations idempotent", async () => {
+    it('keeps batches, re-renders, repairs, and repeated mutations idempotent', async () => {
         document.body.innerHTML = '<main id="batch-feed"></main><main id="moved-feed"></main>';
-        vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
-        const feed = requiredElement("batch-feed");
+        vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
+        const feed = requiredElement('batch-feed');
         const records: FacebookTimestampRecord[] = [];
         const batchSize = 24;
         for (let index = 0; index < batchSize; index += 1) {
             const indexText = String(index);
-            const token = `older-story-token-${String(index).padStart(12, "0")}`;
-            const article = document.createElement("article");
+            const token = `older-story-token-${String(index).padStart(12, '0')}`;
+            const article = document.createElement('article');
             article.innerHTML = `<a id="older-${indexText}" href="/older?__cft__[0]=${token}"`
                 + '><span>1͏d͏</span></a>';
             feed.append(article);
@@ -350,7 +363,7 @@ describe("Facebook offline fixture matrix", () => {
         const source = messages();
         installRuntimes(source, () => Promise.resolve(state(true, 1)));
         await flushRuntime();
-        window.dispatchEvent(new MessageEvent("message", {
+        window.dispatchEvent(new MessageEvent('message', {
             data: createFacebookPayloadMessage({
                 records,
                 invalidatedTrackingTokens: [],
@@ -365,21 +378,21 @@ describe("Facebook offline fixture matrix", () => {
                 .toHaveLength(batchSize);
         });
 
-        const first = requiredElement("older-0");
-        const firstArticle = first.closest("article");
+        const first = requiredElement('older-0');
+        const firstArticle = first.closest('article');
         if (!firstArticle) {
-            throw new Error("Expected older Story article");
+            throw new Error('Expected older Story article');
         }
-        requiredElement("moved-feed").append(firstArticle);
+        requiredElement('moved-feed').append(firstArticle);
         await flushRuntime();
         expect(outputFor(first).dateTime).toBe(records[0]?.rawDatetime);
 
-        first.innerHTML = "<span>1͏d͏</span>";
+        first.innerHTML = '<span>1͏d͏</span>';
         await flushRuntime();
         outputFor(first).remove();
         await flushRuntime();
         for (let index = 0; index < 100; index += 1) {
-            const noise = document.createElement("i");
+            const noise = document.createElement('i');
             first.append(noise);
             noise.remove();
         }
@@ -390,15 +403,15 @@ describe("Facebook offline fixture matrix", () => {
         expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(batchSize);
     });
 
-    it("restores on disable, conflict, removal, and global teardown", async () => {
+    it('restores on disable, conflict, removal, and global teardown', async () => {
         loadFixture();
-        vi.spyOn(window, "postMessage").mockImplementation(() => undefined);
+        vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
         let enabled = true;
         let revision = 1;
         const source = messages();
         installRuntimes(source, () => Promise.resolve(state(enabled, revision)));
         await flushRuntime();
-        await dispatchFixtureRecords("dynamic-response.txt");
+        await dispatchFixtureRecords('dynamic-response.txt');
         await flushRuntime();
         await vi.waitFor(() => {
             expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
@@ -416,22 +429,22 @@ describe("Facebook offline fixture matrix", () => {
         expect(source.dispatch(policy(revision, true)))
             .toEqual(policyAcknowledgement(revision));
         await flushRuntime();
-        await dispatchFixtureRecords("dynamic-response.txt");
+        await dispatchFixtureRecords('dynamic-response.txt');
         await flushRuntime();
         await vi.waitFor(() => {
             expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(2);
         });
 
-        await dispatchFixtureRecords("conflicting-response.txt");
+        await dispatchFixtureRecords('conflicting-response.txt');
         await flushRuntime();
-        const initial = requiredElement("initial-timestamp");
+        const initial = requiredElement('initial-timestamp');
         await vi.waitFor(() => {
             expect(initial.hasAttribute(OWNED_SOURCE_ATTRIBUTE)).toBe(false);
         });
-        expect(initial.hasAttribute("hidden")).toBe(false);
+        expect(initial.hasAttribute('hidden')).toBe(false);
         expect(document.querySelectorAll(`[${OWNED_OUTPUT_ATTRIBUTE}]`)).toHaveLength(1);
 
-        const dynamicPost = requiredElement("dynamic-post");
+        const dynamicPost = requiredElement('dynamic-post');
         dynamicPost.remove();
         await flushRuntime();
         expect(dynamicPost.querySelectorAll(OWNED_SELECTOR)).toHaveLength(0);
@@ -442,6 +455,6 @@ describe("Facebook offline fixture matrix", () => {
         expect(source.dispatch(policy(revision, false)))
             .toEqual(policyAcknowledgement(revision));
         expect(document.querySelectorAll(OWNED_SELECTOR)).toHaveLength(0);
-        expect(requiredElement("generic-timestamp").textContent).toBe("yesterday");
+        expect(requiredElement('generic-timestamp').textContent).toBe('yesterday');
     });
 });

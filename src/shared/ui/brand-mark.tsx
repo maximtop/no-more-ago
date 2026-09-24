@@ -2,7 +2,7 @@
  * @file Inline Exact Point mark shared by the popup and the settings page.
  */
 
-import type { ReactElement } from "react";
+import type { ReactElement } from 'react';
 
 /**
  * Size and accessible-name options for the brand mark.
@@ -25,6 +25,7 @@ export interface BrandMarkProps {
  * @param props - Component properties.
  * @param props.size - Rendered edge length in pixels.
  * @param props.title - Accessible name, when the mark carries meaning.
+ *
  * @returns - The inline brand mark.
  */
 export function BrandMark({ size, title }: BrandMarkProps): ReactElement {
@@ -33,7 +34,7 @@ export function BrandMark({ size, title }: BrandMarkProps): ReactElement {
             width={size}
             height={size}
             viewBox="0 0 128 128"
-            role={title ? "img" : "presentation"}
+            role={title ? 'img' : 'presentation'}
             aria-hidden={title ? undefined : true}
             focusable="false"
         >

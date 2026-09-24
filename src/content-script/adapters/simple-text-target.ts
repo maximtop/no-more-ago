@@ -6,6 +6,7 @@
  * Finds the only text node in an element without child elements.
  *
  * @param container - Page-owned element whose label is inspected.
+ *
  * @returns - One unambiguous existing text target, or null for absent or complex content.
  */
 export function findSimpleTextTarget(container: Element): Text | null {

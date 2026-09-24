@@ -2,22 +2,26 @@
  * @file Verifies scoped activation reconciliation preserves unrelated tab outcomes.
  */
 
-import { describe, expect, it, vi } from "vitest";
-import { ActivationManager } from "../../../../src/background/application/activation-manager";
-import type { ActivationCoordinator } from "../../../../src/background/application/contracts";
-import type {
-    ActivationReconcileResult,
-} from "../../../../src/background/runtime/document-activation";
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
+import { ActivationManager } from '../../../../src/background/application/activation-manager';
 import {
     ACTIVATION_POLICY,
     RECONCILE_FAILURE_SCOPE,
     REGISTRATION_OUTCOME,
     TAB_ACTION,
-} from "../../../../src/background/runtime/document-activation";
-import { DEFAULT_SITE_SCOPE } from "../../../../src/shared/settings/site-scope";
+} from '../../../../src/background/runtime/document-activation';
+import { DEFAULT_SITE_SCOPE } from '../../../../src/shared/settings/site-scope';
 
-describe("ActivationManager", () => {
-    it("preserves an unrelated tab failure until that tab succeeds", async () => {
+import type { ActivationCoordinator } from '../../../../src/background/application/contracts';
+import type {
+    ActivationReconcileResult,
+} from '../../../../src/background/runtime/document-activation';
+
+describe('ActivationManager', () => {
+    it('preserves an unrelated tab failure until that tab succeeds', async () => {
         const results: readonly ActivationReconcileResult[] = [
             {
                 revision: 1,
@@ -25,14 +29,14 @@ describe("ActivationManager", () => {
                 failures: [{
                     scope: RECONCILE_FAILURE_SCOPE.TAB,
                     tabId: 2,
-                    hostname: "b.test",
+                    hostname: 'b.test',
                     action: TAB_ACTION.INJECT,
                 }],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
                 registrations: [],
                 tabs: [{
                     tabId: 2,
-                    hostname: "b.test",
+                    hostname: 'b.test',
                     action: TAB_ACTION.INJECT,
                     ok: false,
                 }],
@@ -45,7 +49,7 @@ describe("ActivationManager", () => {
                 registrations: [],
                 tabs: [{
                     tabId: 1,
-                    hostname: "a.test",
+                    hostname: 'a.test',
                     action: TAB_ACTION.INJECT,
                     ok: true,
                 }],
@@ -58,7 +62,7 @@ describe("ActivationManager", () => {
                 registrations: [],
                 tabs: [{
                     tabId: 2,
-                    hostname: "b.test",
+                    hostname: 'b.test',
                     action: TAB_ACTION.INJECT,
                     ok: true,
                 }],
@@ -70,7 +74,7 @@ describe("ActivationManager", () => {
                 const result = results[nextResult];
                 nextResult += 1;
                 if (!result) {
-                    return Promise.reject(new Error("Unexpected reconciliation"));
+                    return Promise.reject(new Error('Unexpected reconciliation'));
                 }
                 return Promise.resolve(result);
             }),
@@ -86,13 +90,13 @@ describe("ActivationManager", () => {
             ACTIVATION_POLICY.ENABLED,
             2,
             DEFAULT_SITE_SCOPE,
-            ["a.test"],
+            ['a.test'],
         );
 
         expect(manager.result?.failures).toContainEqual({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: 2,
-            hostname: "b.test",
+            hostname: 'b.test',
             action: TAB_ACTION.INJECT,
         });
 
@@ -100,13 +104,13 @@ describe("ActivationManager", () => {
             ACTIVATION_POLICY.ENABLED,
             3,
             DEFAULT_SITE_SCOPE,
-            ["b.test"],
+            ['b.test'],
         );
 
         expect(manager.result?.failures).toEqual([]);
     });
 
-    it("drops a scoped failure when its tab is no longer returned", async () => {
+    it('drops a scoped failure when its tab is no longer returned', async () => {
         const results: readonly ActivationReconcileResult[] = [
             {
                 revision: 1,
@@ -114,14 +118,14 @@ describe("ActivationManager", () => {
                 failures: [{
                     scope: RECONCILE_FAILURE_SCOPE.TAB,
                     tabId: 2,
-                    hostname: "b.test",
+                    hostname: 'b.test',
                     action: TAB_ACTION.INJECT,
                 }],
                 registration: REGISTRATION_OUTCOME.UNCHANGED,
                 registrations: [],
                 tabs: [{
                     tabId: 2,
-                    hostname: "b.test",
+                    hostname: 'b.test',
                     action: TAB_ACTION.INJECT,
                     ok: false,
                 }],
@@ -142,7 +146,7 @@ describe("ActivationManager", () => {
                 nextResult += 1;
                 return result
                     ? Promise.resolve(result)
-                    : Promise.reject(new Error("Unexpected reconciliation"));
+                    : Promise.reject(new Error('Unexpected reconciliation'));
             }),
         };
         const manager = new ActivationManager(coordinator);
@@ -152,7 +156,7 @@ describe("ActivationManager", () => {
             ACTIVATION_POLICY.ENABLED,
             2,
             DEFAULT_SITE_SCOPE,
-            ["b.test"],
+            ['b.test'],
         );
 
         expect(manager.result?.failures).toEqual([]);

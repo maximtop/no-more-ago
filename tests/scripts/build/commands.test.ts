@@ -2,52 +2,56 @@
  * @file Exercises the public build commands and their emitted extension artifacts.
  */
 
-import { execFile } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { promisify } from "node:util";
-import { strFromU8, unzipSync } from "fflate";
-import { describe, expect, it } from "vitest";
-import { BROWSERS } from "../../../scripts/build/contracts";
+import { execFile } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { promisify } from 'node:util';
+
+import { strFromU8, unzipSync } from 'fflate';
+import { describe, expect, it } from 'vitest';
+
+import { BROWSERS } from '../../../scripts/build/contracts';
 import {
     EXTENSION_ICON_BASENAME,
     EXTENSION_ICON_SIZES,
     FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE,
-} from "../../../src/shared/extension-files";
-import { createBuildWorkspace } from "./build-workspace";
+} from '../../../src/shared/extension-files';
+
+import { createBuildWorkspace } from './build-workspace';
 
 const execFileAsync = promisify(execFile);
-const PNPM_COMMAND = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
 /**
  * Reads the pixel size recorded in a PNG header, so a stale icon export fails the build test.
  *
  * @param bytes - PNG file contents.
+ *
  * @returns - Width and height from the IHDR chunk.
  */
 function pngDimensions(bytes: Buffer): { readonly width: number; readonly height: number } {
     return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-describe("build commands", () => {
-    it("shows Commander help without creating artifacts", async () => {
+describe('build commands', () => {
+    it('shows Commander help without creating artifacts', async () => {
         const workspace = createBuildWorkspace();
         try {
-            const result = await execFileAsync(PNPM_COMMAND, ["dev", "--help"], {
+            const result = await execFileAsync(PNPM_COMMAND, ['dev', '--help'], {
                 cwd: workspace.root,
             });
-            expect(result.stdout).toContain("Usage: pnpm dev [options] [browser]");
-            expect(result.stdout).toContain("--watch");
+            expect(result.stdout).toContain('Usage: pnpm dev [options] [browser]');
+            expect(result.stdout).toContain('--watch');
             expect(existsSync(`${workspace.root}/dist`)).toBe(false);
         } finally {
             workspace.cleanup();
         }
     });
 
-    it("rejects an unknown browser without creating artifacts", async () => {
+    it('rejects an unknown browser without creating artifacts', async () => {
         const workspace = createBuildWorkspace();
         try {
             await expect(
-                execFileAsync(PNPM_COMMAND, ["dev", "safari"], { cwd: workspace.root }),
+                execFileAsync(PNPM_COMMAND, ['dev', 'safari'], { cwd: workspace.root }),
             ).rejects.toMatchObject({ code: 2 });
             expect(existsSync(`${workspace.root}/dist`)).toBe(false);
         } finally {
@@ -55,51 +59,51 @@ describe("build commands", () => {
         }
     });
 
-    it("defaults to Chrome and accepts explicit development and release targets", async () => {
+    it('defaults to Chrome and accepts explicit development and release targets', async () => {
         const workspace = createBuildWorkspace();
         try {
             const packageJson = JSON.parse(
-                readFileSync(`${workspace.root}/package.json`, "utf8"),
+                readFileSync(`${workspace.root}/package.json`, 'utf8'),
             ) as Record<string, unknown>;
-            await execFileAsync(PNPM_COMMAND, ["dev"], {
+            await execFileAsync(PNPM_COMMAND, ['dev'], {
                 cwd: workspace.root,
                 timeout: 120_000,
             });
             expect(readdirSync(`${workspace.root}/dist/dev`).sort()).toEqual([
-                "chrome", "chrome.zip",
+                'chrome', 'chrome.zip',
             ]);
             for (const browser of BROWSERS) {
-                await execFileAsync(PNPM_COMMAND, ["dev", browser], {
+                await execFileAsync(PNPM_COMMAND, ['dev', browser], {
                     cwd: workspace.root,
                     timeout: 120_000,
                 });
                 const directory = `${workspace.root}/dist/dev/${browser}`;
-                const manifestText = readFileSync(`${directory}/manifest.json`, "utf8");
+                const manifestText = readFileSync(`${directory}/manifest.json`, 'utf8');
                 const manifest = JSON.parse(manifestText) as Record<string, unknown>;
                 const background = manifest.background as Record<string, unknown>;
                 expect(manifest.manifest_version).toBe(3);
                 expect(manifest.version).toBe(packageJson.version);
                 expect(manifest.permissions).toEqual([
-                    "scripting",
-                    "storage",
-                    "webNavigation",
+                    'scripting',
+                    'storage',
+                    'webNavigation',
                 ]);
-                expect(manifest.host_permissions).toEqual(["<all_urls>"]);
-                expect(background[browser === "firefox" ? "scripts" : "service_worker"])
+                expect(manifest.host_permissions).toEqual(['<all_urls>']);
+                expect(background[browser === 'firefox' ? 'scripts' : 'service_worker'])
                     .toBeDefined();
-                if (browser === "firefox") {
+                if (browser === 'firefox') {
                     expect(manifest.browser_specific_settings).toEqual({
                         gecko: {
                             data_collection_permissions: {
-                                required: ["browsingActivity", "websiteContent"],
+                                required: ['browsingActivity', 'websiteContent'],
                             },
-                            id: "no-more-ago@maximtop.dev",
-                            strict_min_version: "140.0",
+                            id: 'no-more-ago@maximtop.dev',
+                            strict_min_version: '140.0',
                         },
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
                 } else {
-                    expect(manifest.minimum_chrome_version).toBe("111");
+                    expect(manifest.minimum_chrome_version).toBe('111');
                 }
                 expect(existsSync(`${directory}/background.js.map`)).toBe(true);
                 expect(manifest.icons).toEqual(Object.fromEntries(
@@ -122,19 +126,19 @@ describe("build commands", () => {
                     `${directory}/${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`,
                 )).toBe(true);
                 const zip = unzipSync(readFileSync(`${workspace.root}/dist/dev/${browser}.zip`));
-                const zippedManifest = zip["manifest.json"];
+                const zippedManifest = zip['manifest.json'];
                 expect(zippedManifest && strFromU8(zippedManifest)).toBe(manifestText);
                 expect(zip[FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE]).toBeDefined();
                 expect(zip[`${FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE}.map`]).toBeDefined();
             }
 
-            await execFileAsync(PNPM_COMMAND, ["release", "chrome"], {
+            await execFileAsync(PNPM_COMMAND, ['release', 'chrome'], {
                 cwd: workspace.root,
                 timeout: 120_000,
             });
             expect(readdirSync(`${workspace.root}/dist/release`).sort()).toEqual([
-                "chrome",
-                "chrome.zip",
+                'chrome',
+                'chrome.zip',
             ]);
             expect(existsSync(`${workspace.root}/dist/release/chrome/background.js.map`))
                 .toBe(false);

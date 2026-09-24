@@ -12,6 +12,7 @@ export const STATE_LOAD_TIMEOUT_MS = 5_000;
  *
  * @param read - Pending state read.
  * @param timeoutMs - Deadline for the read.
+ *
  * @returns - The read's value, or a rejection when the deadline passed first.
  */
 export function readWithDeadline<T>(
@@ -20,7 +21,7 @@ export function readWithDeadline<T>(
 ): Promise<T> {
     return new Promise((resolve, reject) => {
         const deadline = globalThis.setTimeout(() => {
-            reject(new Error("The state request did not settle before its deadline"));
+            reject(new Error('The state request did not settle before its deadline'));
         }, timeoutMs);
         read.then(
             (value) => {

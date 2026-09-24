@@ -2,14 +2,14 @@
  * @file Extracts minimal timestamp records from structured Facebook Story payloads.
  */
 
-import * as v from "valibot";
+import * as v from 'valibot';
 
 import {
     FACEBOOK_PAYLOAD_LIMIT,
     FACEBOOK_UNIX_SECONDS,
     type FacebookTimestampPayloadUpdate,
     type FacebookTimestampRecord,
-} from "./contracts";
+} from './contracts';
 
 const EMPTY_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate = {
     records: [],
@@ -23,8 +23,8 @@ const INVALIDATE_ALL_FACEBOOK_TIMESTAMP_UPDATE: FacebookTimestampPayloadUpdate =
     invalidateAll: true,
 };
 
-const FACEBOOK_STORY_TYPENAME = "Story" as const;
-const XSSI_PREFIX = "for (;;);" as const;
+const FACEBOOK_STORY_TYPENAME = 'Story' as const;
+const XSSI_PREFIX = 'for (;;);' as const;
 
 /**
  * Page-derived encrypted tracking value bounded enough to retain as an opaque mapping key.
@@ -84,6 +84,7 @@ const payloadNodeSchema = v.looseObject({});
  * Removes the Facebook cross-site script inclusion prefix from one JSON document.
  *
  * @param value - Candidate serialized JSON document.
+ *
  * @returns - Trimmed document without the optional prefix.
  */
 function stripXssiPrefix(value: string): string {
@@ -98,6 +99,7 @@ function stripXssiPrefix(value: string): string {
  *
  * @param payloadText - Page-provided response or script payload.
  * @param visit - Visitor returning false when traversal must fail closed.
+ *
  * @returns - Whether parsing and every root traversal stayed within bounds.
  */
 function visitPayloadRoots(
@@ -105,7 +107,7 @@ function visitPayloadRoots(
     visit: (root: unknown) => boolean,
 ): boolean {
     const normalized = stripXssiPrefix(payloadText);
-    if (normalized === "") {
+    if (normalized === '') {
         return true;
     }
     try {
@@ -120,16 +122,16 @@ function visitPayloadRoots(
         if (lineCount > FACEBOOK_PAYLOAD_LIMIT.MAX_STREAM_LINES) {
             return false;
         }
-        const newline = normalized.indexOf("\n", lineStart);
+        const newline = normalized.indexOf('\n', lineStart);
         const lineEnd = newline === -1 ? normalized.length : newline;
         const line = normalized.slice(
             lineStart,
-            lineEnd > lineStart && normalized[lineEnd - 1] === "\r"
+            lineEnd > lineStart && normalized[lineEnd - 1] === '\r'
                 ? lineEnd - 1
                 : lineEnd,
         );
         const document = stripXssiPrefix(line);
-        if (document !== "") {
+        if (document !== '') {
             try {
                 if (!visit(JSON.parse(document) as unknown)) {
                     return false;
@@ -150,6 +152,7 @@ function visitPayloadRoots(
  * Returns tokens proven to represent the Story or its post timestamp section.
  *
  * @param story - Typed Story with its own creation time.
+ *
  * @returns - Direct Story and canonical timestamp-section tokens.
  */
 function storyTimestampTokens(story: FacebookStory): readonly string[] {
@@ -171,6 +174,7 @@ function storyTimestampTokens(story: FacebookStory): readonly string[] {
  * @param conflicts - Tokens already invalidated by contradictory timestamps.
  * @param trackingToken - Proven Story timestamp token.
  * @param storyTime - Story-owned Unix-seconds value.
+ *
  * @returns - Whether the complete update remains representable within the bound.
  */
 function retainRecord(
@@ -214,6 +218,7 @@ function pushChildren(stack: unknown[], children: readonly unknown[]): void {
  * Extracts a bounded Story timestamp update from one Facebook JSON payload.
  *
  * @param payloadText - Serialized initial-page or GraphQL payload.
+ *
  * @returns - Conflict-free records plus tokens contradicted within the payload.
  */
 export function extractFacebookTimestampUpdate(
@@ -222,8 +227,8 @@ export function extractFacebookTimestampUpdate(
     if (
         payloadText.length === 0
         || payloadText.length > FACEBOOK_PAYLOAD_LIMIT.MAX_CHARACTERS
-        || !payloadText.includes("creation_time")
-        || !payloadText.includes("encrypted_click_tracking")
+        || !payloadText.includes('creation_time')
+        || !payloadText.includes('encrypted_click_tracking')
         || !payloadText.includes(FACEBOOK_STORY_TYPENAME)
     ) {
         return EMPTY_FACEBOOK_TIMESTAMP_UPDATE;
@@ -248,31 +253,31 @@ export function extractFacebookTimestampUpdate(
                     return false;
                 }
                 pushChildren(stack, children);
-                continue;
-            }
-            const node = v.safeParse(payloadNodeSchema, value);
-            if (!node.success) {
-                continue;
-            }
-            if (node.output.__typename === FACEBOOK_STORY_TYPENAME) {
-                const story = v.safeParse(storySchema, node.output);
-                if (story.success) {
-                    const storyTime = story.output.creation_time;
-                    for (const trackingToken of storyTimestampTokens(story.output)) {
-                        if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
-                            return false;
+            } else {
+                const node = v.safeParse(payloadNodeSchema, value);
+                if (node.success) {
+                    const { __typename: typename } = node.output;
+                    if (typename === FACEBOOK_STORY_TYPENAME) {
+                        const story = v.safeParse(storySchema, node.output);
+                        if (story.success) {
+                            const storyTime = story.output.creation_time;
+                            for (const trackingToken of storyTimestampTokens(story.output)) {
+                                if (!retainRecord(records, conflicts, trackingToken, storyTime)) {
+                                    return false;
+                                }
+                            }
                         }
                     }
+                    const children = Object.values(node.output);
+                    const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
+                        - visited
+                        - stack.length;
+                    if (children.length > remaining) {
+                        return false;
+                    }
+                    pushChildren(stack, children);
                 }
             }
-            const children = Object.values(node.output);
-            const remaining = FACEBOOK_PAYLOAD_LIMIT.MAX_VISITED_VALUES
-                - visited
-                - stack.length;
-            if (children.length > remaining) {
-                return false;
-            }
-            pushChildren(stack, children);
         }
         return true;
     });

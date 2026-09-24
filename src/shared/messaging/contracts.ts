@@ -2,89 +2,89 @@
  * @file Background request and diagnostic response contracts.
  */
 
-import type { DiagnosticBrowserFamily, DiagnosticEvent } from "../diagnostics/events";
-import type { Appearance, DisplaySettings } from "../settings/snapshot";
-import type { SiteScopeMode } from "../settings/site-scope";
-import type { SiteSettingsSurface } from "./view-state-values";
+import type { SiteSettingsSurface } from './view-state-values';
+import type { DiagnosticBrowserFamily, DiagnosticEvent } from '../diagnostics/events';
+import type { SiteScopeMode } from '../settings/site-scope';
+import type { Appearance, DisplaySettings } from '../settings/snapshot';
 
 /**
  * Requests popup state for the active tab.
  */
-export const GET_POPUP_STATE_MESSAGE = "no-more-ago:get-popup-state" as const;
+export const GET_POPUP_STATE_MESSAGE = 'no-more-ago:get-popup-state' as const;
 
 /**
  * Requests the current document runtime state.
  */
-export const GET_DOCUMENT_STATE_MESSAGE = "no-more-ago:get-document-state" as const;
+export const GET_DOCUMENT_STATE_MESSAGE = 'no-more-ago:get-document-state' as const;
 
 /**
  * Changes the global activation setting.
  */
-export const SET_GLOBAL_ENABLED_MESSAGE = "no-more-ago:set-global-enabled" as const;
+export const SET_GLOBAL_ENABLED_MESSAGE = 'no-more-ago:set-global-enabled' as const;
 
 /**
  * Requests the scope mode and both hostname lists.
  */
-export const GET_SITES_STATE_MESSAGE = "no-more-ago:get-sites-state" as const;
+export const GET_SITES_STATE_MESSAGE = 'no-more-ago:get-sites-state' as const;
 
 /**
  * Changes a single site's activation setting.
  */
-export const SET_SITE_ENABLED_MESSAGE = "no-more-ago:set-site-enabled" as const;
+export const SET_SITE_ENABLED_MESSAGE = 'no-more-ago:set-site-enabled' as const;
 
 /**
  * Changes the active site scope mode.
  */
-export const SET_SITE_SCOPE_MODE_MESSAGE = "no-more-ago:set-site-scope-mode" as const;
+export const SET_SITE_SCOPE_MODE_MESSAGE = 'no-more-ago:set-site-scope-mode' as const;
 
 /**
  * Requests the current display configuration.
  */
-export const GET_DISPLAY_STATE_MESSAGE = "no-more-ago:get-display-state" as const;
+export const GET_DISPLAY_STATE_MESSAGE = 'no-more-ago:get-display-state' as const;
 
 /**
  * Changes the display configuration.
  */
-export const SET_DISPLAY_SETTINGS_MESSAGE = "no-more-ago:set-display-settings" as const;
+export const SET_DISPLAY_SETTINGS_MESSAGE = 'no-more-ago:set-display-settings' as const;
 
 /**
  * Changes the appearance applied to both extension surfaces.
  */
-export const SET_APPEARANCE_MESSAGE = "no-more-ago:set-appearance" as const;
+export const SET_APPEARANCE_MESSAGE = 'no-more-ago:set-appearance' as const;
 
 /**
  * Restores every setting to its default.
  */
-export const RESET_ALL_SETTINGS_MESSAGE = "no-more-ago:reset-all-settings" as const;
+export const RESET_ALL_SETTINGS_MESSAGE = 'no-more-ago:reset-all-settings' as const;
 
 /**
  * Requests the diagnostic logging state.
  */
-export const GET_DEBUG_STATE_MESSAGE = "no-more-ago:get-debug-state" as const;
+export const GET_DEBUG_STATE_MESSAGE = 'no-more-ago:get-debug-state' as const;
 
 /**
  * Changes the diagnostic logging setting.
  */
-export const SET_DEBUG_ENABLED_MESSAGE = "no-more-ago:set-debug-enabled" as const;
+export const SET_DEBUG_ENABLED_MESSAGE = 'no-more-ago:set-debug-enabled' as const;
 
 /**
  * Requests the persisted diagnostic-event snapshot.
  */
-export const GET_DIAGNOSTICS_SNAPSHOT_MESSAGE = "no-more-ago:get-diagnostics-snapshot" as const;
+export const GET_DIAGNOSTICS_SNAPSHOT_MESSAGE = 'no-more-ago:get-diagnostics-snapshot' as const;
 
 /**
  * Clears persisted diagnostic events.
  */
-export const CLEAR_DIAGNOSTICS_MESSAGE = "no-more-ago:clear-diagnostics" as const;
+export const CLEAR_DIAGNOSTICS_MESSAGE = 'no-more-ago:clear-diagnostics' as const;
 
 /**
  * Named reasons a diagnostics read or clear fails.
  */
 export const DIAGNOSTICS_ERROR = {
-    DISABLED: "disabled",
-    UNAVAILABLE: "unavailable",
-    EMPTY: "empty",
-    STORAGE_FAILED: "storage-failed",
+    DISABLED: 'disabled',
+    UNAVAILABLE: 'unavailable',
+    EMPTY: 'empty',
+    STORAGE_FAILED: 'storage-failed',
 } as const;
 
 /**
@@ -299,8 +299,7 @@ interface ClearDiagnosticsMessage {
 /**
  * Every request accepted by the background runtime listener.
  */
-export type BackgroundMessage =
-    | GetPopupStateMessage
+export type BackgroundMessage = | GetPopupStateMessage
     | GetDocumentStateMessage
     | SetGlobalEnabledMessage
     | GetSitesStateMessage
@@ -348,18 +347,17 @@ export interface DiagnosticsSnapshot {
 /**
  * Result of reading stored diagnostics.
  */
-export type GetDiagnosticsSnapshotResponse =
-    | {
-        /**
-         * Marks a readable diagnostic snapshot.
-         */
-        readonly ok: true;
+export type GetDiagnosticsSnapshotResponse = | {
+    /**
+     * Marks a readable diagnostic snapshot.
+     */
+    readonly ok: true;
 
-        /**
-         * Persisted diagnostics ready for export.
-         */
-        readonly snapshot: DiagnosticsSnapshot;
-    }
+    /**
+     * Persisted diagnostics ready for export.
+     */
+    readonly snapshot: DiagnosticsSnapshot;
+}
     | {
         /**
          * Marks diagnostics that could not be read.
@@ -375,13 +373,12 @@ export type GetDiagnosticsSnapshotResponse =
 /**
  * Result of clearing stored diagnostics.
  */
-export type ClearDiagnosticsResponse =
-    | {
-        /**
-         * Marks a successful clear.
-         */
-        readonly ok: true;
-    }
+export type ClearDiagnosticsResponse = | {
+    /**
+     * Marks a successful clear.
+     */
+    readonly ok: true;
+}
     | {
         /**
          * Marks diagnostics that could not be cleared.

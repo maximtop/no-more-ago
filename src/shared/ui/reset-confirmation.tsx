@@ -2,9 +2,10 @@
  * @file Two-step reset action: a destructive trigger followed by an inline confirmation.
  */
 
-import { Button, Group, Text } from "@mantine/core";
-import { useState, type ReactElement } from "react";
-import { t } from "../i18n/translator";
+import { Button, Group, Text } from '@mantine/core';
+import { useState, type ReactElement } from 'react';
+
+import { t } from '../i18n/translator';
 
 /**
  * Properties for the confirmed reset action.
@@ -27,6 +28,7 @@ export interface ResetConfirmationProps {
  * @param props - Component properties.
  * @param props.resetting - Whether a reset is in flight.
  * @param props.onConfirm - Performs the reset after confirmation.
+ *
  * @returns - The reset action.
  */
 export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationProps): ReactElement {
@@ -42,18 +44,18 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         setConfirming(true);
                     }}
                 >
-                    {t("reset_trigger")}
+                    {t('reset_trigger')}
                 </Button>
             </div>
         );
     }
     return (
-        <div className="nma-reset-confirmation" role="group" aria-label={t("reset_confirm_aria")}>
+        <div className="nma-reset-confirmation" role="group" aria-label={t('reset_confirm_aria')}>
             <Text size="sm" fw={600}>
-                {t("reset_confirm_question")}
+                {t('reset_confirm_question')}
             </Text>
             <Text size="xs" c="dimmed">
-                {t("reset_confirm_detail")}
+                {t('reset_confirm_detail')}
             </Text>
             <Group mt="sm">
                 <Button
@@ -66,7 +68,7 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         onConfirm();
                     }}
                 >
-                    {t("reset_confirm_yes")}
+                    {t('reset_confirm_yes')}
                 </Button>
                 <Button
                     type="button"
@@ -76,7 +78,7 @@ export function ResetConfirmation({ resetting, onConfirm }: ResetConfirmationPro
                         setConfirming(false);
                     }}
                 >
-                    {t("reset_confirm_no")}
+                    {t('reset_confirm_no')}
                 </Button>
             </Group>
         </div>

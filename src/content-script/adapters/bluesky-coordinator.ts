@@ -3,11 +3,11 @@
  */
 
 import {
-    BLUESKY_BATCH_LIMIT,
-    BLUESKY_LOOKUP_STATUS,
-    type BlueskyAppView,
-    type BlueskyPostRecord,
-} from "./bluesky-appview";
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_MAX_COUNT,
+    DIAGNOSTIC_REASON,
+} from '../../shared/diagnostics/contracts';
+
 import {
     BLUESKY_TARGET_ROLE,
     createBlueskyAdapter,
@@ -16,18 +16,20 @@ import {
     matchesBlueskyUrl,
     type BlueskyRelativeTarget,
     type ResolvedBlueskyTarget,
-} from "./bluesky";
+} from './bluesky';
+import {
+    BLUESKY_BATCH_LIMIT,
+    BLUESKY_LOOKUP_STATUS,
+    type BlueskyAppView,
+    type BlueskyPostRecord,
+} from './bluesky-appview';
 import {
     createBlueskyPostUri,
     isValidBlueskyDid,
-} from "./bluesky-identity";
-import type { TimestampSourceRule } from "./types";
-import type { DocumentDiagnosticSink } from "../diagnostics";
-import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_MAX_COUNT,
-    DIAGNOSTIC_REASON,
-} from "../../shared/diagnostics/contracts";
+} from './bluesky-identity';
+
+import type { TimestampSourceRule } from './types';
+import type { DocumentDiagnosticSink } from '../diagnostics';
 
 /**
  * Non-identifying diagnostic totals accumulated during one drain.
@@ -120,6 +122,7 @@ export interface BlueskyCoordinator {
  *
  * @param values - Ordered unique values to split.
  * @param size - Maximum number of values per batch.
+ *
  * @returns - Ordered non-empty batches.
  */
 function chunk<T>(values: readonly T[], size: number): readonly (readonly T[])[] {
@@ -135,6 +138,7 @@ function chunk<T>(values: readonly T[], size: number): readonly (readonly T[])[]
  *
  * @param left - Earlier descriptor.
  * @param right - Current descriptor.
+ *
  * @returns - Whether a cached resolution remains applicable.
  */
 function descriptorsMatch(
@@ -273,18 +277,17 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         }
         let changed = false;
         for (const source of new Set(sources)) {
-            if (source.ownerDocument !== this.input.document || !source.isConnected) {
-                continue;
+            if (source.ownerDocument === this.input.document && source.isConnected) {
+                const descriptor = describeBlueskySource(source, this.tracked.has(source));
+                if (descriptor) {
+                    this.track(descriptor);
+                } else {
+                    this.tracked.delete(source);
+                    this.pending.delete(source);
+                    this.clearResolution(source);
+                }
+                changed = true;
             }
-            const descriptor = describeBlueskySource(source, this.tracked.has(source));
-            if (descriptor) {
-                this.track(descriptor);
-            } else {
-                this.tracked.delete(source);
-                this.pending.delete(source);
-                this.clearResolution(source);
-            }
-            changed = true;
         }
         if (changed) {
             this.pruneLookupState();
@@ -314,27 +317,26 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             this.resolutions.delete(element);
             this.changedSources.delete(element);
         }
-        for (const element of root.querySelectorAll("*")) {
+        for (const element of root.querySelectorAll('*')) {
             this.resolutions.delete(element);
             this.changedSources.delete(element);
         }
         let dependenciesChanged = false;
         for (const [source, descriptor] of [...this.tracked]) {
             if (
-                descriptor.role !== BLUESKY_TARGET_ROLE.QUOTE
-                || !removedOuterIdentities.has(descriptor.outerIdentity.key)
+                descriptor.role === BLUESKY_TARGET_ROLE.QUOTE
+                && removedOuterIdentities.has(descriptor.outerIdentity.key)
             ) {
-                continue;
+                const current = describeBlueskySource(source, true);
+                if (current) {
+                    this.track(current);
+                } else {
+                    this.tracked.delete(source);
+                    this.pending.delete(source);
+                    this.clearResolution(source);
+                }
+                dependenciesChanged = true;
             }
-            const current = describeBlueskySource(source, true);
-            if (current) {
-                this.track(current);
-            } else {
-                this.tracked.delete(source);
-                this.pending.delete(source);
-                this.clearResolution(source);
-            }
-            dependenciesChanged = true;
         }
         this.pruneLookupState();
         if (dependenciesChanged) {
@@ -377,6 +379,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a bounded root belongs to the owned document.
      *
      * @param root - Region considered for discovery or release.
+     *
      * @returns - Whether the root belongs to the active document.
      */
     private belongsToDocument(root: ParentNode): boolean {
@@ -449,6 +452,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a connected tracked source still references one public actor.
      *
      * @param actor - Normalized handle or DID queued for lookup.
+     *
      * @returns - Whether the actor is still needed by this document.
      */
     private isActorReferenced(actor: string): boolean {
@@ -463,6 +467,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether a connected tracked source still resolves to one post URI.
      *
      * @param uri - Canonical AT post URI queued for lookup.
+     *
      * @returns - Whether the post remains needed by this document.
      */
     private isPostReferenced(uri: string): boolean {
@@ -491,7 +496,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
         if (!this.active || this.running || this.drainScheduled) {
             return;
         }
-        const generation = this.generation;
+        const { generation } = this;
         this.drainScheduled = true;
         queueMicrotask(() => {
             if (!this.isCurrentGeneration(generation)) {
@@ -506,6 +511,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      * Checks whether asynchronous work still belongs to the active document generation.
      *
      * @param generation - Generation captured before awaiting external work.
+     *
      * @returns - Whether the work may still update current state.
      */
     private isCurrentGeneration(generation: number): boolean {
@@ -526,20 +532,22 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
             return;
         }
         this.running = true;
-        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         try {
-            await this.resolveActors(generation, signal, diagnostics);
+            const actorCounts = await this.resolveActors(generation, signal);
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
             this.pruneLookupState();
-            await this.resolvePosts(generation, signal, diagnostics);
+            const postCounts = await this.resolvePosts(generation, signal);
             if (!this.isCurrentGeneration(generation)) {
                 return;
             }
             this.publishPending();
             this.pruneLookupState();
-            this.emitDiagnostics(diagnostics);
+            this.emitDiagnostics({
+                failure: actorCounts.failure + postCounts.failure,
+                partial: actorCounts.partial + postCounts.partial,
+            });
         } finally {
             if (this.isCurrentGeneration(generation)) {
                 this.running = false;
@@ -556,13 +564,14 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      *
      * @param generation - Active lifecycle generation.
      * @param signal - Active cancellation signal.
-     * @param diagnostics - Mutable finite event counts for this drain.
+     *
+     * @returns - Finite event counts for this drain.
      */
     private async resolveActors(
         generation: number,
         signal: AbortSignal,
-        diagnostics: DiagnosticCounts,
-    ): Promise<void> {
+    ): Promise<DiagnosticCounts> {
+        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         const actors = new Set(
             [...this.pending.values()].map(({ outerIdentity }) => outerIdentity.actor),
         );
@@ -581,45 +590,46 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     && !this.actorCache.has(actor)
                     && !this.attemptedActors.has(actor);
             });
-            if (batch.length === 0) {
-                continue;
-            }
-            let result: Awaited<ReturnType<BlueskyAppView["getProfiles"]>>;
-            try {
-                result = await this.input.appView.getProfiles(batch, signal);
-            } catch {
-                result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
-            }
-            if (!this.isCurrentGeneration(generation)) {
-                return;
-            }
-            const liveActors = batch.filter((actor) => this.isActorReferenced(actor));
-            for (const actor of liveActors) {
-                this.attemptedActors.add(actor);
-            }
-            if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
-                diagnostics.failure += liveActors.length;
-                if (liveActors.length > 0) {
-                    return;
+            if (batch.length > 0) {
+                let result: Awaited<ReturnType<BlueskyAppView['getProfiles']>>;
+                try {
+                    result = await this.input.appView.getProfiles(batch, signal);
+                } catch {
+                    result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
                 }
-                continue;
-            }
-            for (const actor of liveActors) {
-                const matches = result.records.filter((record) => record.actor === actor);
-                const match = matches.length === 1 ? matches[0] : undefined;
-                if (match) {
-                    this.actorCache.set(actor, match.did);
+                if (!this.isCurrentGeneration(generation)) {
+                    return diagnostics;
+                }
+                const liveActors = batch.filter((actor) => this.isActorReferenced(actor));
+                for (const actor of liveActors) {
+                    this.attemptedActors.add(actor);
+                }
+                if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
+                    diagnostics.failure += liveActors.length;
+                    if (liveActors.length > 0) {
+                        return diagnostics;
+                    }
                 } else {
-                    diagnostics.partial += 1;
+                    for (const actor of liveActors) {
+                        const matches = result.records.filter((record) => record.actor === actor);
+                        const match = matches.length === 1 ? matches[0] : undefined;
+                        if (match) {
+                            this.actorCache.set(actor, match.did);
+                        } else {
+                            diagnostics.partial += 1;
+                        }
+                    }
                 }
             }
         }
+        return diagnostics;
     }
 
     /**
      * Collects an outer post URI for a descriptor whose actor has resolved.
      *
      * @param descriptor - Current pending descriptor.
+     *
      * @returns - Resolved outer AT post URI, or null while actor resolution is unavailable.
      */
     private getPostUri(descriptor: BlueskyRelativeTarget): string | null {
@@ -634,13 +644,14 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      *
      * @param generation - Active lifecycle generation.
      * @param signal - Active cancellation signal.
-     * @param diagnostics - Mutable finite event counts for this drain.
+     *
+     * @returns - Finite event counts for this drain.
      */
     private async resolvePosts(
         generation: number,
         signal: AbortSignal,
-        diagnostics: DiagnosticCounts,
-    ): Promise<void> {
+    ): Promise<DiagnosticCounts> {
+        const diagnostics: DiagnosticCounts = { failure: 0, partial: 0 };
         const uris = [...new Set(
             [...this.pending.values()].flatMap((descriptor) => {
                 const uri = this.getPostUri(descriptor);
@@ -656,45 +667,46 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
                     && !this.postCache.has(uri)
                     && !this.attemptedPosts.has(uri);
             });
-            if (batch.length === 0) {
-                continue;
-            }
-            let result: Awaited<ReturnType<BlueskyAppView["getPosts"]>>;
-            try {
-                result = await this.input.appView.getPosts(batch, signal);
-            } catch {
-                result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
-            }
-            if (!this.isCurrentGeneration(generation)) {
-                return;
-            }
-            const liveUris = batch.filter((uri) => this.isPostReferenced(uri));
-            for (const uri of liveUris) {
-                this.attemptedPosts.add(uri);
-            }
-            if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
-                diagnostics.failure += liveUris.length;
-                if (liveUris.length > 0) {
-                    return;
+            if (batch.length > 0) {
+                let result: Awaited<ReturnType<BlueskyAppView['getPosts']>>;
+                try {
+                    result = await this.input.appView.getPosts(batch, signal);
+                } catch {
+                    result = { status: BLUESKY_LOOKUP_STATUS.FAILURE };
                 }
-                continue;
-            }
-            for (const uri of liveUris) {
-                const matches = result.records.filter((record) => record.uri === uri);
-                const match = matches.length === 1 ? matches[0] : undefined;
-                if (match) {
-                    this.postCache.set(uri, match);
+                if (!this.isCurrentGeneration(generation)) {
+                    return diagnostics;
+                }
+                const liveUris = batch.filter((uri) => this.isPostReferenced(uri));
+                for (const uri of liveUris) {
+                    this.attemptedPosts.add(uri);
+                }
+                if (result.status === BLUESKY_LOOKUP_STATUS.FAILURE) {
+                    diagnostics.failure += liveUris.length;
+                    if (liveUris.length > 0) {
+                        return diagnostics;
+                    }
                 } else {
-                    diagnostics.partial += 1;
+                    for (const uri of liveUris) {
+                        const matches = result.records.filter((record) => record.uri === uri);
+                        const match = matches.length === 1 ? matches[0] : undefined;
+                        if (match) {
+                            this.postCache.set(uri, match);
+                        } else {
+                            diagnostics.partial += 1;
+                        }
+                    }
                 }
             }
         }
+        return diagnostics;
     }
 
     /**
      * Rediscovers one retained descriptor and rejects every changed or detached association.
      *
      * @param descriptor - Descriptor retained before asynchronous work.
+     *
      * @returns - Matching current descriptor, or null when stale.
      */
     private getCurrentDescriptor(
@@ -715,58 +727,68 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
      */
     private publishPending(): void {
         for (const [source, descriptor] of [...this.pending]) {
-            const current = this.getCurrentDescriptor(descriptor);
-            if (!current) {
-                if (this.pending.get(source) === descriptor) {
-                    this.pending.delete(source);
-                }
-                if (this.tracked.get(source) === descriptor) {
-                    this.tracked.delete(source);
-                }
-                this.clearResolution(source);
-                continue;
+            this.publishDescriptor(source, descriptor);
+        }
+    }
+
+    /**
+     * Publishes one pending descriptor once it is still current and its lookups have resolved.
+     *
+     * @param source - Source element the descriptor belongs to.
+     * @param descriptor - Descriptor retained before asynchronous work.
+     */
+    private publishDescriptor(source: Element, descriptor: BlueskyRelativeTarget): void {
+        const current = this.getCurrentDescriptor(descriptor);
+        if (!current) {
+            if (this.pending.get(source) === descriptor) {
+                this.pending.delete(source);
             }
-            const actor = current.outerIdentity.actor;
-            const uri = this.getPostUri(current);
-            if (!uri) {
-                if (this.attemptedActors.has(actor)) {
-                    this.pending.delete(source);
-                    this.clearResolution(source);
-                }
-                continue;
+            if (this.tracked.get(source) === descriptor) {
+                this.tracked.delete(source);
             }
-            const post = this.postCache.get(uri);
-            if (!post) {
-                if (this.attemptedPosts.has(uri)) {
-                    this.pending.delete(source);
-                    this.clearResolution(source);
-                }
-                continue;
-            }
-            const indexedAt = current.role === BLUESKY_TARGET_ROLE.POST
-                ? post.indexedAt
-                : post.quote?.indexedAt;
-            if (!indexedAt) {
+            this.clearResolution(source);
+            return;
+        }
+        const { actor } = current.outerIdentity;
+        const uri = this.getPostUri(current);
+        if (!uri) {
+            if (this.attemptedActors.has(actor)) {
                 this.pending.delete(source);
                 this.clearResolution(source);
-                continue;
             }
-            const previous = this.resolutions.get(source);
-            if (
-                !previous
-                || previous.target !== current.target
-                || previous.fingerprint !== current.fingerprint
-                || previous.indexedAt !== indexedAt
-            ) {
-                this.resolutions.set(source, {
-                    target: current.target,
-                    fingerprint: current.fingerprint,
-                    indexedAt,
-                });
-                this.changedSources.add(source);
-            }
-            this.pending.delete(source);
+            return;
         }
+        const post = this.postCache.get(uri);
+        if (!post) {
+            if (this.attemptedPosts.has(uri)) {
+                this.pending.delete(source);
+                this.clearResolution(source);
+            }
+            return;
+        }
+        const indexedAt = current.role === BLUESKY_TARGET_ROLE.POST
+            ? post.indexedAt
+            : post.quote?.indexedAt;
+        if (!indexedAt) {
+            this.pending.delete(source);
+            this.clearResolution(source);
+            return;
+        }
+        const previous = this.resolutions.get(source);
+        if (
+            !previous
+            || previous.target !== current.target
+            || previous.fingerprint !== current.fingerprint
+            || previous.indexedAt !== indexedAt
+        ) {
+            this.resolutions.set(source, {
+                target: current.target,
+                fingerprint: current.fingerprint,
+                indexedAt,
+            });
+            this.changedSources.add(source);
+        }
+        this.pending.delete(source);
     }
 
     /**
@@ -817,6 +839,7 @@ class DocumentBlueskyCoordinator implements BlueskyCoordinator {
  * Creates one document-local Bluesky resolution coordinator.
  *
  * @param input - Document, AppView, diagnostics, and exact-source callback dependencies.
+ *
  * @returns - Inactive coordinator ready for the controller lifecycle.
  */
 export function createBlueskyCoordinator(

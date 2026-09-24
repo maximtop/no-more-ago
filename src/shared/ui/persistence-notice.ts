@@ -2,13 +2,14 @@
  * @file Shared mapping from mutation outcomes to the notices both surfaces show.
  */
 
-import { CLIENT_RESULT_KIND, type MutationResult } from "../client-result";
-import type { MessageKey } from "../i18n/translator";
+import { CLIENT_RESULT_KIND, type MutationResult } from '../client-result';
 import {
     SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_ERROR,
     type SiteSettingsError,
-} from "../messaging/view-state-values";
+} from '../messaging/view-state-values';
+
+import type { MessageKey } from '../i18n/translator';
 
 /**
  * Named outcomes of a settings mutation shared by the popup and Settings.
@@ -18,15 +19,14 @@ export const MUTATION_NOTICE = {
     INVALID_HOSTNAME: SITE_SETTINGS_ERROR.INVALID_HOSTNAME,
     LIST_FULL: SITE_SETTINGS_ERROR.LIST_FULL,
     SCOPE_CHANGED: SITE_SETTINGS_ERROR.SCOPE_CHANGED,
-    INTERRUPTED: "interrupted",
-    UNKNOWN: "unknown",
+    INTERRUPTED: 'interrupted',
+    UNKNOWN: 'unknown',
 } as const;
 
 /**
  * User-visible outcome of a settings mutation, or undefined when there is none.
  */
-export type MutationNotice =
-    | (typeof MUTATION_NOTICE)[keyof typeof MUTATION_NOTICE]
+export type MutationNotice = | (typeof MUTATION_NOTICE)[keyof typeof MUTATION_NOTICE]
     | undefined;
 
 /**
@@ -34,6 +34,7 @@ export type MutationNotice =
  * name, because the surface cannot tell whether the write landed.
  *
  * @param error - Error returned by a settings command.
+ *
  * @returns - Notice to show for the error.
  */
 export function persistenceNotice(error: SiteSettingsError): MutationNotice {
@@ -61,6 +62,7 @@ export interface SettledMutation<TState> {
  * Turns a mutation result into the state and notice a controller applies.
  *
  * @param result - Validated response or ambiguous reread.
+ *
  * @returns - State to render and the notice to show.
  */
 export function settleMutation<TState>(
@@ -85,8 +87,8 @@ export function settleMutation<TState>(
  * Surface whose wording an ambiguous-outcome notice should use.
  */
 export const NOTICE_SURFACE = {
-    POPUP: "popup",
-    OPTIONS: "options",
+    POPUP: 'popup',
+    OPTIONS: 'options',
 } as const;
 
 /**
@@ -99,28 +101,28 @@ export type NoticeSurface = (typeof NOTICE_SURFACE)[keyof typeof NOTICE_SURFACE]
  */
 const MUTATION_NOTICE_KEYS = {
     [MUTATION_NOTICE.SAVE_FAILED]: {
-        [NOTICE_SURFACE.POPUP]: "notice_save_failed",
-        [NOTICE_SURFACE.OPTIONS]: "notice_save_failed",
+        [NOTICE_SURFACE.POPUP]: 'notice_save_failed',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_save_failed',
     },
     [MUTATION_NOTICE.INVALID_HOSTNAME]: {
-        [NOTICE_SURFACE.POPUP]: "notice_invalid_hostname",
-        [NOTICE_SURFACE.OPTIONS]: "notice_invalid_hostname",
+        [NOTICE_SURFACE.POPUP]: 'notice_invalid_hostname',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_invalid_hostname',
     },
     [MUTATION_NOTICE.LIST_FULL]: {
-        [NOTICE_SURFACE.POPUP]: "notice_list_full",
-        [NOTICE_SURFACE.OPTIONS]: "notice_list_full",
+        [NOTICE_SURFACE.POPUP]: 'notice_list_full',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_list_full',
     },
     [MUTATION_NOTICE.SCOPE_CHANGED]: {
-        [NOTICE_SURFACE.POPUP]: "notice_scope_changed",
-        [NOTICE_SURFACE.OPTIONS]: "notice_scope_changed",
+        [NOTICE_SURFACE.POPUP]: 'notice_scope_changed',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_scope_changed',
     },
     [MUTATION_NOTICE.INTERRUPTED]: {
-        [NOTICE_SURFACE.POPUP]: "notice_interrupted",
-        [NOTICE_SURFACE.OPTIONS]: "notice_interrupted",
+        [NOTICE_SURFACE.POPUP]: 'notice_interrupted',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_interrupted',
     },
     [MUTATION_NOTICE.UNKNOWN]: {
-        [NOTICE_SURFACE.POPUP]: "notice_unknown_popup",
-        [NOTICE_SURFACE.OPTIONS]: "notice_unknown_options",
+        [NOTICE_SURFACE.POPUP]: 'notice_unknown_popup',
+        [NOTICE_SURFACE.OPTIONS]: 'notice_unknown_options',
     },
 } as const satisfies Record<Exclude<MutationNotice, undefined>, Record<NoticeSurface, MessageKey>>;
 
@@ -129,6 +131,7 @@ const MUTATION_NOTICE_KEYS = {
  *
  * @param notice - Outcome reported after a settings mutation.
  * @param surface - Surface whose retry wording applies.
+ *
  * @returns - Message key to render, or undefined when there is nothing to show.
  */
 export function mutationNoticeKey(

@@ -2,24 +2,28 @@
  * @file Verifies the diagnostic journal's observable persistence policy.
  */
 
-import { describe, expect, it, vi } from "vitest";
-import type { DiagnosticEvent } from "../../../../src/shared/diagnostics/events";
 import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_REASON,
-} from "../../../../src/shared/diagnostics/contracts";
+    describe, expect, it, vi,
+} from 'vitest';
+
 import {
     DIAGNOSTICS_MAX_BYTES,
     DIAGNOSTICS_STORAGE_KEY,
     DiagnosticJournal,
     type DiagnosticStorage,
-} from "../../../../src/background/diagnostics/journal";
+} from '../../../../src/background/diagnostics/journal';
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from '../../../../src/shared/diagnostics/contracts';
+
+import type { DiagnosticEvent } from '../../../../src/shared/diagnostics/events';
 
 const event = (timestamp: number): DiagnosticEvent => ({
-    category: "mutation",
+    category: 'mutation',
     timestamp,
-    hostname: "github.com",
-    pageCategory: "repository",
+    hostname: 'github.com',
+    pageCategory: 'repository',
     incognito: false,
     count: timestamp,
 });
@@ -27,17 +31,18 @@ const event = (timestamp: number): DiagnosticEvent => ({
 const failedTimestampEvent = (timestamp: number): DiagnosticEvent => ({
     category: DIAGNOSTIC_CATEGORY.SKIP,
     timestamp,
-    hostname: "web.telegram.org",
-    pageCategory: "other",
+    hostname: 'web.telegram.org',
+    pageCategory: 'other',
     incognito: false,
     reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-    sourceTimestamp: "123456789",
+    sourceTimestamp: '123456789',
 });
 
 /**
  * Creates an observable in-memory storage implementation.
  *
  * @param initial - Initial diagnostic envelope.
+ *
  * @returns - Storage implementation and its current value.
  */
 function createStorage(initial?: unknown): DiagnosticStorage & {
@@ -47,18 +52,18 @@ function createStorage(initial?: unknown): DiagnosticStorage & {
     const state = { value: initial, calls: [] as string[] };
     return {
         get: vi.fn(() => {
-            state.calls.push("get");
+            state.calls.push('get');
             return Promise.resolve(state.value === undefined
                 ? {}
                 : { [DIAGNOSTICS_STORAGE_KEY]: state.value });
         }),
         set: vi.fn((items: Record<string, unknown>) => {
-            state.calls.push("set");
+            state.calls.push('set');
             state.value = items[DIAGNOSTICS_STORAGE_KEY];
             return Promise.resolve();
         }),
         remove: vi.fn(() => {
-            state.calls.push("remove");
+            state.calls.push('remove');
             state.value = undefined;
             return Promise.resolve();
         }),
@@ -71,12 +76,12 @@ function createStorage(initial?: unknown): DiagnosticStorage & {
     };
 }
 
-describe("DiagnosticJournal", () => {
-    it("uses the agreed five-megabyte storage limit", () => {
+describe('DiagnosticJournal', () => {
+    it('uses the agreed five-megabyte storage limit', () => {
         expect(DIAGNOSTICS_MAX_BYTES).toBe(5_000_000);
     });
 
-    it("writes only while enabled and deletes entries when disabled", async () => {
+    it('writes only while enabled and deletes entries when disabled', async () => {
         const storage = createStorage();
         const journal = new DiagnosticJournal(storage);
         await journal.append(event(1));
@@ -88,7 +93,7 @@ describe("DiagnosticJournal", () => {
         expect(storage.value).toBeUndefined();
     });
 
-    it("keeps ordered entries within the serialized byte limit", async () => {
+    it('keeps ordered entries within the serialized byte limit', async () => {
         const storage = createStorage();
         const journal = new DiagnosticJournal(storage, 250);
         await journal.setEnabled(true);
@@ -103,7 +108,7 @@ describe("DiagnosticJournal", () => {
             .toBeLessThanOrEqual(250);
     });
 
-    it("round-trips bounded invalid timestamp evidence through snapshots", async () => {
+    it('round-trips bounded invalid timestamp evidence through snapshots', async () => {
         const storage = createStorage();
         const journal = new DiagnosticJournal(storage);
         const failed = failedTimestampEvent(2);
@@ -116,7 +121,7 @@ describe("DiagnosticJournal", () => {
         });
     });
 
-    it("clears entries without disabling future collection", async () => {
+    it('clears entries without disabling future collection', async () => {
         const storage = createStorage();
         const journal = new DiagnosticJournal(storage);
         await journal.setEnabled(true);
@@ -130,7 +135,7 @@ describe("DiagnosticJournal", () => {
         });
     });
 
-    it("does not restore a pending entry after logging is disabled", async () => {
+    it('does not restore a pending entry after logging is disabled', async () => {
         const storage = createStorage();
         let release: (() => void) | undefined;
         const gate = new Promise<void>((resolve) => {

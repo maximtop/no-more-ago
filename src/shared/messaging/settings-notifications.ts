@@ -5,7 +5,7 @@
 /**
  * Announces that persisted settings changed and names the committed revision.
  */
-export const SETTINGS_CHANGED_MESSAGE = "no-more-ago:settings-changed" as const;
+export const SETTINGS_CHANGED_MESSAGE = 'no-more-ago:settings-changed' as const;
 
 /**
  * Notification sent by the background after a committed settings write.
@@ -86,6 +86,7 @@ export interface SettingsChangedRuntime {
  * Recognizes a settings change notification among the extension's messages.
  *
  * @param value - Runtime message.
+ *
  * @returns - Whether the message announces a committed settings revision.
  */
 function isSettingsChangedMessage(value: unknown): value is SettingsChangedMessage {
@@ -105,6 +106,7 @@ export const INERT_SETTINGS_CHANGED_SUBSCRIBER: SubscribeSettingsChanged = () =>
  * Creates a subscriber over an extension message runtime.
  *
  * @param runtime - Message runtime, or undefined outside an extension page.
+ *
  * @returns - Subscriber that delivers committed revisions to its listener.
  */
 export function createSettingsChangedSubscriber(

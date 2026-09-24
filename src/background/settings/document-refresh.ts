@@ -10,17 +10,18 @@ import {
     isPresentationAcknowledgement,
     type DebugPolicyUpdateMessage,
     type PresentationUpdateMessage,
-} from "../../shared/messaging/document-messages";
-import { REFRESH_FAILURE_REASON } from "../../shared/messaging/view-state-values";
+} from '../../shared/messaging/document-messages';
+import { REFRESH_FAILURE_REASON } from '../../shared/messaging/view-state-values';
+import { isSiteProcessingEnabled } from '../../shared/settings/site-scope';
+import { HTTP_MATCH_PATTERNS, parseHttpUrl } from '../../shared/url/http';
+import { settleBrowserOperation } from '../runtime/settle';
+
 import type {
     RefreshFailure as DebugRefreshFailure,
     RefreshFailure as DisplayRefreshFailure,
-} from "../../shared/messaging/view-state";
-import { HTTP_MATCH_PATTERNS, parseHttpUrl } from "../../shared/url/http";
-import type { DisplaySettings, SettingsSnapshot } from "../../shared/settings/snapshot";
-import { isSiteProcessingEnabled } from "../../shared/settings/site-scope";
-import type { RuntimeTab, TabsRuntime } from "../runtime/tabs";
-import { settleBrowserOperation } from "../runtime/settle";
+} from '../../shared/messaging/view-state';
+import type { DisplaySettings, SettingsSnapshot } from '../../shared/settings/snapshot';
+import type { RuntimeTab, TabsRuntime } from '../runtime/tabs';
 
 /**
  * Revisioned settings message sent to a document runtime.
@@ -32,6 +33,7 @@ type RefreshMessage = DebugPolicyUpdateMessage | PresentationUpdateMessage;
  *
  * @param response - Untrusted response returned by the browser.
  * @param message - Revisioned update sent to the tab.
+ *
  * @returns - Whether the response acknowledges the sent revision.
  */
 function isRefreshAcknowledgement(
@@ -51,6 +53,7 @@ export class DocumentRefresh {
      * Creates a refresh broadcaster.
      *
      * @param tabs - Browser tab query and messaging boundary.
+     *
      * @returns - A refresh broadcaster.
      */
     public constructor(private readonly tabs: TabsRuntime) {}
@@ -61,6 +64,7 @@ export class DocumentRefresh {
      * @param snapshot - Committed settings snapshot.
      * @param enabled - New diagnostic forwarding policy.
      * @param revision - Revision carried by the message.
+     *
      * @returns - Refresh failures by tab.
      */
     public refreshDebugPolicy(
@@ -81,6 +85,7 @@ export class DocumentRefresh {
      * @param snapshot - Committed settings snapshot.
      * @param display - New display settings.
      * @param revision - Revision carried by the message.
+     *
      * @returns - Refresh failures by tab.
      */
     public refreshDisplay(
@@ -100,6 +105,7 @@ export class DocumentRefresh {
      *
      * @param snapshot - Committed settings snapshot.
      * @param message - Typed update message.
+     *
      * @returns - Refresh failures by tab.
      */
     private async broadcast(
@@ -109,11 +115,10 @@ export class DocumentRefresh {
         if (!snapshot.globalEnabled) {
             return [];
         }
-        const matchingTabs = await settleBrowserOperation(() =>
-            this.tabs.query({ url: [...HTTP_MATCH_PATTERNS] }));
+        const matchingTabs = await settleBrowserOperation(() => this.tabs.query({ url: [...HTTP_MATCH_PATTERNS] }));
         if (!matchingTabs.ok) {
             return [{
-                hostname: "*",
+                hostname: '*',
                 reason: REFRESH_FAILURE_REASON.MATCHING_TABS_QUERY,
             }];
         }
@@ -130,16 +135,18 @@ export class DocumentRefresh {
                 return;
             }
             try {
-                const frames = await settleBrowserOperation(() =>
-                    this.tabs.getAllFrames(tab.id));
+                const frames = await settleBrowserOperation(() => this.tabs.getAllFrames(tab.id));
                 if (!frames.ok || frames.value.length === 0) {
-                    throw new Error("No reachable document frames");
+                    throw new Error('No reachable document frames');
                 }
                 await Promise.all(frames.value.map(async ({ frameId }) => {
-                    const response = await settleBrowserOperation(() =>
-                        this.tabs.sendMessage(tab.id, message, { frameId }));
+                    const response = await settleBrowserOperation(() => this.tabs.sendMessage(
+                        tab.id,
+                        message,
+                        { frameId },
+                    ));
                     if (!response.ok || !isRefreshAcknowledgement(response.value, message)) {
-                        throw new Error("Invalid document refresh acknowledgement");
+                        throw new Error('Invalid document refresh acknowledgement');
                     }
                 }));
             } catch {

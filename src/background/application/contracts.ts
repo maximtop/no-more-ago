@@ -2,25 +2,25 @@
  * @file Background application lifecycle and dependency contracts.
  */
 
-import type { DiagnosticBrowserFamily } from "../../shared/diagnostics/events";
-import type { DiagnosticJournalStore } from "../diagnostics/journal";
+import type { DiagnosticBrowserFamily } from '../../shared/diagnostics/events';
+import type { SettingsStateFailure } from '../../shared/messaging/view-state-values';
+import type { SiteScopePolicy } from '../../shared/settings/site-scope';
+import type { DiagnosticJournalStore } from '../diagnostics/journal';
 import type {
     ActivationPolicy,
     ActivationReconcileResult,
-} from "../runtime/document-activation";
-import type { TabsRuntime } from "../runtime/tabs";
-import type { SettingsPersistence } from "../settings/service";
-import type { SiteScopePolicy } from "../../shared/settings/site-scope";
-import type { SettingsStateFailure } from "../../shared/messaging/view-state-values";
+} from '../runtime/document-activation';
+import type { TabsRuntime } from '../runtime/tabs';
+import type { SettingsPersistence } from '../settings/service';
 
 /**
  * Lifecycle states of the background application.
  */
 export const APPLICATION_PHASE = {
-    COLD: "cold",
-    INITIALIZING: "initializing",
-    READY: "ready",
-    FAILED_CLOSED: "failed-closed",
+    COLD: 'cold',
+    INITIALIZING: 'initializing',
+    READY: 'ready',
+    FAILED_CLOSED: 'failed-closed',
 } as const;
 
 /**
@@ -125,10 +125,10 @@ export interface BackgroundApplicationOptions {
  * Events that trigger background initialization or reconciliation.
  */
 export const LIFECYCLE_REASON = {
-    STARTUP: "startup",
-    INSTALLED: "installed",
-    UPDATED: "updated",
-    COLD_WORKER: "cold-worker",
+    STARTUP: 'startup',
+    INSTALLED: 'installed',
+    UPDATED: 'updated',
+    COLD_WORKER: 'cold-worker',
 } as const;
 
 /**

@@ -2,17 +2,18 @@
  * @file Source-rule registry for specialized rules and the generic fallback.
  */
 
-import { genericTimeRule } from "./generic-time";
-import { facebookAdapter } from "./facebook";
-import { githubAdapter } from "./github";
-import { hackerNewsAdapter } from "./hacker-news";
-import { instagramAdapter } from "./instagram";
-import { linkedinAdapter } from "./linkedin";
-import { stackExchangeAdapter } from "./stack-exchange";
-import { telegramWebKAdapter } from "./telegram-web-k";
-import { tiktokAdapters } from "./tiktok";
-import type { TimestampSourceRule } from "./types";
-import { youtubeAdapter, youtubePlayerResponseRule } from "./youtube";
+import { facebookAdapter } from './facebook';
+import { genericTimeRule } from './generic-time';
+import { githubAdapter } from './github';
+import { hackerNewsAdapter } from './hacker-news';
+import { instagramAdapter } from './instagram';
+import { linkedinAdapter } from './linkedin';
+import { stackExchangeAdapter } from './stack-exchange';
+import { telegramWebKAdapter } from './telegram-web-k';
+import { tiktokAdapters } from './tiktok';
+import { youtubeAdapter, youtubePlayerResponseRule } from './youtube';
+
+import type { TimestampSourceRule } from './types';
 
 /**
  * Provides deterministic source-rule selection with specialized rules before the generic fallback.
@@ -49,6 +50,7 @@ export class AdapterRegistry {
      * Selects all rules whose URL matcher accepts the current page.
      *
      * @param url - Page URL to match against registered source rules.
+     *
      * @returns - Matching specialized rules followed by the generic fallback when applicable.
      */
     matching(url: URL): readonly TimestampSourceRule[] {
@@ -60,6 +62,7 @@ export class AdapterRegistry {
      * Returns a registry with one document-scoped specialized rule at highest priority.
      *
      * @param rule - Specialized rule to prepend or replace by identifier.
+     *
      * @returns - New registry retaining all other rules and the generic fallback.
      */
     withSpecialized(rule: TimestampSourceRule): AdapterRegistry {

@@ -2,7 +2,7 @@
  * @file Owns and restores exact text within existing page-owned timestamp DOM.
  */
 
-import type { OwnedDomMutationSink } from "./owned-dom-mutations";
+import type { OwnedDomMutationSink } from './owned-dom-mutations';
 
 /**
  * Document-local reversible state for one in-place presentation.
@@ -51,6 +51,7 @@ const recordsByTarget = new WeakMap<Text, OwnedTextRecord>();
  * Retrieves or creates the ownership registry for one document.
  *
  * @param document - Document whose registry is requested.
+ *
  * @returns - Mutable in-place ownership records.
  */
 function getRecords(document: Document): Map<Element, OwnedTextRecord> {
@@ -67,6 +68,7 @@ function getRecords(document: Document): Map<Element, OwnedTextRecord> {
  * Finds an ownership record by exact page-owned text identity.
  *
  * @param node - Candidate owned text node.
+ *
  * @returns - Matching record, or null when the node is not owned.
  */
 function findRecordForTarget(node: Node): OwnedTextRecord | null {
@@ -81,12 +83,11 @@ function findRecordForTarget(node: Node): OwnedTextRecord | null {
  */
 function restoreRecord(record: OwnedTextRecord, mutations?: OwnedDomMutationSink): void {
     if (record.target.data !== record.renderedText) {
-        record.pageText = record.target.data;
         return;
     }
     if (record.target.data !== record.pageText) {
         mutations?.beforeOwnedTextChange?.(record.target, record.pageText);
-        record.target.data = record.pageText;
+        Object.assign(record.target, { data: record.pageText });
     }
 }
 
@@ -95,6 +96,7 @@ function restoreRecord(record: OwnedTextRecord, mutations?: OwnedDomMutationSink
  *
  * @param node - Exact owned target reported by the observer.
  * @param text - Page-authored value represented by the mutation record.
+ *
  * @returns - Owning source, or null when the node is not owned.
  */
 export function capturePageOwnedTextChange(node: Node, text: string): Element | null {
@@ -110,6 +112,7 @@ export function capturePageOwnedTextChange(node: Node, text: string): Element | 
  * Returns the latest page-authored text retained for an owned target.
  *
  * @param target - Existing page-owned text node.
+ *
  * @returns - Retained page text, or current text when the target is not owned.
  */
 export function readPageOwnedText(target: Text): string {
@@ -120,6 +123,7 @@ export function readPageOwnedText(target: Text): string {
  * Lists connected in-place sources without scanning page DOM.
  *
  * @param document - Document whose records are requested.
+ *
  * @returns - Connected source and retained target entries.
  */
 export function getOwnedTextSourceEntries(document: Document): readonly OwnedTextSourceEntry[] {
@@ -139,6 +143,7 @@ export function getOwnedTextSourceEntries(document: Document): readonly OwnedTex
  * @param target - Existing unambiguous label node.
  * @param text - Formatted exact label.
  * @param mutations - Optional observer acknowledgement sink.
+ *
  * @returns - The same text node, or null when ownership is unsafe.
  */
 export function renderExactText(
@@ -172,14 +177,16 @@ export function renderExactText(
         }
         retained.renderedText = text;
     } else {
-        const record = { source, target, pageText: target.data, renderedText: text };
+        const record = {
+            source, target, pageText: target.data, renderedText: text,
+        };
         records.set(source, record);
         recordsByTarget.set(target, record);
     }
     mutations?.trackOwnedTextSource?.(source, target);
     if (target.data !== text) {
         mutations?.beforeOwnedTextChange?.(target, text);
-        target.data = text;
+        Object.assign(target, { data: text });
     }
     return target;
 }
@@ -219,39 +226,35 @@ export function restoreExactTexts(
     for (const candidate of roots) {
         const rootNode = candidate as Node;
         const document = rootNode.nodeType === 9 ? rootNode as Document : rootNode.ownerDocument;
-        if (!document) {
-            continue;
+        if (document) {
+            const documentRoots = rootsByDocument.get(document) ?? [];
+            documentRoots.push(rootNode);
+            rootsByDocument.set(document, documentRoots);
         }
-        const documentRoots = rootsByDocument.get(document) ?? [];
-        documentRoots.push(rootNode);
-        rootsByDocument.set(document, documentRoots);
     }
     for (const [document, rootNodes] of rootsByDocument) {
         const records = recordsByDocument.get(document);
-        if (!records) {
-            continue;
-        }
-        const restoredSources: Element[] = [];
-        for (const [source, record] of records) {
-            const isCovered = rootNodes.some((rootNode) =>
-                rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
-            );
-            if (!isCovered) {
-                continue;
+        if (records) {
+            const restoredSources: Element[] = [];
+            for (const [source, record] of records) {
+                const isCovered = rootNodes.some((rootNode) => (
+                    rootNode.nodeType === 9 || source === rootNode || rootNode.contains(source)
+                ));
+                if (isCovered) {
+                    restoreRecord(record, mutations);
+                    restoredSources.push(source);
+                    records.delete(source);
+                    recordsByTarget.delete(record.target);
+                }
             }
-            restoreRecord(record, mutations);
-            restoredSources.push(source);
-            records.delete(source);
-            recordsByTarget.delete(record.target);
-        }
-        if (restoredSources.length === 0) {
-            continue;
-        }
-        if (mutations?.untrackOwnedTextSources) {
-            mutations.untrackOwnedTextSources(restoredSources);
-        } else {
-            for (const source of restoredSources) {
-                mutations?.untrackOwnedTextSource?.(source);
+            if (restoredSources.length > 0) {
+                if (mutations?.untrackOwnedTextSources) {
+                    mutations.untrackOwnedTextSources(restoredSources);
+                } else {
+                    for (const source of restoredSources) {
+                        mutations?.untrackOwnedTextSource?.(source);
+                    }
+                }
             }
         }
     }

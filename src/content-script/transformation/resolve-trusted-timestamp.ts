@@ -2,10 +2,10 @@
  * @file Validates adapter candidates and resolves only explicitly trusted timestamp values.
  */
 
-import { isValid } from "date-fns";
+import { isValid } from 'date-fns';
 
-import { parseCalendarDate, type CalendarDate } from "../../shared/date/calendar-date";
-import { parseExplicitZoneDatetime } from "../../shared/date/parse-explicit-zone-datetime";
+import { parseCalendarDate, type CalendarDate } from '../../shared/date/calendar-date';
+import { parseExplicitZoneDatetime } from '../../shared/date/parse-explicit-zone-datetime';
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_VALIDATION_RULE,
@@ -14,8 +14,9 @@ import {
     type TimestampCandidate,
     type TimestampPresentation,
     type TimestampVisibilityPolicy,
-} from "../adapters/types";
-import { parseHtmlGlobalDatetime } from "./parse-html-global-datetime";
+} from '../adapters/types';
+
+import { parseHtmlGlobalDatetime } from './parse-html-global-datetime';
 
 const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
 
@@ -23,14 +24,15 @@ const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
  * Semantic kinds produced by trusted timestamp resolution.
  */
 export const RESOLVED_TIMESTAMP_KIND = {
-    INSTANT: "instant",
-    CALENDAR_DATE: "calendar-date",
+    INSTANT: 'instant',
+    CALENDAR_DATE: 'calendar-date',
 } as const;
 
 /**
  * Resolves one exact ten-digit Unix-seconds value without guessing its unit.
  *
  * @param value - Raw adapter value.
+ *
  * @returns - Valid absolute instant, or null for an unsupported value.
  */
 function resolveUnixSeconds(value: string): Date | null {
@@ -50,6 +52,7 @@ function resolveUnixSeconds(value: string): Date | null {
  *
  * @param source - Timestamp source selected by an adapter.
  * @param presentation - Presentation strategy selected by the same adapter.
+ *
  * @returns - Validated presentation, or null when its target is unsuitable.
  */
 function resolvePresentation(
@@ -62,11 +65,11 @@ function resolvePresentation(
     }
     if (
         kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT
-        || !("target" in presentation)
+        || !('target' in presentation)
     ) {
         return null;
     }
-    const target = presentation.target;
+    const { target } = presentation;
     if (
         target.nodeType !== Node.TEXT_NODE
         || target.ownerDocument !== source.ownerDocument
@@ -76,8 +79,8 @@ function resolvePresentation(
     }
     const hasDelimiters = presentation.textPrefix !== undefined
         || presentation.textSuffix !== undefined;
-    const textPrefix = presentation.textPrefix ?? "";
-    const textSuffix = presentation.textSuffix ?? "";
+    const textPrefix = presentation.textPrefix ?? '';
+    const textSuffix = presentation.textSuffix ?? '';
     if (
         hasDelimiters
         && (
@@ -123,7 +126,7 @@ interface ResolvedPageTimestampBase extends ResolvedTimestampBase {
     /**
      * Page-value validation rule that accepted the candidate.
      */
-    readonly validationRule: ValidatedStringTimestampCandidate["validationRule"];
+    readonly validationRule: ValidatedStringTimestampCandidate['validationRule'];
 }
 
 /**
@@ -205,8 +208,7 @@ interface ResolvedDerivedTimestamp extends ResolvedTimestampBase {
 /**
  * Trusted candidate preserving instant, calendar-date, and source provenance semantics.
  */
-export type ResolvedTimestamp =
-    | ResolvedPageInstantTimestamp
+export type ResolvedTimestamp = | ResolvedPageInstantTimestamp
     | ResolvedCalendarDateTimestamp
     | ResolvedDerivedTimestamp;
 
@@ -215,6 +217,7 @@ export type ResolvedTimestamp =
  *
  * @param candidate - Timestamp candidate extracted by a trusted adapter.
  * @param nowMilliseconds - Deterministic current Unix milliseconds.
+ *
  * @returns - Valid resolved semantic timestamp and source metadata, or null when rejected.
  */
 export function resolveTrustedTimestamp(
@@ -239,7 +242,7 @@ export function resolveTrustedTimestamp(
         if (presentation.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
             return null;
         }
-        const epochMilliseconds = candidate.epochMilliseconds;
+        const { epochMilliseconds } = candidate;
         if (
             !Number.isSafeInteger(epochMilliseconds)
             || epochMilliseconds <= 0
@@ -262,7 +265,7 @@ export function resolveTrustedTimestamp(
     }
 
     const validationRule: unknown = candidate.validationRule;
-    const rawDatetime = candidate.rawDatetime;
+    const { rawDatetime } = candidate;
     if (
         validationRule === TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE
         || validationRule

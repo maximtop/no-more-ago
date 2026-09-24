@@ -2,24 +2,23 @@
  * @file Resolves trusted TikTok publication timestamps from embedded state and post IDs.
  */
 
-import * as v from "valibot";
+import * as v from 'valibot';
 
-import { isHtmlElement } from "./html-element";
+import { isHtmlElement } from './html-element';
 
 /**
  * Exact ID of the supported TikTok hydration script.
  */
-export const TIKTOK_HYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__" as const;
+export const TIKTOK_HYDRATION_SCRIPT_ID = '__UNIVERSAL_DATA_FOR_REHYDRATION__' as const;
 
 /**
  * Exact selector of the supported TikTok hydration script.
  */
-export const TIKTOK_HYDRATION_SELECTOR =
-    `script#${TIKTOK_HYDRATION_SCRIPT_ID}[type="application/json"]` as const;
+export const TIKTOK_HYDRATION_SELECTOR = `script#${TIKTOK_HYDRATION_SCRIPT_ID}[type="application/json"]` as const;
 
 const TIKTOK_POST_ID_PATTERN = /^[1-9]\d{18}$/u;
 const UNIX_SECONDS_PATTERN = /^[1-9]\d{9}$/u;
-const MINIMUM_TIMESTAMP_MS = Date.parse("2016-01-01T00:00:00Z");
+const MINIMUM_TIMESTAMP_MS = Date.parse('2016-01-01T00:00:00Z');
 const FUTURE_TOLERANCE_MS = 86_400_000;
 const MAXIMUM_HYDRATION_TEXT_LENGTH = 5_000_000;
 const MAXIMUM_HYDRATION_NODE_COUNT = 100_000;
@@ -31,7 +30,7 @@ interface ParsedHydrationCacheEntry {
     /**
      * Parsed-cache discriminant.
      */
-    readonly kind: "parsed";
+    readonly kind: 'parsed';
 
     /**
      * Exact parsed script element.
@@ -56,7 +55,7 @@ interface OversizedHydrationCacheEntry {
     /**
      * Oversized-cache discriminant.
      */
-    readonly kind: "oversized";
+    readonly kind: 'oversized';
 
     /**
      * Exact script element rejected by the size limit.
@@ -100,19 +99,21 @@ const hydrationPostSchema = v.object({ id: v.string(), createTime: v.string() })
  * Checks the one exact script whose JSON may supply TikTok publication evidence.
  *
  * @param element - Candidate page element.
+ *
  * @returns - Whether the element is the supported hydration script.
  */
 export function isTikTokHydrationScript(element: Element): element is HTMLScriptElement {
     return isHtmlElement(element)
-        && element.localName === "script"
+        && element.localName === 'script'
         && element.id === TIKTOK_HYDRATION_SCRIPT_ID
-        && element.getAttribute("type") === "application/json";
+        && element.getAttribute('type') === 'application/json';
 }
 
 /**
  * Checks the strict decimal grammar shared by TikTok paths, wrappers, and decoding.
  *
  * @param value - Candidate publication ID.
+ *
  * @returns - Whether the value is one supported TikTok post ID.
  */
 export function isTikTokPostId(value: string): boolean {
@@ -123,6 +124,7 @@ export function isTikTokPostId(value: string): boolean {
  * Indexes string-valued id/createTime pairs found in the confirmed hydration script.
  *
  * @param value - Parsed hydration JSON root.
+ *
  * @returns - Create-time values keyed by exact string post IDs.
  */
 function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
@@ -139,28 +141,27 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
                 }
                 pending.push(child);
             }
-            continue;
-        }
-        const node = v.safeParse(hydrationNodeSchema, current);
-        if (!node.success) {
-            continue;
-        }
-        const post = v.safeParse(hydrationPostSchema, node.output);
-        if (post.success) {
-            const { id, createTime } = post.output;
-            const existing = index.get(id);
-            if (existing === undefined) {
-                index.set(id, createTime);
-            } else if (existing !== createTime) {
-                index.set(id, null);
+        } else {
+            const node = v.safeParse(hydrationNodeSchema, current);
+            if (node.success) {
+                const post = v.safeParse(hydrationPostSchema, node.output);
+                if (post.success) {
+                    const { id, createTime } = post.output;
+                    const existing = index.get(id);
+                    if (existing === undefined) {
+                        index.set(id, createTime);
+                    } else if (existing !== createTime) {
+                        index.set(id, null);
+                    }
+                }
+                for (const child of Object.values(node.output)) {
+                    scheduledNodes += 1;
+                    if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
+                        return EMPTY_INDEX;
+                    }
+                    pending.push(child);
+                }
             }
-        }
-        for (const child of Object.values(node.output)) {
-            scheduledNodes += 1;
-            if (scheduledNodes > MAXIMUM_HYDRATION_NODE_COUNT) {
-                return EMPTY_INDEX;
-            }
-            pending.push(child);
         }
     }
     return index;
@@ -170,6 +171,7 @@ function indexHydration(value: unknown): ReadonlyMap<string, string | null> {
  * Reads or rebuilds the index for the one supported hydration script.
  *
  * @param document - TikTok document containing embedded state.
+ *
  * @returns - Cached or newly parsed create-time index.
  */
 function readHydrationIndex(
@@ -188,19 +190,19 @@ function readHydrationIndex(
     const cached = hydrationCache.get(document);
     if (text.length > MAXIMUM_HYDRATION_TEXT_LENGTH) {
         if (
-            cached?.kind !== "oversized"
+            cached?.kind !== 'oversized'
             || cached.script !== script
             || cached.textLength !== text.length
         ) {
             hydrationCache.set(document, {
-                kind: "oversized",
+                kind: 'oversized',
                 script,
                 textLength: text.length,
             });
         }
         return EMPTY_INDEX;
     }
-    if (cached?.kind === "parsed" && cached.script === script && cached.text === text) {
+    if (cached?.kind === 'parsed' && cached.script === script && cached.text === text) {
         return cached.createTimeByPostId;
     }
     let createTimeByPostId = EMPTY_INDEX;
@@ -210,7 +212,9 @@ function readHydrationIndex(
     } catch {
         /* malformed page data remains empty until the exact script snapshot changes */
     }
-    hydrationCache.set(document, { kind: "parsed", script, text, createTimeByPostId });
+    hydrationCache.set(document, {
+        kind: 'parsed', script, text, createTimeByPostId,
+    });
     return createTimeByPostId;
 }
 
@@ -219,6 +223,7 @@ function readHydrationIndex(
  *
  * @param value - Raw ten-digit Unix-seconds value.
  * @param nowMs - Current browser time used for the future bound.
+ *
  * @returns - ISO UTC datetime, or null outside the accepted domain.
  */
 function canonicalizeUnixSeconds(value: string, nowMs: number): string | null {
@@ -240,13 +245,14 @@ function canonicalizeUnixSeconds(value: string, nowMs: number): string | null {
  * Decodes the high 32 bits of one strict TikTok post ID.
  *
  * @param postId - Strict decimal post ID.
+ *
  * @returns - Unix seconds encoded in the high bits, or null for invalid shape.
  */
 function decodePostIdSeconds(postId: string): string | null {
     if (!isTikTokPostId(postId)) {
         return null;
     }
-    return (BigInt(postId) >> 32n).toString();
+    return (BigInt(postId) / 2n ** 32n).toString();
 }
 
 /**
@@ -258,6 +264,7 @@ function decodePostIdSeconds(postId: string): string | null {
  * @param document - Current TikTok document.
  * @param postId - Current publication's strict decimal ID.
  * @param nowMs - Current browser time used for plausibility validation.
+ *
  * @returns - Canonical ISO UTC datetime, or null when neither source is valid.
  */
 export function resolveTikTokPublicationDatetime(
@@ -269,7 +276,7 @@ export function resolveTikTokPublicationDatetime(
         return null;
     }
     const createTime = readHydrationIndex(document).get(postId);
-    if (typeof createTime === "string") {
+    if (typeof createTime === 'string') {
         const embedded = canonicalizeUnixSeconds(createTime, nowMs);
         if (embedded) {
             return embedded;

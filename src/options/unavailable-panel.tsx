@@ -2,15 +2,19 @@
  * @file Settings recovery view shown when settings cannot be read.
  */
 
-import { Alert, Button, Group, Stack, Text, Title } from "@mantine/core";
-import type { ReactElement } from "react";
-import type { SettingsStateFailure } from "../shared/messaging/view-state-values";
-import { isDiagnosticsSuccessNotice } from "../shared/diagnostics/download";
-import { unavailableSettingsKeys } from "../shared/ui/copy";
-import { t, type MessageKey } from "../shared/i18n/translator";
-import type { DiagnosticsController } from "./diagnostics-controller";
-import { ResetConfirmation } from "../shared/ui/reset-confirmation";
-import type { ResetController } from "./reset-controller";
+import {
+    Alert, Button, Group, Stack, Text, Title,
+} from '@mantine/core';
+
+import { isDiagnosticsSuccessNotice } from '../shared/diagnostics/download';
+import { t, type MessageKey } from '../shared/i18n/translator';
+import { unavailableSettingsKeys } from '../shared/ui/copy';
+import { ResetConfirmation } from '../shared/ui/reset-confirmation';
+
+import type { DiagnosticsController } from './diagnostics-controller';
+import type { ResetController } from './reset-controller';
+import type { SettingsStateFailure } from '../shared/messaging/view-state-values';
+import type { ReactElement } from 'react';
 
 /**
  * Controllers backing the recovery actions.
@@ -45,6 +49,7 @@ export interface OptionsUnavailablePanelProps {
  * @param props.diagnostics - Diagnostics controller.
  * @param props.reset - Reset coordinator.
  * @param props.resetNotice - Key of the failure guidance from the latest reset attempt.
+ *
  * @returns - The settings recovery view.
  */
 export function OptionsUnavailablePanel({
@@ -57,10 +62,10 @@ export function OptionsUnavailablePanel({
     const { diagnosticsNotice } = diagnostics;
     return (
         <Stack gap="md" className="options-content options-unavailable" component="section">
-            <Title order={2}>{t("popup_status_unavailable")}</Title>
+            <Title order={2}>{t('popup_status_unavailable')}</Title>
             <Text role="status">{t(keys.status)}</Text>
             <Text size="sm" c="dimmed">
-                {t(keys.consequence)} {t("unavailable_recovery_hint_options")}
+                {t(keys.consequence)} {t('unavailable_recovery_hint_options')}
             </Text>
             <Group>
                 <Button
@@ -72,7 +77,7 @@ export function OptionsUnavailablePanel({
                         void diagnostics.openGitHubIssue();
                     }}
                 >
-                    {t("diagnostics_open_issue")}
+                    {t('diagnostics_open_issue')}
                 </Button>
                 <Button
                     type="button"
@@ -83,7 +88,7 @@ export function OptionsUnavailablePanel({
                         void diagnostics.downloadDiagnostics();
                     }}
                 >
-                    {t("diagnostics_download")}
+                    {t('diagnostics_download')}
                 </Button>
             </Group>
             <ResetConfirmation
@@ -95,7 +100,7 @@ export function OptionsUnavailablePanel({
             {diagnosticsNotice ? (
                 <Alert
                     role="status"
-                    color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? "signal" : "red"}
+                    color={isDiagnosticsSuccessNotice(diagnosticsNotice) ? 'signal' : 'red'}
                 >
                     {t(diagnosticsNotice)}
                 </Alert>

@@ -2,25 +2,28 @@
  * @file Verifies the locale catalogs and localized manifest in built artifacts.
  */
 
-import { execFile } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { promisify } from "node:util";
-import { describe, expect, it } from "vitest";
+import { execFile } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { promisify } from 'node:util';
+
+import { describe, expect, it } from 'vitest';
+
+import { BROWSER, BROWSERS } from '../../../scripts/build/contracts';
 import {
     BASE_UI_LOCALE, CHROMIUM_LOCALE_ALIAS, UI_LOCALES,
-} from "../../../src/shared/i18n/locales";
-import { BROWSER, BROWSERS } from "../../../scripts/build/contracts";
-import { createBuildWorkspace } from "./build-workspace";
+} from '../../../src/shared/i18n/locales';
+
+import { createBuildWorkspace } from './build-workspace';
 
 const execFileAsync = promisify(execFile);
-const PNPM_COMMAND = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
-describe("locale artifacts", () => {
-    it("ships every catalog, the Chromium alias, and a localized manifest", async () => {
+describe('locale artifacts', () => {
+    it('ships every catalog, the Chromium alias, and a localized manifest', async () => {
         const workspace = createBuildWorkspace();
         try {
             for (const browser of BROWSERS) {
-                await execFileAsync(PNPM_COMMAND, ["dev", browser], {
+                await execFileAsync(PNPM_COMMAND, ['dev', browser], {
                     cwd: workspace.root,
                     timeout: 300_000,
                 });
@@ -47,11 +50,11 @@ describe("locale artifacts", () => {
             for (const browser of BROWSERS) {
                 const manifest = JSON.parse(readFileSync(
                     `${workspace.root}/dist/dev/${browser}/manifest.json`,
-                    "utf8",
+                    'utf8',
                 )) as Record<string, string>;
                 expect(manifest.default_locale).toBe(BASE_UI_LOCALE);
-                expect(manifest.name).toBe("__MSG_extension_name__");
-                expect(manifest.description).toBe("__MSG_extension_description__");
+                expect(manifest.name).toBe('__MSG_extension_name__');
+                expect(manifest.description).toBe('__MSG_extension_description__');
             }
         } finally {
             workspace.cleanup();

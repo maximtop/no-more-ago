@@ -2,33 +2,33 @@
  * @file Creates and downloads ZIP archives from validated diagnostic snapshots.
  */
 
-import * as fflate from "fflate";
-import type { DiagnosticsSnapshot } from "../messaging/contracts";
+import * as fflate from 'fflate';
+
+import type { DiagnosticsSnapshot } from '../messaging/contracts';
 
 /**
  * JSON member stored inside a diagnostic archive.
  */
-export const DIAGNOSTICS_ARCHIVE_MEMBER = "diagnostics.json" as const;
+export const DIAGNOSTICS_ARCHIVE_MEMBER = 'diagnostics.json' as const;
 
 /**
  * Filename assigned to a downloaded diagnostic archive.
  */
-export const DIAGNOSTICS_ARCHIVE_FILE = "no-more-ago-diagnostics.zip" as const;
+export const DIAGNOSTICS_ARCHIVE_FILE = 'no-more-ago-diagnostics.zip' as const;
 
 /**
  * Named archive failures shown by both surfaces.
  */
 export const DIAGNOSTIC_ARCHIVE_ERROR = {
-    EMPTY: "empty",
-    COMPRESSION_FAILED: "compression-failed",
-    DOWNLOAD_FAILED: "download-failed",
+    EMPTY: 'empty',
+    COMPRESSION_FAILED: 'compression-failed',
+    DOWNLOAD_FAILED: 'download-failed',
 } as const;
 
 /**
  * Stable archive failure shown by both surfaces.
  */
-export type DiagnosticArchiveErrorCode =
-    (typeof DIAGNOSTIC_ARCHIVE_ERROR)[keyof typeof DIAGNOSTIC_ARCHIVE_ERROR];
+export type DiagnosticArchiveErrorCode = (typeof DIAGNOSTIC_ARCHIVE_ERROR)[keyof typeof DIAGNOSTIC_ARCHIVE_ERROR];
 
 /**
  * Validated snapshot accepted by archive creation.
@@ -107,7 +107,7 @@ export class DiagnosticArchiveError extends Error {
         options?: ErrorOptions,
     ) {
         super(message, options);
-        this.name = "DiagnosticArchiveError";
+        this.name = 'DiagnosticArchiveError';
     }
 }
 
@@ -116,7 +116,10 @@ export class DiagnosticArchiveError extends Error {
  *
  * @param snapshot - Snapshot returned by the validated options client.
  * @param encoder - ZIP encoder.
+ *
  * @returns - ZIP archive bytes.
+ *
+ * @throws If the snapshot has no entries or compression fails.
  */
 export function createDiagnosticsZip(
     snapshot: DiagnosticArchiveSnapshot,
@@ -125,7 +128,7 @@ export function createDiagnosticsZip(
     if (snapshot.entries.length === 0) {
         throw new DiagnosticArchiveError(
             DIAGNOSTIC_ARCHIVE_ERROR.EMPTY,
-            "There are no diagnostic entries to download.",
+            'There are no diagnostic entries to download.',
         );
     }
     try {
@@ -134,7 +137,7 @@ export function createDiagnosticsZip(
     } catch (cause) {
         throw new DiagnosticArchiveError(
             DIAGNOSTIC_ARCHIVE_ERROR.COMPRESSION_FAILED,
-            "The diagnostic archive could not be created.",
+            'The diagnostic archive could not be created.',
             { cause },
         );
     }
@@ -145,14 +148,16 @@ export function createDiagnosticsZip(
  *
  * @param bytes - ZIP archive bytes.
  * @param browser - Browser download primitives.
+ *
+ * @throws If the browser cannot start the download.
  */
 export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRuntime): void {
     let objectUrl: string | undefined;
-    let anchor: ReturnType<DownloadRuntime["createAnchor"]> | undefined;
+    let anchor: ReturnType<DownloadRuntime['createAnchor']> | undefined;
     try {
         const archive = new Uint8Array(bytes);
         objectUrl = browser.createObjectURL(
-            new browser.Blob([archive.buffer], { type: "application/zip" }),
+            new browser.Blob([archive.buffer], { type: 'application/zip' }),
         );
         anchor = browser.createAnchor();
         anchor.href = objectUrl;
@@ -170,7 +175,7 @@ export function downloadDiagnosticsZip(bytes: Uint8Array, browser: DownloadRunti
         anchor?.remove?.();
         throw new DiagnosticArchiveError(
             DIAGNOSTIC_ARCHIVE_ERROR.DOWNLOAD_FAILED,
-            "The diagnostic archive could not be downloaded.",
+            'The diagnostic archive could not be downloaded.',
             { cause },
         );
     }

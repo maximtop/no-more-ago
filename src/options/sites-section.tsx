@@ -13,7 +13,7 @@ import {
     Text,
     TextInput,
     Title,
-} from "@mantine/core";
+} from '@mantine/core';
 import {
     memo,
     useCallback,
@@ -22,17 +22,19 @@ import {
     useState,
     type ReactElement,
     type SyntheticEvent,
-} from "react";
-import { STATE_AVAILABILITY } from "../shared/messaging/view-state-values";
+} from 'react';
+
+import { t, tPlural, type MessageKey } from '../shared/i18n/translator';
+import { STATE_AVAILABILITY } from '../shared/messaging/view-state-values';
 import {
     SITE_SCOPE_MODE,
     parseSiteScopeMode,
-} from "../shared/settings/site-scope";
-import { t, tPlural, type MessageKey } from "../shared/i18n/translator";
-import { SCOPE_MODE_KEY } from "../shared/ui/copy";
-import { NOTICE_SURFACE, mutationNoticeKey } from "../shared/ui/persistence-notice";
-import { activeListCopy, validateHostnameEntry, type ActiveListCopy } from "./site-scope-form";
-import { SITES_BUSY_KIND, type SitesController } from "./sites-controller";
+} from '../shared/settings/site-scope';
+import { SCOPE_MODE_KEY } from '../shared/ui/copy';
+import { NOTICE_SURFACE, mutationNoticeKey } from '../shared/ui/persistence-notice';
+
+import { activeListCopy, validateHostnameEntry, type ActiveListCopy } from './site-scope-form';
+import { SITES_BUSY_KIND, type SitesController } from './sites-controller';
 
 /**
  * Properties for the site-settings section.
@@ -78,6 +80,7 @@ interface HostnameEntryFormProps {
  * @param props.hosts - Hostnames already in that list.
  * @param props.onAdd - Adds a validated hostname.
  * @param props.onRejected - Called when the entry was rejected locally.
+ *
  * @returns - The entry form.
  */
 function HostnameEntryForm({
@@ -86,7 +89,7 @@ function HostnameEntryForm({
     onAdd,
     onRejected,
 }: HostnameEntryFormProps): ReactElement {
-    const [draft, setDraft] = useState("");
+    const [draft, setDraft] = useState('');
     const [formError, setFormError] = useState<MessageKey>();
 
     /**
@@ -105,7 +108,7 @@ function HostnameEntryForm({
         setFormError(undefined);
         void onAdd(result.hostname).then((added) => {
             if (added) {
-                setDraft("");
+                setDraft('');
             }
         });
     };
@@ -115,7 +118,7 @@ function HostnameEntryForm({
                 {t(copy.fieldLabel)}
             </Text>
             <Text id="hostname-entry-hint" size="xs" c="dimmed" mb="xs">
-                {t("sites_hostname_hint")}
+                {t('sites_hostname_hint')}
             </Text>
             <Group align="flex-start" gap="sm" wrap="nowrap">
                 <TextInput
@@ -128,7 +131,7 @@ function HostnameEntryForm({
                     error={formError === undefined ? undefined : t(formError)}
                     autoComplete="off"
                     spellCheck={false}
-                    classNames={{ input: "nma-mono options-hostname-input" }}
+                    classNames={{ input: 'nma-mono options-hostname-input' }}
                     onChange={(event) => {
                         setDraft(event.currentTarget.value);
                         setFormError(undefined);
@@ -175,14 +178,15 @@ interface SiteListProps {
  * @param props.removeAriaKey - Accessible-name catalog key for the remove action.
  * @param props.busyHostname - Hostname whose removal is in flight.
  * @param props.onRemove - Removes one hostname.
+ *
  * @returns - The hostname list.
  */
-const SiteList = memo(function SiteList({
+const SiteList = memo(({
     hosts,
     removeAriaKey,
     busyHostname,
     onRemove,
-}: SiteListProps): ReactElement {
+}: SiteListProps): ReactElement => {
     return (
         <ul className="options-site-list">
             {hosts.map((hostname) => (
@@ -197,7 +201,7 @@ const SiteList = memo(function SiteList({
                             onRemove(hostname);
                         }}
                     >
-                        {t("sites_remove_action")}
+                        {t('sites_remove_action')}
                     </Button>
                 </li>
             ))}
@@ -210,6 +214,7 @@ const SiteList = memo(function SiteList({
  *
  * @param props - Component properties.
  * @param props.controller - State and commands for the site settings.
+ *
  * @returns - The Sites section.
  */
 export function SitesSection({ controller }: SitesSectionProps): ReactElement {
@@ -220,9 +225,11 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
         : undefined;
     // A confirmation names the list it was added to, so it is dropped as soon
     // as the mode changes or a failure notice replaces it.
-    useEffect(() => {
+    const [shown, setShown] = useState({ scopeMode, notice });
+    if (shown.scopeMode !== scopeMode || shown.notice !== notice) {
+        setShown({ scopeMode, notice });
         setConfirmation(undefined);
-    }, [scopeMode, notice]);
+    }
     // The controller's commands are recreated on every render; the list gets
     // one stable callback that reads the latest ones.
     const latest = useRef(controller);
@@ -243,7 +250,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
     if (!state || state.availability !== STATE_AVAILABILITY.READY) {
         return (
             <Text role="status">
-                {t("sites_unavailable")}
+                {t('sites_unavailable')}
             </Text>
         );
     }
@@ -256,6 +263,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
      * Adds a validated hostname and confirms it beside the list.
      *
      * @param hostname - Canonical hostname to add.
+     *
      * @returns - Whether the background confirmed the addition.
      */
     const onAdd = async (hostname: string): Promise<boolean> => {
@@ -270,35 +278,35 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
         <Stack gap="lg" component="section" aria-labelledby="sites-heading">
             <Box>
                 <Title order={2} id="sites-heading">
-                    {t("sites_heading")}
+                    {t('sites_heading')}
                 </Title>
                 <Text size="sm" c="dimmed">
-                    {t("sites_intro")}
+                    {t('sites_intro')}
                 </Text>
             </Box>
             <Group justify="space-between" wrap="nowrap" className="nma-row">
                 <Box>
                     <Text size="sm" fw={600}>
-                        {t("global_switch_label")}
+                        {t('global_switch_label')}
                     </Text>
                     <Text size="xs" c="dimmed" aria-live="polite">
                         {t(state.globalEnabled
-                            ? "sites_status_enabled"
-                            : "sites_status_paused")}
+                            ? 'sites_status_enabled'
+                            : 'sites_status_paused')}
                     </Text>
                 </Box>
                 <Switch
                     checked={state.globalEnabled}
                     aria-busy={busy?.kind === SITES_BUSY_KIND.GLOBAL}
-                    aria-label={t("global_switch_label")}
+                    aria-label={t('global_switch_label')}
                     onChange={(event) => {
                         void controller.changeGlobal(event.currentTarget.checked);
                     }}
                 />
             </Group>
             <Radio.Group
-                label={t("sites_run_on_label")}
-                description={t("sites_run_on_hint")}
+                label={t('sites_run_on_label')}
+                description={t('sites_run_on_hint')}
                 value={state.scopeMode}
                 onChange={(value) => {
                     const mode = parseSiteScopeMode(value);
@@ -311,13 +319,13 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                     <Radio
                         value={SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED}
                         label={t(SCOPE_MODE_KEY[SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED])}
-                        description={t("sites_mode_all_description")}
+                        description={t('sites_mode_all_description')}
                         aria-busy={scopeBusy}
                     />
                     <Radio
                         value={SITE_SCOPE_MODE.SELECTED_ONLY}
                         label={t(SCOPE_MODE_KEY[SITE_SCOPE_MODE.SELECTED_ONLY])}
-                        description={t("sites_mode_selected_description")}
+                        description={t('sites_mode_selected_description')}
                         aria-busy={scopeBusy}
                     />
                 </Stack>
@@ -335,7 +343,7 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                     <Group gap="xs" align="baseline">
                         <Title order={3}>{t(copy.title)}</Title>
                         <Text size="xs" c="dimmed">
-                            {tPlural("sites_count", hosts.length)}
+                            {tPlural('sites_count', hosts.length)}
                         </Text>
                     </Group>
                     <Text size="xs" c="dimmed">
@@ -349,8 +357,8 @@ export function SitesSection({ controller }: SitesSectionProps): ReactElement {
                     <Alert
                         role="status"
                         color={state.scopeMode === SITE_SCOPE_MODE.SELECTED_ONLY
-                            ? "yellow"
-                            : "gray"}
+                            ? 'yellow'
+                            : 'gray'}
                         mt="sm"
                     >
                         {t(copy.emptyState)}

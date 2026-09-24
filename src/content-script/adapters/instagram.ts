@@ -2,11 +2,16 @@
  * @file Preserves Instagram timestamp styling through in-place standard-time presentation.
  */
 
-import { isHttpUrl } from "../../shared/url/http";
-import { OWNED_OUTPUT_ATTRIBUTE } from "../ownership-markers";
-import { discoverElements } from "./discover-elements";
-import { findSimpleTextTarget } from "./simple-text-target";
-import { isHtmlElement } from "./html-element";
+import { isHttpUrl } from '../../shared/url/http';
+import { OWNED_OUTPUT_ATTRIBUTE } from '../ownership-markers';
+
+import { discoverElements } from './discover-elements';
+import { isHtmlElement } from './html-element';
+import {
+    RELATIVE_PRESENTATION_PROFILE,
+    createRelativePresentationClassifier,
+} from './relative-presentation';
+import { findSimpleTextTarget } from './simple-text-target';
 import {
     TIMESTAMP_PRESENTATION_KIND,
     TIMESTAMP_SOURCE_ATTRIBUTE,
@@ -14,28 +19,25 @@ import {
     TIMESTAMP_VALIDATION_RULE,
     TIMESTAMP_VISIBILITY_POLICY,
     type TimestampSourceRule,
-} from "./types";
-import {
-    RELATIVE_PRESENTATION_PROFILE,
-    createRelativePresentationClassifier,
-} from "./relative-presentation";
+} from './types';
 
 /**
  * Stable identifier for the Instagram presentation rule.
  */
-export const INSTAGRAM_ADAPTER_ID = "instagram" as const;
+export const INSTAGRAM_ADAPTER_ID = 'instagram' as const;
 
 /**
  * Canonical hostname handled by the Instagram presentation rule.
  */
-export const INSTAGRAM_HOSTNAME = "www.instagram.com" as const;
+export const INSTAGRAM_HOSTNAME = 'www.instagram.com' as const;
 
-const INSTAGRAM_TIME_SELECTOR = "time[datetime]" as const;
+const INSTAGRAM_TIME_SELECTOR = 'time[datetime]' as const;
 
 /**
  * Checks whether a URL belongs to the supported Instagram origin.
  *
  * @param url - URL considered for adapter selection.
+ *
  * @returns - Whether the URL uses HTTP(S) and the canonical Instagram hostname.
  */
 export function matchesInstagramUrl(url: URL): boolean {
@@ -46,6 +48,7 @@ export function matchesInstagramUrl(url: URL): boolean {
  * Recognizes a page-owned standard Instagram time element.
  *
  * @param element - Candidate timestamp element.
+ *
  * @returns - Whether the element has the supported standard-time shape.
  */
 function isInstagramTimeElement(element: Element): boolean {
@@ -78,7 +81,7 @@ export const instagramAdapter = {
         }
         const rawDatetime = element.getAttribute(TIMESTAMP_SOURCE_ATTRIBUTE.DATETIME);
         const target = findSimpleTextTarget(element);
-        if (!rawDatetime || rawDatetime.trim() === "" || !target) {
+        if (!rawDatetime || rawDatetime.trim() === '' || !target) {
             return null;
         }
         return {

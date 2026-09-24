@@ -2,31 +2,21 @@
  * @file Transforms eligible timestamps while preserving ownership and diagnostics boundaries.
  */
 
-import { isIncompleteAbsolutePresentation } from "../adapters/absolute-presentation";
-import { AdapterRegistry, defaultRegistry } from "../adapters/registry";
+import { formatCalendarDate } from '../../shared/date/format-calendar-date';
+import { formatDateWithPresentation } from '../../shared/date/format-default-date';
+import { INVALID_DATE_FORMAT_ERROR } from '../../shared/date/presentation-errors';
+import {
+    DIAGNOSTIC_CATEGORY,
+    DIAGNOSTIC_REASON,
+} from '../../shared/diagnostics/contracts';
+import {
+    safeDiagnosticSourceTimestamp,
+} from '../../shared/diagnostics/events';
+import { isIncompleteAbsolutePresentation } from '../adapters/absolute-presentation';
+import { defaultRegistry } from '../adapters/registry';
 import {
     getRelativePresentationObservationTarget,
-} from "../adapters/relative-presentation";
-import { formatCalendarDate } from "../../shared/date/format-calendar-date";
-import { formatDateWithPresentation } from "../../shared/date/format-default-date";
-import { INVALID_DATE_FORMAT_ERROR } from "../../shared/date/presentation-errors";
-import {
-    releaseSourceHiddenForReconciliation,
-} from "./render-exact-time";
-import type { OwnedDomMutationSink } from "./owned-dom-mutations";
-import {
-    getOwnedTimestampSourceEntries,
-    readPageOwnedText,
-    renderTimestampPresentation,
-    restoreTimestampPresentation,
-    type TimestampRenderResult,
-} from "./render-timestamp-presentation";
-import {
-    RESOLVED_TIMESTAMP_KIND,
-    resolveTrustedTimestamp,
-    type ResolvedTimestamp,
-} from "./resolve-trusted-timestamp";
-import { isSourceSuppressed } from "./source-visibility";
+} from '../adapters/relative-presentation';
 import {
     TIMESTAMP_VISIBILITY_POLICY,
     TIMESTAMP_PRESENTATION_KIND,
@@ -36,17 +26,30 @@ import {
     type TimestampExtractionContext,
     type TimestampPresentationContext,
     type TimestampSourceRule,
-} from "../adapters/types";
-import type { DisplaySettings } from "../../shared/settings/snapshot";
+} from '../adapters/types';
+
 import {
-    safeDiagnosticSourceTimestamp,
-} from "../../shared/diagnostics/events";
+    releaseSourceHiddenForReconciliation,
+} from './render-exact-time';
 import {
-    DIAGNOSTIC_CATEGORY,
-    DIAGNOSTIC_REASON,
-} from "../../shared/diagnostics/contracts";
-import type { TimestampExtractionPolicy } from "./route-handoff";
-import type { DocumentDiagnosticSink } from "../diagnostics";
+    getOwnedTimestampSourceEntries,
+    readPageOwnedText,
+    renderTimestampPresentation,
+    restoreTimestampPresentation,
+    type TimestampRenderResult,
+} from './render-timestamp-presentation';
+import {
+    RESOLVED_TIMESTAMP_KIND,
+    resolveTrustedTimestamp,
+    type ResolvedTimestamp,
+} from './resolve-trusted-timestamp';
+import { isSourceSuppressed } from './source-visibility';
+
+import type { OwnedDomMutationSink } from './owned-dom-mutations';
+import type { TimestampExtractionPolicy } from './route-handoff';
+import type { DisplaySettings } from '../../shared/settings/snapshot';
+import type { AdapterRegistry } from '../adapters/registry';
+import type { DocumentDiagnosticSink } from '../diagnostics';
 
 /**
  * Emits one bounded skip event for a candidate that cannot be rendered.
@@ -65,14 +68,14 @@ function emitCandidateSkipped(diagnosticSink: DocumentDiagnosticSink | undefined
  * Returns failure-only source evidence for the explicit Telegram Unix-seconds contract.
  *
  * @param candidates - Rejected candidates emitted for one source.
+ *
  * @returns - Bounded numeric evidence, or undefined for every other source contract.
  */
 function getFailureSourceTimestamp(
     candidates: readonly TimestampCandidate[],
 ): string | undefined {
     const telegramCandidate = candidates.find(
-        (candidate) =>
-            candidate.sourceKind === TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE
+        (candidate) => candidate.sourceKind === TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE
             && candidate.validationRule === TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
     );
     if (
@@ -93,6 +96,7 @@ function getFailureSourceTimestamp(
  * @param diagnosticSink - Optional bounded diagnostic sink.
  * @param ownedDomMutations - Optional renderer mutation sink.
  * @param nowMilliseconds - Shared age snapshot captured before discovery.
+ *
  * @returns - Render result, or null when presentation or ownership is unavailable.
  */
 function renderResolvedTimestamp(
@@ -103,7 +107,7 @@ function renderResolvedTimestamp(
     ownedDomMutations: OwnedDomMutationSink | undefined,
     nowMilliseconds: number,
 ): TimestampRenderResult | null {
-    const source = resolved.source;
+    const { source } = resolved;
     if (resolved.visibilityPolicy === TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION) {
         ownedDomMutations?.trackSource?.(source, true);
         releaseSourceHiddenForReconciliation(source, ownedDomMutations);
@@ -117,9 +121,7 @@ function renderResolvedTimestamp(
     }
     const presentation = resolved.kind === RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE
         ? { text: formatCalendarDate(resolved.calendarDate, locales, display) }
-        : formatDateWithPresentation(
-            resolved.instant, locales, display, undefined, nowMilliseconds,
-        );
+        : formatDateWithPresentation(resolved.instant, locales, display, undefined, nowMilliseconds);
     if (presentation.text.length === 0) {
         restoreTimestampPresentation(source, ownedDomMutations);
         if (diagnosticSink && presentation.error === INVALID_DATE_FORMAT_ERROR) {
@@ -260,7 +262,7 @@ export interface ReconcileInput {
 /**
  * Dependencies for a batched reconciliation of exact timestamp sources.
  */
-export interface ReconcileSourcesInput extends Omit<ReconcileInput, "root"> {
+export interface ReconcileSourcesInput extends Omit<ReconcileInput, 'root'> {
     /**
      * Document that owns every supplied source.
      */
@@ -337,6 +339,7 @@ interface CandidateAccumulator {
  *
  * @param input - Processing dependencies carrying URL, registry, and diagnostics.
  * @param url - Current URL snapshot used for this pass.
+ *
  * @returns - Matching rules in source precedence order.
  */
 function getMatchingRules(
@@ -407,9 +410,7 @@ function evaluateRuleCandidate(
     }
     if (!rule.isRelativePresentation(candidate, presentationContext)
         && !(allowAbsolute && resolved.kind === RESOLVED_TIMESTAMP_KIND.INSTANT
-            && isIncompleteAbsolutePresentation(
-                candidate, presentationContext, resolved.instant,
-            ))) {
+            && isIncompleteAbsolutePresentation(candidate, presentationContext, resolved.instant))) {
         accumulator.presentationRejectedSources.add(source);
         return;
     }
@@ -421,6 +422,7 @@ function evaluateRuleCandidate(
  * Creates the read-only adapter context for one processing pass.
  *
  * @param url - Current route URL for route-specific value provenance.
+ *
  * @returns - Context exposing current route and retained page text.
  */
 function createExtractionContext(
@@ -436,6 +438,7 @@ function createExtractionContext(
  * Creates the presentation-only context for one processing pass.
  *
  * @param input - Processing input carrying static or live locale preferences.
+ *
  * @returns - Context exposing current locales and retained page text.
  */
 function createPresentationContext(
@@ -456,6 +459,7 @@ function createPresentationContext(
  * @param started - Optional start time captured before discovery.
  * @param nowMilliseconds - Shared age snapshot captured before discovery.
  * @param display - Shared display settings snapshot captured before discovery.
+ *
  * @returns - Generated adjacent time outputs from the processed sources.
  */
 function processCandidateCollection(
@@ -466,8 +470,8 @@ function processCandidateCollection(
     nowMilliseconds: number,
     display: DisplaySettings | undefined,
 ): readonly HTMLTimeElement[] {
-    const ownedDomMutations = input.ownedDomMutations;
-    const diagnosticSink = input.diagnosticSink;
+    const { ownedDomMutations } = input;
+    const { diagnosticSink } = input;
     const {
         candidatesBySource,
         resolvedBySource,
@@ -510,34 +514,33 @@ function processCandidateCollection(
                     ownedDomMutations?.untrackSource?.(source);
                 }
                 restoreTimestampPresentation(source, ownedDomMutations);
-                if (blockedSources.has(source)) {
-                    continue;
+                if (!blockedSources.has(source)) {
+                    if (candidates.length === 0 && presentationRejectedSources.has(source)) {
+                        emitCandidateSkipped(diagnosticSink);
+                    } else {
+                        const sourceTimestamp = getFailureSourceTimestamp(candidates);
+                        diagnosticSink?.({
+                            category: DIAGNOSTIC_CATEGORY.SKIP,
+                            reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+                            count: 1,
+                            ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
+                        });
+                    }
                 }
-                if (candidates.length === 0 && presentationRejectedSources.has(source)) {
-                    emitCandidateSkipped(diagnosticSink);
-                    continue;
-                }
-                const sourceTimestamp = getFailureSourceTimestamp(candidates);
-                diagnosticSink?.({
-                    category: DIAGNOSTIC_CATEGORY.SKIP,
-                    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-                    count: 1,
-                    ...(sourceTimestamp === undefined ? {} : { sourceTimestamp }),
-                });
-                continue;
-            }
-            const result = renderResolvedTimestamp(
-                resolved,
-                locales,
-                display,
-                diagnosticSink,
-                ownedDomMutations,
-                nowMilliseconds,
-            );
-            if (result) {
-                renderedCount += 1;
-                if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
-                    outputs.push(result.output);
+            } else {
+                const result = renderResolvedTimestamp(
+                    resolved,
+                    locales,
+                    display,
+                    diagnosticSink,
+                    ownedDomMutations,
+                    nowMilliseconds,
+                );
+                if (result) {
+                    renderedCount += 1;
+                    if (result.kind !== TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT) {
+                        outputs.push(result.output);
+                    }
                 }
             }
         }
@@ -562,11 +565,12 @@ function processCandidateCollection(
  * change.
  *
  * @param input - Document region, page URL, presentation, and adapter dependencies.
+ *
  * @returns - Extension-owned time elements generated in the region.
  */
 function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeElement[] {
     const { root } = input;
-    const url = input.url;
+    const { url } = input;
     const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
@@ -597,17 +601,17 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
             }
             if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, element)) {
                 blockedSources.add(element);
-                continue;
+            } else {
+                evaluateRuleCandidate(
+                    accumulator,
+                    rule,
+                    element,
+                    extractionContext,
+                    presentationContext,
+                    nowMilliseconds,
+                    display?.precisionPolicy?.absoluteLabels ?? false,
+                );
             }
-            evaluateRuleCandidate(
-                accumulator,
-                rule,
-                element,
-                extractionContext,
-                presentationContext,
-                nowMilliseconds,
-                display?.precisionPolicy?.absoluteLabels ?? false,
-            );
         }
     }
 
@@ -652,12 +656,13 @@ function processRegion(input: ProcessInput | ReconcileInput): readonly HTMLTimeE
  * Re-evaluates exact sources in one pass without enumerating document-wide ownership records.
  *
  * @param input - Exact sources plus page, presentation, and ownership dependencies.
+ *
  * @returns - Generated adjacent time outputs from the supplied sources.
  */
 export function reconcileDocumentSources(
     input: ReconcileSourcesInput,
 ): readonly HTMLTimeElement[] {
-    const url = input.url;
+    const { url } = input;
     const rules = getMatchingRules(input, url);
     if (rules.length === 0) {
         return [];
@@ -682,28 +687,27 @@ export function reconcileDocumentSources(
     const presentationContext = createPresentationContext(input);
     for (const source of input.sources) {
         if (
-            discovered.has(source)
-            || source.ownerDocument !== input.root
-            || !source.isConnected
+            !discovered.has(source)
+            && source.ownerDocument === input.root
+            && source.isConnected
         ) {
-            continue;
-        }
-        discovered.add(source);
-        discoveredSources.push(source);
-        for (const rule of rules) {
-            if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
-                blockedSources.add(source);
-                continue;
+            discovered.add(source);
+            discoveredSources.push(source);
+            for (const rule of rules) {
+                if (input.extractionPolicy && !input.extractionPolicy.allowsRule(rule.id, source)) {
+                    blockedSources.add(source);
+                } else {
+                    evaluateRuleCandidate(
+                        accumulator,
+                        rule,
+                        source,
+                        extractionContext,
+                        presentationContext,
+                        nowMilliseconds,
+                        display?.precisionPolicy?.absoluteLabels ?? false,
+                    );
+                }
             }
-            evaluateRuleCandidate(
-                accumulator,
-                rule,
-                source,
-                extractionContext,
-                presentationContext,
-                nowMilliseconds,
-                display?.precisionPolicy?.absoluteLabels ?? false,
-            );
         }
     }
     return processCandidateCollection(
@@ -738,6 +742,7 @@ export function reconcileDocumentSources(
  * @param input.ownedDomMutations - Optional renderer mutation sink.
  * @param input.extractionPolicy - Optional route provenance policy.
  * @param input.registry - Trusted adapter registry.
+ *
  * @returns - Extension-owned time elements generated by the pass.
  */
 export function processDocument({
@@ -770,6 +775,7 @@ export function processDocument({
  * Reprocesses only the supplied region after settings or DOM changes.
  *
  * @param input - Region, page, presentation, and restoration dependencies.
+ *
  * @returns - Extension-owned time elements generated in the region.
  */
 export function reconcileDocumentRegion(input: ReconcileInput): readonly HTMLTimeElement[] {

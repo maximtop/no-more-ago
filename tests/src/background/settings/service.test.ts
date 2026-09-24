@@ -2,10 +2,18 @@
  * @file Exercises versioned settings persistence, recovery, and serialized updates.
  */
 
-/* eslint-disable @typescript-eslint/require-await */
-import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_PRECISION_POLICY } from "../../../../src/shared/settings/precision-policy";
-import { SettingsService } from "../../../../src/background/settings/service";
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
+import { SettingsService } from '../../../../src/background/settings/service';
+import { DEFAULT_PRECISION_POLICY } from '../../../../src/shared/settings/precision-policy';
+import {
+    DEFAULT_SITE_SCOPE,
+    MAX_SITE_LIST_ENTRIES,
+    SITE_SCOPE_MODE,
+    type SiteScopePolicy,
+} from '../../../../src/shared/settings/site-scope';
 import {
     APPEARANCE,
     DEFAULT_SETTINGS_SNAPSHOT,
@@ -15,13 +23,7 @@ import {
     createSettingsSnapshot,
     type DisplaySettings,
     type SettingsSnapshot,
-} from "../../../../src/shared/settings/snapshot";
-import {
-    DEFAULT_SITE_SCOPE,
-    MAX_SITE_LIST_ENTRIES,
-    SITE_SCOPE_MODE,
-    type SiteScopePolicy,
-} from "../../../../src/shared/settings/site-scope";
+} from '../../../../src/shared/settings/snapshot';
 
 const EXCLUDING = SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED;
 
@@ -29,10 +31,11 @@ const v6 = (
     revision = 0,
     globalEnabled = true,
     siteScope: SiteScopePolicy = DEFAULT_SITE_SCOPE,
-    display: DisplaySettings = { formatMode: "system", timeZone: { mode: "system" } },
+    display: DisplaySettings = { formatMode: 'system', timeZone: { mode: 'system' } },
     debugEnabled = false,
-): SettingsSnapshot =>
-    createSettingsSnapshot({ revision, globalEnabled, siteScope, display, debugEnabled });
+): SettingsSnapshot => createSettingsSnapshot({
+    revision, globalEnabled, siteScope, display, debugEnabled,
+});
 
 const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
     mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
@@ -45,6 +48,7 @@ const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
  *
  * @param initial - Initial current snapshot value.
  * @param previous - Initial recovery snapshot value.
+ *
  * @returns - Storage double with inspection and replacement helpers.
  */
 function storage(initial?: object, previous?: object) {
@@ -70,51 +74,56 @@ function storage(initial?: object, previous?: object) {
     };
 }
 
-describe("SettingsService", () => {
-    it("migrates published schema 1 and its recovery copy without losing preferences", async () => {
+describe('SettingsService', () => {
+    it('migrates published schema 1 and its recovery copy without losing preferences', async () => {
         const saved = createSettingsSnapshot({
-            revision: 42, globalEnabled: false, debugEnabled: true, appearance: APPEARANCE.DARK,
+            revision: 42,
+            globalEnabled: false,
+            debugEnabled: true,
+            appearance: APPEARANCE.DARK,
             siteScope: {
                 mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-                allowedSites: ["github.com"], excludedSites: ["example.com"],
+                allowedSites: ['github.com'],
+                excludedSites: ['example.com'],
             },
             display: {
-                formatMode: "custom", pattern: "dd/MM/yyyy HH:mm:ss",
-                timeZone: { mode: "iana", identifier: "Asia/Nicosia" },
+                formatMode: 'custom',
+                pattern: 'dd/MM/yyyy HH:mm:ss',
+                timeZone: { mode: 'iana', identifier: 'Asia/Nicosia' },
             },
         });
         const previous = { ...saved, revision: 41, globalEnabled: true };
         const backend = storage({ ...saved, schemaVersion: 1 }, { ...previous, schemaVersion: 1 });
         await expect(new SettingsService(backend).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: "stored",
+            ok: true, snapshot: saved, source: 'stored',
         });
         expect(backend.pair()).toEqual({ current: saved, previous });
         await expect(new SettingsService(backend).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: "stored",
+            ok: true, snapshot: saved, source: 'stored',
         });
         expect(backend.set).toHaveBeenCalledTimes(1);
     });
 
-    it("recovers a schema 1 backup and leaves storage intact when migration fails", async () => {
+    it('recovers a schema 1 backup and leaves storage intact when migration fails', async () => {
         const saved = { ...DEFAULT_SETTINGS_SNAPSHOT, revision: 7, globalEnabled: false };
         const legacy = { ...saved, schemaVersion: 1 };
         const backup = storage(undefined, legacy);
         await expect(new SettingsService(backup).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: "recovered",
+            ok: true, snapshot: saved, source: 'recovered',
         });
         expect(backup.pair()).toEqual({ current: saved, previous: saved });
         const failing = storage(legacy);
-        failing.set.mockRejectedValueOnce(new Error("Storage unavailable"));
+        failing.set.mockRejectedValueOnce(new Error('Storage unavailable'));
         await expect(new SettingsService(failing).load()).resolves.toEqual({
-            ok: false, error: "load-failed",
+            ok: false, error: 'load-failed',
         });
         expect(failing.pair().current).toEqual(legacy);
         await expect(new SettingsService(failing).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: "stored",
+            ok: true, snapshot: saved, source: 'stored',
         });
     });
 
-    it("persists the precision policy across other writes and rejects invalid ranges", async () => {
+    it('persists the precision policy across other writes and rejects invalid ranges', async () => {
         const backend = storage(DEFAULT_SETTINGS_SNAPSHOT);
         const service = new SettingsService(backend);
         const display = {
@@ -139,23 +148,23 @@ describe("SettingsService", () => {
         expect(result.snapshot.display).toEqual(display);
     });
 
-    it("uses the default-on snapshot only when storage is missing", async () => {
+    it('uses the default-on snapshot only when storage is missing', async () => {
         await expect(new SettingsService(storage()).load()).resolves.toEqual({
             ok: true,
             snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-            source: "default",
+            source: 'default',
         });
     });
 
-    it("discards a snapshot written by another schema version and persists defaults", async () => {
+    it('discards a snapshot written by another schema version and persists defaults', async () => {
         const legacy = { ...DEFAULT_SETTINGS_SNAPSHOT, schemaVersion: 5, revision: 9 };
         const backend = storage(legacy);
-        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
         await expect(new SettingsService(backend).load()).resolves.toEqual({
             ok: true,
             snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-            source: "discarded",
+            source: 'discarded',
         });
         expect(backend.set).toHaveBeenCalledWith({
             [SETTINGS_STORAGE_KEY]: DEFAULT_SETTINGS_SNAPSHOT,
@@ -164,42 +173,41 @@ describe("SettingsService", () => {
         expect(warn).toHaveBeenCalledOnce();
     });
 
-    it("fails closed when the discarded snapshot cannot be replaced", async () => {
+    it('fails closed when the discarded snapshot cannot be replaced', async () => {
         const legacy = { ...DEFAULT_SETTINGS_SNAPSHOT, schemaVersion: 5, revision: 9 };
         const backend = storage(legacy);
-        backend.set.mockRejectedValueOnce(new Error("quota"));
-        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        backend.set.mockRejectedValueOnce(new Error('quota'));
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         const service = new SettingsService(backend);
 
-        await expect(service.load()).resolves.toEqual({ ok: false, error: "invalid-settings" });
-        expect(service.lastLoadError).toBe("invalid-settings");
+        await expect(service.load()).resolves.toEqual({ ok: false, error: 'invalid-settings' });
+        expect(service.lastLoadError).toBe('invalid-settings');
     });
 
-    it("writes one hostname into the list the active mode owns", async () => {
+    it('writes one hostname into the list the active mode owns', async () => {
         const backend = storage(v6(1, true, {
             mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             excludedSites: [],
-            allowedSites: ["kept.test"],
+            allowedSites: ['kept.test'],
         }));
         const service = new SettingsService(backend);
         await service.load();
 
-        const write = await service.setSiteEnabled("github.com", false, EXCLUDING);
+        const write = await service.setSiteEnabled('github.com', false, EXCLUDING);
 
         expect(write.ok).toBe(true);
-        expect(write.snapshot.siteScope.excludedSites).toEqual(["github.com"]);
-        expect(write.snapshot.siteScope.allowedSites).toEqual(["kept.test"]);
+        expect(write.snapshot.siteScope.excludedSites).toEqual(['github.com']);
+        expect(write.snapshot.siteScope.allowedSites).toEqual(['kept.test']);
         expect(write.snapshot.revision).toBe(2);
         await expect(service.setSiteEnabled(
-            "github.com",
+            'github.com',
             false,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
         )).resolves.toMatchObject({ ok: true, changed: false });
     });
 
-    it("refuses to grow a full list and keeps the snapshot unchanged", async () => {
-        const excludedSites = Array.from({ length: MAX_SITE_LIST_ENTRIES }, (_, index) =>
-            `host-${String(index)}.test`);
+    it('refuses to grow a full list and keeps the snapshot unchanged', async () => {
+        const excludedSites = Array.from({ length: MAX_SITE_LIST_ENTRIES }, (_, index) => `host-${String(index)}.test`);
         const backend = storage(v6(3, true, {
             mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             excludedSites,
@@ -209,23 +217,23 @@ describe("SettingsService", () => {
         await service.load();
 
         await expect(service.setSiteEnabled(
-            "one-more.test",
+            'one-more.test',
             false,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
         )).resolves.toMatchObject({
             ok: false,
-            error: "list-full",
+            error: 'list-full',
             snapshot: { revision: 3 },
         });
         expect(backend.set).not.toHaveBeenCalled();
         await expect(service.setSiteEnabled(
-            "host-0.test",
+            'host-0.test',
             true,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
         )).resolves.toMatchObject({ ok: true, changed: true });
     });
 
-    it("rejects a hostname decision made under a scope mode that has since changed", async () => {
+    it('rejects a hostname decision made under a scope mode that has since changed', async () => {
         const backend = storage(v6(1, true, {
             mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
             excludedSites: [],
@@ -236,22 +244,22 @@ describe("SettingsService", () => {
         await service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
 
         await expect(service.setSiteEnabled(
-            "github.com",
+            'github.com',
             false,
             SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
         )).resolves.toMatchObject({
             ok: false,
-            error: "scope-changed",
+            error: 'scope-changed',
             snapshot: { revision: 2, siteScope: { excludedSites: [], allowedSites: [] } },
         });
         expect(backend.set).toHaveBeenCalledOnce();
     });
 
-    it("changes the scope mode while retaining both lists", async () => {
+    it('changes the scope mode while retaining both lists', async () => {
         const backend = storage(v6(1, true, {
             mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-            excludedSites: ["excluded.test"],
-            allowedSites: ["allowed.test"],
+            excludedSites: ['excluded.test'],
+            allowedSites: ['allowed.test'],
         }));
         const service = new SettingsService(backend);
         await service.load();
@@ -260,15 +268,15 @@ describe("SettingsService", () => {
 
         expect(write.ok && write.snapshot.siteScope).toEqual({
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            excludedSites: ["excluded.test"],
-            allowedSites: ["allowed.test"],
+            excludedSites: ['excluded.test'],
+            allowedSites: ['allowed.test'],
         });
         await expect(service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY))
             .resolves.toMatchObject({ ok: true, changed: false });
     });
 
-    it("persists the appearance on its own without touching display settings", async () => {
-        const utc: DisplaySettings = { formatMode: "system", timeZone: { mode: "utc" } };
+    it('persists the appearance on its own without touching display settings', async () => {
+        const utc: DisplaySettings = { formatMode: 'system', timeZone: { mode: 'utc' } };
         const backend = storage(v6(1, true, undefined, utc));
         const service = new SettingsService(backend);
         await service.load();
@@ -283,9 +291,9 @@ describe("SettingsService", () => {
             .resolves.toMatchObject({ ok: true, changed: false });
     });
 
-    it("stores a complete current/previous pair and serializes debug updates", async () => {
-        const utc: DisplaySettings = { formatMode: "system", timeZone: { mode: "utc" } };
-        const backend = storage(v6(2, false, excluding("github.com"), utc));
+    it('stores a complete current/previous pair and serializes debug updates', async () => {
+        const utc: DisplaySettings = { formatMode: 'system', timeZone: { mode: 'utc' } };
+        const backend = storage(v6(2, false, excluding('github.com'), utc));
         const service = new SettingsService(backend);
         await service.load();
         await expect(service.setDebugEnabled(true)).resolves.toMatchObject({
@@ -296,12 +304,12 @@ describe("SettingsService", () => {
                 revision: 3,
                 debugEnabled: true,
                 globalEnabled: false,
-                siteScope: { excludedSites: ["github.com"] },
+                siteScope: { excludedSites: ['github.com'] },
             },
         });
         expect(backend.set).toHaveBeenCalledWith({
-            [SETTINGS_STORAGE_KEY]: v6(3, false, excluding("github.com"), utc, true),
-            [SETTINGS_PREVIOUS_STORAGE_KEY]: v6(2, false, excluding("github.com"), utc),
+            [SETTINGS_STORAGE_KEY]: v6(3, false, excluding('github.com'), utc, true),
+            [SETTINGS_PREVIOUS_STORAGE_KEY]: v6(2, false, excluding('github.com'), utc),
         });
         await expect(service.setDebugEnabled(true)).resolves.toMatchObject({
             ok: true,
@@ -309,36 +317,36 @@ describe("SettingsService", () => {
         });
     });
 
-    it("preserves debug state through every other mutation", async () => {
+    it('preserves debug state through every other mutation', async () => {
         const backend = storage(v6(1, true, undefined, undefined, true));
         const service = new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true);
         await service.load();
         await service.setGlobalEnabled(false);
-        await service.setSiteEnabled("github.com", false, EXCLUDING);
+        await service.setSiteEnabled('github.com', false, EXCLUDING);
         await service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY);
         await service.setDisplaySettings({
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd",
-            timeZone: { mode: "utc" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd',
+            timeZone: { mode: 'utc' },
         });
         await service.setAppearance(APPEARANCE.LIGHT);
         expect(backend.pair().current).toMatchObject({
             schemaVersion: SETTINGS_SCHEMA_VERSION,
             debugEnabled: true,
             globalEnabled: false,
-            siteScope: { mode: SITE_SCOPE_MODE.SELECTED_ONLY, excludedSites: ["github.com"] },
-            display: { formatMode: "custom" },
+            siteScope: { mode: SITE_SCOPE_MODE.SELECTED_ONLY, excludedSites: ['github.com'] },
+            display: { formatMode: 'custom' },
             appearance: APPEARANCE.LIGHT,
         });
     });
 
-    it("recovers a previous snapshot when the current snapshot is absent", async () => {
-        const previous = v6(8, false, excluding("github.com"), undefined, true);
+    it('recovers a previous snapshot when the current snapshot is absent', async () => {
+        const previous = v6(8, false, excluding('github.com'), undefined, true);
         const backend = storage(undefined, previous);
         const service = new SettingsService(backend);
         await expect(service.load()).resolves.toMatchObject({
             ok: true,
-            source: "recovered",
+            source: 'recovered',
             snapshot: { revision: 8, debugEnabled: true },
         });
         await expect(service.resetAll()).resolves.toMatchObject({
@@ -351,28 +359,28 @@ describe("SettingsService", () => {
         });
     });
 
-    it("preserves the current snapshot when a write fails", async () => {
+    it('preserves the current snapshot when a write fails', async () => {
         const validBackend = storage(v6(2));
         const service = new SettingsService(validBackend);
         await service.load();
-        validBackend.set.mockRejectedValueOnce(new Error("disk full"));
+        validBackend.set.mockRejectedValueOnce(new Error('disk full'));
         await expect(service.setDebugEnabled(true)).resolves.toMatchObject({
             ok: false,
-            error: "persistence-failed",
+            error: 'persistence-failed',
             snapshot: { revision: 2, debugEnabled: false },
         });
     });
 });
 
-describe("SettingsService durable loading and backup recovery", () => {
-    it("reads current and previous keys without persisting a fresh default", async () => {
+describe('SettingsService durable loading and backup recovery', () => {
+    it('reads current and previous keys without persisting a fresh default', async () => {
         const backend = storage();
         const service = new SettingsService(backend);
 
         await expect(service.load()).resolves.toEqual({
             ok: true,
             snapshot: DEFAULT_SETTINGS_SNAPSHOT,
-            source: "default",
+            source: 'default',
         });
         expect(backend.get).toHaveBeenCalledOnce();
         expect(backend.get).toHaveBeenCalledWith([
@@ -385,15 +393,15 @@ describe("SettingsService durable loading and backup recovery", () => {
         expect(service.lastLoadError).toBeUndefined();
     });
 
-    it("accepts a valid current snapshot without rewriting its backup", async () => {
+    it('accepts a valid current snapshot without rewriting its backup', async () => {
         const current = v6(
             6,
             false,
-            excluding("github.com"),
+            excluding('github.com'),
             {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd HH:mm",
-                timeZone: { mode: "iana", identifier: "America/New_York" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm',
+                timeZone: { mode: 'iana', identifier: 'America/New_York' },
             },
             true,
         );
@@ -403,59 +411,59 @@ describe("SettingsService durable loading and backup recovery", () => {
         await expect(new SettingsService(backend).load()).resolves.toEqual({
             ok: true,
             snapshot: current,
-            source: "stored",
+            source: 'stored',
         });
         expect(backend.set).not.toHaveBeenCalled();
         expect(backend.pair()).toEqual({ current, previous });
     });
 
-    it("preserves both documents when restoring a valid backup cannot be persisted", async () => {
-        const previous = v6(8, false, excluding("github.com"), undefined, true);
+    it('preserves both documents when restoring a valid backup cannot be persisted', async () => {
+        const previous = v6(8, false, excluding('github.com'), undefined, true);
         const backend = storage(undefined, previous);
-        backend.set.mockRejectedValueOnce(new Error("disk full"));
+        backend.set.mockRejectedValueOnce(new Error('disk full'));
         const service = new SettingsService(backend);
 
-        await expect(service.load()).resolves.toEqual({ ok: false, error: "invalid-settings" });
+        await expect(service.load()).resolves.toEqual({ ok: false, error: 'invalid-settings' });
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({ current: undefined, previous });
         expect(service.loadedSnapshot).toBeUndefined();
-        expect(service.lastLoadError).toBe("invalid-settings");
+        expect(service.lastLoadError).toBe('invalid-settings');
     });
 
-    it("reports an unreadable pair without adopting defaults or writing storage", async () => {
+    it('reports an unreadable pair without adopting defaults or writing storage', async () => {
         const current = v6(4, false);
         const previous = v6(3, true);
         const backend = storage(current, previous);
-        backend.get.mockRejectedValueOnce(new Error("storage unavailable"));
+        backend.get.mockRejectedValueOnce(new Error('storage unavailable'));
         const service = new SettingsService(backend);
 
-        await expect(service.load()).resolves.toEqual({ ok: false, error: "load-failed" });
+        await expect(service.load()).resolves.toEqual({ ok: false, error: 'load-failed' });
         expect(service.loadedSnapshot).toBeUndefined();
-        expect(service.lastLoadError).toBe("load-failed");
+        expect(service.lastLoadError).toBe('load-failed');
         expect(backend.pair()).toEqual({ current, previous });
         expect(backend.set).not.toHaveBeenCalled();
     });
 
-    it("rereads an externally replaced valid pair and clears a prior read failure", async () => {
+    it('rereads an externally replaced valid pair and clears a prior read failure', async () => {
         const backend = storage(v6(1));
         const service = new SettingsService(backend);
-        backend.get.mockRejectedValueOnce(new Error("temporarily unavailable"));
-        await expect(service.load()).resolves.toMatchObject({ ok: false, error: "load-failed" });
-        const replacement = v6(9, false, excluding("github.com"), undefined, true);
+        backend.get.mockRejectedValueOnce(new Error('temporarily unavailable'));
+        await expect(service.load()).resolves.toMatchObject({ ok: false, error: 'load-failed' });
+        const replacement = v6(9, false, excluding('github.com'), undefined, true);
         backend.replace(replacement, v6(8));
 
         await expect(service.readLatest()).resolves.toEqual({
             ok: true,
             snapshot: replacement,
-            source: "stored",
+            source: 'stored',
         });
         expect(service.loadedSnapshot).toEqual(replacement);
         expect(service.lastLoadError).toBeUndefined();
     });
 });
 
-describe("SettingsService global and exact-host policy", () => {
-    it("atomically persists a fresh global change with its untouched default backup", async () => {
+describe('SettingsService global and exact-host policy', () => {
+    it('atomically persists a fresh global change with its untouched default backup', async () => {
         const backend = storage();
         const service = new SettingsService(backend);
 
@@ -475,16 +483,16 @@ describe("SettingsService global and exact-host policy", () => {
         });
     });
 
-    it("preserves site, display, and debug settings across global transitions", async () => {
+    it('preserves site, display, and debug settings across global transitions', async () => {
         const custom: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd HH:mm",
-            timeZone: { mode: "utc" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm',
+            timeZone: { mode: 'utc' },
         };
         const scope: SiteScopePolicy = {
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            excludedSites: ["github.com"],
-            allowedSites: ["example.test."],
+            excludedSites: ['github.com'],
+            allowedSites: ['example.test.'],
         };
         const initial = v6(4, true, scope, custom, true);
         const backend = storage(initial, v6(3));
@@ -508,9 +516,9 @@ describe("SettingsService global and exact-host policy", () => {
     });
 
     it.each([true, false])(
-        "keeps an unchanged global=%s request entirely write-free",
+        'keeps an unchanged global=%s request entirely write-free',
         async (enabled) => {
-            const current = v6(7, enabled, excluding("github.com"), undefined, true);
+            const current = v6(7, enabled, excluding('github.com'), undefined, true);
             const previous = v6(6, !enabled);
             const backend = storage(current, previous);
 
@@ -524,20 +532,20 @@ describe("SettingsService global and exact-host policy", () => {
         },
     );
 
-    it("keeps related hostname policies independent", async () => {
+    it('keeps related hostname policies independent', async () => {
         const backend = storage(v6(3, true, undefined, undefined, true));
         const service = new SettingsService(backend);
 
-        await service.setSiteEnabled("example.test", false, EXCLUDING);
-        await service.setSiteEnabled("sub.example.test", true, EXCLUDING);
-        await service.setSiteEnabled("sibling.example.test", false, EXCLUDING);
-        await service.setSiteEnabled("example.test.", false, EXCLUDING);
+        await service.setSiteEnabled('example.test', false, EXCLUDING);
+        await service.setSiteEnabled('sub.example.test', true, EXCLUDING);
+        await service.setSiteEnabled('sibling.example.test', false, EXCLUDING);
+        await service.setSiteEnabled('example.test.', false, EXCLUDING);
 
         expect(backend.pair().current).toEqual(
             v6(
                 6,
                 true,
-                excluding("example.test", "sibling.example.test", "example.test."),
+                excluding('example.test', 'sibling.example.test', 'example.test.'),
                 undefined,
                 true,
             ),
@@ -545,7 +553,7 @@ describe("SettingsService global and exact-host policy", () => {
         expect(backend.set).toHaveBeenCalledTimes(3);
     });
 
-    it("adds an allowed hostname only once in selected-only mode", async () => {
+    it('adds an allowed hostname only once in selected-only mode', async () => {
         const selected: SiteScopePolicy = {
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
             excludedSites: [],
@@ -554,56 +562,56 @@ describe("SettingsService global and exact-host policy", () => {
         const backend = storage(v6(2, true, selected));
         const service = new SettingsService(backend);
 
-        await expect(service.setSiteEnabled("github.com", true, SITE_SCOPE_MODE.SELECTED_ONLY))
+        await expect(service.setSiteEnabled('github.com', true, SITE_SCOPE_MODE.SELECTED_ONLY))
             .resolves.toEqual({
                 ok: true,
                 changed: true,
-                snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
+                snapshot: v6(3, true, { ...selected, allowedSites: ['github.com'] }),
             });
-        await expect(service.setSiteEnabled("github.com", true, SITE_SCOPE_MODE.SELECTED_ONLY))
+        await expect(service.setSiteEnabled('github.com', true, SITE_SCOPE_MODE.SELECTED_ONLY))
             .resolves.toEqual({
                 ok: true,
                 changed: false,
-                snapshot: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
+                snapshot: v6(3, true, { ...selected, allowedSites: ['github.com'] }),
             });
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({
-            current: v6(3, true, { ...selected, allowedSites: ["github.com"] }),
+            current: v6(3, true, { ...selected, allowedSites: ['github.com'] }),
             previous: v6(2, true, selected),
         });
     });
 
     it.each([
-        "",
-        "EXAMPLE.TEST",
-        "bücher.example",
-        "example.test:443",
-        "https://example.test",
-        "user@example.test",
-        "example.test/path",
-        "example.test?query=secret",
-        "example.test#fragment",
-        "*.example.test",
-        "example.test..",
-        " example.test",
-        "example.test ",
-    ])("rejects non-canonical exact hostname %j with zero storage operations", async (hostname) => {
+        '',
+        'EXAMPLE.TEST',
+        'bücher.example',
+        'example.test:443',
+        'https://example.test',
+        'user@example.test',
+        'example.test/path',
+        'example.test?query=secret',
+        'example.test#fragment',
+        '*.example.test',
+        'example.test..',
+        ' example.test',
+        'example.test ',
+    ])('rejects non-canonical exact hostname %j with zero storage operations', async (hostname) => {
         const backend = storage(v6(2));
 
         await expect(
             new SettingsService(backend).setSiteEnabled(hostname, false, EXCLUDING),
-        ).resolves.toMatchObject({ ok: false, error: "invalid-hostname" });
+        ).resolves.toMatchObject({ ok: false, error: 'invalid-hostname' });
         expect(backend.get).not.toHaveBeenCalled();
         expect(backend.set).not.toHaveBeenCalled();
     });
 
     it.each([false, true])(
-        "does not rewrite an already-effective site=%s decision",
+        'does not rewrite an already-effective site=%s decision',
         async (enabled) => {
             const current = v6(
                 4,
                 true,
-                enabled ? DEFAULT_SITE_SCOPE : excluding("github.com"),
+                enabled ? DEFAULT_SITE_SCOPE : excluding('github.com'),
                 undefined,
                 true,
             );
@@ -611,7 +619,7 @@ describe("SettingsService global and exact-host policy", () => {
             const backend = storage(current, previous);
 
             await expect(
-                new SettingsService(backend).setSiteEnabled("github.com", enabled, EXCLUDING),
+                new SettingsService(backend).setSiteEnabled('github.com', enabled, EXCLUDING),
             ).resolves.toEqual({ ok: true, changed: false, snapshot: current });
             expect(backend.set).not.toHaveBeenCalled();
             expect(backend.pair()).toEqual({ current, previous });
@@ -619,42 +627,42 @@ describe("SettingsService global and exact-host policy", () => {
     );
 });
 
-describe("SettingsService system/custom presentation and diagnostics settings", () => {
+describe('SettingsService system/custom presentation and diagnostics settings', () => {
     it.each([
-        ["system", { mode: "system" as const }],
-        ["UTC", { mode: "utc" as const }],
-        ["one-component CET", { mode: "iana" as const, identifier: "CET" }],
-        ["one-component Japan", { mode: "iana" as const, identifier: "Japan" }],
-        ["one-component Iceland", { mode: "iana" as const, identifier: "Iceland" }],
+        ['system', { mode: 'system' as const }],
+        ['UTC', { mode: 'utc' as const }],
+        ['one-component CET', { mode: 'iana' as const, identifier: 'CET' }],
+        ['one-component Japan', { mode: 'iana' as const, identifier: 'Japan' }],
+        ['one-component Iceland', { mode: 'iana' as const, identifier: 'Iceland' }],
         [
-            "slash-separated America/New_York",
-            { mode: "iana" as const, identifier: "America/New_York" },
+            'slash-separated America/New_York',
+            { mode: 'iana' as const, identifier: 'America/New_York' },
         ],
     ])(
-        "persists the valid %s time-zone selection without losing policy/debug state",
+        'persists the valid %s time-zone selection without losing policy/debug state',
         async (_label, timeZone) => {
             const initialDisplay: DisplaySettings = {
-                formatMode: "custom",
-                pattern: "yyyy-MM-dd",
-                timeZone: { mode: "utc" },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd',
+                timeZone: { mode: 'utc' },
             };
-            const initial = v6(4, false, excluding("github.com"), initialDisplay, true);
+            const initial = v6(4, false, excluding('github.com'), initialDisplay, true);
             const backend = storage(initial);
             const available = vi.fn(() => true);
             const service = new SettingsService(backend, SETTINGS_STORAGE_KEY, available);
-            const display: DisplaySettings = { formatMode: "system", timeZone };
+            const display: DisplaySettings = { formatMode: 'system', timeZone };
 
             await expect(service.setDisplaySettings(display)).resolves.toEqual({
                 ok: true,
                 changed: true,
-                snapshot: v6(5, false, excluding("github.com"), display, true),
+                snapshot: v6(5, false, excluding('github.com'), display, true),
             });
             expect(backend.set).toHaveBeenCalledOnce();
             expect(backend.pair()).toEqual({
-                current: v6(5, false, excluding("github.com"), display, true),
+                current: v6(5, false, excluding('github.com'), display, true),
                 previous: initial,
             });
-            if (timeZone.mode === "iana") {
+            if (timeZone.mode === 'iana') {
                 expect(available).toHaveBeenCalledWith(timeZone.identifier);
             } else {
                 expect(available).not.toHaveBeenCalled();
@@ -662,17 +670,17 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         },
     );
 
-    it("preserves a custom pattern and IANA zone in the atomic pair", async () => {
+    it('preserves a custom pattern and IANA zone in the atomic pair', async () => {
         const scope: SiteScopePolicy = {
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            excludedSites: ["github.com"],
-            allowedSites: ["example.test"],
+            excludedSites: ['github.com'],
+            allowedSites: ['example.test'],
         };
         const initial = v6(8, false, scope, undefined, true);
         const custom: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "EEEE, d MMMM yyyy HH:mm XXX",
-            timeZone: { mode: "iana", identifier: "America/New_York" },
+            formatMode: 'custom',
+            pattern: 'EEEE, d MMMM yyyy HH:mm XXX',
+            timeZone: { mode: 'iana', identifier: 'America/New_York' },
         };
         const backend = storage(initial, v6(7));
 
@@ -691,28 +699,28 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
     });
 
     it.each([
-        "",
-        "YYYY-MM-dd",
-        "yyyy-DD",
-        "yyyy ff",
+        '',
+        'YYYY-MM-dd',
+        'yyyy-DD',
+        'yyyy ff',
         "'literal only'",
         "yyyy 'unfinished",
-        "yyyy\nMM",
-        "y".repeat(257),
+        'yyyy\nMM',
+        'y'.repeat(257),
     ])(
-        "rejects unsafe custom format %# as invalid-format before touching either snapshot",
+        'rejects unsafe custom format %# as invalid-format before touching either snapshot',
         async (pattern) => {
-            const current = v6(4, false, excluding("github.com"), undefined, true);
+            const current = v6(4, false, excluding('github.com'), undefined, true);
             const previous = v6(3);
             const backend = storage(current, previous);
 
             await expect(
                 new SettingsService(backend).setDisplaySettings({
-                    formatMode: "custom",
+                    formatMode: 'custom',
                     pattern,
-                    timeZone: { mode: "utc" },
+                    timeZone: { mode: 'utc' },
                 }),
-            ).resolves.toMatchObject({ ok: false, error: "invalid-format" });
+            ).resolves.toMatchObject({ ok: false, error: 'invalid-format' });
             expect(backend.get).not.toHaveBeenCalled();
             expect(backend.set).not.toHaveBeenCalled();
             expect(backend.pair()).toEqual({ current, previous });
@@ -720,60 +728,60 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
     );
 
     it.each([
-        "",
-        "../UTC",
-        "America/../New_York",
-        "America//New_York",
-        "America\\New_York",
-        " America/New_York",
-        "America/New_York ",
-        "America/New\nYork",
+        '',
+        '../UTC',
+        'America/../New_York',
+        'America//New_York',
+        'America\\New_York',
+        ' America/New_York',
+        'America/New_York ',
+        'America/New\nYork',
     ])(
-        "rejects structurally unsafe time zone %j without checking availability or storage",
+        'rejects structurally unsafe time zone %j without checking availability or storage',
         async (identifier) => {
             const backend = storage(v6(4));
             const available = vi.fn(() => true);
 
             await expect(
                 new SettingsService(backend, SETTINGS_STORAGE_KEY, available).setDisplaySettings({
-                    formatMode: "system",
-                    timeZone: { mode: "iana", identifier },
+                    formatMode: 'system',
+                    timeZone: { mode: 'iana', identifier },
                 }),
-            ).resolves.toMatchObject({ ok: false, error: "invalid-display-settings" });
+            ).resolves.toMatchObject({ ok: false, error: 'invalid-display-settings' });
             expect(available).not.toHaveBeenCalled();
             expect(backend.get).not.toHaveBeenCalled();
             expect(backend.set).not.toHaveBeenCalled();
         },
     );
 
-    it("rejects a structurally valid but unavailable IANA identifier", async () => {
-        const backend = storage(v6(5, false, excluding("github.com"), undefined, true));
+    it('rejects a structurally valid but unavailable IANA identifier', async () => {
+        const backend = storage(v6(5, false, excluding('github.com'), undefined, true));
         const available = vi.fn(() => false);
 
         await expect(
             new SettingsService(backend, SETTINGS_STORAGE_KEY, available).setDisplaySettings({
-                formatMode: "system",
-                timeZone: { mode: "iana", identifier: "Mars/Olympus" },
+                formatMode: 'system',
+                timeZone: { mode: 'iana', identifier: 'Mars/Olympus' },
             }),
-        ).resolves.toMatchObject({ ok: false, error: "invalid-time-zone" });
+        ).resolves.toMatchObject({ ok: false, error: 'invalid-time-zone' });
         expect(available).toHaveBeenCalledOnce();
         expect(backend.get).not.toHaveBeenCalled();
         expect(backend.set).not.toHaveBeenCalled();
     });
 
     it.each([
-        { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
+        { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } },
         {
-            formatMode: "system" as const,
-            timeZone: { mode: "iana" as const, identifier: "America/New_York" },
+            formatMode: 'system' as const,
+            timeZone: { mode: 'iana' as const, identifier: 'America/New_York' },
         },
         {
-            formatMode: "custom" as const,
-            pattern: "yyyy-MM-dd",
-            timeZone: { mode: "utc" as const },
+            formatMode: 'custom' as const,
+            pattern: 'yyyy-MM-dd',
+            timeZone: { mode: 'utc' as const },
         },
-    ])("keeps an unchanged equivalent display %# write-free", async (display) => {
-        const current = v6(6, false, excluding("github.com"), display, true);
+    ])('keeps an unchanged equivalent display %# write-free', async (display) => {
+        const current = v6(6, false, excluding('github.com'), display, true);
         const previous = v6(5);
         const backend = storage(current, previous);
 
@@ -790,9 +798,9 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
     });
 
     it.each([true, false])(
-        "keeps an unchanged debug=%s preference and both existing documents",
+        'keeps an unchanged debug=%s preference and both existing documents',
         async (enabled) => {
-            const current = v6(8, false, excluding("github.com"), undefined, enabled);
+            const current = v6(8, false, excluding('github.com'), undefined, enabled);
             const previous = v6(7);
             const backend = storage(current, previous);
 
@@ -806,16 +814,16 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
         },
     );
 
-    it("toggles debug without changing display or hostname policy", async () => {
+    it('toggles debug without changing display or hostname policy', async () => {
         const custom: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd HH:mm",
-            timeZone: { mode: "iana", identifier: "America/New_York" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm',
+            timeZone: { mode: 'iana', identifier: 'America/New_York' },
         };
         const scope: SiteScopePolicy = {
             mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-            excludedSites: ["github.com"],
-            allowedSites: ["example.test"],
+            excludedSites: ['github.com'],
+            allowedSites: ['example.test'],
         };
         const initial = v6(2, false, scope, custom);
         const backend = storage(initial);
@@ -840,37 +848,36 @@ describe("SettingsService system/custom presentation and diagnostics settings", 
 });
 
 const mutations = [
-    ["global", (service: SettingsService) => service.setGlobalEnabled(false)],
+    ['global', (service: SettingsService) => service.setGlobalEnabled(false)],
     [
-        "site",
-        (service: SettingsService) => service.setSiteEnabled("github.com", false, EXCLUDING),
+        'site',
+        (service: SettingsService) => service.setSiteEnabled('github.com', false, EXCLUDING),
     ],
     [
-        "scope-mode",
+        'scope-mode',
         (service: SettingsService) => service.setSiteScopeMode(SITE_SCOPE_MODE.SELECTED_ONLY),
     ],
     [
-        "display",
-        (service: SettingsService) =>
-            service.setDisplaySettings({ formatMode: "system", timeZone: { mode: "utc" } }),
+        'display',
+        (service: SettingsService) => service.setDisplaySettings({ formatMode: 'system', timeZone: { mode: 'utc' } }),
     ],
-    ["debug", (service: SettingsService) => service.setDebugEnabled(true)],
+    ['debug', (service: SettingsService) => service.setDebugEnabled(true)],
 ] as const;
 
-describe("SettingsService atomic failure and concurrency boundaries", () => {
+describe('SettingsService atomic failure and concurrency boundaries', () => {
     it.each(mutations)(
-        "preserves both snapshots and memory after a rejected %s write",
+        'preserves both snapshots and memory after a rejected %s write',
         async (_label, mutate) => {
             const current = v6(4, true);
-            const previous = v6(3, false, excluding("example.test"));
+            const previous = v6(3, false, excluding('example.test'));
             const backend = storage(current, previous);
             const service = new SettingsService(backend);
             await service.load();
-            backend.set.mockRejectedValueOnce(new Error("disk full"));
+            backend.set.mockRejectedValueOnce(new Error('disk full'));
 
             await expect(mutate(service)).resolves.toEqual({
                 ok: false,
-                error: "persistence-failed",
+                error: 'persistence-failed',
                 snapshot: current,
             });
             expect(backend.set).toHaveBeenCalledOnce();
@@ -880,28 +887,28 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
     );
 
     it.each(mutations)(
-        "fails a %s transaction closed when the pair becomes unreadable",
+        'fails a %s transaction closed when the pair becomes unreadable',
         async (_label, mutate) => {
             const current = v6(4, true);
             const previous = v6(3);
             const backend = storage(current, previous);
             const service = new SettingsService(backend);
             await service.load();
-            backend.get.mockRejectedValueOnce(new Error("storage disconnected"));
+            backend.get.mockRejectedValueOnce(new Error('storage disconnected'));
 
             await expect(mutate(service)).resolves.toEqual({
                 ok: false,
-                error: "persistence-failed",
+                error: 'persistence-failed',
                 snapshot: current,
             });
-            expect(service.lastLoadError).toBe("load-failed");
+            expect(service.lastLoadError).toBe('load-failed');
             expect(backend.set).not.toHaveBeenCalled();
             expect(backend.pair()).toEqual({ current, previous });
         },
     );
 
     it.each(mutations)(
-        "rejects safe-integer revision overflow during a %s mutation without a write",
+        'rejects safe-integer revision overflow during a %s mutation without a write',
         async (_label, mutate) => {
             const current = v6(Number.MAX_SAFE_INTEGER, true);
             const previous = v6(Number.MAX_SAFE_INTEGER - 1);
@@ -910,7 +917,7 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
 
             await expect(mutate(service)).resolves.toEqual({
                 ok: false,
-                error: "persistence-failed",
+                error: 'persistence-failed',
                 snapshot: current,
             });
             expect(backend.set).not.toHaveBeenCalled();
@@ -918,19 +925,19 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
         },
     );
 
-    it("serializes overlapping settings intents without losing fields", async () => {
+    it('serializes overlapping settings intents without losing fields', async () => {
         const initial = v6(5, true);
         const backend = storage(initial, v6(4));
         const service = new SettingsService(backend, SETTINGS_STORAGE_KEY, () => true);
         const custom: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd HH:mm",
-            timeZone: { mode: "iana", identifier: "America/New_York" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm',
+            timeZone: { mode: 'iana', identifier: 'America/New_York' },
         };
 
         const results = await Promise.all([
             service.setGlobalEnabled(false),
-            service.setSiteEnabled("github.com", false, EXCLUDING),
+            service.setSiteEnabled('github.com', false, EXCLUDING),
             service.setDisplaySettings(custom),
             service.setDebugEnabled(true),
         ]);
@@ -939,8 +946,8 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
         expect(results.every((result) => result.ok && result.changed)).toBe(true);
         expect(backend.set).toHaveBeenCalledTimes(4);
         expect(backend.pair()).toEqual({
-            current: v6(9, false, excluding("github.com"), custom, true),
-            previous: v6(8, false, excluding("github.com"), custom, false),
+            current: v6(9, false, excluding('github.com'), custom, true),
+            previous: v6(8, false, excluding('github.com'), custom, false),
         });
         for (const [index, [items]] of backend.set.mock.calls.entries()) {
             expect(Object.keys(items).sort()).toEqual(
@@ -951,26 +958,26 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
         }
     });
 
-    it("continues later queued transactions after an earlier atomic write rejects", async () => {
+    it('continues later queued transactions after an earlier atomic write rejects', async () => {
         const initial = v6(2, true);
         const backend = storage(initial, v6(1));
-        backend.set.mockRejectedValueOnce(new Error("first write failed"));
+        backend.set.mockRejectedValueOnce(new Error('first write failed'));
         const service = new SettingsService(backend);
 
         const [failed, savedSite, savedDebug] = await Promise.all([
             service.setGlobalEnabled(false),
-            service.setSiteEnabled("github.com", false, EXCLUDING),
+            service.setSiteEnabled('github.com', false, EXCLUDING),
             service.setDebugEnabled(true),
         ]);
 
-        expect(failed).toEqual({ ok: false, error: "persistence-failed", snapshot: initial });
+        expect(failed).toEqual({ ok: false, error: 'persistence-failed', snapshot: initial });
         expect(savedSite).toMatchObject({
             ok: true,
             changed: true,
             snapshot: {
                 revision: 3,
                 globalEnabled: true,
-                siteScope: { excludedSites: ["github.com"] },
+                siteScope: { excludedSites: ['github.com'] },
             },
         });
         expect(savedDebug).toMatchObject({
@@ -979,12 +986,12 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
             snapshot: { revision: 4, globalEnabled: true, debugEnabled: true },
         });
         expect(backend.pair()).toEqual({
-            current: v6(4, true, excluding("github.com"), undefined, true),
-            previous: v6(3, true, excluding("github.com")),
+            current: v6(4, true, excluding('github.com'), undefined, true),
+            previous: v6(3, true, excluding('github.com')),
         });
     });
 
-    it("coalesces concurrent duplicate debug intents into one atomic write", async () => {
+    it('coalesces concurrent duplicate debug intents into one atomic write', async () => {
         const backend = storage(v6(2));
         const service = new SettingsService(backend);
 
@@ -1013,30 +1020,30 @@ describe("SettingsService atomic failure and concurrency boundaries", () => {
     });
 });
 
-describe("SettingsService reset", () => {
-    it("rejects reset when the monotonic revision cannot advance safely", async () => {
-        const current = v6(Number.MAX_SAFE_INTEGER, false, excluding("github.com"));
+describe('SettingsService reset', () => {
+    it('rejects reset when the monotonic revision cannot advance safely', async () => {
+        const current = v6(Number.MAX_SAFE_INTEGER, false, excluding('github.com'));
         const previous = v6(Number.MAX_SAFE_INTEGER - 1);
         const backend = storage(current, previous);
         const service = new SettingsService(backend);
 
         await expect(service.resetAll()).resolves.toEqual({
             ok: false,
-            error: "persistence-failed",
+            error: 'persistence-failed',
             snapshot: current,
         });
         expect(backend.set).not.toHaveBeenCalled();
         expect(backend.pair()).toEqual({ current, previous });
     });
 
-    it("resets custom values while preserving monotonic settings revisions", async () => {
+    it('resets custom values while preserving monotonic settings revisions', async () => {
         const custom: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd",
-            timeZone: { mode: "utc" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd',
+            timeZone: { mode: 'utc' },
         };
         const backend = storage(
-            v6(9, false, excluding("github.com"), custom, true),
+            v6(9, false, excluding('github.com'), custom, true),
             v6(8, false),
         );
         const service = new SettingsService(backend);
@@ -1054,11 +1061,11 @@ describe("SettingsService reset", () => {
         expect(backend.remove).not.toHaveBeenCalled();
     });
 
-    it("atomically clears both lists, the mode, appearance, zone, and diagnostics", async () => {
+    it('atomically clears both lists, the mode, appearance, zone, and diagnostics', async () => {
         const display: DisplaySettings = {
-            formatMode: "custom",
-            pattern: "yyyy-MM-dd HH:mm XXX",
-            timeZone: { mode: "iana", identifier: "America/New_York" },
+            formatMode: 'custom',
+            pattern: 'yyyy-MM-dd HH:mm XXX',
+            timeZone: { mode: 'iana', identifier: 'America/New_York' },
         };
         const current = {
             ...v6(
@@ -1066,15 +1073,15 @@ describe("SettingsService reset", () => {
                 false,
                 {
                     mode: SITE_SCOPE_MODE.SELECTED_ONLY,
-                    excludedSites: ["github.com", "managed-disabled.test"],
-                    allowedSites: ["managed-enabled.test", "managed.test."],
+                    excludedSites: ['github.com', 'managed-disabled.test'],
+                    allowedSites: ['managed-enabled.test', 'managed.test.'],
                 },
                 display,
                 true,
             ),
             appearance: APPEARANCE.DARK,
         };
-        const previous = v6(16, true, excluding("previous-only.test"), display, true);
+        const previous = v6(16, true, excluding('previous-only.test'), display, true);
         const backend = storage(current, previous);
         const service = new SettingsService(backend);
         await service.load();
@@ -1096,30 +1103,30 @@ describe("SettingsService reset", () => {
         expect(backend.remove).not.toHaveBeenCalled();
     });
 
-    it("preserves healthy documents and memory on a rejected reset", async () => {
-        const current = v6(7, false, excluding("github.com"), undefined, true);
+    it('preserves healthy documents and memory on a rejected reset', async () => {
+        const current = v6(7, false, excluding('github.com'), undefined, true);
         const previous = v6(6);
         const backend = storage(current, previous);
         const service = new SettingsService(backend);
         await service.load();
-        backend.set.mockRejectedValueOnce(new Error("disk full"));
+        backend.set.mockRejectedValueOnce(new Error('disk full'));
 
         await expect(service.resetAll()).resolves.toEqual({
             ok: false,
-            error: "persistence-failed",
+            error: 'persistence-failed',
             snapshot: current,
         });
         expect(backend.pair()).toEqual({ current, previous });
         expect(service.loadedSnapshot).toEqual(current);
     });
 
-    it("queues a hostname edit behind an in-flight reset", async () => {
-        const current = v6(3, false, excluding("example.test"), undefined, true);
+    it('queues a hostname edit behind an in-flight reset', async () => {
+        const current = v6(3, false, excluding('example.test'), undefined, true);
         const previous = v6(2);
         const backend = storage(current, previous);
         const originalSet = backend.set.getMockImplementation();
         if (!originalSet) {
-            throw new Error("Expected genuine atomic fake storage");
+            throw new Error('Expected genuine atomic fake storage');
         }
         let release: (() => void) | undefined;
         let entered: (() => void) | undefined;
@@ -1138,7 +1145,7 @@ describe("SettingsService reset", () => {
 
         const reset = service.resetAll();
         await started;
-        const edit = service.setSiteEnabled("github.com", false, EXCLUDING);
+        const edit = service.setSiteEnabled('github.com', false, EXCLUDING);
         await Promise.resolve();
         expect(backend.set).toHaveBeenCalledOnce();
         expect(backend.pair()).toEqual({ current, previous });
@@ -1153,21 +1160,21 @@ describe("SettingsService reset", () => {
         expect(editResult).toEqual({
             ok: true,
             changed: true,
-            snapshot: v6(5, true, excluding("github.com")),
+            snapshot: v6(5, true, excluding('github.com')),
         });
         expect(backend.pair()).toEqual({
-            current: v6(5, true, excluding("github.com")),
+            current: v6(5, true, excluding('github.com')),
             previous: v6(4),
         });
         expect(backend.set).toHaveBeenCalledTimes(2);
     });
 
-    it("queues a reset behind site and debug changes and clears in order", async () => {
+    it('queues a reset behind site and debug changes and clears in order', async () => {
         const backend = storage(v6(3), v6(2));
         const service = new SettingsService(backend);
 
         const [site, enabled, reset] = await Promise.all([
-            service.setSiteEnabled("github.com", false, EXCLUDING),
+            service.setSiteEnabled('github.com', false, EXCLUDING),
             service.setDebugEnabled(true),
             service.resetAll(),
         ]);
@@ -1175,7 +1182,7 @@ describe("SettingsService reset", () => {
         expect(site).toMatchObject({
             ok: true,
             changed: true,
-            snapshot: { revision: 4, siteScope: { excludedSites: ["github.com"] } },
+            snapshot: { revision: 4, siteScope: { excludedSites: ['github.com'] } },
         });
         expect(enabled).toMatchObject({
             ok: true,

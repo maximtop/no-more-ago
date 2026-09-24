@@ -2,27 +2,34 @@
  * @file Coordinates adapter processing and mutation scheduling across a document's lifecycle.
  */
 
+import { DIAGNOSTIC_CATEGORY } from '../../shared/diagnostics/contracts';
+import { defaultRegistry } from '../adapters/registry';
+import {
+    TIMESTAMP_MUTATION_KIND,
+    TIMESTAMP_SOURCE_ATTRIBUTE,
+    type TimestampExtractionContext,
+    type TimestampMutationSourceSelection,
+    type TimestampSourceAttribute,
+} from '../adapters/types';
+
 import {
     DocumentMutationScheduler,
     type AffectedMutationBatch,
-} from "./document-mutation-scheduler";
+} from './document-mutation-scheduler';
 import {
     reconcileDocumentRegion,
     reconcileDocumentSources,
     processDocument,
     type ProcessInput,
     type ReconcileInput,
-} from "./process-document";
-import type { DocumentDiagnosticSink } from "../diagnostics";
+} from './process-document';
 import {
     capturePageOwnedTextChange,
     getOwnedSourceForOutput,
     getOwnedTimestampSourceEntries,
     readPageOwnedText,
     restoreTimestampPresentations,
-} from "./render-timestamp-presentation";
-import { DIAGNOSTIC_CATEGORY } from "../../shared/diagnostics/contracts";
-import { defaultRegistry } from "../adapters/registry";
+} from './render-timestamp-presentation';
 import {
     DOCUMENT_ROUTE_HANDOFF_TRANSITION,
     clearDocumentRouteHandoff,
@@ -30,18 +37,13 @@ import {
     type DocumentRouteHandoffPolicy,
     type DocumentRouteHandoffSession,
     type DocumentRouteHandoffTransition,
-} from "./route-handoff";
-import {
-    TIMESTAMP_MUTATION_KIND,
-    TIMESTAMP_SOURCE_ATTRIBUTE,
-    type TimestampExtractionContext,
-    type TimestampMutationSourceSelection,
-    type TimestampSourceAttribute,
-} from "../adapters/types";
+} from './route-handoff';
+
+import type { DocumentDiagnosticSink } from '../diagnostics';
 import type {
     DocumentTransformationParticipant,
     DocumentTransformationParticipantFactory,
-} from "./document-transformation-participant";
+} from './document-transformation-participant';
 
 /**
  * Normalizes legacy source arrays and explicit handled/delegate mapper results.
@@ -50,6 +52,7 @@ import type {
  * a mutation without selecting any source.
  *
  * @param selection - Adapter-specific mutation mapping result.
+ *
  * @returns - Explicit handled state and exact source collection.
  */
 function normalizeMutationSources(selection: TimestampMutationSourceSelection): {
@@ -67,7 +70,7 @@ function normalizeMutationSources(selection: TimestampMutationSourceSelection): 
  * Controller construction dependencies beyond one document processing pass.
  */
 export interface DocumentTransformationControllerInput
-    extends Omit<ProcessInput, "root"> {
+    extends Omit<ProcessInput, 'root'> {
     /**
      * Document whose timestamps and route lifecycle are owned by the controller.
      */
@@ -94,6 +97,7 @@ export interface DocumentTransformationControllerInput
  *
  * @param element - Candidate element retained from an earlier pass.
  * @param document - Document the controller currently owns.
+ *
  * @returns - Whether the element remains connected to that document.
  */
 function isConnectedToDocument(element: Element, document: Document): boolean {
@@ -105,6 +109,7 @@ function isConnectedToDocument(element: Element, document: Document): boolean {
  *
  * @param roots - Broader roots already selected for processing.
  * @param element - Candidate element to test for coverage.
+ *
  * @returns - Whether an existing root already contains the element.
  */
 function coveredBy(roots: readonly Element[], element: Element): boolean {
@@ -118,7 +123,7 @@ export class DocumentTransformationController {
     /**
      * Distinguishes an inactive controller from one that currently owns document transformations.
      */
-    private phase: "idle" | "active" = "idle";
+    private phase: 'idle' | 'active' = 'idle';
 
     /**
      * Generated time nodes from the latest full pass, retained for targeted reconciliation.
@@ -181,7 +186,9 @@ export class DocumentTransformationController {
      * @param input - Document, adapter, presentation, observer, and route dependencies.
      */
     constructor(input: DocumentTransformationControllerInput) {
-        const { participantFactory, routeHandoffClassifier, urlProvider, ...processInput } = input;
+        const {
+            participantFactory, routeHandoffClassifier, urlProvider, ...processInput
+        } = input;
         this.participant = participantFactory?.({
             getDiagnosticSink: () => this.diagnosticSink,
             onSourcesChanged: (sources) => {
@@ -212,7 +219,7 @@ export class DocumentTransformationController {
         if (sink) {
             mutableInput.diagnosticSink = sink;
         } else {
-            Reflect.deleteProperty(mutableInput, "diagnosticSink");
+            Reflect.deleteProperty(mutableInput, 'diagnosticSink');
         }
     }
 
@@ -220,9 +227,11 @@ export class DocumentTransformationController {
      * Starts route-scoped observation and performs the initial current-route document pass.
      *
      * @returns - Outputs generated by the initial document pass.
+     *
+     * @throws The error of a failed start, after the document is restored to page ownership.
      */
     start(): readonly HTMLTimeElement[] {
-        if (this.phase === "active") {
+        if (this.phase === 'active') {
             return this.outputs;
         }
 
@@ -241,9 +250,9 @@ export class DocumentTransformationController {
             getOwnedSourceForOutput,
             capturePageOwnedTextChange,
             sourceAttributes,
-            shouldFlush: () => this.urlProvider
+            shouldFlush: () => (this.urlProvider
                 ? this.urlProvider().href !== this.currentUrl.href
-                : false,
+                : false),
             beforeBatch: () => {
                 try {
                     return !this.synchronizeCurrentRoute();
@@ -266,14 +275,12 @@ export class DocumentTransformationController {
                     readPageText: readPageOwnedText,
                 };
                 const currentRules = registry.matching(this.currentUrl);
-                const applicableRules = attributeName === TIMESTAMP_SOURCE_ATTRIBUTE.LANG
-                    ? currentRules
-                    : attributeName
-                        ? currentRules.filter((rule) =>
-                            rule.mutationAttributes.includes(
-                                attributeName as TimestampSourceAttribute,
-                            ))
-                        : currentRules;
+                let applicableRules = currentRules;
+                if (attributeName && attributeName !== TIMESTAMP_SOURCE_ATTRIBUTE.LANG) {
+                    applicableRules = currentRules.filter((rule) => rule.mutationAttributes.includes(
+                        attributeName as TimestampSourceAttribute,
+                    ));
+                }
                 const sources: Element[] = [];
                 const seen = new Set<Element>();
 
@@ -305,53 +312,52 @@ export class DocumentTransformationController {
                             }
                             current = current.parentElement;
                         }
-                        continue;
-                    }
-                    let hasCustomMapping = false;
-                    if (rule.getMutationSources) {
-                        const mutationSelection = normalizeMutationSources(
-                            rule.getMutationSources(
-                                element,
-                                attributeName as TimestampSourceAttribute | undefined,
-                                oldValue ?? null,
-                                extractionContext,
-                                mutationKind,
-                            ),
-                        );
-                        for (const source of mutationSelection.sources) {
-                            addSource(source);
+                    } else {
+                        let hasCustomMapping = false;
+                        if (rule.getMutationSources) {
+                            const mutationSelection = normalizeMutationSources(
+                                rule.getMutationSources(
+                                    element,
+                                    attributeName as TimestampSourceAttribute | undefined,
+                                    oldValue ?? null,
+                                    extractionContext,
+                                    mutationKind,
+                                ),
+                            );
+                            for (const source of mutationSelection.sources) {
+                                addSource(source);
+                            }
+                            hasCustomMapping = mutationSelection.handled;
                         }
-                        hasCustomMapping = mutationSelection.handled;
-                    }
-                    if (
-                        mutationKind === TIMESTAMP_MUTATION_KIND.CHILD_LIST
-                        && rule.getChildMutationSources
-                    ) {
-                        const childMutationSelection = normalizeMutationSources(
-                            rule.getChildMutationSources(
-                                element,
-                                addedNodes,
-                                removedNodes,
-                            ),
-                        );
-                        for (const source of childMutationSelection.sources) {
-                            addSource(source);
-                        }
-                        hasCustomMapping = hasCustomMapping
-                            || childMutationSelection.handled;
-                    }
-                    if (hasCustomMapping) {
-                        continue;
-                    }
-                    let current: Element | null = element;
-                    while (current && current.ownerDocument === this.input.root) {
                         if (
-                            rule.matchesElement(current, extractionContext)
+                            mutationKind === TIMESTAMP_MUTATION_KIND.CHILD_LIST
+                            && rule.getChildMutationSources
                         ) {
-                            addSource(current);
-                            break;
+                            const childMutationSelection = normalizeMutationSources(
+                                rule.getChildMutationSources(
+                                    element,
+                                    addedNodes,
+                                    removedNodes,
+                                ),
+                            );
+                            for (const source of childMutationSelection.sources) {
+                                addSource(source);
+                            }
+                            hasCustomMapping = hasCustomMapping
+                                || childMutationSelection.handled;
                         }
-                        current = current.parentElement;
+                        if (!hasCustomMapping) {
+                            let current: Element | null = element;
+                            while (current && current.ownerDocument === this.input.root) {
+                                if (
+                                    rule.matchesElement(current, extractionContext)
+                                ) {
+                                    addSource(current);
+                                    break;
+                                }
+                                current = current.parentElement;
+                            }
+                        }
                     }
                 }
                 return sources;
@@ -380,9 +386,9 @@ export class DocumentTransformationController {
                     this.diagnosticSink({
                         category: DIAGNOSTIC_CATEGORY.MUTATION,
                         count:
-                            batch.sourceTargets.length +
-                            batch.visibilityRoots.length +
-                            batch.displacedOutputSources.length,
+                            batch.sourceTargets.length
+                            + batch.visibilityRoots.length
+                            + batch.displacedOutputSources.length,
                     });
                 }
                 this.reconcile(batch, scheduler);
@@ -395,7 +401,7 @@ export class DocumentTransformationController {
             this.activateHandoffSession(generation);
             this.participant?.inspect(this.input.root);
             this.outputs = processDocument(this.fullProcessInput(scheduler));
-            this.phase = "active";
+            this.phase = 'active';
             return this.outputs;
         } catch (error) {
             this.advanceRouteGeneration();
@@ -406,7 +412,7 @@ export class DocumentTransformationController {
             restoreTimestampPresentations(this.input.root);
             this.outputs = [];
             this.scheduler = undefined;
-            this.phase = "idle";
+            this.phase = 'idle';
             throw error;
         }
     }
@@ -423,7 +429,7 @@ export class DocumentTransformationController {
         this.scheduler = undefined;
         restoreTimestampPresentations(this.input.root);
         this.outputs = [];
-        this.phase = "idle";
+        this.phase = 'idle';
     }
 
     /**
@@ -434,13 +440,13 @@ export class DocumentTransformationController {
      * @returns - Time elements updated during the reformat operation.
      */
     reformatOwned(includeUnowned = false): readonly HTMLTimeElement[] {
-        if (this.phase !== "active") {
+        if (this.phase !== 'active') {
             return this.outputs;
         }
         if (this.synchronizeCurrentRoute()) {
             return this.outputs;
         }
-        const scheduler = this.scheduler;
+        const { scheduler } = this;
         if (!scheduler) {
             return this.outputs;
         }
@@ -465,11 +471,12 @@ export class DocumentTransformationController {
      * Reconciles exact connected sources after an out-of-band adapter record arrives.
      *
      * @param sources - Page-owned sources whose trusted payload data changed.
+     *
      * @returns - Adjacent timestamp outputs rendered by the targeted pass.
      */
     reconcileSources(sources: readonly Element[]): readonly HTMLTimeElement[] {
-        const scheduler = this.scheduler;
-        if (this.phase !== "active" || !scheduler) {
+        const { scheduler } = this;
+        if (this.phase !== 'active' || !scheduler) {
             return [];
         }
         return reconcileDocumentSources({
@@ -483,6 +490,7 @@ export class DocumentTransformationController {
      * Reconciles one sampled current URL through the retained route provenance contract.
      *
      * @param url - Current document URL sampled by the content runtime.
+     *
      * @returns - Outputs generated for the new current route.
      */
     reconcileRoute(url: URL): readonly HTMLTimeElement[] {
@@ -494,7 +502,11 @@ export class DocumentTransformationController {
      * Applies one sampled route change and reports whether it ran a full active pass.
      *
      * @param url - Current document URL sampled by a trusted local capability.
+     *
      * @returns - Whether active output was restored and fully reprocessed.
+     *
+     * @throws If the route cannot be classified, the active controller has no scheduler or reprocessing fails;
+     * an active controller fails closed first.
      */
     private applyRouteChange(url: URL): boolean {
         const nextUrl = new URL(url.href);
@@ -509,7 +521,7 @@ export class DocumentTransformationController {
                 currentUrl: new URL(nextUrl.href),
             });
         } catch (error) {
-            if (this.phase === "active") {
+            if (this.phase === 'active') {
                 this.failClosed();
             }
             throw error;
@@ -530,16 +542,16 @@ export class DocumentTransformationController {
         const generation = this.advanceRouteGeneration();
         this.handoffSession?.dispose();
         this.handoffSession = undefined;
-        if (this.phase !== "active") {
+        if (this.phase !== 'active') {
             this.currentUrl = nextUrl;
             this.applyRouteTransition(transition);
             return false;
         }
 
-        const scheduler = this.scheduler;
+        const { scheduler } = this;
         if (!scheduler) {
             this.failClosed();
-            throw new Error("Active document controller has no mutation scheduler");
+            throw new Error('Active document controller has no mutation scheduler');
         }
         scheduler.resetPageTextSources();
         restoreTimestampPresentations(this.input.root, scheduler);
@@ -575,6 +587,7 @@ export class DocumentTransformationController {
      *
      * @param previousUrl - Route currently owned by the controller.
      * @param currentUrl - Newly sampled route.
+     *
      * @returns - Whether both routes have identical rule applicability.
      */
     private hasSameRuleSelection(previousUrl: URL, currentUrl: URL): boolean {
@@ -602,13 +615,14 @@ export class DocumentTransformationController {
      */
     private applyRouteTransition(transition: DocumentRouteHandoffTransition): void {
         switch (transition.kind) {
-            case DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP:
-                break;
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR:
                 this.handoffPolicy = undefined;
                 break;
             case DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE:
                 this.handoffPolicy = transition.policy;
+                break;
+            case DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP:
+            default:
                 break;
         }
     }
@@ -639,9 +653,9 @@ export class DocumentTransformationController {
      * @param generation - Session generation requesting reconciliation.
      */
     private reconcileHandoffSession(generation: number): void {
-        const scheduler = this.scheduler;
+        const { scheduler } = this;
         if (
-            this.phase !== "active"
+            this.phase !== 'active'
             || generation !== this.routeGeneration
             || !scheduler
             || !this.handoffSession
@@ -663,6 +677,7 @@ export class DocumentTransformationController {
      * Creates one full-document processing input from the retained current context.
      *
      * @param scheduler - Active renderer mutation sink.
+     *
      * @returns - Full processing input for the current route and policy.
      */
     private fullProcessInput(scheduler: DocumentMutationScheduler): ProcessInput {
@@ -678,7 +693,7 @@ export class DocumentTransformationController {
         if (this.handoffPolicy) {
             mutable.extractionPolicy = this.handoffPolicy;
         } else {
-            Reflect.deleteProperty(mutable, "extractionPolicy");
+            Reflect.deleteProperty(mutable, 'extractionPolicy');
         }
         return result;
     }
@@ -688,6 +703,7 @@ export class DocumentTransformationController {
      *
      * @param root - Bounded connected source or added root.
      * @param scheduler - Active renderer mutation sink.
+     *
      * @returns - Region processing input for the current route and policy.
      */
     private regionProcessInput(
@@ -706,7 +722,7 @@ export class DocumentTransformationController {
         if (this.handoffPolicy) {
             mutable.extractionPolicy = this.handoffPolicy;
         } else {
-            Reflect.deleteProperty(mutable, "extractionPolicy");
+            Reflect.deleteProperty(mutable, 'extractionPolicy');
         }
         return result;
     }
@@ -723,7 +739,7 @@ export class DocumentTransformationController {
         this.scheduler = undefined;
         restoreTimestampPresentations(this.input.root);
         this.outputs = [];
-        this.phase = "idle";
+        this.phase = 'idle';
     }
 
     /**
@@ -756,8 +772,7 @@ export class DocumentTransformationController {
         ].filter((source) => isConnectedToDocument(source, this.input.root)));
 
         const sourceTargets = batch.sourceTargets.filter(
-            (target) =>
-                isConnectedToDocument(target, this.input.root)
+            (target) => isConnectedToDocument(target, this.input.root)
                 && !coveredBy(batch.addedRoots, target)
                 && !coveredBy(batch.visibilityRoots, target),
         );

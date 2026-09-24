@@ -1,17 +1,18 @@
 /**
  * @file Caches universal document-runtime reconciliation within serialized application work.
  */
-import type {
-    ActivationPolicy,
-    ActivationReconcileResult,
-} from "../runtime/document-activation";
 import {
     RECONCILE_FAILURE_SCOPE,
     REGISTRATION_OPERATION,
     REGISTRATION_OUTCOME,
-} from "../runtime/document-activation";
-import type { ActivationCoordinator } from "./contracts";
-import type { SiteScopePolicy } from "../../shared/settings/site-scope";
+} from '../runtime/document-activation';
+
+import type { ActivationCoordinator } from './contracts';
+import type { SiteScopePolicy } from '../../shared/settings/site-scope';
+import type {
+    ActivationPolicy,
+    ActivationReconcileResult,
+} from '../runtime/document-activation';
 
 /**
  * Merges a host-scoped reconciliation into the cached complete result.
@@ -19,6 +20,7 @@ import type { SiteScopePolicy } from "../../shared/settings/site-scope";
  * @param previous - Previously cached reconciliation result.
  * @param current - Newly completed reconciliation result.
  * @param affectedHostnames - Hostnames replaced by the scoped reconciliation.
+ *
  * @returns - Result containing current data and untouched tab data.
  */
 function mergeScopedResult(
@@ -27,8 +29,7 @@ function mergeScopedResult(
     affectedHostnames: readonly string[],
 ): ActivationReconcileResult {
     const affected = new Set(affectedHostnames);
-    const preservedFailures = previous.failures.filter((failure) =>
-        failure.scope === RECONCILE_FAILURE_SCOPE.TAB
+    const preservedFailures = previous.failures.filter((failure) => failure.scope === RECONCILE_FAILURE_SCOPE.TAB
         && !affected.has(failure.hostname));
     const preservedTabs = previous.tabs.filter(({ hostname }) => !affected.has(hostname));
     return {
@@ -51,6 +52,7 @@ export class ActivationManager {
      * Creates a manager over a runtime coordinator.
      *
      * @param coordinator - Runtime coordinator used to perform reconciliation.
+     *
      * @returns - A new activation manager.
      */
     public constructor(private readonly coordinator: ActivationCoordinator) {}
@@ -71,6 +73,7 @@ export class ActivationManager {
      * @param revision - Settings revision associated with the operation.
      * @param siteScope - Effective scope mode and hostname lists.
      * @param affectedHostnames - Optional subset of hosts to reconcile.
+     *
      * @returns - The completed reconciliation result.
      */
     public async reconcile(

@@ -2,38 +2,42 @@
  * @file Verifies content-script bootstrap and document-state requests.
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    beforeEach, describe, expect, it, vi,
+} from 'vitest';
+
 import {
     OWNED_OUTPUT_ATTRIBUTE,
     OWNED_SOURCE_ATTRIBUTE,
-} from "../../../src/content-script/ownership-markers";
-import { DOCUMENT_RUNTIME_SLOT } from "../../../src/content-script/runtime";
-import { GET_DOCUMENT_STATE_MESSAGE } from "../../../src/shared/messaging/contracts";
+} from '../../../src/content-script/ownership-markers';
+import { DOCUMENT_RUNTIME_SLOT } from '../../../src/content-script/runtime';
+import { GET_DOCUMENT_STATE_MESSAGE } from '../../../src/shared/messaging/contracts';
 import {
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
-} from "../../../src/shared/messaging/document-messages";
-import { SETTINGS_STATE_FAILURE } from "../../../src/shared/messaging/view-state-values";
+} from '../../../src/shared/messaging/document-messages';
+import { SETTINGS_STATE_FAILURE } from '../../../src/shared/messaging/view-state-values';
+
 import {
     YOUTUBE_LIST_FIXTURE_ID,
     YOUTUBE_LIST_FIXTURES,
     type YouTubeListFixtureId,
-} from "./adapters/youtube-test-data";
+} from './adapters/youtube-test-data';
 
 const YOUTUBE_LIST_LABEL_SELECTORS = {
-    [YOUTUBE_LIST_FIXTURE_ID.HOME]: ".ytContentMetadataViewModelMetadataTextLastPart",
-    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: ".inline-metadata-item.ytd-video-meta-block",
+    [YOUTUBE_LIST_FIXTURE_ID.HOME]: '.ytContentMetadataViewModelMetadataTextLastPart',
+    [YOUTUBE_LIST_FIXTURE_ID.SEARCH]: '.inline-metadata-item.ytd-video-meta-block',
     [YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS]:
-        ".ytContentMetadataViewModelMetadataTextLastPart",
+        '.ytContentMetadataViewModelMetadataTextLastPart',
 } satisfies Readonly<Record<YouTubeListFixtureId, string>>;
 
 /**
  * Installs a minimal extension runtime mock.
  *
  * @param sendMessage - Optional document-state request handler.
+ *
  * @returns - Runtime message mock.
  */
 function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>) {
@@ -55,7 +59,7 @@ function installChromeMock(sendMessage?: (message: unknown) => Promise<unknown>)
         },
         ...(sendMessage === undefined ? {} : { sendMessage }),
     };
-    vi.stubGlobal("chrome", { runtime: messages });
+    vi.stubGlobal('chrome', { runtime: messages });
     return messages;
 }
 
@@ -94,61 +98,61 @@ function expectLocalOnlyDocument(
  *
  * @param enabled - Effective top-level policy.
  * @param revision - Settings revision carried by the state.
+ *
  * @returns - Ready document state.
  */
 function state(enabled = true, revision = 2) {
     return {
-        availability: "ready" as const,
+        availability: 'ready' as const,
         revision,
         enabled,
-        display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
+        display: { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } },
         debugEnabled: false,
     };
 }
 
-describe("content entrypoint", () => {
+describe('content entrypoint', () => {
     beforeEach(() => {
         vi.resetModules();
-        vi.doUnmock("../../../src/content-script/facebook/payload-runtime");
+        vi.doUnmock('../../../src/content-script/facebook/payload-runtime');
         vi.unstubAllGlobals();
         const current = (document as unknown as Record<symbol, {
             handle?: { teardown(): void };
         } | undefined>)[DOCUMENT_RUNTIME_SLOT];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
-        document.body.innerHTML =
-            '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     });
 
-    it("starts immediately while the document is loading", async () => {
+    it('starts immediately while the document is loading', async () => {
         const sendMessage = vi.fn(async () => state());
         const chrome = installChromeMock(sendMessage);
-        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
+        vi.stubGlobal('window', { location: { href: 'https://example.test/page' } });
 
-        await import("../../../src/content-script/main");
+        await import('../../../src/content-script/main');
         await Promise.resolve();
         await Promise.resolve();
 
         expect(sendMessage).toHaveBeenCalledWith({ type: GET_DOCUMENT_STATE_MESSAGE });
         expect(chrome.onMessage.addListener).toHaveBeenCalledTimes(1);
-        expect(document.querySelector("[data-no-more-ago-output]")).not.toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).not.toBeNull();
     });
 
-    it("does not process a disabled document", async () => {
+    it('does not process a disabled document', async () => {
         const sendMessage = vi.fn(async () => state(false));
         installChromeMock(sendMessage);
-        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
+        vi.stubGlobal('window', { location: { href: 'https://example.test/page' } });
 
-        await import("../../../src/content-script/main");
+        await import('../../../src/content-script/main');
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("[data-no-more-ago-output]")).toBeNull();
+        expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
     });
 
-    it("keeps page content unchanged when document state is unavailable", async () => {
+    it('keeps page content unchanged when document state is unavailable', async () => {
         const sendMessage = vi.fn(async () => ({
-            availability: "unavailable" as const,
+            availability: 'unavailable' as const,
             revision: null,
             enabled: false,
             display: null,
@@ -156,34 +160,34 @@ describe("content entrypoint", () => {
             failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
         }));
         installChromeMock(sendMessage);
-        vi.stubGlobal("window", { location: { href: "https://example.test/page" } });
+        vi.stubGlobal('window', { location: { href: 'https://example.test/page' } });
 
-        await import("../../../src/content-script/main");
+        await import('../../../src/content-script/main');
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(document.querySelector("time")?.textContent).toBe("2 hours ago");
+        expect(document.querySelector('time')?.textContent).toBe('2 hours ago');
     });
 
     it(
-        "keeps output across a route-irrelevant popstate without network resolution",
+        'keeps output across a route-irrelevant popstate without network resolution',
         async () => {
             const sendMessage = vi.fn(async () => state());
             const chrome = installChromeMock(sendMessage);
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
                 throw new Error(
-                    "Production entrypoint must not resolve timestamps over the network",
+                    'Production entrypoint must not resolve timestamps over the network',
                 );
             });
-            vi.stubGlobal("fetch", forbiddenFetch);
-            let currentHref = "https://example.test/initial";
+            vi.stubGlobal('fetch', forbiddenFetch);
+            let currentHref = 'https://example.test/initial';
             let popstate: (() => void) | undefined;
             const addEventListener = vi.fn((type: string, listener: () => void) => {
-                if (type === "popstate") {
+                if (type === 'popstate') {
                     popstate = listener;
                 }
             });
-            vi.stubGlobal("window", {
+            vi.stubGlobal('window', {
                 location: {
                     get href() {
                         return currentHref;
@@ -192,27 +196,27 @@ describe("content entrypoint", () => {
                 addEventListener,
             });
 
-            await import("../../../src/content-script/main");
+            await import('../../../src/content-script/main');
             await Promise.resolve();
             await Promise.resolve();
-            const initialOutput = document.querySelector("[data-no-more-ago-output]");
+            const initialOutput = document.querySelector('[data-no-more-ago-output]');
             expect(initialOutput).not.toBeNull();
             expect(addEventListener).toHaveBeenCalledOnce();
-            expect(addEventListener).toHaveBeenCalledWith("popstate", expect.any(Function));
+            expect(addEventListener).toHaveBeenCalledWith('popstate', expect.any(Function));
 
-            currentHref = "https://example.test/later?private=ignored";
+            currentHref = 'https://example.test/later?private=ignored';
             popstate?.();
 
-            expect(document.querySelector("[data-no-more-ago-output]")).toBe(initialOutput);
+            expect(document.querySelector('[data-no-more-ago-output]')).toBe(initialOutput);
             expect(forbiddenFetch).not.toHaveBeenCalled();
             expect(chrome.onMessage.addListener).toHaveBeenCalledTimes(1);
         },
     );
 
     it.each(YOUTUBE_LIST_FIXTURES)(
-        "keeps the $name fixture local-only through disable and re-enable",
+        'keeps the $name fixture local-only through disable and re-enable',
         async ({ id, fixturePath, url }) => {
-            document.documentElement.innerHTML = await readFile(fixturePath, "utf8");
+            document.documentElement.innerHTML = await readFile(fixturePath, 'utf8');
             const labelSelector = YOUTUBE_LIST_LABEL_SELECTORS[id];
             const originalMarkup = document.documentElement.outerHTML;
             const originalLabelText = Array.from(
@@ -229,15 +233,15 @@ describe("content entrypoint", () => {
             });
             const chrome = installChromeMock(sendMessage);
             const forbiddenFetch = vi.fn<typeof fetch>(() => {
-                throw new Error("YouTube list pages must not make a player request");
+                throw new Error('YouTube list pages must not make a player request');
             });
-            vi.stubGlobal("fetch", forbiddenFetch);
-            vi.stubGlobal("window", {
+            vi.stubGlobal('fetch', forbiddenFetch);
+            vi.stubGlobal('window', {
                 location: { href: url },
                 addEventListener: vi.fn(),
             });
 
-            await import("../../../src/content-script/main");
+            await import('../../../src/content-script/main');
             await flushRuntime();
 
             expectLocalOnlyDocument(originalMarkup, labelSelector, originalLabelText);
@@ -278,7 +282,7 @@ describe("content entrypoint", () => {
         { enabled: true, expectedActivity: [true] },
         { enabled: false, expectedActivity: [] },
     ])(
-        "coordinates Facebook payload activity for enabled=$enabled",
+        'coordinates Facebook payload activity for enabled=$enabled',
         async ({ enabled, expectedActivity }) => {
             const setEnabled = vi.fn<(active: boolean) => void>();
             const installFacebookPayloadRuntime = vi.fn(() => ({
@@ -286,16 +290,16 @@ describe("content entrypoint", () => {
                 teardown: vi.fn(),
             }));
             vi.doMock(
-                "../../../src/content-script/facebook/payload-runtime",
+                '../../../src/content-script/facebook/payload-runtime',
                 () => ({ installFacebookPayloadRuntime }),
             );
             const sendMessage = vi.fn(async () => state(enabled));
             installChromeMock(sendMessage);
-            vi.stubGlobal("window", {
-                location: { href: "https://www.facebook.com/home" },
+            vi.stubGlobal('window', {
+                location: { href: 'https://www.facebook.com/home' },
             });
 
-            await import("../../../src/content-script/main");
+            await import('../../../src/content-script/main');
             await Promise.resolve();
             await Promise.resolve();
 

@@ -5,28 +5,28 @@
 import {
     isCanonicalHostname,
     normalizeHostnameInput,
-} from "../shared/settings/hostname";
+} from '../shared/settings/hostname';
 import {
     SITE_SCOPE_MODE,
     type SiteScopeMode,
-} from "../shared/settings/site-scope";
-import type { MessageKey } from "../shared/i18n/translator";
+} from '../shared/settings/site-scope';
+
+import type { MessageKey } from '../shared/i18n/translator';
 
 /**
  * Outcome of validating one hostname entered in the Sites form.
  */
-export type HostnameEntryResult =
-    | {
-        /**
-         * Indicates an accepted hostname.
-         */
-        readonly ok: true;
+export type HostnameEntryResult = | {
+    /**
+     * Indicates an accepted hostname.
+     */
+    readonly ok: true;
 
-        /**
-         * Canonical hostname to send to the background.
-         */
-        readonly hostname: string;
-    }
+    /**
+     * Canonical hostname to send to the background.
+     */
+    readonly hostname: string;
+}
     | {
         /**
          * Indicates a rejected hostname.
@@ -94,6 +94,7 @@ export interface ActiveListCopy {
  *
  * @param value - Raw field value.
  * @param existing - Hostnames already present in the active list.
+ *
  * @returns - Canonical hostname, or the inline error to display.
  */
 export function validateHostnameEntry(
@@ -102,13 +103,13 @@ export function validateHostnameEntry(
 ): HostnameEntryResult {
     const hostname = normalizeHostnameInput(value);
     if (hostname.length === 0) {
-        return { ok: false, error: "sites_error_empty" };
+        return { ok: false, error: 'sites_error_empty' };
     }
     if (!isCanonicalHostname(hostname)) {
-        return { ok: false, error: "sites_error_invalid" };
+        return { ok: false, error: 'sites_error_invalid' };
     }
     if (existing.includes(hostname)) {
-        return { ok: false, error: "sites_error_duplicate" };
+        return { ok: false, error: 'sites_error_duplicate' };
     }
     return { ok: true, hostname };
 }
@@ -118,25 +119,25 @@ export function validateHostnameEntry(
  */
 const ACTIVE_LIST_COPY = {
     [SITE_SCOPE_MODE.SELECTED_ONLY]: {
-        title: "scope_list_allowed",
-        description: "sites_allowed_description",
-        fieldLabel: "sites_allowed_field_label",
-        submitLabel: "sites_allowed_submit",
-        removalEffect: "sites_allowed_removal_effect",
-        emptyState: "sites_allowed_empty",
-        removeAria: "sites_remove_from_allowed_aria",
-        addedConfirmation: "sites_added_to_allowed",
+        title: 'scope_list_allowed',
+        description: 'sites_allowed_description',
+        fieldLabel: 'sites_allowed_field_label',
+        submitLabel: 'sites_allowed_submit',
+        removalEffect: 'sites_allowed_removal_effect',
+        emptyState: 'sites_allowed_empty',
+        removeAria: 'sites_remove_from_allowed_aria',
+        addedConfirmation: 'sites_added_to_allowed',
         addEnables: true,
     },
     [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED]: {
-        title: "scope_list_excluded",
-        description: "sites_excluded_description",
-        fieldLabel: "sites_excluded_field_label",
-        submitLabel: "sites_excluded_submit",
-        removalEffect: "sites_excluded_removal_effect",
-        emptyState: "sites_excluded_empty",
-        removeAria: "sites_remove_from_excluded_aria",
-        addedConfirmation: "sites_added_to_excluded",
+        title: 'scope_list_excluded',
+        description: 'sites_excluded_description',
+        fieldLabel: 'sites_excluded_field_label',
+        submitLabel: 'sites_excluded_submit',
+        removalEffect: 'sites_excluded_removal_effect',
+        emptyState: 'sites_excluded_empty',
+        removeAria: 'sites_remove_from_excluded_aria',
+        addedConfirmation: 'sites_added_to_excluded',
         addEnables: false,
     },
 } as const satisfies Record<SiteScopeMode, ActiveListCopy>;
@@ -145,6 +146,7 @@ const ACTIVE_LIST_COPY = {
  * Describes the list the active scope mode owns.
  *
  * @param mode - Active scope mode.
+ *
  * @returns - Message keys, empty state, and add semantics for that list.
  */
 export function activeListCopy(mode: SiteScopeMode): ActiveListCopy {

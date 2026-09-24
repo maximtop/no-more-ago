@@ -2,8 +2,10 @@
  * @file Verifies universal document-runtime reconciliation.
  */
 
-import { describe, expect, it, vi } from "vitest";
-/* eslint-disable @typescript-eslint/require-await */
+import {
+    describe, expect, it, vi,
+} from 'vitest';
+
 import {
     DocumentActivationCoordinator,
     ACTIVATION_POLICY,
@@ -11,31 +13,32 @@ import {
     REGISTRATION_OPERATION,
     REGISTRATION_OUTCOME,
     TAB_ACTION,
-} from "../../../../src/background/runtime/document-activation";
-import {
-    SCRIPT_EXECUTION_WORLD,
-    type RegisteredContentScriptSpec,
-    type ScriptingRuntime,
-} from "../../../../src/background/runtime/scripting";
-import type { RuntimeFrame } from "../../../../src/background/runtime/tabs";
+} from '../../../../src/background/runtime/document-activation';
 import {
     DOCUMENT_RUNTIME_REGISTRATION,
     DOCUMENT_RUNTIME_REGISTRATION_ID,
     FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION,
     FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID,
-} from "../../../../src/background/runtime/register-documents";
+} from '../../../../src/background/runtime/register-documents';
 import {
-    DOCUMENT_POLICY_RECONCILED_MESSAGE,
-    RECONCILE_DOCUMENT_POLICY_MESSAGE,
-} from "../../../../src/shared/messaging/document-messages";
+    SCRIPT_EXECUTION_WORLD,
+    type RegisteredContentScriptSpec,
+    type ScriptingRuntime,
+} from '../../../../src/background/runtime/scripting';
 import {
     installContentRuntime,
     type ContentRuntimeHandle,
-} from "../../../../src/content-script/runtime";
-import { STATE_AVAILABILITY } from "../../../../src/shared/messaging/view-state-values";
-import { SITE_SCOPE_MODE } from "../../../../src/shared/settings/site-scope";
+} from '../../../../src/content-script/runtime';
 import { FACEBOOK_PAYLOAD_BRIDGE_SCRIPT_FILE } from
-    "../../../../src/shared/extension-files";
+    '../../../../src/shared/extension-files';
+import {
+    DOCUMENT_POLICY_RECONCILED_MESSAGE,
+    RECONCILE_DOCUMENT_POLICY_MESSAGE,
+} from '../../../../src/shared/messaging/document-messages';
+import { STATE_AVAILABILITY } from '../../../../src/shared/messaging/view-state-values';
+import { SITE_SCOPE_MODE } from '../../../../src/shared/settings/site-scope';
+
+import type { RuntimeFrame } from '../../../../src/background/runtime/tabs';
 
 /**
  * Creates an independently dispatchable content-runtime message source.
@@ -60,7 +63,10 @@ function frameMessages() {
  * Installs a timestamp-processing runtime in an isolated frame document.
  *
  * @param readPolicy - Reads the current top-level site policy and revision.
+ *
  * @returns - Frame document, message source, and runtime handle.
+ *
+ * @throws If the frame has no document.
  */
 function installedFrame(readPolicy: () => {
     readonly enabled: boolean;
@@ -71,48 +77,51 @@ function installedFrame(readPolicy: () => {
     readonly messages: ReturnType<typeof frameMessages>;
     readonly handle: ContentRuntimeHandle;
 } {
-    const element = document.createElement("iframe");
+    const element = document.createElement('iframe');
     document.body.append(element);
     const frameDocument = element.contentDocument;
     if (!frameDocument) {
-        throw new Error("Expected frame document");
+        throw new Error('Expected frame document');
     }
-    frameDocument.body.innerHTML =
-        '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
+    frameDocument.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     const messages = frameMessages();
     const handle = installContentRuntime({
         document: frameDocument,
-        url: new URL("https://example.test/page"),
-        locales: ["en-US"],
+        url: new URL('https://example.test/page'),
+        locales: ['en-US'],
         loadDocumentState: async () => {
             const policy = readPolicy();
             return {
                 availability: STATE_AVAILABILITY.READY,
                 revision: policy.revision,
                 enabled: policy.enabled,
-                display: { formatMode: "system" as const, timeZone: { mode: "utc" as const } },
+                display: { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } },
                 debugEnabled: false,
             };
         },
         messages,
     });
-    return { document: frameDocument, element, messages, handle };
+    return {
+        document: frameDocument, element, messages, handle,
+    };
 }
 
 /**
  * Checks whether a frame currently contains generated timestamp output.
  *
  * @param frame - Installed frame under inspection.
+ *
  * @returns - Whether the frame has generated output.
  */
 function hasOutput(frame: ReturnType<typeof installedFrame>): boolean {
-    return frame.document.querySelector("[data-no-more-ago-output]") !== null;
+    return frame.document.querySelector('[data-no-more-ago-output]') !== null;
 }
 
 /**
  * Acknowledges the revision carried by one document-policy command.
  *
  * @param message - Policy command delivered to a content runtime.
+ *
  * @returns - Exact policy acknowledgement.
  */
 function acknowledgePolicy(message: unknown) {
@@ -125,6 +134,7 @@ function acknowledgePolicy(message: unknown) {
  *
  * @param urls - Top-level tab URLs returned by the query.
  * @param framesByTab - Reachable frames returned for each one-based fixture tab.
+ *
  * @returns - Scripting and tabs doubles.
  */
 function fakes(
@@ -159,10 +169,10 @@ function fakes(
             }
         }),
         executeScript: vi.fn(async (
-            input: Parameters<ScriptingRuntime["executeScript"]>[0],
-        ) => "frameIds" in input.target
+            input: Parameters<ScriptingRuntime['executeScript']>[0],
+        ) => ('frameIds' in input.target
             ? input.target.frameIds.map((frameId) => ({ frameId }))
-            : [{ frameId: 0 }, { frameId: 1 }]),
+            : [{ frameId: 0 }, { frameId: 1 }])),
     };
     const tabs = {
         query: vi.fn(async () => urls.map((url, index) => ({ id: index + 1, url }))),
@@ -176,9 +186,9 @@ function fakes(
     return { scripting, tabs, registered };
 }
 
-describe("DocumentActivationCoordinator", () => {
-    it("registers universally and targets every frame before all-frame ensure", async () => {
-        const fake = fakes(["https://example.test/page"]);
+describe('DocumentActivationCoordinator', () => {
+    it('registers universally and targets every frame before all-frame ensure', async () => {
+        const fake = fakes(['https://example.test/page']);
         fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
@@ -225,22 +235,22 @@ describe("DocumentActivationCoordinator", () => {
         );
         expect(fake.scripting.executeScript).toHaveBeenCalledWith({
             target: { tabId: 1, allFrames: true },
-            files: ["content.js"],
+            files: ['content.js'],
         });
     });
 
     it(
-        "keeps the core runtime registered when the Facebook bridge registration fails",
+        'keeps the core runtime registered when the Facebook bridge registration fails',
         async () => {
             const fake = fakes([]);
             fake.registered.clear();
             fake.scripting.registerContentScripts.mockImplementation(async (scripts) => {
                 const registration = scripts[0];
                 if (!registration) {
-                    throw new Error("Expected one registration");
+                    throw new Error('Expected one registration');
                 }
                 if (registration.id === FACEBOOK_PAYLOAD_BRIDGE_REGISTRATION_ID) {
-                    throw new Error("MAIN-world registration is unavailable");
+                    throw new Error('MAIN-world registration is unavailable');
                 }
                 fake.registered.set(registration.id, registration);
             });
@@ -271,8 +281,8 @@ describe("DocumentActivationCoordinator", () => {
         },
     );
 
-    it("ensures the Facebook main-world bridge only for an enabled Facebook site", async () => {
-        const fake = fakes(["https://www.facebook.com/Meta"]);
+    it('ensures the Facebook main-world bridge only for an enabled Facebook site', async () => {
+        const fake = fakes(['https://www.facebook.com/Meta']);
         const coordinator = new DocumentActivationCoordinator(fake);
 
         const result = await coordinator.reconcile({
@@ -282,13 +292,13 @@ describe("DocumentActivationCoordinator", () => {
 
         expect(result.tabs).toEqual([{
             tabId: 1,
-            hostname: "www.facebook.com",
+            hostname: 'www.facebook.com',
             action: TAB_ACTION.INJECT,
             ok: true,
         }]);
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(1, {
             target: { tabId: 1, allFrames: true },
-            files: ["content.js"],
+            files: ['content.js'],
         });
         expect(fake.scripting.executeScript).toHaveBeenNthCalledWith(2, {
             target: { tabId: 1, frameIds: [0] },
@@ -297,13 +307,13 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
-    it("injects the bridge into Facebook child frames of another top-level site", async () => {
+    it('injects the bridge into Facebook child frames of another top-level site', async () => {
         const fake = fakes([
-            "https://example.test/page",
+            'https://example.test/page',
         ], [[
-            { frameId: 0, url: "https://example.test/page" },
-            { frameId: 2, url: "https://www.facebook.com/plugins/post.php" },
-            { frameId: 3, url: "https://other.test/frame" },
+            { frameId: 0, url: 'https://example.test/page' },
+            { frameId: 2, url: 'https://www.facebook.com/plugins/post.php' },
+            { frameId: 3, url: 'https://other.test/frame' },
         ]]);
         const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -314,7 +324,7 @@ describe("DocumentActivationCoordinator", () => {
 
         expect(result.tabs).toEqual([{
             tabId: 1,
-            hostname: "example.test",
+            hostname: 'example.test',
             action: TAB_ACTION.INJECT,
             ok: true,
         }]);
@@ -325,13 +335,13 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
-    it("injects one bridge call into every reachable Facebook frame", async () => {
+    it('injects one bridge call into every reachable Facebook frame', async () => {
         const fake = fakes([
-            "https://www.facebook.com/home",
+            'https://www.facebook.com/home',
         ], [[
-            { frameId: 0, url: "https://www.facebook.com/home" },
-            { frameId: 2, url: "https://m.facebook.com/story" },
-            { frameId: 4, url: "https://example.test/frame" },
+            { frameId: 0, url: 'https://www.facebook.com/home' },
+            { frameId: 2, url: 'https://m.facebook.com/story' },
+            { frameId: 4, url: 'https://example.test/frame' },
         ]]);
         const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -347,8 +357,8 @@ describe("DocumentActivationCoordinator", () => {
         });
     });
 
-    it("does not inject a bridge when no reachable frame is Facebook", async () => {
-        const fake = fakes(["https://example.test/page"]);
+    it('does not inject a bridge when no reachable frame is Facebook', async () => {
+        const fake = fakes(['https://example.test/page']);
         const coordinator = new DocumentActivationCoordinator(fake);
 
         await coordinator.reconcile({
@@ -359,9 +369,9 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).toHaveBeenCalledTimes(1);
     });
 
-    it("reports frame enumeration failure without rejecting reconciliation", async () => {
-        const fake = fakes(["https://www.facebook.com/home"]);
-        fake.tabs.getAllFrames.mockRejectedValue(new Error("frames unavailable"));
+    it('reports frame enumeration failure without rejecting reconciliation', async () => {
+        const fake = fakes(['https://www.facebook.com/home']);
+        fake.tabs.getAllFrames.mockRejectedValue(new Error('frames unavailable'));
         const coordinator = new DocumentActivationCoordinator(fake);
 
         const result = await coordinator.reconcile({
@@ -371,27 +381,27 @@ describe("DocumentActivationCoordinator", () => {
 
         expect(result.tabs).toEqual([{
             tabId: 1,
-            hostname: "www.facebook.com",
+            hostname: 'www.facebook.com',
             action: TAB_ACTION.INJECT,
             ok: false,
         }]);
         expect(result.failures).toContainEqual({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: 1,
-            hostname: "www.facebook.com",
+            hostname: 'www.facebook.com',
             action: TAB_ACTION.INJECT,
         });
     });
 
-    it("suspends a disabled site and still ensures every reachable frame", async () => {
-        const fake = fakes(["https://example.test/page"]);
+    it('suspends a disabled site and still ensures every reachable frame', async () => {
+        const fake = fakes(['https://example.test/page']);
         const coordinator = new DocumentActivationCoordinator(fake);
         await coordinator.reconcile({
             revision: 2,
             policy: ACTIVATION_POLICY.ENABLED,
             siteScope: {
                 mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-                excludedSites: ["example.test"],
+                excludedSites: ['example.test'],
                 allowedSites: [],
             },
         });
@@ -417,8 +427,8 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).toHaveBeenCalledTimes(1);
     });
 
-    it("unregisters and broadcasts teardown when globally disabled", async () => {
-        const fake = fakes(["https://example.test/page"]);
+    it('unregisters and broadcasts teardown when globally disabled', async () => {
+        const fake = fakes(['https://example.test/page']);
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
             revision: 3,
@@ -447,11 +457,11 @@ describe("DocumentActivationCoordinator", () => {
         expect(fake.scripting.executeScript).not.toHaveBeenCalled();
     });
 
-    it("reports global teardown failure unless every reachable frame acknowledges", async () => {
-        const fake = fakes(["https://example.test/page"]);
+    it('reports global teardown failure unless every reachable frame acknowledges', async () => {
+        const fake = fakes(['https://example.test/page']);
         fake.tabs.sendMessage.mockImplementation(async (_tabId, message, options) => {
             if (options?.frameId === 1) {
-                throw new Error("frame unavailable");
+                throw new Error('frame unavailable');
             }
             return acknowledgePolicy(message);
         });
@@ -464,23 +474,25 @@ describe("DocumentActivationCoordinator", () => {
 
         expect(fake.tabs.sendMessage).toHaveBeenCalledTimes(2);
         expect(result.tabs).toEqual([
-            { tabId: 1, hostname: "example.test", action: TAB_ACTION.TEARDOWN, ok: false },
+            {
+                tabId: 1, hostname: 'example.test', action: TAB_ACTION.TEARDOWN, ok: false,
+            },
         ]);
         expect(result.failures).toContainEqual({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: 1,
-            hostname: "example.test",
+            hostname: 'example.test',
             action: TAB_ACTION.TEARDOWN,
         });
     });
 
-    it("retains sibling recovery when one tab ensure fails", async () => {
+    it('retains sibling recovery when one tab ensure fails', async () => {
         const fake = fakes([
-            "https://first.test/page",
-            "https://second.test/page",
+            'https://first.test/page',
+            'https://second.test/page',
         ]);
         fake.scripting.executeScript
-            .mockRejectedValueOnce(new Error("unreachable"))
+            .mockRejectedValueOnce(new Error('unreachable'))
             .mockResolvedValueOnce([{ frameId: 0 }]);
         const coordinator = new DocumentActivationCoordinator(fake);
         const result = await coordinator.reconcile({
@@ -489,40 +501,42 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.tabs).toEqual([
-            { tabId: 1, hostname: "first.test", action: TAB_ACTION.INJECT, ok: false },
-            { tabId: 2, hostname: "second.test", action: TAB_ACTION.INJECT, ok: true },
+            {
+                tabId: 1, hostname: 'first.test', action: TAB_ACTION.INJECT, ok: false,
+            },
+            {
+                tabId: 2, hostname: 'second.test', action: TAB_ACTION.INJECT, ok: true,
+            },
         ]);
         expect(result.failures).toContainEqual({
             scope: RECONCILE_FAILURE_SCOPE.TAB,
             tabId: 1,
-            hostname: "first.test",
+            hostname: 'first.test',
             action: TAB_ACTION.INJECT,
         });
     });
 
-    it.each(["message", "injection"] as const)(
-        "does not let a pending tab %s block reconciliation",
+    it.each(['message', 'injection'] as const)(
+        'does not let a pending tab %s block reconciliation',
         async (pendingOperation) => {
             vi.useFakeTimers();
             try {
                 const fake = fakes([
-                    "https://pending.test/page",
-                    "https://reachable.test/page",
+                    'https://pending.test/page',
+                    'https://reachable.test/page',
                 ]);
-                if (pendingOperation === "message") {
+                if (pendingOperation === 'message') {
                     let firstPendingMessage = true;
                     fake.tabs.sendMessage.mockImplementation((tabId, message) => {
                         if (tabId === 1 && firstPendingMessage) {
                             firstPendingMessage = false;
-                            return new Promise<ReturnType<typeof acknowledgePolicy>>(
-                                () => undefined,
-                            );
+                            return new Promise<ReturnType<typeof acknowledgePolicy>>(() => {});
                         }
                         return Promise.resolve(acknowledgePolicy(message));
                     });
                 } else {
                     fake.scripting.executeScript
-                        .mockImplementationOnce(() => new Promise<never>(() => undefined))
+                        .mockImplementationOnce(() => new Promise<never>(() => {}))
                         .mockResolvedValueOnce([{ frameId: 0 }]);
                 }
                 const coordinator = new DocumentActivationCoordinator(fake);
@@ -531,17 +545,17 @@ describe("DocumentActivationCoordinator", () => {
                     policy: ACTIVATION_POLICY.ENABLED,
                 });
                 const outcome = Promise.race([
-                    reconciliation.then((result) => ({ kind: "resolved" as const, result })),
-                    new Promise<{ readonly kind: "deadline" }>((resolve) => {
+                    reconciliation.then((result) => ({ kind: 'resolved' as const, result })),
+                    new Promise<{ readonly kind: 'deadline' }>((resolve) => {
                         setTimeout(() => {
-                            resolve({ kind: "deadline" });
+                            resolve({ kind: 'deadline' });
                         }, 2_000);
                     }),
                 ]);
 
                 await vi.advanceTimersByTimeAsync(2_000);
 
-                await expect(outcome).resolves.toMatchObject({ kind: "resolved" });
+                await expect(outcome).resolves.toMatchObject({ kind: 'resolved' });
                 expect(fake.scripting.executeScript).toHaveBeenCalledTimes(2);
             } finally {
                 vi.useRealTimers();
@@ -549,24 +563,24 @@ describe("DocumentActivationCoordinator", () => {
         },
     );
 
-    it.each(["registration-read", "registration-write", "tabs-query"] as const)(
-        "does not let a pending %s block lifecycle reconciliation",
+    it.each(['registration-read', 'registration-write', 'tabs-query'] as const)(
+        'does not let a pending %s block lifecycle reconciliation',
         async (pendingOperation) => {
             vi.useFakeTimers();
             try {
-                const fake = fakes(["https://example.test/page"]);
-                if (pendingOperation === "registration-read") {
+                const fake = fakes(['https://example.test/page']);
+                if (pendingOperation === 'registration-read') {
                     fake.scripting.getRegisteredContentScripts.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
-                } else if (pendingOperation === "registration-write") {
+                } else if (pendingOperation === 'registration-write') {
                     fake.scripting.getRegisteredContentScripts.mockResolvedValue([]);
                     fake.scripting.registerContentScripts.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
                 } else {
                     fake.tabs.query.mockImplementation(
-                        () => new Promise<never>(() => undefined),
+                        () => new Promise<never>(() => {}),
                     );
                 }
                 const coordinator = new DocumentActivationCoordinator(fake);
@@ -586,21 +600,20 @@ describe("DocumentActivationCoordinator", () => {
         },
     );
 
-    it("repairs a registration write that succeeds after a newer disable intent", async () => {
+    it('repairs a registration write that succeeds after a newer disable intent', async () => {
         vi.useFakeTimers();
         try {
             const fake = fakes([]);
             fake.registered.clear();
             const completeRegisters: (() => void)[] = [];
-            fake.scripting.registerContentScripts.mockImplementation((scripts) =>
-                new Promise<void>((resolve) => {
-                    completeRegisters.push(() => {
-                        for (const script of scripts) {
-                            fake.registered.set(script.id, script);
-                        }
-                        resolve();
-                    });
-                }));
+            fake.scripting.registerContentScripts.mockImplementation((scripts) => new Promise<void>((resolve) => {
+                completeRegisters.push(() => {
+                    for (const script of scripts) {
+                        fake.registered.set(script.id, script);
+                    }
+                    resolve();
+                });
+            }));
             const coordinator = new DocumentActivationCoordinator(fake);
             const enabling = coordinator.reconcile({
                 revision: 8,
@@ -634,20 +647,19 @@ describe("DocumentActivationCoordinator", () => {
         }
     });
 
-    it("contains synchronous browser API failures and still reconciles siblings", async () => {
+    it('contains synchronous browser API failures and still reconciles siblings', async () => {
         const fake = fakes([
-            "https://first.test/page",
-            "https://second.test/page",
+            'https://first.test/page',
+            'https://second.test/page',
         ]);
         fake.tabs.sendMessage
             .mockImplementationOnce(() => {
-                throw new Error("synchronous message failure");
+                throw new Error('synchronous message failure');
             })
-            .mockImplementationOnce((_tabId, message) =>
-                Promise.resolve(acknowledgePolicy(message)));
+            .mockImplementationOnce((_tabId, message) => Promise.resolve(acknowledgePolicy(message)));
         fake.scripting.executeScript
             .mockImplementationOnce(() => {
-                throw new Error("synchronous injection failure");
+                throw new Error('synchronous injection failure');
             })
             .mockResolvedValueOnce([{ frameId: 0 }]);
         const coordinator = new DocumentActivationCoordinator(fake);
@@ -658,8 +670,12 @@ describe("DocumentActivationCoordinator", () => {
         });
 
         expect(result.tabs).toEqual([
-            { tabId: 1, hostname: "first.test", action: TAB_ACTION.INJECT, ok: false },
-            { tabId: 2, hostname: "second.test", action: TAB_ACTION.INJECT, ok: true },
+            {
+                tabId: 1, hostname: 'first.test', action: TAB_ACTION.INJECT, ok: false,
+            },
+            {
+                tabId: 2, hostname: 'second.test', action: TAB_ACTION.INJECT, ok: true,
+            },
         ]);
     });
 
@@ -667,16 +683,15 @@ describe("DocumentActivationCoordinator", () => {
         vi.useFakeTimers();
         try {
             const fake = fakes([
-                "https://stalled.test/page",
-                "https://ready.test/page",
+                'https://stalled.test/page',
+                'https://ready.test/page',
             ]);
-            fake.tabs.sendMessage.mockImplementation((tabId, message) => tabId === 1
-                ? new Promise(() => undefined)
-                : Promise.resolve(acknowledgePolicy(message)));
-            fake.scripting.executeScript.mockImplementation((input) =>
-                input.target.tabId === 1
-                    ? new Promise(() => undefined)
-                    : Promise.resolve([{ frameId: 0 }]));
+            fake.tabs.sendMessage.mockImplementation((tabId, message) => (tabId === 1
+                ? new Promise(() => {})
+                : Promise.resolve(acknowledgePolicy(message))));
+            fake.scripting.executeScript.mockImplementation((input) => (input.target.tabId === 1
+                ? new Promise(() => {})
+                : Promise.resolve([{ frameId: 0 }])));
             const coordinator = new DocumentActivationCoordinator(fake);
 
             const reconciliation = coordinator.reconcile({
@@ -689,13 +704,13 @@ describe("DocumentActivationCoordinator", () => {
 
             expect(result.tabs).toContainEqual({
                 tabId: 1,
-                hostname: "stalled.test",
+                hostname: 'stalled.test',
                 action: TAB_ACTION.INJECT,
                 ok: false,
             });
             expect(result.tabs).toContainEqual({
                 tabId: 2,
-                hostname: "ready.test",
+                hostname: 'ready.test',
                 action: TAB_ACTION.INJECT,
                 ok: true,
             });
@@ -704,12 +719,12 @@ describe("DocumentActivationCoordinator", () => {
         }
     });
 
-    it("reports registration failure when registration lookup never settles", async () => {
+    it('reports registration failure when registration lookup never settles', async () => {
         vi.useFakeTimers();
         try {
-            const fake = fakes(["https://example.test/page"]);
+            const fake = fakes(['https://example.test/page']);
             fake.scripting.getRegisteredContentScripts.mockImplementation(
-                () => new Promise<never>(() => undefined),
+                () => new Promise<never>(() => {}),
             );
             const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -737,11 +752,11 @@ describe("DocumentActivationCoordinator", () => {
         }
     });
 
-    it("reports tab-query failure when the matching query never settles", async () => {
+    it('reports tab-query failure when the matching query never settles', async () => {
         vi.useFakeTimers();
         try {
-            const fake = fakes(["https://example.test/page"]);
-            fake.tabs.query.mockImplementation(() => new Promise<never>(() => undefined));
+            const fake = fakes(['https://example.test/page']);
+            fake.tabs.query.mockImplementation(() => new Promise<never>(() => {}));
             const coordinator = new DocumentActivationCoordinator(fake);
 
             const reconciliation = coordinator.reconcile({
@@ -761,12 +776,12 @@ describe("DocumentActivationCoordinator", () => {
         }
     });
 
-    it("reports injection failure when frame enumeration never settles", async () => {
+    it('reports injection failure when frame enumeration never settles', async () => {
         vi.useFakeTimers();
         try {
-            const fake = fakes(["https://www.facebook.com/home"]);
+            const fake = fakes(['https://www.facebook.com/home']);
             fake.tabs.getAllFrames.mockImplementation(
-                () => new Promise<never>(() => undefined),
+                () => new Promise<never>(() => {}),
             );
             const coordinator = new DocumentActivationCoordinator(fake);
 
@@ -779,7 +794,7 @@ describe("DocumentActivationCoordinator", () => {
             await expect(reconciliation).resolves.toMatchObject({
                 tabs: [{
                     tabId: 1,
-                    hostname: "www.facebook.com",
+                    hostname: 'www.facebook.com',
                     action: TAB_ACTION.INJECT,
                     ok: false,
                 }],
@@ -789,14 +804,13 @@ describe("DocumentActivationCoordinator", () => {
         }
     });
 
-    it("reports injection failure when the Facebook bridge never settles", async () => {
+    it('reports injection failure when the Facebook bridge never settles', async () => {
         vi.useFakeTimers();
         try {
-            const fake = fakes(["https://www.facebook.com/home"]);
-            fake.scripting.executeScript.mockImplementation((input) =>
-                "frameIds" in input.target
-                    ? new Promise<never>(() => undefined)
-                    : Promise.resolve([{ frameId: 0 }]));
+            const fake = fakes(['https://www.facebook.com/home']);
+            fake.scripting.executeScript.mockImplementation((input) => ('frameIds' in input.target
+                ? new Promise<never>(() => {})
+                : Promise.resolve([{ frameId: 0 }])));
             const coordinator = new DocumentActivationCoordinator(fake);
 
             const reconciliation = coordinator.reconcile({
@@ -808,7 +822,7 @@ describe("DocumentActivationCoordinator", () => {
             await expect(reconciliation).resolves.toMatchObject({
                 tabs: [{
                     tabId: 1,
-                    hostname: "www.facebook.com",
+                    hostname: 'www.facebook.com',
                     action: TAB_ACTION.INJECT,
                     ok: false,
                 }],
@@ -819,21 +833,21 @@ describe("DocumentActivationCoordinator", () => {
     });
 
     it(
-        "restores and reprocesses every reachable frame across site and global policy changes",
+        'restores and reprocesses every reachable frame across site and global policy changes',
         async () => {
             let siteEnabled = true;
             let revision = 1;
             const first = installedFrame(() => ({ enabled: siteEnabled, revision }));
             const second = installedFrame(() => ({ enabled: siteEnabled, revision }));
             const frames = [first, second];
-            const fake = fakes(["https://example.test/page"]);
+            const fake = fakes(['https://example.test/page']);
             let rejectedBroadcasts = 1;
             fake.tabs.sendMessage.mockImplementation(async (_tabId, message, options) => {
                 const frame = frames[options?.frameId ?? -1];
                 const response = frame?.messages.dispatch(message);
                 if (rejectedBroadcasts > 0) {
                     rejectedBroadcasts -= 1;
-                    throw new Error("nondeterministic broadcast response");
+                    throw new Error('nondeterministic broadcast response');
                 }
                 return response as ReturnType<typeof acknowledgePolicy>;
             });
@@ -854,7 +868,7 @@ describe("DocumentActivationCoordinator", () => {
                     policy: ACTIVATION_POLICY.ENABLED,
                     siteScope: {
                         mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-                        excludedSites: ["example.test"],
+                        excludedSites: ['example.test'],
                         allowedSites: [],
                     },
                 });
@@ -863,7 +877,9 @@ describe("DocumentActivationCoordinator", () => {
                 expect(frames.map(hasOutput)).toEqual([false, false]);
                 expect(siteDisabled.failures).toEqual([]);
                 expect(siteDisabled.tabs).toEqual([
-                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.INJECT, ok: true },
+                    {
+                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.INJECT, ok: true,
+                    },
                 ]);
 
                 siteEnabled = true;
@@ -876,7 +892,9 @@ describe("DocumentActivationCoordinator", () => {
                 await Promise.resolve();
                 expect(frames.map(hasOutput)).toEqual([true, true]);
                 expect(siteEnabledResult.tabs).toEqual([
-                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.INJECT, ok: true },
+                    {
+                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.INJECT, ok: true,
+                    },
                 ]);
 
                 revision = 5;
@@ -886,7 +904,9 @@ describe("DocumentActivationCoordinator", () => {
                 });
                 expect(frames.map(hasOutput)).toEqual([false, false]);
                 expect(globallyDisabled.tabs).toEqual([
-                    { tabId: 1, hostname: "example.test", action: TAB_ACTION.TEARDOWN, ok: true },
+                    {
+                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.TEARDOWN, ok: true,
+                    },
                 ]);
             } finally {
                 first.handle.teardown();

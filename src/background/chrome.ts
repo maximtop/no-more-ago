@@ -2,10 +2,8 @@
  * @file Chrome API wiring for the background application and runtime messages.
  */
 
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-/* eslint-disable @typescript-eslint/no-confusing-void-expression */
-import { BackgroundApplication } from "./application";
+import { DIAGNOSTIC_BROWSER_FAMILY } from '../shared/diagnostics/contracts';
+import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from '../shared/extension-files';
 import {
     CLEAR_DIAGNOSTICS_MESSAGE,
     DIAGNOSTICS_ERROR,
@@ -23,43 +21,43 @@ import {
     SET_SITE_ENABLED_MESSAGE,
     SET_SITE_SCOPE_MODE_MESSAGE,
     type BackgroundMessage,
-} from "../shared/messaging/contracts";
-import { SETTINGS_CHANGED_MESSAGE } from "../shared/messaging/settings-notifications";
+} from '../shared/messaging/contracts';
 import {
     DIAGNOSTIC_EVENT_MESSAGE,
     type DiagnosticEventMessage,
-} from "../shared/messaging/document-messages";
+} from '../shared/messaging/document-messages';
+import { createUnavailableDocumentState } from '../shared/messaging/document-state';
+import { SETTINGS_CHANGED_MESSAGE } from '../shared/messaging/settings-notifications';
 import {
     createUnavailableDebugState,
     createUnavailableDisplayState,
     createUnavailablePopupState,
     createUnavailableSitesState,
-} from "../shared/messaging/view-state";
+} from '../shared/messaging/view-state';
 import {
     SETTINGS_PERSISTENCE_ERROR,
     SITE_SETTINGS_SURFACE,
     type SiteSettingsSurface,
-} from "../shared/messaging/view-state-values";
-import type {
-    UnavailablePopupState,
-    UnavailableSitesState,
-} from "../shared/messaging/view-state";
-import { createUnavailableDocumentState } from "../shared/messaging/document-state";
-import { SettingsService, type SettingsStorage } from "./settings/service";
-import { DiagnosticJournal, type DiagnosticStorage } from "./diagnostics/journal";
-import type { DiagnosticBrowserFamily } from "../shared/diagnostics/events";
-import { DocumentActivationCoordinator } from "./runtime/document-activation";
-import type { ScriptingRuntime } from "./runtime/scripting";
-import type { TabsRuntime } from "./runtime/tabs";
-import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from "../shared/extension-files";
-import { LIFECYCLE_REASON, type SettingsBroadcast } from "./application/contracts";
-import { DIAGNOSTIC_BROWSER_FAMILY } from "../shared/diagnostics/contracts";
-import { parseHttpUrl } from "../shared/url/http";
-import type { DisplaySettings } from "../shared/settings/snapshot";
+} from '../shared/messaging/view-state-values';
+import { parseHttpUrl } from '../shared/url/http';
+
+import { BackgroundApplication } from './application';
+import { LIFECYCLE_REASON, type SettingsBroadcast } from './application/contracts';
+import { DiagnosticJournal, type DiagnosticStorage } from './diagnostics/journal';
+import { DocumentActivationCoordinator } from './runtime/document-activation';
 import {
     installDocumentRouteUpdates,
     type HistoryStateUpdateSource,
-} from "./runtime/document-route-updates";
+} from './runtime/document-route-updates';
+import { SettingsService, type SettingsStorage } from './settings/service';
+
+import type { ScriptingRuntime } from './runtime/scripting';
+import type { TabsRuntime } from './runtime/tabs';
+import type { DiagnosticBrowserFamily } from '../shared/diagnostics/events';
+import type {
+    UnavailablePopupState,
+    UnavailableSitesState,
+} from '../shared/messaging/view-state';
 
 /**
  * Announces committed settings revisions to open extension pages.
@@ -88,13 +86,13 @@ const settingsBroadcast: SettingsBroadcast = {
 function installApplication(): BackgroundApplication | undefined {
     const candidate = chrome as unknown as {
         readonly storage?: {
-            readonly local?: Pick<DiagnosticStorage, "get" | "set"> & {
+            readonly local?: Pick<DiagnosticStorage, 'get' | 'set'> & {
                 readonly remove?: (keys: string | readonly string[]) => Promise<void>;
             };
         };
         readonly tabs?: {
-            readonly query?: TabsRuntime["query"];
-            readonly sendMessage?: TabsRuntime["sendMessage"];
+            readonly query?: TabsRuntime['query'];
+            readonly sendMessage?: TabsRuntime['sendMessage'];
         };
         readonly webNavigation?: {
             readonly getAllFrames?: typeof chrome.webNavigation.getAllFrames;
@@ -110,15 +108,15 @@ function installApplication(): BackgroundApplication | undefined {
         };
     };
     if (
-        !candidate.storage?.local ||
-        !candidate.tabs?.query ||
-        !candidate.tabs.sendMessage ||
-        !candidate.webNavigation?.getAllFrames ||
-        !candidate.scripting?.getRegisteredContentScripts ||
-        !candidate.scripting.registerContentScripts ||
-        !candidate.scripting.updateContentScripts ||
-        !candidate.scripting.unregisterContentScripts ||
-        !candidate.scripting.executeScript
+        !candidate.storage?.local
+        || !candidate.tabs?.query
+        || !candidate.tabs.sendMessage
+        || !candidate.webNavigation?.getAllFrames
+        || !candidate.scripting?.getRegisteredContentScripts
+        || !candidate.scripting.registerContentScripts
+        || !candidate.scripting.updateContentScripts
+        || !candidate.scripting.unregisterContentScripts
+        || !candidate.scripting.executeScript
     ) {
         return undefined;
     }
@@ -127,57 +125,49 @@ function installApplication(): BackgroundApplication | undefined {
         get: (keys) => candidate.storage?.local?.get(keys) as Promise<
             Readonly<Record<string, unknown>>
         >,
-        set: (items: Record<string, unknown>) =>
-            candidate.storage?.local?.set(items) as Promise<void>,
+        set: (items: Record<string, unknown>) => candidate.storage?.local?.set(items) as Promise<void>,
         remove: (keys) => candidate.storage?.local?.remove?.(keys) ?? Promise.resolve(),
     };
     const scripting: ScriptingRuntime = {
-        getRegisteredContentScripts: (filter) =>
-            candidate.scripting
-                ?.getRegisteredContentScripts?.(filter as { ids: string[] })
-                .then((scripts) =>
-                    scripts.map((script) => ({
-                        id: script.id,
-                        matches: script.matches,
-                        js: script.js,
-                        runAt: script.runAt,
-                        allFrames: script.allFrames,
-                        persistAcrossSessions: script.persistAcrossSessions,
-                        world: script.world,
-                    })),
-                ) ?? Promise.reject(new Error("Scripting is unavailable")),
-        registerContentScripts: (scripts) =>
-            candidate.scripting?.registerContentScripts?.(scripts) ??
-            Promise.reject(new Error("Scripting is unavailable")),
-        updateContentScripts: (scripts) =>
-            candidate.scripting?.updateContentScripts?.(scripts) ??
-            Promise.reject(new Error("Scripting is unavailable")),
-        unregisterContentScripts: (filter) =>
-            candidate.scripting?.unregisterContentScripts?.(filter) ??
-            Promise.reject(new Error("Scripting is unavailable")),
-        executeScript: (input) =>
-            candidate.scripting?.executeScript?.(
-                input as unknown as Parameters<typeof chrome.scripting.executeScript>[0],
-            ).then((results) => results.map((result) => ({
-                frameId: result.frameId,
-                result: result.result,
-            }))) ?? Promise.reject(new Error("Scripting is unavailable")),
+        getRegisteredContentScripts: (filter) => candidate.scripting
+            ?.getRegisteredContentScripts?.(filter)
+            .then((scripts) => scripts.map((script) => ({
+                id: script.id,
+                matches: script.matches,
+                js: script.js,
+                runAt: script.runAt,
+                allFrames: script.allFrames,
+                persistAcrossSessions: script.persistAcrossSessions,
+                world: script.world,
+            }))) ?? Promise.reject(new Error('Scripting is unavailable')),
+        registerContentScripts: (scripts) => candidate.scripting?.registerContentScripts?.(scripts)
+            ?? Promise.reject(new Error('Scripting is unavailable')),
+        updateContentScripts: (scripts) => candidate.scripting?.updateContentScripts?.(scripts)
+            ?? Promise.reject(new Error('Scripting is unavailable')),
+        unregisterContentScripts: (filter) => candidate.scripting?.unregisterContentScripts?.(filter)
+            ?? Promise.reject(new Error('Scripting is unavailable')),
+        executeScript: (input) => candidate.scripting?.executeScript?.(
+            input as unknown as Parameters<typeof chrome.scripting.executeScript>[0],
+        ).then((results) => results.map((result) => ({
+            frameId: result.frameId,
+            result: result.result,
+        }))) ?? Promise.reject(new Error('Scripting is unavailable')),
     };
     const tabs: TabsRuntime = {
         query: async (query) => {
             const result = await candidate.tabs?.query?.(query);
-            return (result ?? []).flatMap((tab) =>
-                tab.id === undefined
-                    ? []
-                    : [tab.url === undefined ? { id: tab.id } : { id: tab.id, url: tab.url }],
-            );
+            return (result ?? []).flatMap((tab) => (tab.id === undefined
+                ? []
+                : [tab.url === undefined ? { id: tab.id } : { id: tab.id, url: tab.url }]));
         },
-        sendMessage: (tabId, message, options) =>
-            candidate.tabs?.sendMessage?.(tabId, message, options) as Promise<unknown>,
+        sendMessage: (tabId, message, options) => candidate.tabs?.sendMessage?.(
+            tabId,
+            message,
+            options,
+        ) as Promise<unknown>,
         getAllFrames: async (tabId) => {
             const frames = await candidate.webNavigation?.getAllFrames?.({ tabId });
-            return (frames ?? []).flatMap(({ frameId, url }) =>
-                parseHttpUrl(url) ? [{ frameId, url }] : []);
+            return (frames ?? []).flatMap(({ frameId, url }) => (parseHttpUrl(url) ? [{ frameId, url }] : []));
         },
     };
     const coordinator = new DocumentActivationCoordinator({ scripting, tabs });
@@ -187,12 +177,13 @@ function installApplication(): BackgroundApplication | undefined {
             tabs,
         });
     }
-    const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
-    const browserFamily: DiagnosticBrowserFamily = /Firefox|FxiOS/iu.test(userAgent)
-        ? DIAGNOSTIC_BROWSER_FAMILY.FIREFOX
-        : /Chrome|Chromium|Edg|OPR/iu.test(userAgent)
-            ? DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM
-            : DIAGNOSTIC_BROWSER_FAMILY.OTHER;
+    const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+    let browserFamily: DiagnosticBrowserFamily = DIAGNOSTIC_BROWSER_FAMILY.OTHER;
+    if (/Firefox|FxiOS/iu.test(userAgent)) {
+        browserFamily = DIAGNOSTIC_BROWSER_FAMILY.FIREFOX;
+    } else if (/Chrome|Chromium|Edg|OPR/iu.test(userAgent)) {
+        browserFamily = DIAGNOSTIC_BROWSER_FAMILY.CHROMIUM;
+    }
     let extensionVersion: string | undefined;
     try {
         extensionVersion = chrome.runtime?.getManifest?.().version;
@@ -219,6 +210,7 @@ const application = installApplication();
  * Accepts only messages sent from this extension's own options page or popup.
  *
  * @param sender - Runtime message sender metadata.
+ *
  * @returns - Whether the sender is one of this extension's settings surfaces.
  */
 function isTrustedSurfaceSender(sender: chrome.runtime.MessageSender): boolean {
@@ -237,6 +229,7 @@ function isTrustedSurfaceSender(sender: chrome.runtime.MessageSender): boolean {
  * Builds the fail-closed response returned when a settings command itself rejects.
  *
  * @param state - Unavailable projection for the command's surface.
+ *
  * @returns - Failed command response carrying the projection.
  */
 function unavailableCommand<TState>(state: TState): {
@@ -251,6 +244,7 @@ function unavailableCommand<TState>(state: TState): {
  * Selects the unavailable projection for a popup or sites request.
  *
  * @param surface - Surface that issued the request.
+ *
  * @returns - Unavailable popup or sites projection.
  */
 function unavailableSurfaceState(
@@ -269,14 +263,14 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         /**
          * Sends the response once; a later attempt from the same handler is ignored.
          *
-         * @param value - Response payload.
+         * @param payload - Response payload.
          */
-        const sendOnce = (value: unknown): void => {
+        const sendOnce = (payload: unknown): void => {
             if (responseSent) {
                 return;
             }
             responseSent = true;
-            sendResponse(value);
+            sendResponse(payload);
         };
         if (message?.type === DIAGNOSTIC_EVENT_MESSAGE) {
             void application.recordDocumentEvent(message.event, sender).then(
@@ -356,16 +350,14 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         }
         if (request.type === SET_DISPLAY_SETTINGS_MESSAGE) {
             void application
-                .setDisplaySettings(request.display as DisplaySettings)
-                .then(sendOnce, () =>
-                    sendOnce(unavailableCommand(createUnavailableDisplayState())));
+                .setDisplaySettings(request.display)
+                .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableDisplayState())));
             return true;
         }
         if (request.type === SET_APPEARANCE_MESSAGE) {
             void application
                 .setAppearance(request.appearance)
-                .then(sendOnce, () =>
-                    sendOnce(unavailableCommand(createUnavailableDisplayState())));
+                .then(sendOnce, () => sendOnce(unavailableCommand(createUnavailableDisplayState())));
             return true;
         }
         if (request.type === SET_GLOBAL_ENABLED_MESSAGE) {
@@ -407,6 +399,6 @@ if (application && chrome.runtime?.onMessage?.addListener) {
         void application.requestLifecycle(LIFECYCLE_REASON.INSTALLED);
     });
     void application.ensureReady(LIFECYCLE_REASON.COLD_WORKER).catch((error: unknown) => {
-        console.error("Background initialization failed", error);
+        console.error('Background initialization failed', error);
     });
 }

@@ -4,6 +4,7 @@
  * @file Typed client for popup requests and ambiguous-response recovery.
  */
 
+import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from '../shared/client-result';
 import {
     GET_DIAGNOSTICS_SNAPSHOT_MESSAGE,
     GET_POPUP_STATE_MESSAGE,
@@ -13,17 +14,17 @@ import {
     DIAGNOSTICS_ERROR,
     type GetDiagnosticsSnapshotResponse,
     type BackgroundMessage,
-} from "../shared/messaging/contracts";
-import type { PopupState } from "../shared/messaging/view-state";
+} from '../shared/messaging/contracts';
+import { SITE_SETTINGS_SURFACE } from '../shared/messaging/view-state-values';
+
+import type { DiagnosticsSnapshotResult } from '../shared/diagnostics/download';
 import type {
     ResetAllSettingsResponse,
     SetGlobalEnabledResponse,
     SetSiteEnabledResponse,
-} from "../shared/messaging/responses";
-import { SITE_SETTINGS_SURFACE } from "../shared/messaging/view-state-values";
-import type { SiteScopeMode } from "../shared/settings/site-scope";
-import { CLIENT_RESULT_KIND, runMutation, type MutationResult } from "../shared/client-result";
-import type { DiagnosticsSnapshotResult } from "../shared/diagnostics/download";
+} from '../shared/messaging/responses';
+import type { PopupState } from '../shared/messaging/view-state';
+import type { SiteScopeMode } from '../shared/settings/site-scope';
 
 /**
  * Sends a popup request to the extension runtime.
@@ -91,7 +92,7 @@ export class PopupClient {
         const response = await this.transport.sendMessage({ type: GET_POPUP_STATE_MESSAGE });
         const state = response as PopupState | undefined;
         if (!state) {
-            throw new Error("Missing popup state response");
+            throw new Error('Missing popup state response');
         }
         return state;
     }
@@ -100,6 +101,7 @@ export class PopupClient {
      * Changes the global enabled setting.
      *
      * @param enabled - Whether the extension should process supported pages.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setGlobalEnabled(enabled: boolean): Promise<PopupSetResult> {
@@ -110,9 +112,9 @@ export class PopupClient {
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
             () => this.getState(),
-            (response: SetGlobalEnabledResponse):
-                response is PopupSurfaceResponse<SetGlobalEnabledResponse> =>
-                response.surface === SITE_SETTINGS_SURFACE.POPUP,
+            (response: SetGlobalEnabledResponse): response is PopupSurfaceResponse<SetGlobalEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.POPUP
+            ),
         );
     }
 
@@ -122,6 +124,7 @@ export class PopupClient {
      * @param hostname - Exact hostname whose setting should change.
      * @param enabled - Whether processing should be enabled for the hostname.
      * @param mode - Scope mode rendered when the decision was made.
+     *
      * @returns - The confirmed response, or a state reread after an ambiguous response.
      */
     public setSiteEnabled(
@@ -138,9 +141,9 @@ export class PopupClient {
                 surface: SITE_SETTINGS_SURFACE.POPUP,
             }),
             () => this.getState(),
-            (response: SetSiteEnabledResponse):
-                response is PopupSurfaceResponse<SetSiteEnabledResponse> =>
-                response.surface === SITE_SETTINGS_SURFACE.POPUP,
+            (response: SetSiteEnabledResponse): response is PopupSurfaceResponse<SetSiteEnabledResponse> => (
+                response.surface === SITE_SETTINGS_SURFACE.POPUP
+            ),
         );
     }
 
@@ -189,16 +192,17 @@ export class PopupClient {
  * Creates a popup client using an injected transport or the extension runtime.
  *
  * @param transport - Optional transport for tests or embedded callers.
+ *
  * @returns - A client whose default transport rejects when the extension runtime is unavailable.
  */
 export function createPopupClient(transport?: PopupTransport): PopupClient {
     if (transport) {
         return new PopupClient(transport);
     }
-    if (typeof chrome !== "undefined") {
+    if (typeof chrome !== 'undefined') {
         return new PopupClient(chrome.runtime);
     }
     return new PopupClient({
-        sendMessage: () => Promise.reject(new Error("Extension runtime is unavailable")),
+        sendMessage: () => Promise.reject(new Error('Extension runtime is unavailable')),
     });
 }

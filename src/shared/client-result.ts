@@ -6,27 +6,26 @@
  * Result kinds shared by popup and options clients and their consumers.
  */
 export const CLIENT_RESULT_KIND = {
-    RESPONSE: "response",
-    AMBIGUOUS: "ambiguous",
-    ERROR: "error",
+    RESPONSE: 'response',
+    AMBIGUOUS: 'ambiguous',
+    ERROR: 'error',
 } as const;
 
 /**
  * Outcome of one settings mutation: the background response, or the state
  * reread after that response was lost.
  */
-export type MutationResult<TResponse, TState> =
-    | {
-        /**
-         * Indicates that the background answered the command.
-         */
-        readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
+export type MutationResult<TResponse, TState> = | {
+    /**
+     * Indicates that the background answered the command.
+     */
+    readonly kind: typeof CLIENT_RESULT_KIND.RESPONSE;
 
-        /**
-         * Result of the command as the background reported it.
-         */
-        readonly response: TResponse;
-    }
+    /**
+     * Result of the command as the background reported it.
+     */
+    readonly response: TResponse;
+}
     | {
         /**
          * Indicates that command completion could not be determined directly.
@@ -40,6 +39,23 @@ export type MutationResult<TResponse, TState> =
     };
 
 /**
+ * Reads current state after a mutation response is lost.
+ *
+ * @param reread - Reads the surface's current state.
+ *
+ * @returns - An ambiguous result carrying the state when the reread succeeds.
+ */
+async function rereadAfterAmbiguousResponse<TResponse, TState>(
+    reread: () => Promise<TState>,
+): Promise<MutationResult<TResponse, TState>> {
+    try {
+        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state: await reread() };
+    } catch {
+        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
+    }
+}
+
+/**
  * Dispatches one mutation exactly once and rereads state when no usable response
  * arrives. The mutation is never retried, because a lost response may follow a
  * committed write. The background produces the response, so its shape is the
@@ -49,6 +65,7 @@ export type MutationResult<TResponse, TState> =
  * @param send - Sends the mutation and resolves with the background response.
  * @param reread - Reads the surface's current state after a lost response.
  * @param accept - Optional discriminant check selecting this surface's response.
+ *
  * @returns - The background response, or an ambiguous outcome with the reread state.
  */
 export async function runMutation<TResponse, TState, TAccepted extends TResponse = TResponse>(
@@ -72,20 +89,4 @@ export async function runMutation<TResponse, TState, TAccepted extends TResponse
     return accept(result)
         ? { kind: CLIENT_RESULT_KIND.RESPONSE, response: result }
         : rereadAfterAmbiguousResponse(reread);
-}
-
-/**
- * Reads current state after a mutation response is lost.
- *
- * @param reread - Reads the surface's current state.
- * @returns - An ambiguous result carrying the state when the reread succeeds.
- */
-async function rereadAfterAmbiguousResponse<TResponse, TState>(
-    reread: () => Promise<TState>,
-): Promise<MutationResult<TResponse, TState>> {
-    try {
-        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS, state: await reread() };
-    } catch {
-        return { kind: CLIENT_RESULT_KIND.AMBIGUOUS };
-    }
 }

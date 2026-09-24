@@ -6,16 +6,15 @@
  * Stable identities for the captured YouTube list fixtures.
  */
 export const YOUTUBE_LIST_FIXTURE_ID = {
-    HOME: "home",
-    SEARCH: "search",
-    CHANNEL_VIDEOS: "channel-videos",
+    HOME: 'home',
+    SEARCH: 'search',
+    CHANNEL_VIDEOS: 'channel-videos',
 } as const;
 
 /**
  * Identity accepted by boundary-specific YouTube list fixture assertions.
  */
-export type YouTubeListFixtureId =
-    (typeof YOUTUBE_LIST_FIXTURE_ID)[keyof typeof YOUTUBE_LIST_FIXTURE_ID];
+export type YouTubeListFixtureId = (typeof YOUTUBE_LIST_FIXTURE_ID)[keyof typeof YOUTUBE_LIST_FIXTURE_ID];
 
 /**
  * Shared identity, path, and URL for every captured YouTube list fixture.
@@ -23,25 +22,25 @@ export type YouTubeListFixtureId =
 export const YOUTUBE_LIST_FIXTURES = [
     {
         id: YOUTUBE_LIST_FIXTURE_ID.HOME,
-        name: "Home",
+        name: 'Home',
         fixturePath:
-            "tests/src/content-script/fixtures/youtube/home-modern-relative-only.html",
-        url: "https://www.youtube.com/",
+            'tests/src/content-script/fixtures/youtube/home-modern-relative-only.html',
+        url: 'https://www.youtube.com/',
     },
     {
         id: YOUTUBE_LIST_FIXTURE_ID.SEARCH,
-        name: "Search",
+        name: 'Search',
         fixturePath:
-            "tests/src/content-script/fixtures/youtube/search-legacy-relative-only.html",
-        url: "https://www.youtube.com/results?search_query=fixture",
+            'tests/src/content-script/fixtures/youtube/search-legacy-relative-only.html',
+        url: 'https://www.youtube.com/results?search_query=fixture',
     },
     {
         id: YOUTUBE_LIST_FIXTURE_ID.CHANNEL_VIDEOS,
-        name: "Channel Videos",
+        name: 'Channel Videos',
         fixturePath:
-            "tests/src/content-script/fixtures/youtube/" +
-            "channel-videos-modern-relative-only.html",
-        url: "https://www.youtube.com/@fixture-channel/videos",
+            'tests/src/content-script/fixtures/youtube/'
+            + 'channel-videos-modern-relative-only.html',
+        url: 'https://www.youtube.com/@fixture-channel/videos',
     },
 ] as const;
 
@@ -51,6 +50,7 @@ export const YOUTUBE_LIST_FIXTURES = [
  * @param publication - Publication value placed in the approved field.
  * @param videoId - Primary player video identity.
  * @param externalVideoId - Microformat video identity.
+ *
  * @returns - Inert assignment text accepted by the recording parser when values are valid.
  */
 export function youtubePlayerResponseAssignment(

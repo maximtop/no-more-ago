@@ -2,13 +2,14 @@
  * @file Document runtime state projected by the background context.
  */
 
-import type { UNAVAILABLE_TIME_ZONE_ERROR } from "../date/presentation-errors";
-import type { DisplaySettings } from "../settings/snapshot";
 import {
     SETTINGS_STATE_FAILURE,
     STATE_AVAILABILITY,
     type SettingsStateFailure,
-} from "./view-state-values";
+} from './view-state-values';
+
+import type { UNAVAILABLE_TIME_ZONE_ERROR } from '../date/presentation-errors';
+import type { DisplaySettings } from '../settings/snapshot';
 
 /**
  * Document state projected while settings are readable.
@@ -89,6 +90,7 @@ export type DocumentState = ReadyDocumentState | UnavailableDocumentState;
  * Builds the fail-closed document state used when settings cannot be read safely.
  *
  * @param failure - Settings failure that made the state unavailable.
+ *
  * @returns - Complete unavailable document state.
  */
 export function createUnavailableDocumentState(

@@ -8,6 +8,7 @@
  * @param root - Document or element subtree to inspect.
  * @param selector - Selector that bounds descendant discovery.
  * @param accepts - Adapter predicate applied to both the root and descendants.
+ *
  * @returns - Accepted elements in root-first document order.
  */
 export function discoverElements(
