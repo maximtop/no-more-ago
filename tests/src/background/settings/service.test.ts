@@ -36,19 +36,23 @@ const v6 = (
     siteScope: SiteScopePolicy = DEFAULT_SITE_SCOPE,
     display: DisplaySettings = { formatMode: 'system', timeZone: { mode: 'system' } },
     debugEnabled = false,
-): SettingsSnapshot => createSettingsSnapshot({
-    revision,
-    globalEnabled,
-    siteScope,
-    display,
-    debugEnabled,
-});
+): SettingsSnapshot => {
+    return createSettingsSnapshot({
+        revision,
+        globalEnabled,
+        siteScope,
+        display,
+        debugEnabled,
+    });
+};
 
-const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
-    mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-    excludedSites: hostnames,
-    allowedSites: [],
-});
+const excluding = (...hostnames: readonly string[]): SiteScopePolicy => {
+    return {
+        mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        excludedSites: hostnames,
+        allowedSites: [],
+    };
+};
 
 /**
  * Creates observable in-memory storage for settings service tests.

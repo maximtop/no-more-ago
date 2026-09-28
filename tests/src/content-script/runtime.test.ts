@@ -687,9 +687,11 @@ describe('installContentRuntime', () => {
          *
          * @returns - Pending document-state promise.
          */
-        const staleLoader = () => new Promise<unknown>((resolve) => {
-            completeStaleHydration = resolve;
-        });
+        const staleLoader = () => {
+            return new Promise<unknown>((resolve) => {
+                completeStaleHydration = resolve;
+            });
+        };
         const first = install(source, staleLoader);
 
         expect(source.dispatch(policy(5, false))).toEqual(policyAcknowledgement(5));

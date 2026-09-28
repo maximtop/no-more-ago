@@ -23,7 +23,9 @@ const scope = (
     mode: SiteScopePolicy['mode'],
     excludedSites: readonly string[] = [],
     allowedSites: readonly string[] = [],
-): SiteScopePolicy => ({ mode, excludedSites, allowedSites });
+): SiteScopePolicy => {
+    return { mode, excludedSites, allowedSites };
+};
 
 describe('site scope decisions', () => {
     it('processes everything except excluded hostnames by default', () => {

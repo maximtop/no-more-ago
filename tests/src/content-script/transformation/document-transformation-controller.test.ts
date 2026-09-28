@@ -412,7 +412,9 @@ describe('DocumentTransformationController', () => {
             participantFactory,
         });
 
-        const construct = (): DocumentTransformationController => new DocumentTransformationController(input);
+        const construct = (): DocumentTransformationController => {
+            return new DocumentTransformationController(input);
+        };
 
         expect(() => [construct(), construct()]).not.toThrow();
         expect(participantFactory).toHaveBeenCalledTimes(2);
@@ -559,9 +561,11 @@ describe('DocumentTransformationController', () => {
 
         try {
             controller.start();
-            const documentOptions = (): MutationObserverInit | undefined => observe.mock.calls
-                .filter(([target]) => target === document)
-                .at(-1)?.[1];
+            const documentOptions = (): MutationObserverInit | undefined => {
+                return observe.mock.calls
+                    .filter(([target]) => target === document)
+                    .at(-1)?.[1];
+            };
             expect(documentOptions()?.characterData).toBeUndefined();
             expect(documentOptions()?.characterDataOldValue).toBeUndefined();
 

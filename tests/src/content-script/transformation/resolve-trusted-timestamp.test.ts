@@ -40,28 +40,32 @@ DERIVED_SOURCE.append(DERIVED_TARGET);
  *
  * @returns - Derived in-place timestamp candidate.
  */
-const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => ({
-    ruleId: LINKEDIN_ADAPTER_ID,
-    source: DERIVED_SOURCE,
-    sourceKind: TIMESTAMP_SOURCE_KIND.LINKEDIN_TIMESTAMP,
-    epochMilliseconds,
-    presentation: {
-        kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
-        target: DERIVED_TARGET,
-    },
-    validationRule: TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS,
-    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-});
+const derivedCandidate = (epochMilliseconds: number): TimestampCandidate => {
+    return {
+        ruleId: LINKEDIN_ADAPTER_ID,
+        source: DERIVED_SOURCE,
+        sourceKind: TIMESTAMP_SOURCE_KIND.LINKEDIN_TIMESTAMP,
+        epochMilliseconds,
+        presentation: {
+            kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+            target: DERIVED_TARGET,
+        },
+        validationRule: TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS,
+        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+    };
+};
 
-const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => ({
-    ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
-    source: document.createElement('div'),
-    sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
-    rawDatetime,
-    presentation: ADJACENT_TIME_PRESENTATION,
-    validationRule: TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
-    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-});
+const unixSecondsCandidate = (rawDatetime: string): TimestampCandidate => {
+    return {
+        ruleId: TELEGRAM_WEB_K_ADAPTER_ID,
+        source: document.createElement('div'),
+        sourceKind: TIMESTAMP_SOURCE_KIND.TELEGRAM_WEB_K_MESSAGE,
+        rawDatetime,
+        presentation: ADJACENT_TIME_PRESENTATION,
+        validationRule: TIMESTAMP_VALIDATION_RULE.UNIX_SECONDS,
+        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+    };
+};
 
 describe('resolveTrustedTimestamp', () => {
     it('resolves an exact ten-digit Unix-seconds source', () => {
@@ -144,15 +148,17 @@ describe('resolveTrustedTimestamp', () => {
     const candidate = (
         rawDatetime: string,
         rule: unknown = TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
-    ) => ({
-        ruleId: 'github',
-        source: document.createElement('relative-time'),
-        sourceKind: 'relative-time' as const,
-        rawDatetime,
-        presentation: ADJACENT_TIME_PRESENTATION,
-        ...(rule === null ? {} : { validationRule: rule }),
-        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
-    }) as unknown as TimestampCandidate;
+    ) => {
+        return {
+            ruleId: 'github',
+            source: document.createElement('relative-time'),
+            sourceKind: 'relative-time' as const,
+            rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
+            ...(rule === null ? {} : { validationRule: rule }),
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+        } as unknown as TimestampCandidate;
+    };
 
     it('preserves a valid derived Unix millisecond instant', () => {
         const epochMilliseconds = 1_704_164_645_678;
@@ -231,15 +237,17 @@ describe('resolveTrustedTimestamp', () => {
      *
      * @returns - Timestamp candidate.
      */
-    const calendarCandidate = (rawDatetime: string): TimestampCandidate => ({
-        ruleId: YOUTUBE_ADAPTER_ID,
-        source: document.createElement('yt-formatted-string'),
-        sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
-        rawDatetime,
-        presentation: ADJACENT_TIME_PRESENTATION,
-        validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
-        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
-    });
+    const calendarCandidate = (rawDatetime: string): TimestampCandidate => {
+        return {
+            ruleId: YOUTUBE_ADAPTER_ID,
+            source: document.createElement('yt-formatted-string'),
+            sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
+            rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        };
+    };
 
     it('preserves a trusted calendar date as a non-instant value', () => {
         const source = document.createElement('yt-formatted-string');
@@ -288,16 +296,18 @@ describe('resolveTrustedTimestamp', () => {
      *
      * @returns - Timestamp candidate.
      */
-    const combinedCandidate = (rawDatetime: string): TimestampCandidate => ({
-        ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
-        source: document.createElement('yt-formatted-string'),
-        sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
-        rawDatetime,
-        presentation: ADJACENT_TIME_PRESENTATION,
-        validationRule:
+    const combinedCandidate = (rawDatetime: string): TimestampCandidate => {
+        return {
+            ruleId: YOUTUBE_PLAYER_RESPONSE_RULE_ID,
+            source: document.createElement('yt-formatted-string'),
+            sourceKind: TIMESTAMP_SOURCE_KIND.YT_FORMATTED_STRING,
+            rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule:
             TIMESTAMP_VALIDATION_RULE.CALENDAR_OR_EXPLICIT_ISO_ZONE,
-        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
-    });
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        };
+    };
 
     it.each([
         ['2024-02-29', RESOLVED_TIMESTAMP_KIND.CALENDAR_DATE],
@@ -453,15 +463,17 @@ describe('resolveTrustedTimestamp', () => {
      *
      * @returns - Timestamp candidate.
      */
-    const htmlCandidate = (rawDatetime: string) => ({
-        ruleId: 'generic-time',
-        source: document.createElement('time'),
-        sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
-        rawDatetime,
-        presentation: ADJACENT_TIME_PRESENTATION,
-        validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
-        visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
-    }) as unknown as TimestampCandidate;
+    const htmlCandidate = (rawDatetime: string) => {
+        return {
+            ruleId: 'generic-time',
+            source: document.createElement('time'),
+            sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+            rawDatetime,
+            presentation: ADJACENT_TIME_PRESENTATION,
+            validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+            visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+        } as unknown as TimestampCandidate;
+    };
 
     it.each([
         ['2026-08-23T10:15Z', '2026-08-23T10:15:00.000Z'],

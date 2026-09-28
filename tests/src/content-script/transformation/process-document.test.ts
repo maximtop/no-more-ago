@@ -865,15 +865,17 @@ describe('processDocument', () => {
              * @returns - Source rule.
              */
             const matchingRule = (id: string, extract: TimestampSourceRule['extract']):
-            TimestampSourceRule => ({
-                id,
-                mutationAttributes: [],
-                matches: () => true,
-                matchesElement: (element) => element === source,
-                discover: () => [source],
-                isRelativePresentation: () => true,
-                extract,
-            });
+            TimestampSourceRule => {
+                return {
+                    id,
+                    mutationAttributes: [],
+                    matches: () => true,
+                    matchesElement: (element) => element === source,
+                    discover: () => [source],
+                    isRelativePresentation: () => true,
+                    extract,
+                };
+            };
             const registry = new AdapterRegistry(
                 [matchingRule('higher', higherExtract)],
                 matchingRule('lower', lowerExtract),

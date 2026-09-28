@@ -8,11 +8,13 @@ import { isCanonicalHostname } from '../../../../src/shared/settings/hostname';
 import { SITE_SCOPE_MODE, type SiteScopePolicy } from '../../../../src/shared/settings/site-scope';
 import { createSettingsSnapshot } from '../../../../src/shared/settings/snapshot';
 
-const excluding = (hostname: string): SiteScopePolicy => ({
-    mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-    excludedSites: [hostname],
-    allowedSites: [],
-});
+const excluding = (hostname: string): SiteScopePolicy => {
+    return {
+        mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        excludedSites: [hostname],
+        allowedSites: [],
+    };
+};
 
 describe('canonical hostnames', () => {
     it('recognizes lowercase exact hostnames only', () => {

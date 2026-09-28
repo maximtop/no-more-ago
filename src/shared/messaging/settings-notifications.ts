@@ -98,9 +98,11 @@ function isSettingsChangedMessage(value: unknown): value is SettingsChangedMessa
  *
  * @returns - Subscription with nothing to cancel.
  */
-export const INERT_SETTINGS_CHANGED_SUBSCRIBER: SubscribeSettingsChanged = () => ({
-    unsubscribe: () => undefined,
-});
+export const INERT_SETTINGS_CHANGED_SUBSCRIBER: SubscribeSettingsChanged = () => {
+    return {
+        unsubscribe: () => undefined,
+    };
+};
 
 /**
  * Creates a subscriber over an extension message runtime.

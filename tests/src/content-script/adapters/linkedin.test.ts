@@ -35,20 +35,24 @@ const COMMENT_ID = '7181895116414517252';
  *
  * @returns - Extraction context that reads current page text.
  */
-const context = (): TimestampExtractionContext => ({
-    url: new URL('https://www.linkedin.com/feed/'),
-    readPageText: (target) => target.data,
-});
+const context = (): TimestampExtractionContext => {
+    return {
+        url: new URL('https://www.linkedin.com/feed/'),
+        readPageText: (target) => target.data,
+    };
+};
 
 /**
  * Creates presentation-only locale evidence for direct classifier tests.
  *
  * @returns - Presentation context that reads current page text.
  */
-const presentationContext = (): TimestampPresentationContext => ({
-    locales: ['en-US'],
-    readPageText: (target) => target.data,
-});
+const presentationContext = (): TimestampPresentationContext => {
+    return {
+        locales: ['en-US'],
+        readPageText: (target) => target.data,
+    };
+};
 
 /**
  * Loads markup and extracts its only accepted LinkedIn source.
