@@ -9,7 +9,8 @@ import {
 } from './relative-presentation';
 import {
     TIMESTAMP_VALIDATION_RULE,
-    type TimestampCandidate, type TimestampPresentationContext,
+    type TimestampCandidate,
+    type TimestampPresentationContext,
 } from './types';
 
 /**
@@ -107,7 +108,9 @@ export function isIncompleteAbsolutePresentation(
             if (hasSeconds) {
                 for (const dateStyle of ['short', 'medium', 'long'] as const) {
                     const formatter = new Intl.DateTimeFormat(locale, {
-                        dateStyle, timeStyle: 'short', timeZone,
+                        dateStyle,
+                        timeStyle: 'short',
+                        timeZone,
                     });
                     if (label === normalized(formatter.format(instant))) {
                         return true;

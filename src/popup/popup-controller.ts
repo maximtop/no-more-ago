@@ -3,7 +3,11 @@
  */
 
 import {
-    useCallback, useEffect, useMemo, useRef, useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 
 import { downloadDiagnosticsSnapshot } from '../shared/diagnostics/download';

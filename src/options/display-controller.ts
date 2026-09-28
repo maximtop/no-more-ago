@@ -4,7 +4,12 @@
 
 import { useMachine } from '@xstate/react';
 import {
-    assertEvent, assign, fromPromise, setup, waitFor, type SnapshotFrom,
+    assertEvent,
+    assign,
+    fromPromise,
+    setup,
+    waitFor,
+    type SnapshotFrom,
 } from 'xstate';
 
 import { CLIENT_RESULT_KIND } from '../shared/client-result';

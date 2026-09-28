@@ -8,7 +8,10 @@ import path from 'node:path';
 import { sources, Compilation } from '@rspack/core';
 
 import {
-    BROWSER, BUILD_MODE, isBrowser, isBuildMode,
+    BROWSER,
+    BUILD_MODE,
+    isBrowser,
+    isBuildMode,
 } from './scripts/build/contracts.ts';
 import {
     EXTENSION_ICON_BASENAME,

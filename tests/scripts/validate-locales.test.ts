@@ -17,7 +17,10 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import {
-    afterEach, describe, expect, it,
+    afterEach,
+    describe,
+    expect,
+    it,
 } from 'vitest';
 
 const execFileAsync = promisify(execFile);

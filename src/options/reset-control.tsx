@@ -3,7 +3,11 @@
  */
 
 import {
-    Alert, Box, Stack, Text, Title,
+    Alert,
+    Box,
+    Stack,
+    Text,
+    Title,
 } from '@mantine/core';
 
 import { t, type MessageKey } from '../shared/i18n/translator';

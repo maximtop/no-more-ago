@@ -4,7 +4,10 @@
 
 import { spawn } from 'node:child_process';
 import {
-    cpSync, mkdtempSync, rmSync, symlinkSync,
+    cpSync,
+    mkdtempSync,
+    rmSync,
+    symlinkSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';

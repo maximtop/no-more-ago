@@ -258,7 +258,10 @@ describe('resolveTrustedTimestamp', () => {
             source,
             sourceDatetime: '2024-02-29',
             calendarDate: {
-                isoDate: '2024-02-29', year: 2024, month: 2, day: 29,
+                isoDate: '2024-02-29',
+                year: 2024,
+                month: 2,
+                day: 29,
             },
             validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
             visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,

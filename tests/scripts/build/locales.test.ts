@@ -10,7 +10,9 @@ import { describe, expect, it } from 'vitest';
 
 import { BROWSER, BROWSERS } from '../../../scripts/build/contracts';
 import {
-    BASE_UI_LOCALE, CHROMIUM_LOCALE_ALIAS, UI_LOCALES,
+    BASE_UI_LOCALE,
+    CHROMIUM_LOCALE_ALIAS,
+    UI_LOCALES,
 } from '../../../src/shared/i18n/locales';
 
 import { createBuildWorkspace } from './build-workspace';

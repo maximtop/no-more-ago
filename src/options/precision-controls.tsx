@@ -3,7 +3,13 @@
  */
 
 import {
-    Button, Group, NativeSelect, NumberInput, Stack, Switch, Text,
+    Button,
+    Group,
+    NativeSelect,
+    NumberInput,
+    Stack,
+    Switch,
+    Text,
 } from '@mantine/core';
 
 import { t } from '../shared/i18n/translator';
@@ -58,10 +64,13 @@ interface PrecisionControlsProps {
  * @returns - Precision settings controls.
  */
 export function PrecisionControls({
-    policy, disabled, onChange,
+    policy,
+    disabled,
+    onChange,
 }: PrecisionControlsProps): ReactElement {
     const choices = DATE_PRECISIONS.map((precision) => ({
-        value: precision, label: t(PRECISION_KEYS[precision]),
+        value: precision,
+        label: t(PRECISION_KEYS[precision]),
     }));
     return (
         <Stack gap="md">
@@ -72,7 +81,8 @@ export function PrecisionControls({
                 disabled={disabled}
                 onChange={(event) => {
                     onChange({
-                        ...policy, absoluteLabels: event.currentTarget.checked,
+                        ...policy,
+                        absoluteLabels: event.currentTarget.checked,
                     });
                 }}
             />
@@ -83,7 +93,8 @@ export function PrecisionControls({
                 disabled={disabled}
                 onChange={(event) => {
                     onChange({
-                        ...policy, agePrecision: event.currentTarget.checked,
+                        ...policy,
+                        agePrecision: event.currentTarget.checked,
                     });
                 }}
             />
@@ -163,7 +174,8 @@ export function PrecisionControls({
                         data={choices}
                         onChange={(event) => {
                             onChange({
-                                ...policy, older: event.currentTarget.value as typeof policy.older,
+                                ...policy,
+                                older: event.currentTarget.value as typeof policy.older,
                             });
                         }}
                     />

@@ -5,7 +5,12 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, beforeEach, describe, expect, it, vi,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { genericTimeRule } from '../../../../src/content-script/adapters/generic-time';

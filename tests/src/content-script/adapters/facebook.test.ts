@@ -3,7 +3,10 @@
  */
 
 import {
-    afterEach, describe, expect, it,
+    afterEach,
+    describe,
+    expect,
+    it,
 } from 'vitest';
 
 import {

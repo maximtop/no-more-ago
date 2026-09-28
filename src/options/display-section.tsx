@@ -3,7 +3,14 @@
  */
 
 import {
-    Alert, Box, Button, NativeSelect, Stack, Text, TextInput, Title,
+    Alert,
+    Box,
+    Button,
+    NativeSelect,
+    Stack,
+    Text,
+    TextInput,
+    Title,
 } from '@mantine/core';
 import { useMemo, type ReactElement } from 'react';
 
@@ -137,7 +144,11 @@ function useDraftAnalysis(draft: DisplayDraft | undefined): {
  */
 export function DisplaySection({ controller }: DisplaySectionProps): ReactElement {
     const {
-        state, draft, loading, saving, notice,
+        state,
+        draft,
+        loading,
+        saving,
+        notice,
     } = controller;
     const analysis = useDraftAnalysis(draft);
     const inlineNotice = notice === DISPLAY_NOTICE.INVALID_TIME_ZONE

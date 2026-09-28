@@ -178,7 +178,10 @@ export function renderExactText(
         retained.renderedText = text;
     } else {
         const record = {
-            source, target, pageText: target.data, renderedText: text,
+            source,
+            target,
+            pageText: target.data,
+            renderedText: text,
         };
         records.set(source, record);
         recordsByTarget.set(target, record);

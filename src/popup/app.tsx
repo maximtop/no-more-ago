@@ -3,10 +3,17 @@
  */
 
 import {
-    DirectionProvider, MantineProvider, Stack, Text, Title,
+    DirectionProvider,
+    MantineProvider,
+    Stack,
+    Text,
+    Title,
 } from '@mantine/core';
 import {
-    useMemo, useState, type ReactElement, type ReactNode,
+    useMemo,
+    useState,
+    type ReactElement,
+    type ReactNode,
 } from 'react';
 
 import { t, uiDirection, type MessageKey } from '../shared/i18n/translator';

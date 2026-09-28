@@ -50,7 +50,10 @@ export interface SettingsChangedOptions {
  */
 export function useSettingsChanged(options: SettingsChangedOptions): void {
     const {
-        subscribe, revision, inFlight, onExternalChange,
+        subscribe,
+        revision,
+        inFlight,
+        onExternalChange,
     } = options;
     // Announcements are kept in a ref; the counter only schedules the render whose
     // effect decides them, so a write that starts in the same event counts as in flight.

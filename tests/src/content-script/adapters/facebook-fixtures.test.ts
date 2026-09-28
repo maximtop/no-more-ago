@@ -5,7 +5,11 @@
 import { readFileSync } from 'node:fs';
 
 import {
-    afterEach, describe, expect, it, vi,
+    afterEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {

@@ -210,7 +210,10 @@ export class SettingsCommands {
             };
         }
         return {
-            ok: true, acceptedRevision: outcome.acceptedRevision, state, refreshFailures,
+            ok: true,
+            acceptedRevision: outcome.acceptedRevision,
+            state,
+            refreshFailures,
         };
     }
 
@@ -333,19 +336,31 @@ export class SettingsCommands {
             const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? {
-                    ok: false, error, surface, state: state as PopupState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as PopupState,
                 }
                 : {
-                    ok: false, error, surface, state: state as SitesState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as SitesState,
                 };
         }
         const { acceptedRevision } = outcome;
         return surface === SITE_SETTINGS_SURFACE.POPUP
             ? {
-                ok: true, acceptedRevision, surface, state: state as PopupState,
+                ok: true,
+                acceptedRevision,
+                surface,
+                state: state as PopupState,
             }
             : {
-                ok: true, acceptedRevision, surface, state: state as SitesState,
+                ok: true,
+                acceptedRevision,
+                surface,
+                state: state as SitesState,
             };
     }
 
@@ -399,10 +414,16 @@ export class SettingsCommands {
             const error = SITE_SETTINGS_ERROR.INVALID_HOSTNAME;
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? {
-                    ok: false, error, surface, state: state as PopupState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as PopupState,
                 }
                 : {
-                    ok: false, error, surface, state: state as SitesState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as SitesState,
                 };
         }
         const outcome = await this.runWrite(
@@ -419,19 +440,31 @@ export class SettingsCommands {
             const error = outcome.error ?? SETTINGS_PERSISTENCE_ERROR.SETTINGS_UNAVAILABLE;
             return surface === SITE_SETTINGS_SURFACE.POPUP
                 ? {
-                    ok: false, error, surface, state: state as PopupState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as PopupState,
                 }
                 : {
-                    ok: false, error, surface, state: state as SitesState,
+                    ok: false,
+                    error,
+                    surface,
+                    state: state as SitesState,
                 };
         }
         const { acceptedRevision } = outcome;
         return surface === SITE_SETTINGS_SURFACE.POPUP
             ? {
-                ok: true, acceptedRevision, surface, state: state as PopupState,
+                ok: true,
+                acceptedRevision,
+                surface,
+                state: state as PopupState,
             }
             : {
-                ok: true, acceptedRevision, surface, state: state as SitesState,
+                ok: true,
+                acceptedRevision,
+                surface,
+                state: state as SitesState,
             };
     }
 

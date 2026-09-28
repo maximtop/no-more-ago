@@ -112,7 +112,9 @@ export function formatDateWithPresentation(
             const pattern = projectPrecisionPattern(display.pattern, precision, locales);
             if (pattern !== null) {
                 return formatDateWithPresentation(instant, locales, {
-                    formatMode: FORMAT_MODE.CUSTOM, pattern, timeZone: display.timeZone,
+                    formatMode: FORMAT_MODE.CUSTOM,
+                    pattern,
+                    timeZone: display.timeZone,
                 }, available);
             }
         }
@@ -134,7 +136,8 @@ export function formatDateWithPresentation(
             };
         return {
             text: new Intl.DateTimeFormat(locales.length === 0 ? undefined : [...locales], {
-                ...options, ...(timeZone === undefined ? {} : { timeZone }),
+                ...options,
+                ...(timeZone === undefined ? {} : { timeZone }),
             }).format(instant),
             ...(unavailable ? { error: UNAVAILABLE_TIME_ZONE_ERROR } : {}),
         };
