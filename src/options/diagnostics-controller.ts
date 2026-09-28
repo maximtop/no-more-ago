@@ -3,7 +3,10 @@
  */
 
 import {
-    useCallback, useEffect, useRef, useState,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
 } from 'react';
 
 import { CLIENT_RESULT_KIND } from '../shared/client-result';
@@ -219,7 +222,10 @@ export function useDiagnosticsController(
     options: DiagnosticsControllerOptions,
 ): DiagnosticsController {
     const {
-        client, reporter, initialState, archiveRuntime,
+        client,
+        reporter,
+        initialState,
+        archiveRuntime,
     } = options;
     const [state, setState] = useState<DebugState | undefined>(initialState);
     const [loading, setLoading] = useState(initialState === undefined);

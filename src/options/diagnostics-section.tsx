@@ -3,7 +3,14 @@
  */
 
 import {
-    Alert, Box, Button, Group, Stack, Switch, Text, Title,
+    Alert,
+    Box,
+    Button,
+    Group,
+    Stack,
+    Switch,
+    Text,
+    Title,
 } from '@mantine/core';
 
 import { isDiagnosticsSuccessNotice } from '../shared/diagnostics/download';

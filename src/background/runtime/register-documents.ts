@@ -81,11 +81,13 @@ export function registrationMatches(
      *
      * @returns - Whether the lists are equal or the reported one is absent.
      */
-    const same = (left: readonly string[] | undefined, right: readonly string[]): boolean => left === undefined
+    const same = (left: readonly string[] | undefined, right: readonly string[]): boolean => {
+        return left === undefined
         || (
             left.length === right.length
             && left.every((value, index) => value === right[index])
         );
+    };
 
     /**
      * Compares a reported value with the expected one; an unreported value counts as equal.
@@ -95,7 +97,9 @@ export function registrationMatches(
      *
      * @returns - Whether the values are equal or the reported one is absent.
      */
-    const optionalMatches = <T>(left: T | undefined, right: T): boolean => left === undefined || left === right;
+    const optionalMatches = <T>(left: T | undefined, right: T): boolean => {
+        return left === undefined || left === right;
+    };
     return existing.id === expected.id
         && same(existing.matches, expected.matches)
         && same(existing.js, expected.js)

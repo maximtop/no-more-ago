@@ -9,13 +9,22 @@ import { parseCalendarDate } from '../../../../src/shared/date/calendar-date';
 describe('parseCalendarDate', () => {
     it.each([
         ['2026-08-29', {
-            isoDate: '2026-08-29', year: 2026, month: 8, day: 29,
+            isoDate: '2026-08-29',
+            year: 2026,
+            month: 8,
+            day: 29,
         }],
         ['2024-02-29', {
-            isoDate: '2024-02-29', year: 2024, month: 2, day: 29,
+            isoDate: '2024-02-29',
+            year: 2024,
+            month: 2,
+            day: 29,
         }],
         ['2000-02-29', {
-            isoDate: '2000-02-29', year: 2000, month: 2, day: 29,
+            isoDate: '2000-02-29',
+            year: 2000,
+            month: 2,
+            day: 29,
         }],
     ])('accepts Gregorian calendar date %s', (value, expected) => {
         expect(parseCalendarDate(value)).toEqual(expected);

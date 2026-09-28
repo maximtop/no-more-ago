@@ -5,7 +5,11 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-    beforeAll, describe, expect, it, vi,
+    beforeAll,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { OptionsApp } from '../../../src/options/app';

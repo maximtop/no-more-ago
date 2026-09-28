@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {
@@ -19,24 +22,28 @@ import {
 
 import type { DiagnosticEvent } from '../../../../src/shared/diagnostics/events';
 
-const event = (timestamp: number): DiagnosticEvent => ({
-    category: 'mutation',
-    timestamp,
-    hostname: 'github.com',
-    pageCategory: 'repository',
-    incognito: false,
-    count: timestamp,
-});
+const event = (timestamp: number): DiagnosticEvent => {
+    return {
+        category: 'mutation',
+        timestamp,
+        hostname: 'github.com',
+        pageCategory: 'repository',
+        incognito: false,
+        count: timestamp,
+    };
+};
 
-const failedTimestampEvent = (timestamp: number): DiagnosticEvent => ({
-    category: DIAGNOSTIC_CATEGORY.SKIP,
-    timestamp,
-    hostname: 'web.telegram.org',
-    pageCategory: 'other',
-    incognito: false,
-    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-    sourceTimestamp: '123456789',
-});
+const failedTimestampEvent = (timestamp: number): DiagnosticEvent => {
+    return {
+        category: DIAGNOSTIC_CATEGORY.SKIP,
+        timestamp,
+        hostname: 'web.telegram.org',
+        pageCategory: 'other',
+        incognito: false,
+        reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+        sourceTimestamp: '123456789',
+    };
+};
 
 /**
  * Creates an observable in-memory storage implementation.

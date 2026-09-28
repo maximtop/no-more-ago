@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { SettingsService } from '../../../../src/background/settings/service';
@@ -33,15 +36,23 @@ const v6 = (
     siteScope: SiteScopePolicy = DEFAULT_SITE_SCOPE,
     display: DisplaySettings = { formatMode: 'system', timeZone: { mode: 'system' } },
     debugEnabled = false,
-): SettingsSnapshot => createSettingsSnapshot({
-    revision, globalEnabled, siteScope, display, debugEnabled,
-});
+): SettingsSnapshot => {
+    return createSettingsSnapshot({
+        revision,
+        globalEnabled,
+        siteScope,
+        display,
+        debugEnabled,
+    });
+};
 
-const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
-    mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-    excludedSites: hostnames,
-    allowedSites: [],
-});
+const excluding = (...hostnames: readonly string[]): SiteScopePolicy => {
+    return {
+        mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        excludedSites: hostnames,
+        allowedSites: [],
+    };
+};
 
 /**
  * Creates observable in-memory storage for settings service tests.
@@ -95,11 +106,15 @@ describe('SettingsService', () => {
         const previous = { ...saved, revision: 41, globalEnabled: true };
         const backend = storage({ ...saved, schemaVersion: 1 }, { ...previous, schemaVersion: 1 });
         await expect(new SettingsService(backend).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: 'stored',
+            ok: true,
+            snapshot: saved,
+            source: 'stored',
         });
         expect(backend.pair()).toEqual({ current: saved, previous });
         await expect(new SettingsService(backend).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: 'stored',
+            ok: true,
+            snapshot: saved,
+            source: 'stored',
         });
         expect(backend.set).toHaveBeenCalledTimes(1);
     });
@@ -109,17 +124,22 @@ describe('SettingsService', () => {
         const legacy = { ...saved, schemaVersion: 1 };
         const backup = storage(undefined, legacy);
         await expect(new SettingsService(backup).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: 'recovered',
+            ok: true,
+            snapshot: saved,
+            source: 'recovered',
         });
         expect(backup.pair()).toEqual({ current: saved, previous: saved });
         const failing = storage(legacy);
         failing.set.mockRejectedValueOnce(new Error('Storage unavailable'));
         await expect(new SettingsService(failing).load()).resolves.toEqual({
-            ok: false, error: 'load-failed',
+            ok: false,
+            error: 'load-failed',
         });
         expect(failing.pair().current).toEqual(legacy);
         await expect(new SettingsService(failing).load()).resolves.toEqual({
-            ok: true, snapshot: saved, source: 'stored',
+            ok: true,
+            snapshot: saved,
+            source: 'stored',
         });
     });
 
@@ -129,7 +149,9 @@ describe('SettingsService', () => {
         const display = {
             ...DEFAULT_SETTINGS_SNAPSHOT.display,
             precisionPolicy: {
-                ...DEFAULT_PRECISION_POLICY, absoluteLabels: true, agePrecision: true,
+                ...DEFAULT_PRECISION_POLICY,
+                absoluteLabels: true,
+                agePrecision: true,
             },
         };
         expect((await service.setDisplaySettings(display)).ok).toBe(true);

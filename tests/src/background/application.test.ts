@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {
@@ -35,11 +38,13 @@ import type {
 } from '../../../src/background/runtime/document-activation';
 import type { TabsRuntime } from '../../../src/background/runtime/tabs';
 
-const excluding = (...hostnames: readonly string[]): SiteScopePolicy => ({
-    mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-    excludedSites: hostnames,
-    allowedSites: [],
-});
+const excluding = (...hostnames: readonly string[]): SiteScopePolicy => {
+    return {
+        mode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        excludedSites: hostnames,
+        allowedSites: [],
+    };
+};
 
 const reconciled: ActivationReconcileResult = {
     revision: 0,

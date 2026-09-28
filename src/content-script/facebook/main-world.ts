@@ -605,7 +605,9 @@ export function installFacebookPayloadBridge(target: Window): void {
      *
      * @returns - Active generation, or null.
      */
-    const getGeneration = (): number | null => (enabled && !disposed ? generation : null);
+    const getGeneration = (): number | null => {
+        return (enabled && !disposed ? generation : null);
+    };
 
     /**
      * Reports whether a captured generation is still the active one.
@@ -614,7 +616,9 @@ export function installFacebookPayloadBridge(target: Window): void {
      *
      * @returns - Whether the generation is still active.
      */
-    const isCurrent = (capturedGeneration: number): boolean => getGeneration() === capturedGeneration;
+    const isCurrent = (capturedGeneration: number): boolean => {
+        return getGeneration() === capturedGeneration;
+    };
 
     /**
      * Cancels every response reader still inspecting a body.

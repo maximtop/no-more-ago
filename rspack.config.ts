@@ -8,7 +8,10 @@ import path from 'node:path';
 import { sources, Compilation } from '@rspack/core';
 
 import {
-    BROWSER, BUILD_MODE, isBrowser, isBuildMode,
+    BROWSER,
+    BUILD_MODE,
+    isBrowser,
+    isBuildMode,
 } from './scripts/build/contracts.ts';
 import {
     EXTENSION_ICON_BASENAME,
@@ -59,7 +62,9 @@ function metadataPlugin({ workspaceRoot, browser }: { workspaceRoot: string; bro
      *
      * @returns - Absolute path to that catalog.
      */
-    const catalogPath = (code: string): string => path.join(workspaceRoot, `src/_locales/${code}/messages.json`);
+    const catalogPath = (code: string): string => {
+        return path.join(workspaceRoot, `src/_locales/${code}/messages.json`);
+    };
     const catalogCodes = UI_LOCALES.map(({ code }) => code);
     const aliasEntries = browser === BROWSER.FIREFOX
         ? []

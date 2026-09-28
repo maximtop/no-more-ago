@@ -3,10 +3,19 @@
  */
 
 import {
-    Alert, DirectionProvider, MantineProvider, Text,
+    Alert,
+    DirectionProvider,
+    MantineProvider,
+    Text,
 } from '@mantine/core';
 import {
-    useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactElement,
+    type ReactNode,
 } from 'react';
 
 import { t, uiDirection } from '../shared/i18n/translator';
@@ -166,7 +175,10 @@ export function OptionsApp({
         archiveRuntime,
     });
     const reset = useResetController({
-        client, sites, display, diagnostics,
+        client,
+        sites,
+        display,
+        diagnostics,
     });
     const [externalChange, setExternalChange] = useState(false);
     const ownWriteInFlight = sites.busy !== undefined

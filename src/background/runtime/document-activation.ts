@@ -617,7 +617,10 @@ async function refresh(
         });
     }
     records.push({
-        tabId: tab.id, hostname, action: TAB_ACTION.INJECT, ok,
+        tabId: tab.id,
+        hostname,
+        action: TAB_ACTION.INJECT,
+        ok,
     });
 }
 
@@ -660,7 +663,10 @@ async function teardown(
         });
     }
     records.push({
-        tabId: tab.id, hostname, action: TAB_ACTION.TEARDOWN, ok,
+        tabId: tab.id,
+        hostname,
+        action: TAB_ACTION.TEARDOWN,
+        ok,
     });
 }
 

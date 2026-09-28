@@ -95,7 +95,10 @@ export interface ResetController {
  */
 export function useResetController(options: ResetControllerOptions): ResetController {
     const {
-        client, sites, display, diagnostics,
+        client,
+        sites,
+        display,
+        diagnostics,
     } = options;
     const [resetting, setResetting] = useState(false);
     const [notice, setNotice] = useState<ResetNotice>();
@@ -150,6 +153,9 @@ export function useResetController(options: ResetControllerOptions): ResetContro
     };
 
     return {
-        resetting, notice, origin, reset,
+        resetting,
+        notice,
+        origin,
+        reset,
     };
 }

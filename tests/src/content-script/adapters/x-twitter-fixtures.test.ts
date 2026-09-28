@@ -5,7 +5,10 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, describe, expect, it,
+    beforeAll,
+    describe,
+    expect,
+    it,
 } from 'vitest';
 
 import { GENERIC_TIME_RULE_ID } from
@@ -204,7 +207,10 @@ describe('offline X/Twitter public-surface fixtures', () => {
     it.each(fixtureCases)(
         'processes $name through the universal source on each final hostname',
         ({
-            name, path, sources, unrelatedSelector,
+            name,
+            path,
+            sources,
+            unrelatedSelector,
         }) => {
             const fixture = fixtures.get(name);
             if (!fixture) {

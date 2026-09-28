@@ -5,7 +5,12 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, beforeEach, describe, expect, it, vi,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { genericTimeRule } from '../../../../src/content-script/adapters/generic-time';
@@ -860,15 +865,17 @@ describe('processDocument', () => {
              * @returns - Source rule.
              */
             const matchingRule = (id: string, extract: TimestampSourceRule['extract']):
-            TimestampSourceRule => ({
-                id,
-                mutationAttributes: [],
-                matches: () => true,
-                matchesElement: (element) => element === source,
-                discover: () => [source],
-                isRelativePresentation: () => true,
-                extract,
-            });
+            TimestampSourceRule => {
+                return {
+                    id,
+                    mutationAttributes: [],
+                    matches: () => true,
+                    matchesElement: (element) => element === source,
+                    discover: () => [source],
+                    isRelativePresentation: () => true,
+                    extract,
+                };
+            };
             const registry = new AdapterRegistry(
                 [matchingRule('higher', higherExtract)],
                 matchingRule('lower', lowerExtract),

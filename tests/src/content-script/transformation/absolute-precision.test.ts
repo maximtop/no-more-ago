@@ -3,7 +3,12 @@
  */
 
 import {
-    afterEach, beforeEach, describe, expect, it, vi,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { genericTimeRule } from '../../../../src/content-script/adapters/generic-time';
@@ -22,7 +27,9 @@ import {
     type PrecisionPolicy,
 } from '../../../../src/shared/settings/precision-policy';
 import {
-    FORMAT_MODE, TIME_ZONE_MODE, type DisplaySettings,
+    FORMAT_MODE,
+    TIME_ZONE_MODE,
+    type DisplaySettings,
 } from '../../../../src/shared/settings/snapshot';
 
 const instant = '2026-08-22T09:19:17Z';
@@ -122,7 +129,8 @@ describe('absolute date policy', () => {
 
     it('restores the original label after the policy is disabled', () => {
         expect(processLabel('Aug 22, 2026', {
-            ...display, precisionPolicy: expanded,
+            ...display,
+            precisionPolicy: expanded,
         })).toHaveLength(1);
         expect(processDocument({
             url: new URL('https://example.test'),
@@ -136,18 +144,21 @@ describe('absolute date policy', () => {
     it('recognizes a localized absolute date using the page language', () => {
         document.documentElement.lang = 'de';
         expect(processLabel('22. August 2026', {
-            ...display, precisionPolicy: expanded,
+            ...display,
+            precisionPolicy: expanded,
         })[0]?.textContent).toBe('2026-08-22 09:19:17');
     });
 
     it("preserves regional date recognition and the source offset's calendar day", () => {
         document.documentElement.lang = 'en-GB';
         expect(processLabel('22 Aug 2026', {
-            ...display, precisionPolicy: expanded,
+            ...display,
+            precisionPolicy: expanded,
         })[0]?.textContent).toBe('2026-08-22 09:19:17');
         document.documentElement.lang = 'en';
         expect(processLabel('Aug 22, 2026', {
-            ...display, precisionPolicy: expanded,
+            ...display,
+            precisionPolicy: expanded,
         }, '2026-08-22T00:19:17+0300')[0]?.textContent).toBe('2026-08-21 21:19:17');
     });
 
@@ -158,7 +169,8 @@ describe('absolute date policy', () => {
                 const candidate = genericTimeRule.extract(source);
                 return candidate && candidate.validationRule
                     !== TIMESTAMP_VALIDATION_RULE.DERIVED_UNIX_MILLISECONDS ? {
-                        ...candidate, validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
+                        ...candidate,
+                        validationRule: TIMESTAMP_VALIDATION_RULE.CALENDAR_DATE,
                     } : null;
             },
         };
@@ -227,7 +239,9 @@ describe('age-based output', () => {
             precisionPolicy: aged,
         };
         const expected = new Intl.DateTimeFormat('en-US', {
-            dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Pacific/Honolulu',
+            dateStyle: 'medium',
+            timeStyle: 'medium',
+            timeZone: 'Pacific/Honolulu',
         }).format(new Date(instant));
         expect(processLabel('1 day ago', settings)[0]?.textContent).toBe(expected);
     });

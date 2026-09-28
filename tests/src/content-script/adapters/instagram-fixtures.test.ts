@@ -5,7 +5,11 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, beforeEach, describe, expect, it,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
 } from 'vitest';
 
 import {

@@ -4,7 +4,12 @@
 
 import { useMachine } from '@xstate/react';
 import {
-    assertEvent, assign, fromPromise, setup, waitFor, type SnapshotFrom,
+    assertEvent,
+    assign,
+    fromPromise,
+    setup,
+    waitFor,
+    type SnapshotFrom,
 } from 'xstate';
 
 import { CLIENT_RESULT_KIND } from '../shared/client-result';
@@ -832,11 +837,13 @@ export function useDisplayController(options: DisplayControllerOptions): Display
      *
      * @returns - A promise that settles after the activity ended.
      */
-    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> => waitFor(
-        actor,
-        (current) => !active(current),
-        { timeout: Infinity },
-    ).then(() => undefined, () => undefined);
+    const settled = (active: (current: DisplaySnapshot) => boolean): Promise<void> => {
+        return waitFor(
+            actor,
+            (current) => !active(current),
+            { timeout: Infinity },
+        ).then(() => undefined, () => undefined);
+    };
 
     /**
      * Applies one draft edit and clears the current notice.

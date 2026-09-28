@@ -5,7 +5,12 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    afterEach, beforeEach, describe, expect, it, vi,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {
@@ -682,9 +687,11 @@ describe('installContentRuntime', () => {
          *
          * @returns - Pending document-state promise.
          */
-        const staleLoader = () => new Promise<unknown>((resolve) => {
-            completeStaleHydration = resolve;
-        });
+        const staleLoader = () => {
+            return new Promise<unknown>((resolve) => {
+                completeStaleHydration = resolve;
+            });
+        };
         const first = install(source, staleLoader);
 
         expect(source.dispatch(policy(5, false))).toEqual(policyAcknowledgement(5));

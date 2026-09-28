@@ -5,7 +5,10 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, describe, expect, it,
+    beforeAll,
+    describe,
+    expect,
+    it,
 } from 'vitest';
 
 import { defaultRegistry } from '../../../../src/content-script/adapters/registry';

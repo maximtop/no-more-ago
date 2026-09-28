@@ -140,6 +140,8 @@ export type DocumentRouteHandoffClassifier = (input: {
  *
  * @returns - A transition that clears any retained policy.
  */
-export const clearDocumentRouteHandoff: DocumentRouteHandoffClassifier = () => ({
-    kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR,
-});
+export const clearDocumentRouteHandoff: DocumentRouteHandoffClassifier = () => {
+    return {
+        kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.CLEAR,
+    };
+};
