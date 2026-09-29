@@ -7,8 +7,9 @@ and marquee artwork are outside this package.
 ## Current listing status
 
 Chrome Web Store item `pcaimklimkjljhmbfkhidealekkiopbd` was submitted for
-review on 2026-09-11 with version 0.1.0. Its current recorded status is
-`Pending review`; automatic publication is enabled after approval.
+review on 2026-09-11 with version 0.1.0 and is published. On 2026-09-29 the
+public listing showed version 0.1.0, updated 2026-09-13. Version 0.1.1 has not
+been submitted to Chrome.
 
 All 40 localized descriptions were saved, reloaded and compared with their
 source files. The global icon, three screenshots and small promotional tile
@@ -178,9 +179,8 @@ telemetry endpoint, account requirement, or sale of user data.
 ## Review status
 
 The submission may receive an in-depth review because it requests broad host
-permissions. Check the Developer Dashboard for the current state. `Pending
-review` does not establish approval or publication; after approval, verify the
-public listing and update this record with the observed publication state.
+permissions. Check the Developer Dashboard for the current state, and verify
+the public listing after every submission before updating this record.
 
 ## Official references
 

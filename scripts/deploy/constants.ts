@@ -45,6 +45,7 @@ export const SOURCE_REQUIRED_FILES = [
     'src/manifest/firefox.json',
     'scripts/build.ts',
     'DEVELOPMENT.md',
+    'LICENSE',
 ];
 
 /**
