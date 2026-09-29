@@ -4,7 +4,9 @@
 
 import { validateCustomFormatPattern } from './custom-format';
 import {
-    isPrecisionPolicyValid, samePrecisionPolicy, type PrecisionPolicy,
+    isPrecisionPolicyValid,
+    samePrecisionPolicy,
+    type PrecisionPolicy,
 } from './precision-policy';
 import {
     DEFAULT_SITE_SCOPE,
@@ -390,7 +392,10 @@ export function parseDisplaySettings(value: DisplaySettings): DisplaySettings | 
         return null;
     }
     return Object.freeze({
-        formatMode: FORMAT_MODE.CUSTOM, pattern: checked.pattern, timeZone, ...precision,
+        formatMode: FORMAT_MODE.CUSTOM,
+        pattern: checked.pattern,
+        timeZone,
+        ...precision,
     });
 }
 

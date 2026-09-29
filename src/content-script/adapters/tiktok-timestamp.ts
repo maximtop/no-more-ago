@@ -213,7 +213,10 @@ function readHydrationIndex(
         /* malformed page data remains empty until the exact script snapshot changes */
     }
     hydrationCache.set(document, {
-        kind: 'parsed', script, text, createTimeByPostId,
+        kind: 'parsed',
+        script,
+        text,
+        createTimeByPostId,
     });
     return createTimeByPostId;
 }

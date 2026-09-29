@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {
@@ -102,7 +105,10 @@ function installedFrame(readPolicy: () => {
         messages,
     });
     return {
-        document: frameDocument, element, messages, handle,
+        document: frameDocument,
+        element,
+        messages,
+        handle,
     };
 }
 
@@ -475,7 +481,10 @@ describe('DocumentActivationCoordinator', () => {
         expect(fake.tabs.sendMessage).toHaveBeenCalledTimes(2);
         expect(result.tabs).toEqual([
             {
-                tabId: 1, hostname: 'example.test', action: TAB_ACTION.TEARDOWN, ok: false,
+                tabId: 1,
+                hostname: 'example.test',
+                action: TAB_ACTION.TEARDOWN,
+                ok: false,
             },
         ]);
         expect(result.failures).toContainEqual({
@@ -502,10 +511,16 @@ describe('DocumentActivationCoordinator', () => {
 
         expect(result.tabs).toEqual([
             {
-                tabId: 1, hostname: 'first.test', action: TAB_ACTION.INJECT, ok: false,
+                tabId: 1,
+                hostname: 'first.test',
+                action: TAB_ACTION.INJECT,
+                ok: false,
             },
             {
-                tabId: 2, hostname: 'second.test', action: TAB_ACTION.INJECT, ok: true,
+                tabId: 2,
+                hostname: 'second.test',
+                action: TAB_ACTION.INJECT,
+                ok: true,
             },
         ]);
         expect(result.failures).toContainEqual({
@@ -671,10 +686,16 @@ describe('DocumentActivationCoordinator', () => {
 
         expect(result.tabs).toEqual([
             {
-                tabId: 1, hostname: 'first.test', action: TAB_ACTION.INJECT, ok: false,
+                tabId: 1,
+                hostname: 'first.test',
+                action: TAB_ACTION.INJECT,
+                ok: false,
             },
             {
-                tabId: 2, hostname: 'second.test', action: TAB_ACTION.INJECT, ok: true,
+                tabId: 2,
+                hostname: 'second.test',
+                action: TAB_ACTION.INJECT,
+                ok: true,
             },
         ]);
     });
@@ -878,7 +899,10 @@ describe('DocumentActivationCoordinator', () => {
                 expect(siteDisabled.failures).toEqual([]);
                 expect(siteDisabled.tabs).toEqual([
                     {
-                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.INJECT, ok: true,
+                        tabId: 1,
+                        hostname: 'example.test',
+                        action: TAB_ACTION.INJECT,
+                        ok: true,
                     },
                 ]);
 
@@ -893,7 +917,10 @@ describe('DocumentActivationCoordinator', () => {
                 expect(frames.map(hasOutput)).toEqual([true, true]);
                 expect(siteEnabledResult.tabs).toEqual([
                     {
-                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.INJECT, ok: true,
+                        tabId: 1,
+                        hostname: 'example.test',
+                        action: TAB_ACTION.INJECT,
+                        ok: true,
                     },
                 ]);
 
@@ -905,7 +932,10 @@ describe('DocumentActivationCoordinator', () => {
                 expect(frames.map(hasOutput)).toEqual([false, false]);
                 expect(globallyDisabled.tabs).toEqual([
                     {
-                        tabId: 1, hostname: 'example.test', action: TAB_ACTION.TEARDOWN, ok: true,
+                        tabId: 1,
+                        hostname: 'example.test',
+                        action: TAB_ACTION.TEARDOWN,
+                        ok: true,
                     },
                 ]);
             } finally {

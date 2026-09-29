@@ -6,7 +6,10 @@ import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { strFromU8, unzipSync } from 'fflate';
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { createBuildWorkspace, startChromeWatch } from './build-workspace';

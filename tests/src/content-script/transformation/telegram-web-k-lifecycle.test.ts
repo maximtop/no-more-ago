@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { genericTimeRule } from '../../../../src/content-script/adapters/generic-time';
@@ -413,7 +416,9 @@ describe('Telegram Web K document lifecycle', () => {
             throw new Error('Expected Telegram settings fixture');
         }
         const instant = new Date(1_778_774_880_000);
-        const twoDigits = (value: number): string => String(value).padStart(2, '0');
+        const twoDigits = (value: number): string => {
+            return String(value).padStart(2, '0');
+        };
         const expectedClocks = [
             `${instant.getFullYear()}-${twoDigits(instant.getMonth() + 1)}-`
                 + `${twoDigits(instant.getDate())} ${twoDigits(instant.getHours())}:${

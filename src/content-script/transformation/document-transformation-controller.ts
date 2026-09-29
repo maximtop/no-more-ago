@@ -187,7 +187,10 @@ export class DocumentTransformationController {
      */
     constructor(input: DocumentTransformationControllerInput) {
         const {
-            participantFactory, routeHandoffClassifier, urlProvider, ...processInput
+            participantFactory,
+            routeHandoffClassifier,
+            urlProvider,
+            ...processInput
         } = input;
         this.participant = participantFactory?.({
             getDiagnosticSink: () => this.diagnosticSink,

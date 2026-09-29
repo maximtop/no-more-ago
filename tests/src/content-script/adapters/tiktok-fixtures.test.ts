@@ -5,7 +5,13 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    afterEach, beforeAll, beforeEach, describe, expect, it, vi,
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { DocumentTransformationController } from

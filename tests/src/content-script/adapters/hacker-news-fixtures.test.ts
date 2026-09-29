@@ -5,7 +5,11 @@
 import { readFile } from 'node:fs/promises';
 
 import {
-    beforeAll, describe, expect, it, vi,
+    beforeAll,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { genericTimeRule } from '../../../../src/content-script/adapters/generic-time';
@@ -82,7 +86,9 @@ describe('Hacker News fixtures', () => {
             root: document,
             locales: ['en-US'],
             display: {
-                formatMode: 'custom', pattern: 'yyyy-MM-dd HH:mm', timeZone: { mode: 'utc' },
+                formatMode: 'custom',
+                pattern: 'yyyy-MM-dd HH:mm',
+                timeZone: { mode: 'utc' },
             },
         });
         controller.start();

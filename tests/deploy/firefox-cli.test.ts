@@ -66,12 +66,16 @@ zip.addFile('manifest.json', Buffer.from(JSON.stringify({
 zip.addFile('META-INF/mozilla.rsa', Buffer.from('synthetic signature envelope'));
 const signedXpi = zip.toBuffer();
 const signedDigest = createHash('sha256').update(signedXpi).digest('hex');
-const approved = (url: string | undefined, hash: string | undefined): object => ({
-    ...pending,
-    file: { status: AMO_STATUS.Public, url, hash },
-});
+const approved = (url: string | undefined, hash: string | undefined): object => {
+    return {
+        ...pending,
+        file: { status: AMO_STATUS.Public, url, hash },
+    };
+};
 const request = vi.fn<typeof fetch>();
-const json = (value: unknown): Response => new Response(JSON.stringify(value));
+const json = (value: unknown): Response => {
+    return new Response(JSON.stringify(value));
+};
 
 beforeEach(() => {
     vi.resetAllMocks();

@@ -5,7 +5,11 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-    beforeAll, describe, expect, it, vi,
+    beforeAll,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { OptionsApp } from '../../../src/options/app';
@@ -1842,7 +1846,9 @@ describe('Options Display contract', () => {
             expect(writes).toHaveLength(0);
             const after = previewText(rendered.container);
             const fixture = new Date('2026-08-27T19:32:28Z');
-            const two = (value: number): string => String(value).padStart(2, '0');
+            const two = (value: number): string => {
+                return String(value).padStart(2, '0');
+            };
             expect(after).toBe(
                 `${fixture.getFullYear()}-${two(fixture.getMonth() + 1)}-${two(fixture.getDate())}`
                 + ` ${two(fixture.getHours())}:${two(fixture.getMinutes())}`,

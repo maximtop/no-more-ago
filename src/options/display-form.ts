@@ -12,7 +12,8 @@ import {
     validateCustomFormatPattern,
 } from '../shared/settings/custom-format';
 import {
-    DEFAULT_PRECISION_POLICY, type PrecisionPolicy,
+    DEFAULT_PRECISION_POLICY,
+    type PrecisionPolicy,
 } from '../shared/settings/precision-policy';
 import {
     FORMAT_MODE,
@@ -150,7 +151,10 @@ export function displayFromDraft(draft: DisplayDraft): DisplaySettings {
     };
     return draft.formatMode === FORMAT_MODE.CUSTOM
         ? {
-            formatMode: FORMAT_MODE.CUSTOM, pattern: draft.pattern, timeZone, ...precision,
+            formatMode: FORMAT_MODE.CUSTOM,
+            pattern: draft.pattern,
+            timeZone,
+            ...precision,
         }
         : { formatMode: FORMAT_MODE.SYSTEM, timeZone, ...precision };
 }

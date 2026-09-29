@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { DiagnosticsService } from '../../../../src/background/diagnostics/service';
@@ -333,7 +336,10 @@ describe('DiagnosticsService document events', () => {
         const journal = fakeJournal();
         const service = new DiagnosticsService(journal, undefined);
         await service.record({
-            category: 'timing', count: 1, extensionVersion: '0.0.1', browserFamily: 'chromium',
+            category: 'timing',
+            count: 1,
+            extensionVersion: '0.0.1',
+            browserFamily: 'chromium',
         }, sender, stateOf());
         expect(journal.appended[0]).not.toHaveProperty('extensionVersion');
         expect(journal.appended[0]).not.toHaveProperty('browserFamily');

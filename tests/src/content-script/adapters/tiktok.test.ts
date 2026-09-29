@@ -3,7 +3,12 @@
  */
 
 import {
-    afterEach, beforeEach, describe, expect, it, vi,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { GENERIC_TIME_RULE_ID } from

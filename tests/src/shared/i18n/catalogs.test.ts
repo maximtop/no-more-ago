@@ -6,7 +6,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
-    afterEach, describe, expect, it, vi,
+    afterEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { resolveUiLocale } from '../../../../src/shared/i18n/locales';

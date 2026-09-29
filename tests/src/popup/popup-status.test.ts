@@ -15,17 +15,19 @@ import { APPEARANCE } from '../../../src/shared/settings/snapshot';
 
 import type { PopupState } from '../../../src/shared/messaging/view-state';
 
-const ready = (overrides: Partial<PopupState> = {}): PopupState => ({
-    availability: STATE_AVAILABILITY.READY,
-    revision: 2,
-    globalEnabled: true,
-    hostname: 'github.com',
-    siteEnabled: true,
-    scopeMode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
-    appearance: APPEARANCE.SYSTEM,
-    status: POPUP_STATUS.ACTIVE,
-    ...overrides,
-} as PopupState);
+const ready = (overrides: Partial<PopupState> = {}): PopupState => {
+    return {
+        availability: STATE_AVAILABILITY.READY,
+        revision: 2,
+        globalEnabled: true,
+        hostname: 'github.com',
+        siteEnabled: true,
+        scopeMode: SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED,
+        appearance: APPEARANCE.SYSTEM,
+        status: POPUP_STATUS.ACTIVE,
+        ...overrides,
+    } as PopupState;
+};
 
 describe('popup status', () => {
     it.each([

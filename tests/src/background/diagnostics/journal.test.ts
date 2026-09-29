@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import {
@@ -20,24 +23,28 @@ import { DIAGNOSTICS_ERROR } from '../../../../src/shared/messaging/contracts';
 
 import type { DiagnosticEvent } from '../../../../src/shared/diagnostics/events';
 
-const event = (timestamp: number): DiagnosticEvent => ({
-    category: 'mutation',
-    timestamp,
-    hostname: 'github.com',
-    pageCategory: 'repository',
-    incognito: false,
-    count: timestamp,
-});
+const event = (timestamp: number): DiagnosticEvent => {
+    return {
+        category: 'mutation',
+        timestamp,
+        hostname: 'github.com',
+        pageCategory: 'repository',
+        incognito: false,
+        count: timestamp,
+    };
+};
 
-const failedTimestampEvent = (timestamp: number): DiagnosticEvent => ({
-    category: DIAGNOSTIC_CATEGORY.SKIP,
-    timestamp,
-    hostname: 'web.telegram.org',
-    pageCategory: 'other',
-    incognito: false,
-    reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
-    sourceTimestamp: '123456789',
-});
+const failedTimestampEvent = (timestamp: number): DiagnosticEvent => {
+    return {
+        category: DIAGNOSTIC_CATEGORY.SKIP,
+        timestamp,
+        hostname: 'web.telegram.org',
+        pageCategory: 'other',
+        incognito: false,
+        reason: DIAGNOSTIC_REASON.INVALID_TIMESTAMP,
+        sourceTimestamp: '123456789',
+    };
+};
 
 /**
  * Creates an observable in-memory storage implementation.
@@ -223,7 +230,8 @@ describe('DiagnosticJournal', () => {
 
         vi.mocked(storage.get).mockRejectedValueOnce(new Error('storage down'));
         await expect(journal.readSnapshot()).resolves.toEqual({
-            ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
         });
     });
 
@@ -244,7 +252,8 @@ describe('DiagnosticJournal', () => {
         await expect(journal.readStored()).resolves.toEqual({ ok: true, entries: [event(1), event(2)] });
         vi.mocked(storage.get).mockRejectedValueOnce(new Error('storage down'));
         await expect(journal.readStored()).resolves.toEqual({
-            ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
         });
     });
 
@@ -278,7 +287,8 @@ describe('DiagnosticJournal', () => {
         await journal.setEnabled(true);
         vi.mocked(storage.remove).mockRejectedValueOnce(new Error('storage down'));
         await expect(journal.clearEntries()).resolves.toEqual({
-            ok: false, error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
         });
         expect(journal.enabled).toBe(true);
         expect(storage.value).toEqual({ entries: [event(1)] });

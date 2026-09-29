@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { processDocument } from '../../../../src/content-script/transformation/process-document';

@@ -4,7 +4,10 @@
 
 import { Buffer } from 'node:buffer';
 import {
-    readFileSync, readdirSync, statSync, writeFileSync,
+    readFileSync,
+    readdirSync,
+    statSync,
+    writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
 

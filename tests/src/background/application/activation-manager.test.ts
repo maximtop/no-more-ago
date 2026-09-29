@@ -3,7 +3,10 @@
  */
 
 import {
-    describe, expect, it, vi,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { ActivationManager } from '../../../../src/background/application/activation-manager';
@@ -164,19 +167,21 @@ describe('ActivationManager', () => {
         expect(manager.result?.tabs).toEqual([]);
     });
     describe('retained result', () => {
-        const resultAt = (revision: number | null, hostname = 'a.test'): ActivationReconcileResult => ({
-            revision,
-            policy: ACTIVATION_POLICY.ENABLED,
-            failures: [],
-            registration: REGISTRATION_OUTCOME.UNCHANGED,
-            registrations: [],
-            tabs: [{
-                tabId: 1,
-                hostname,
-                action: TAB_ACTION.INJECT,
-                ok: true,
-            }],
-        });
+        const resultAt = (revision: number | null, hostname = 'a.test'): ActivationReconcileResult => {
+            return {
+                revision,
+                policy: ACTIVATION_POLICY.ENABLED,
+                failures: [],
+                registration: REGISTRATION_OUTCOME.UNCHANGED,
+                registrations: [],
+                tabs: [{
+                    tabId: 1,
+                    hostname,
+                    action: TAB_ACTION.INJECT,
+                    ok: true,
+                }],
+            };
+        };
         const managerReturning = (...results: ActivationReconcileResult[]) => {
             const queue = [...results];
             const coordinator: ActivationCoordinator = {

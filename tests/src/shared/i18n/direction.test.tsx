@@ -8,7 +8,12 @@ import { DirectionProvider, useDirection } from '@mantine/core';
 import { act, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-    afterEach, beforeAll, describe, expect, it, vi,
+    afterEach,
+    beforeAll,
+    describe,
+    expect,
+    it,
+    vi,
 } from 'vitest';
 
 import { STATE_AVAILABILITY } from '../../../../src/shared/messaging/view-state-values';
@@ -125,7 +130,9 @@ describe('right-to-left surfaces', () => {
                             },
                         }}
                         initialDebugState={{
-                            availability: STATE_AVAILABILITY.READY, revision: 1, enabled: false,
+                            availability: STATE_AVAILABILITY.READY,
+                            revision: 1,
+                            enabled: false,
                         }}
                         subscribe={() => ({ unsubscribe: () => undefined })}
                     />,

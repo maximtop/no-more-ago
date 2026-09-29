@@ -21,10 +21,12 @@ import {
     type TimeZoneSelection,
 } from '../../../../src/shared/settings/snapshot';
 
-const display = (mode: 'system' | 'utc' | 'iana', identifier?: string): DisplaySettings => ({
-    formatMode: 'system' as const,
-    timeZone: mode === 'iana' ? { mode, identifier: identifier ?? 'America/New_York' } : { mode },
-});
+const display = (mode: 'system' | 'utc' | 'iana', identifier?: string): DisplaySettings => {
+    return {
+        formatMode: 'system' as const,
+        timeZone: mode === 'iana' ? { mode, identifier: identifier ?? 'America/New_York' } : { mode },
+    };
+};
 
 describe('Settings Snapshot', () => {
     it('uses one frozen default with the default scope and system appearance', () => {

@@ -281,7 +281,9 @@ describe('formatDateWithPresentation with age precision in system format', () =>
             now,
         );
         expect(text).toBe(new Intl.DateTimeFormat(['en-US'], {
-            dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tokyo',
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'Asia/Tokyo',
         }).format(instant));
         expect(text).not.toBe(intl({ dateStyle: 'medium', timeStyle: 'short' }));
     });

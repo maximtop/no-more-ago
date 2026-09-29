@@ -65,6 +65,9 @@ export function parseCalendarDate(value: string): CalendarDate | null {
         return null;
     }
     return Object.freeze({
-        isoDate: value, year, month, day,
+        isoDate: value,
+        year,
+        month,
+        day,
     });
 }

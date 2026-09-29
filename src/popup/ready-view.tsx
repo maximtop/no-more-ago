@@ -3,7 +3,12 @@
  */
 
 import {
-    Alert, Box, Button, Group, Switch, Text,
+    Alert,
+    Box,
+    Button,
+    Group,
+    Switch,
+    Text,
 } from '@mantine/core';
 
 import { t, type MessageKey } from '../shared/i18n/translator';
