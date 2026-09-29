@@ -76,9 +76,9 @@ Install the published extension from the store for your browser:
 
 - [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/pcaimklimkjljhmbfkhidealekkiopbd)
 - [Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/no-more-ago/)
+- [Install from Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/mpgekpchclaplfofhpbnpmbcnafkkjne)
 
-The Microsoft Edge Add-ons release is still under review. Developers who need
-to test the Edge target can build it locally by following the
+Developers can also build any target locally by following the
 [development guide](DEVELOPMENT.md).
 
 The official product pages are available on maximtop.dev:
@@ -606,7 +606,6 @@ source types are deferred.
   local date-times, and other unsupported timestamp forms remain unchanged.
 - Website markup can change at any time, so compatibility is best-effort and
   is not a promise about future markup.
-- The extension is not yet distributed through browser stores.
 
 ## Documentation
 
