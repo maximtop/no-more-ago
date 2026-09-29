@@ -19,6 +19,7 @@ import {
     DIAGNOSTIC_CATEGORY,
     DIAGNOSTIC_REASON,
 } from '../../../../src/shared/diagnostics/contracts';
+import { DIAGNOSTICS_ERROR } from '../../../../src/shared/messaging/contracts';
 
 import type { DiagnosticEvent } from '../../../../src/shared/diagnostics/events';
 
@@ -159,5 +160,149 @@ describe('DiagnosticJournal', () => {
         release?.();
         await Promise.all([pending, disabled]);
         expect(storage.value).toBeUndefined();
+    });
+
+    it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])('rejects the size limit %s', (limit) => {
+        expect(() => new DiagnosticJournal(createStorage(), limit)).toThrow('Invalid diagnostics limit');
+    });
+
+    it('writes nothing when the event alone exceeds the size limit', async () => {
+        const storage = createStorage();
+        const journal = new DiagnosticJournal(storage, 10);
+        await journal.setEnabled(true);
+        await journal.append(event(1));
+        expect(storage.set).not.toHaveBeenCalled();
+    });
+
+    it('contains a failed read while appending and keeps accepting events', async () => {
+        const storage = createStorage();
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        vi.mocked(storage.get).mockRejectedValueOnce(new Error('storage down'));
+        await expect(journal.append(event(1))).resolves.toBeUndefined();
+        expect(storage.set).not.toHaveBeenCalled();
+        await journal.append(event(2));
+        expect(storage.value).toEqual({ entries: [event(2)] });
+    });
+
+    it('contains a failed write while appending and keeps accepting events', async () => {
+        const storage = createStorage();
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        vi.mocked(storage.set).mockRejectedValueOnce(new Error('quota exceeded'));
+        await expect(journal.append(event(1))).resolves.toBeUndefined();
+        expect(storage.value).toBeUndefined();
+        await journal.append(event(2));
+        expect(storage.value).toEqual({ entries: [event(2)] });
+    });
+
+    it('contains a failed removal when disabling or clearing', async () => {
+        const storage = createStorage({ entries: [event(1)] });
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        vi.mocked(storage.remove).mockRejectedValue(new Error('storage down'));
+        await expect(journal.setEnabled(false)).resolves.toBeUndefined();
+        expect(journal.enabled).toBe(false);
+        await expect(journal.clear()).resolves.toBeUndefined();
+        expect(journal.enabled).toBe(false);
+    });
+
+    it('stops collecting and removes entries on clear', async () => {
+        const storage = createStorage();
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        await journal.append(event(1));
+        await journal.clear();
+        expect(journal.enabled).toBe(false);
+        expect(storage.value).toBeUndefined();
+        await journal.append(event(2));
+        expect(storage.value).toBeUndefined();
+    });
+
+    it('answers snapshot reads by policy and storage state', async () => {
+        const storage = createStorage({ entries: [event(1)] });
+        const journal = new DiagnosticJournal(storage);
+        await expect(journal.readSnapshot()).resolves.toEqual({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
+        expect(storage.get).not.toHaveBeenCalled();
+
+        await journal.setEnabled(true);
+        await expect(journal.readSnapshot()).resolves.toEqual({ ok: true, entries: [event(1)] });
+
+        vi.mocked(storage.get).mockRejectedValueOnce(new Error('storage down'));
+        await expect(journal.readSnapshot()).resolves.toEqual({
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+        });
+    });
+
+    it.each([
+        ['no stored envelope', undefined],
+        ['an empty stored journal', { entries: [] }],
+    ])('reports an empty journal for %s', async (_name, initial) => {
+        const journal = new DiagnosticJournal(createStorage(initial));
+        await journal.setEnabled(true);
+        await expect(journal.readSnapshot()).resolves.toEqual({ ok: false, error: DIAGNOSTICS_ERROR.EMPTY });
+        await expect(journal.readStored()).resolves.toEqual({ ok: false, error: DIAGNOSTICS_ERROR.EMPTY });
+    });
+
+    it('reads retained entries for recovery views even while collection is off', async () => {
+        const storage = createStorage({ entries: [event(1), event(2)] });
+        const journal = new DiagnosticJournal(storage);
+        expect(journal.enabled).toBe(false);
+        await expect(journal.readStored()).resolves.toEqual({ ok: true, entries: [event(1), event(2)] });
+        vi.mocked(storage.get).mockRejectedValueOnce(new Error('storage down'));
+        await expect(journal.readStored()).resolves.toEqual({
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+        });
+    });
+
+    it('drops a snapshot read that was queued before logging was disabled', async () => {
+        const storage = createStorage({ entries: [event(1)] });
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        let release: (() => void) | undefined;
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        vi.mocked(storage.get).mockImplementationOnce(async () => {
+            await gate;
+            return {};
+        });
+        const blocker = journal.append(event(2));
+        const snapshot = journal.readSnapshot();
+        const disabled = journal.setEnabled(false);
+        release?.();
+        await Promise.all([blocker, disabled]);
+        await expect(snapshot).resolves.toEqual({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
+    });
+
+    it('answers clearEntries by policy and storage state', async () => {
+        const storage = createStorage({ entries: [event(1)] });
+        const journal = new DiagnosticJournal(storage);
+        await expect(journal.clearEntries()).resolves.toEqual({ ok: false, error: DIAGNOSTICS_ERROR.DISABLED });
+        expect(storage.remove).not.toHaveBeenCalled();
+        expect(storage.value).toEqual({ entries: [event(1)] });
+
+        await journal.setEnabled(true);
+        vi.mocked(storage.remove).mockRejectedValueOnce(new Error('storage down'));
+        await expect(journal.clearEntries()).resolves.toEqual({
+            ok: false,
+            error: DIAGNOSTICS_ERROR.STORAGE_FAILED,
+        });
+        expect(journal.enabled).toBe(true);
+        expect(storage.value).toEqual({ entries: [event(1)] });
+    });
+
+    it('leaves nothing behind for an append queued before clearEntries, and accepts later ones', async () => {
+        const storage = createStorage({ entries: [event(1)] });
+        const journal = new DiagnosticJournal(storage);
+        await journal.setEnabled(true);
+        const pending = journal.append(event(2));
+        const cleared = journal.clearEntries();
+        await Promise.all([pending, cleared]);
+        expect(storage.value).toBeUndefined();
+        await journal.append(event(3));
+        expect(storage.value).toEqual({ entries: [event(3)] });
     });
 });

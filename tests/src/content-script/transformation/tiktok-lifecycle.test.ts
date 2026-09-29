@@ -15,8 +15,6 @@ import { classifyYouTubeWatchRouteHandoff } from
     '../../../../src/content-script/adapters/youtube-watch-route-handoff';
 import { DocumentTransformationController } from
     '../../../../src/content-script/transformation/document-transformation-controller';
-import { formatDateWithPresentation } from
-    '../../../../src/shared/date/format-default-date';
 
 import type { DisplaySettings } from
     '../../../../src/shared/settings/snapshot';
@@ -304,16 +302,21 @@ describe('TikTok document lifecycle', () => {
             diagnosticSink: diagnostics,
         });
         const instant = new Date(1_778_774_880_000);
+        const expectedDates = [
+            new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                .format(instant),
+            '2026-05-14 16:08',
+            '2026-05-14 19:08:00',
+        ];
 
         try {
             controller.start();
-            for (const nextDisplay of displays) {
+            for (const [index, nextDisplay] of displays.entries()) {
                 display = nextDisplay;
                 controller.reformatOwned();
                 expect(document.getElementById('reformat-source')).toBe(source);
                 expect(document.getElementById('reformat-date')).toBe(date);
-                expect(date.textContent)
-                    .toBe(formatDateWithPresentation(instant, LOCALES, display).text);
+                expect(date.textContent).toBe(expectedDates[index]);
             }
             const diagnosticText = JSON.stringify(diagnostics.mock.calls);
             expect(diagnosticText).not.toContain(id);

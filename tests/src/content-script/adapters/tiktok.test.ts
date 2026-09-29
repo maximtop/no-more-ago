@@ -3,10 +3,12 @@
  */
 
 import {
+    afterEach,
     beforeEach,
     describe,
     expect,
     it,
+    vi,
 } from 'vitest';
 
 import { GENERIC_TIME_RULE_ID } from
@@ -59,8 +61,14 @@ function installHydration(): void {
 
 describe('TikTok adapter', () => {
     beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-08-30T12:00:00Z'));
         document.head.innerHTML = '';
         document.body.innerHTML = '';
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it.each([

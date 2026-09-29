@@ -1058,6 +1058,53 @@ describe('SettingsService reset', () => {
         expect(backend.pair()).toEqual({ current, previous });
     });
 
+    it('replaces an unreadable pair with defaults at revision 1 when nothing was ever loaded', async () => {
+        const backend = storage(v6(4, false), v6(3));
+        backend.get.mockRejectedValue(new Error('storage unavailable'));
+        const service = new SettingsService(backend);
+        await expect(service.load()).resolves.toEqual({ ok: false, error: 'load-failed' });
+        backend.get.mockReset();
+        backend.get.mockImplementation(() => Promise.reject(new Error('storage unavailable')));
+
+        await expect(service.resetAll()).resolves.toEqual({
+            ok: true,
+            changed: true,
+            snapshot: v6(1),
+        });
+        expect(backend.pair()).toEqual({ current: v6(1), previous: v6(1) });
+        expect(service.loadedSnapshot).toEqual(v6(1));
+        expect(service.lastLoadError).toBeUndefined();
+    });
+
+    it('continues the revision of the loaded snapshot when the pair becomes unreadable', async () => {
+        const backend = storage(v6(5, false), v6(4));
+        const service = new SettingsService(backend);
+        await service.load();
+        backend.get.mockRejectedValueOnce(new Error('storage unavailable'));
+
+        await expect(service.resetAll()).resolves.toEqual({
+            ok: true,
+            changed: true,
+            snapshot: v6(6),
+        });
+        expect(backend.pair()).toEqual({ current: v6(6), previous: v6(6) });
+    });
+
+    it('reports the fallback snapshot when an unreadable pair cannot be replaced', async () => {
+        const backend = storage(v6(5, false), v6(4));
+        const service = new SettingsService(backend);
+        await service.load();
+        backend.get.mockRejectedValueOnce(new Error('storage unavailable'));
+        backend.set.mockRejectedValueOnce(new Error('disk full'));
+
+        await expect(service.resetAll()).resolves.toEqual({
+            ok: false,
+            error: 'persistence-failed',
+            snapshot: v6(5, false),
+        });
+        expect(backend.pair()).toEqual({ current: v6(5, false), previous: v6(4) });
+    });
+
     it('resets custom values while preserving monotonic settings revisions', async () => {
         const custom: DisplaySettings = {
             formatMode: 'custom',

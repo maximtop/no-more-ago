@@ -256,6 +256,78 @@ describe('DocumentRefresh', () => {
         }]);
     });
 
+    it('does not touch tabs when the extension is globally disabled', async () => {
+        const tabs = {
+            query: vi.fn(() => Promise.resolve([{ id: 1, url: 'https://example.test/page' }])),
+            getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
+            sendMessage: vi.fn(() => Promise.resolve(undefined)),
+        };
+        const snapshot = createSettingsSnapshot({ revision: 7, globalEnabled: false });
+        const refresh = new DocumentRefresh(tabs);
+
+        const display = await refresh.refreshDisplay(snapshot, snapshot.display, snapshot.revision);
+        const debug = await refresh.refreshDebugPolicy(snapshot, true, snapshot.revision);
+
+        expect(display).toEqual([]);
+        expect(debug).toEqual([]);
+        expect(tabs.query).not.toHaveBeenCalled();
+        expect(tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['rejects', () => Promise.reject(new Error('tabs unavailable'))],
+        ['throws synchronously', () => {
+            throw new Error('tabs unavailable');
+        }],
+    ])('reports a wildcard failure when the tab query %s', async (_, query) => {
+        const tabs = {
+            query: vi.fn(query),
+            getAllFrames: vi.fn(() => Promise.resolve([{ frameId: 0 }])),
+            sendMessage: vi.fn(() => Promise.resolve(undefined)),
+        };
+        const snapshot = createSettingsSnapshot({ revision: 7, globalEnabled: true });
+
+        const failures = await new DocumentRefresh(tabs).refreshDisplay(
+            snapshot,
+            snapshot.display,
+            snapshot.revision,
+        );
+
+        expect(failures).toEqual([{
+            hostname: '*',
+            reason: REFRESH_FAILURE_REASON.MATCHING_TABS_QUERY,
+        }]);
+        expect(tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('reports a tab failure when frame enumeration rejects and still updates other tabs', async () => {
+        const tabs = {
+            query: vi.fn(() => Promise.resolve([
+                { id: 20, url: 'https://broken.test/page' },
+                { id: 21, url: 'https://fine.test/page' },
+            ])),
+            getAllFrames: vi.fn((tabId: number) => (tabId === 20
+                ? Promise.reject(new Error('tab closed'))
+                : Promise.resolve([{ frameId: 0 }]))),
+            sendMessage: vi.fn(() => Promise.resolve({ type: PRESENTATION_UPDATED_MESSAGE, revision: 7 })),
+        };
+        const snapshot = createSettingsSnapshot({ revision: 7, globalEnabled: true });
+
+        const failures = await new DocumentRefresh(tabs).refreshDisplay(
+            snapshot,
+            snapshot.display,
+            snapshot.revision,
+        );
+
+        expect(failures).toEqual([{
+            hostname: 'broken.test',
+            tabId: 20,
+            reason: REFRESH_FAILURE_REASON.TAB_UPDATE,
+        }]);
+        expect(tabs.sendMessage).toHaveBeenCalledTimes(1);
+        expect(tabs.sendMessage).toHaveBeenCalledWith(21, expect.anything(), { frameId: 0 });
+    });
+
     it('reports a tab failure when a frame update never settles', async () => {
         vi.useFakeTimers();
         try {

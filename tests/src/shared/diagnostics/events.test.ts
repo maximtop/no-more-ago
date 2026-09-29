@@ -13,6 +13,7 @@ import {
     createDiagnosticEvent,
     diagnosticEventSchema,
     deriveDiagnosticContext,
+    pageCategoryFromPath,
 } from '../../../../src/shared/diagnostics/events';
 
 describe('diagnostic events', () => {
@@ -161,5 +162,46 @@ describe('diagnostic events', () => {
             category: DIAGNOSTIC_CATEGORY.ADAPTER,
             reason: DIAGNOSTIC_REASON.ADAPTER_MATCHED,
         })).toBe(false);
+    });
+});
+
+describe('page category from path', () => {
+    it.each([
+        ['/acme/project/issues/3', 'issue'],
+        ['/acme/project/issues/3/', 'issue'],
+        ['/acme/project/issues/3/timeline', 'issue'],
+        ['/acme/project/pull/12/files', 'pull-request'],
+        ['/acme/project/actions', 'actions'],
+        ['/acme/project/actions/runs/1', 'actions'],
+        ['/acme/project', 'repository'],
+        ['/acme/project/', 'repository'],
+        ['/acme/project/blob/main/README.md', 'repository'],
+        ['/settings', 'settings'],
+        ['/settings/', 'settings'],
+        ['/', 'other'],
+        ['/acme', 'other'],
+    ])('categorizes %s as %s', (pathname, category) => {
+        expect(pageCategoryFromPath(pathname)).toBe(category);
+    });
+
+    it.each([
+        ['/acme/project/issues/new', 'repository'],
+        ['/acme/project/issues', 'repository'],
+        ['/acme/project/pull/new', 'repository'],
+        ['/acme/project/actionsx', 'repository'],
+        ['/acme/project/issues/3x', 'repository'],
+    ])('does not mistake %s for a numbered or exact section', (pathname, category) => {
+        expect(pageCategoryFromPath(pathname)).toBe(category);
+    });
+
+    // Production bug: the two-segment repository pattern precedes the settings
+    // pattern, so signed-in settings sub-pages are recorded as repository pages.
+    it.fails('categorizes settings sub-pages as settings, not as a repository named after them', () => {
+        expect(pageCategoryFromPath('/settings/profile')).toBe('settings');
+    });
+
+    it('records the category only for github.com senders', () => {
+        expect(deriveDiagnosticContext({ url: 'https://example.com/acme/project/issues/3' }))
+            .toEqual({ hostname: 'example.com', pageCategory: 'other', incognito: false });
     });
 });

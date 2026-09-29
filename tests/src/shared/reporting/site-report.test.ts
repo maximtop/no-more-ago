@@ -208,4 +208,72 @@ describe('site report browser boundary', () => {
         expect(failed).toEqual({ ok: false, error: 'open-failed' });
         expect(failedBrowser.creates).toHaveLength(1);
     });
+
+    it.each([
+        ['no active tab', () => runtime(undefined)],
+        ['more than one active tab', () => {
+            const browser = runtime({ url: 'https://github.com/a', incognito: false });
+            const query = browser.tabs?.query;
+            if (!browser.tabs || !query) {
+                throw new Error('Expected tab API');
+            }
+            browser.tabs.query = async (...args) => [...await query(...args), ...await query(...args)];
+            return browser;
+        }],
+        ['an active tab without a URL', () => runtime({ incognito: false })],
+        ['a rejected tab query', () => {
+            const browser = runtime({ url: 'https://github.com/a', incognito: false });
+            if (!browser.tabs) {
+                throw new Error('Expected tab API');
+            }
+            browser.tabs.query = () => Promise.reject(new Error('no permission'));
+            return browser;
+        }],
+    ])('reports a missing tab for %s and opens nothing', async (_name, build) => {
+        const browser = build();
+        const result = await createSiteReportReporter(browser).openPopupReport({ hostname: 'github.com' });
+        expect(result).toEqual({ ok: false, error: 'missing-tab' });
+        expect(browser.creates).toHaveLength(0);
+    });
+
+    it('reports an unavailable browser when the tabs API is absent', async () => {
+        const reporter = createSiteReportReporter({ runtime: { getManifest: () => manifest } });
+        expect(await reporter.openPopupReport({ hostname: 'github.com' }))
+            .toEqual({ ok: false, error: 'browser-unavailable' });
+        expect(await reporter.openOptionsReport())
+            .toEqual({ ok: false, error: 'browser-unavailable' });
+    });
+
+    it.each([
+        ['no runtime API', (tab?: SiteReportTab): SiteReportBrowserRuntime => ({
+            tabs: {
+                query: () => Promise.resolve(tab ? [tab] : []),
+                create: () => Promise.resolve(undefined),
+            },
+        })],
+        ['a throwing manifest read', (tab?: SiteReportTab): SiteReportBrowserRuntime => ({
+            ...runtime(tab),
+            runtime: {
+                getManifest: (): never => {
+                    throw new Error('manifest unavailable');
+                },
+            },
+        })],
+    ])('refuses to report without an extension version: %s', async (_name, build) => {
+        const popupBrowser = build({ url: 'https://github.com/a', incognito: false });
+        expect(await createSiteReportReporter(popupBrowser).openPopupReport({ hostname: 'github.com' }))
+            .toEqual({ ok: false, error: 'invalid-context' });
+
+        const optionsBrowser = build(undefined);
+        expect(await createSiteReportReporter(optionsBrowser).openOptionsReport())
+            .toEqual({ ok: false, error: 'invalid-context' });
+    });
+
+    it('accepts another report after a rejected one', async () => {
+        const browser = runtime({ url: 'https://example.com/a', incognito: false });
+        const reporter = createSiteReportReporter(browser);
+        expect(await reporter.openPopupReport({ hostname: 'github.com' }))
+            .toEqual({ ok: false, error: 'hostname-mismatch' });
+        expect((await reporter.openPopupReport({ hostname: 'example.com' })).ok).toBe(true);
+    });
 });

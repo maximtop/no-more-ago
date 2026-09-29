@@ -469,6 +469,31 @@ Known architectural exclusions to improve when their area changes:
   implementation steps.
 - There is no required coverage threshold or end-to-end suite currently. Add
   either only when it protects a concrete risk.
+- Never compute an expected value with the formatter under test. Use a literal
+  or an independent oracle such as raw `Intl.DateTimeFormat`, with the same
+  options the production path documents (`timeStyle: 'short'`, not a guess).
+- Freeze the clock (`vi.useFakeTimers()` plus `vi.setSystemTime()`, restored in
+  `afterEach`) in every test whose subject defaults to `Date.now()`. Keep tests
+  timezone-independent: run them under `TZ=UTC`, `America/Los_Angeles`, and
+  `Asia/Tokyo` when they touch dates.
+- A sole `not.toBeNull()`, `toBeDefined()`, or `toHaveLength(>0)` assertion, or
+  an expectation equal to its own input, catches nothing. Assert the extracted
+  value.
+- Every trust boundary needs a rejection test: spoofed `origin` or `source` on
+  main-world messages, a non-AMO host in deploy downloads, untrusted fields in
+  diagnostic records. Cover the failure branch (`query` rejects, storage read
+  fails, tab has no URL) next to the success branch.
+- Sabotage every new guard test: mutate the production line, confirm the test
+  fails, then restore it. A test that stays green is not protecting the guard.
+- Split table rows by the stage that rejects them. `discover` returning `[]`
+  and `extract` returning `null` are different contracts; a loop over the
+  wrong stage silently never runs.
+- Type fakes against the real interface (`DiagnosticJournalStore`,
+  `SiteReportBrowserRuntime`). Do not use `as unknown as` or mutate typed
+  builders in helpers.
+- Do not commit a red test for a production bug. Keep a reproducer as
+  `it.fails` with a comment that names the bug and the expected value, and
+  remove the marker together with the fix.
 
 ### Dependency Management
 

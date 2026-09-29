@@ -36,13 +36,6 @@ describe('Hacker News fixtures', () => {
         }
     });
 
-    it('parse as non-empty offline documents', () => {
-        for (const html of fixtures.values()) {
-            document.body.innerHTML = html;
-            expect(document.body.children.length).toBeGreaterThan(0);
-        }
-    });
-
     const processingFixtures = [
         {
             name: 'list.html',

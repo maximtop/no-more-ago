@@ -230,6 +230,60 @@ describe('resolveTrustedTimestamp', () => {
         )).toBeNull();
     });
 
+    describe('in-place text delimiters', () => {
+        /**
+         * Resolves an in-place candidate whose page text and delimiters are given.
+         *
+         * @param data - Page-owned text node content.
+         * @param delimiters - Prefix and suffix the adapter claims surround the timestamp.
+         * @param delimiters.textPrefix - Claimed leading page text.
+         * @param delimiters.textSuffix - Claimed trailing page text.
+         *
+         * @returns - Resolver output for the candidate.
+         */
+        const resolveWithDelimiters = (
+            data: string,
+            delimiters: { textPrefix?: string; textSuffix?: string },
+        ): ReturnType<typeof resolveTrustedTimestamp> => {
+            const source = document.createElement('span');
+            const target = document.createTextNode(data);
+            source.append(target);
+            return resolveTrustedTimestamp({
+                ruleId: IN_PLACE_TEST_RULE_ID,
+                source,
+                sourceKind: TIMESTAMP_SOURCE_KIND.HACKER_NEWS_AGE,
+                rawDatetime: '2026-08-28T10:09:07.000000Z',
+                presentation: {
+                    kind: TIMESTAMP_PRESENTATION_KIND.IN_PLACE_TEXT,
+                    target,
+                    ...delimiters,
+                },
+                validationRule: TIMESTAMP_VALIDATION_RULE.EXPLICIT_ISO_ZONE,
+                visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.IGNORE_PAGE_SUPPRESSION,
+            }, NOW_MILLISECONDS);
+        };
+
+        it.each([
+            ['no delimiters', '1 hour ago', {}],
+            ['a matching prefix', ' · 1h', { textPrefix: ' · ' }],
+            ['a matching suffix', '1h (edited)', { textSuffix: ' (edited)' }],
+            ['both matching delimiters', '[1h]', { textPrefix: '[', textSuffix: ']' }],
+        ])('accepts %s around a replaceable segment', (_name, data, delimiters) => {
+            expect(resolveWithDelimiters(data, delimiters)).not.toBeNull();
+        });
+
+        it.each([
+            ['a prefix the text does not start with', 'edited 1h', { textPrefix: ' · ' }],
+            ['a suffix the text does not end with', '1 hour ago', { textSuffix: ' (edited)' }],
+            ['a prefix and suffix with no segment between them', '[]', { textPrefix: '[', textSuffix: ']' }],
+            ['a prefix that is the entire text', ' · ', { textPrefix: ' · ' }],
+            ['a suffix that is the entire text', ' (edited)', { textSuffix: ' (edited)' }],
+            ['overlapping prefix and suffix', 'ab', { textPrefix: 'ab', textSuffix: 'b' }],
+        ])('rejects %s', (_name, data, delimiters) => {
+            expect(resolveWithDelimiters(data, delimiters)).toBeNull();
+        });
+    });
+
     /**
      * Builds a YouTube calendar-date candidate.
      *

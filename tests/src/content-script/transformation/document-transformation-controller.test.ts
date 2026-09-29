@@ -1998,6 +1998,133 @@ describe('DocumentTransformationController', () => {
         controller.teardown();
     });
 
+    it('clears retained output when a no-op classification changes the matched rules', () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
+        const source = document.querySelector('time');
+        if (!source) {
+            throw new Error('Expected route source');
+        }
+        const ruleFor = (hostname: string, sources: readonly Element[]): TimestampSourceRule => {
+            return {
+                id: `host-${hostname}`,
+                mutationAttributes: [],
+                matches: (url) => url.hostname === hostname,
+                matchesElement: (element) => sources.includes(element),
+                discover: () => sources,
+                isRelativePresentation: () => true,
+                extract: (element) => ({
+                    ruleId: `host-${hostname}`,
+                    source: element,
+                    sourceKind: TIMESTAMP_SOURCE_KIND.STANDARD_TIME,
+                    rawDatetime: '2026-08-23T10:15Z',
+                    presentation: ADJACENT_TIME_PRESENTATION,
+                    validationRule: TIMESTAMP_VALIDATION_RULE.HTML_GLOBAL,
+                    visibilityPolicy: TIMESTAMP_VISIBILITY_POLICY.PRESERVE_PAGE_SUPPRESSION,
+                }),
+            };
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL('https://a.test/page'),
+            root: document,
+            locales: ['en-US'],
+            registry: new AdapterRegistry(
+                [ruleFor('a.test', [source]), ruleFor('b.test', [])],
+                noMatchRule,
+            ),
+            routeHandoffClassifier: () => ({ kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.NOOP }),
+        });
+        try {
+            const [initialOutput] = controller.start();
+            expect(initialOutput).toBeInstanceOf(HTMLTimeElement);
+
+            controller.reconcileRoute(new URL('https://a.test/other'));
+            expect(document.querySelector('[data-no-more-ago-output]')).toBe(initialOutput);
+
+            controller.reconcileRoute(new URL('https://b.test/page'));
+            expect(document.querySelector('[data-no-more-ago-output]')).toBeNull();
+            expect(source.hasAttribute('hidden')).toBe(false);
+        } finally {
+            controller.teardown();
+        }
+    });
+
+    it('reports added and removed structure roots to the active handoff session', async () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
+        const noteStructure = vi.fn<DocumentRouteHandoffSession['noteStructure']>();
+        const policy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: () => ({ noteStructure, dispose: () => undefined }),
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL('https://example.test/initial'),
+            root: document,
+            locales: ['en-US'],
+            routeHandoffClassifier: () => ({
+                kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                policy,
+            }),
+        });
+        try {
+            controller.start();
+            controller.reconcileRoute(new URL('https://example.test/next'));
+            await flushMutations();
+            noteStructure.mockClear();
+
+            const added = document.createElement('p');
+            document.body.append(added);
+            await flushMutations();
+            expect(noteStructure).toHaveBeenCalledWith({ addedRoots: [added], removedRoots: [] });
+
+            noteStructure.mockClear();
+            added.remove();
+            await flushMutations();
+            expect(noteStructure).toHaveBeenCalledWith({ addedRoots: [], removedRoots: [added] });
+        } finally {
+            controller.teardown();
+        }
+    });
+
+    it('accepts queued handoff reconciliation only for the current route generation', () => {
+        document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
+        const requests: (() => void)[] = [];
+        const policy: DocumentRouteHandoffPolicy = {
+            allowsRule: () => true,
+            activate: ({ requestReconciliation }) => {
+                requests.push(requestReconciliation);
+                return { noteStructure: () => undefined, dispose: () => undefined };
+            },
+        };
+        const controller = new DocumentTransformationController({
+            url: new URL('https://example.test/initial'),
+            root: document,
+            locales: ['en-US'],
+            routeHandoffClassifier: () => ({
+                kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
+                policy,
+            }),
+        });
+        const extract = vi.spyOn(genericTimeRule, 'extract');
+        try {
+            controller.start();
+            controller.reconcileRoute(new URL('https://example.test/one'));
+            controller.reconcileRoute(new URL('https://example.test/two'));
+            const [stale, current] = requests;
+            if (requests.length !== 2 || !stale || !current) {
+                throw new Error('Expected one session per route change');
+            }
+            extract.mockClear();
+
+            stale();
+            expect(extract).not.toHaveBeenCalled();
+
+            current();
+            expect(extract).toHaveBeenCalled();
+        } finally {
+            extract.mockRestore();
+            controller.teardown();
+        }
+    });
+
     it('restores before activating and passing a replacement route', () => {
         document.body.innerHTML = '<time datetime="2026-08-23T10:15Z">2 hours ago</time>';
         const source = document.querySelector('time');
