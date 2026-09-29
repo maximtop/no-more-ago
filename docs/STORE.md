@@ -8,8 +8,9 @@ and marquee artwork are outside this package.
 
 Chrome Web Store item `pcaimklimkjljhmbfkhidealekkiopbd` was submitted for
 review on 2026-09-11 with version 0.1.0 and is published. On 2026-09-29 the
-public listing showed version 0.1.0, updated 2026-09-13. Version 0.1.1 has not
-been submitted to Chrome.
+dashboard showed `Published - public`, with draft and published both at 0.1.0
+and no pending submission. The public listing showed version 0.1.0, updated
+2026-09-13. Version 0.1.1 has not been submitted to Chrome.
 
 All 40 localized descriptions were saved, reloaded and compared with their
 source files. The global icon, three screenshots and small promotional tile
