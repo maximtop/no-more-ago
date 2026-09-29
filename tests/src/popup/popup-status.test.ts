@@ -53,6 +53,20 @@ describe('popup status', () => {
         })).toEqual({ text: 'Current processing state is unknown', tone: 'warning' });
     });
 
+    it('describes unreadable settings as unavailable, not as an unknown state', () => {
+        expect(popupStatusModel({
+            availability: STATE_AVAILABILITY.UNAVAILABLE,
+            revision: null,
+            globalEnabled: null,
+            hostname: null,
+            siteEnabled: null,
+            scopeMode: null,
+            appearance: APPEARANCE.SYSTEM,
+            status: POPUP_STATUS.RUNTIME_FAILED,
+            failure: SETTINGS_STATE_FAILURE.SETTINGS_LOAD,
+        })).toEqual({ text: 'Settings are unavailable', tone: 'danger' });
+    });
+
     it.each([
         [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, true, 'popup_site_switch_all_on'],
         [SITE_SCOPE_MODE.ALL_EXCEPT_EXCLUDED, false, 'popup_site_switch_all_off'],

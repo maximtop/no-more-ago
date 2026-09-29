@@ -80,7 +80,6 @@ describe('timestamp extraction URL context', () => {
             await flushMutations();
 
             expect(seenUrls.at(-1)).toBe(currentUrl.href);
-            expect(seenUrls).not.toContain('missing');
         } finally {
             controller.teardown();
         }

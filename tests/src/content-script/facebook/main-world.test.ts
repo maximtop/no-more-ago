@@ -131,12 +131,19 @@ function harness(response: Promise<Response> = Promise.resolve(new Response('{}'
  *
  * @param target - Controlled main-world window.
  * @param enabled - Whether bounded response inspection may run.
+ * @param sender - Message provenance; defaults to the window itself on its own origin.
+ * @param sender.source - Event source reported to the bridge.
+ * @param sender.origin - Event origin reported to the bridge.
  */
-function setEnabled(target: Window, enabled: boolean): void {
+function setEnabled(
+    target: Window,
+    enabled: boolean,
+    sender: { source?: MessageEventSource | null; origin?: string } = {},
+): void {
     target.dispatchEvent(new MessageEvent('message', {
         data: createFacebookPayloadBridgeControlMessage(enabled),
-        origin: target.location.origin,
-        source: target,
+        origin: sender.origin ?? target.location.origin,
+        source: 'source' in sender ? sender.source : target,
     }));
 }
 
@@ -532,5 +539,65 @@ describe('Facebook main-world bridge', () => {
             body,
             `${FACEBOOK_ORIGIN}/home`,
         )).toBe(false);
+    });
+
+    it.each([
+        ['another origin', { origin: 'https://evil.test' }],
+        ['a different source window', { source: window }],
+        ['no source window', { source: null }],
+    ])('ignores an enable message from %s', async (_name, sender) => {
+        const { target, postMessage } = harness(Promise.resolve(new Response(responsePayload())));
+        installFacebookPayloadBridge(target);
+        postMessage.mockClear();
+
+        setEnabled(target, true, sender);
+        await target.fetch(`${FACEBOOK_ORIGIN}/api/graphql/`, {
+            method: 'POST',
+            body: selectedBody(),
+        });
+        await flushAsync();
+        expect(postMessage).not.toHaveBeenCalled();
+
+        setEnabled(target, true);
+        await target.fetch(`${FACEBOOK_ORIGIN}/api/graphql/`, {
+            method: 'POST',
+            body: selectedBody(),
+        });
+        await vi.waitFor(() => {
+            expect(postMessage).toHaveBeenCalledOnce();
+        });
+    });
+
+    it('keeps inspecting when a spoofed message tries to disable the bridge', async () => {
+        const { target, postMessage } = harness(Promise.resolve(new Response(responsePayload())));
+        installFacebookPayloadBridge(target);
+        setEnabled(target, true);
+        postMessage.mockClear();
+
+        setEnabled(target, false, { origin: 'https://evil.test' });
+        await target.fetch(`${FACEBOOK_ORIGIN}/api/graphql/`, {
+            method: 'POST',
+            body: selectedBody(),
+        });
+
+        await vi.waitFor(() => {
+            expect(postMessage).toHaveBeenCalledOnce();
+        });
+    });
+
+    it('restores the page transports on dispose only while the wrappers are still installed', () => {
+        const untouched = harness();
+        const originalFetch = untouched.target.fetch;
+        installFacebookPayloadBridge(untouched.target);
+        expect(untouched.target.fetch).not.toBe(originalFetch);
+        Reflect.get(untouched.target, BRIDGE_SLOT).dispose();
+        expect(untouched.target.fetch).toBe(originalFetch);
+
+        const overridden = harness();
+        installFacebookPayloadBridge(overridden.target);
+        const pageFetch = vi.fn(() => Promise.resolve(new Response('{}')));
+        Object.assign(overridden.target, { fetch: pageFetch });
+        Reflect.get(overridden.target, BRIDGE_SLOT).dispose();
+        expect(overridden.target.fetch).toBe(pageFetch);
     });
 });

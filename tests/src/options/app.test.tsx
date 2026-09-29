@@ -1841,7 +1841,12 @@ describe('Options Display contract', () => {
             });
             expect(writes).toHaveLength(0);
             const after = previewText(rendered.container);
-            expect(after).toMatch(/^2026-08-27 \d{2}:\d{2}$/u);
+            const fixture = new Date('2026-08-27T19:32:28Z');
+            const two = (value: number): string => String(value).padStart(2, '0');
+            expect(after).toBe(
+                `${fixture.getFullYear()}-${two(fixture.getMonth() + 1)}-${two(fixture.getDate())}`
+                + ` ${two(fixture.getHours())}:${two(fixture.getMinutes())}`,
+            );
             expect(after).not.toBe(before);
             await act(async () => {
                 save.click();

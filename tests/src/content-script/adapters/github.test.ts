@@ -140,18 +140,28 @@ describe('GitHub adapter registry', () => {
         '<relative-time datetime="   ">visible</relative-time>',
         '<relative-time datetime="2026-08-23T10:15Z" format="datetime">absolute</relative-time>',
         '<relative-time datetime="2026-08-23T10:15Z" format=" DATETIME ">absolute</relative-time>',
-        '<local-time datetime="2026-08-23T10:15Z">local</local-time>',
-        '<time datetime="2026-08-23T10:15Z">generic</time>',
         '<relative-time title="2026-08-23T10:15Z" aria-label="2026-08-23T10:15Z" '
             + 'data-date="2026-08-23T10:15Z">prose</relative-time>',
-    ])('does not extract unsafe or non-authoritative markup: %s', (markup) => {
+    ])('discovers but does not extract unsafe or non-authoritative markup: %s', (markup) => {
         document.body.innerHTML = markup;
         const original = document.body.innerHTML;
         const adapter = defaultRegistry.matching(new URL('https://github.com/any/path'))[0];
-        expect(adapter).not.toBeNull();
-        for (const element of adapter?.discover(document, extractionContext) ?? []) {
+        const discovered = adapter?.discover(document, extractionContext) ?? [];
+        expect(discovered).toHaveLength(1);
+        for (const element of discovered) {
             expect(adapter?.extract(element, extractionContext)).toBeNull();
         }
+        expect(document.body.innerHTML).toBe(original);
+    });
+
+    it.each([
+        '<local-time datetime="2026-08-23T10:15Z">local</local-time>',
+        '<time datetime="2026-08-23T10:15Z">generic</time>',
+    ])('does not discover elements outside the approved GitHub set: %s', (markup) => {
+        document.body.innerHTML = markup;
+        const original = document.body.innerHTML;
+        const adapter = defaultRegistry.matching(new URL('https://github.com/any/path'))[0];
+        expect(adapter?.discover(document, extractionContext)).toEqual([]);
         expect(document.body.innerHTML).toBe(original);
     });
 

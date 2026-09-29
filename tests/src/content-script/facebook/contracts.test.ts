@@ -105,7 +105,11 @@ describe('Facebook cross-world contracts', () => {
     it('creates and recognizes bridge lifecycle messages', () => {
         expect(isFacebookPayloadBridgeReadyMessage(
             createFacebookPayloadBridgeReadyMessage(),
-        )).not.toBeNull();
+        )).toBe(true);
+        expect(isFacebookPayloadBridgeReadyMessage(
+            createFacebookPayloadBridgeControlMessage(true),
+        )).toBe(false);
+        expect(isFacebookPayloadBridgeReadyMessage({ type: 'unrelated' })).toBe(false);
         expect(readFacebookBridgeControlEnabled(
             createFacebookPayloadBridgeControlMessage(true),
         )).toBe(true);

@@ -14,9 +14,6 @@ import {
 import {
     DocumentTransformationController,
 } from '../../../../src/content-script/transformation/document-transformation-controller';
-import {
-    formatDateWithPresentation,
-} from '../../../../src/shared/date/format-default-date';
 
 import type {
     TimestampSourceRule,
@@ -416,14 +413,21 @@ describe('Telegram Web K document lifecycle', () => {
             throw new Error('Expected Telegram settings fixture');
         }
         const instant = new Date(1_778_774_880_000);
+        const twoDigits = (value: number): string => String(value).padStart(2, '0');
+        const expectedClocks = [
+            `${instant.getFullYear()}-${twoDigits(instant.getMonth() + 1)}-`
+                + `${twoDigits(instant.getDate())} ${twoDigits(instant.getHours())}:${
+                    twoDigits(instant.getMinutes())}`,
+            '2026-05-14 16:08',
+            '2026-05-14 19:08',
+        ];
 
         try {
             controller.start();
-            for (const nextDisplay of displays) {
+            for (const [index, nextDisplay] of displays.entries()) {
                 display = nextDisplay;
                 controller.reformatOwned();
-                expect(clock.textContent)
-                    .toBe(formatDateWithPresentation(instant, LOCALES, display).text);
+                expect(clock.textContent).toBe(expectedClocks[index]);
                 expect(document.getElementById('settings-clock')).toBe(clock);
                 expect(unrelated.textContent).toBe('unchanged');
             }

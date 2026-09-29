@@ -8,6 +8,7 @@ import {
     formatDateWithPresentation,
     formatDefaultDate,
 } from '../../../../src/shared/date/format-default-date';
+import { DATE_PRECISION, DEFAULT_PRECISION_POLICY } from '../../../../src/shared/settings/precision-policy';
 
 describe('formatDefaultDate', () => {
     it('matches browser defaults for explicit and runtime-default locales', () => {
@@ -217,5 +218,105 @@ describe('formatDefaultDate', () => {
                 timeZone: { mode: 'system' },
             }),
         ).toEqual({ text: '', error: 'invalid-format' });
+    });
+});
+
+describe('formatDateWithPresentation with age precision in system format', () => {
+    const instant = new Date('2026-08-23T07:15:42.000Z');
+    const now = instant.getTime() + 1;
+    const precisionPolicy = {
+        ...DEFAULT_PRECISION_POLICY,
+        agePrecision: true,
+    };
+    const utc = { formatMode: 'system' as const, timeZone: { mode: 'utc' as const } };
+
+    /**
+     * Formats the instant in UTC with plain Intl, independent of the code under test.
+     *
+     * @param options - Intl date and time styles.
+     *
+     * @returns - Expected en-US text.
+     */
+    function intl(options: Intl.DateTimeFormatOptions): string {
+        return new Intl.DateTimeFormat(['en-US'], { ...options, timeZone: 'UTC' }).format(instant);
+    }
+
+    it.each([
+        [DATE_PRECISION.SECONDS, intl({ dateStyle: 'medium', timeStyle: 'medium' })],
+        [DATE_PRECISION.MINUTES, intl({ dateStyle: 'medium', timeStyle: 'short' })],
+        [DATE_PRECISION.DAY, intl({ dateStyle: 'medium' })],
+        [DATE_PRECISION.YEAR, '2026'],
+    ])('limits the age range precision to %s', (precision, expected) => {
+        const ranges = [{ hours: 1, precision }];
+        expect(formatDateWithPresentation(
+            instant,
+            ['en-US'],
+            { ...utc, precisionPolicy: { ...precisionPolicy, ranges } },
+            () => true,
+            now,
+        )).toEqual({ text: expected });
+    });
+
+    it('uses the precision beyond the last range for old timestamps', () => {
+        expect(formatDateWithPresentation(
+            instant,
+            ['en-US'],
+            { ...utc, precisionPolicy: { ...precisionPolicy, older: DATE_PRECISION.YEAR } },
+            () => true,
+            instant.getTime() + 10 * 8760 * 3_600_000,
+        )).toEqual({ text: '2026' });
+    });
+
+    it('applies the selected named zone to the limited precision', () => {
+        const ranges = [{ hours: 1, precision: DATE_PRECISION.MINUTES }];
+        const { text } = formatDateWithPresentation(
+            instant,
+            ['en-US'],
+            {
+                formatMode: 'system',
+                timeZone: { mode: 'iana', identifier: 'Asia/Tokyo' },
+                precisionPolicy: { ...precisionPolicy, ranges },
+            },
+            () => true,
+            now,
+        );
+        expect(text).toBe(new Intl.DateTimeFormat(['en-US'], {
+            dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tokyo',
+        }).format(instant));
+        expect(text).not.toBe(intl({ dateStyle: 'medium', timeStyle: 'short' }));
+    });
+
+    it('reports an unavailable saved zone and formats in the system zone', () => {
+        const ranges = [{ hours: 1, precision: DATE_PRECISION.DAY }];
+        expect(formatDateWithPresentation(
+            instant,
+            ['en-US'],
+            {
+                formatMode: 'system',
+                timeZone: { mode: 'iana', identifier: 'Gone/Zone' },
+                precisionPolicy: { ...precisionPolicy, ranges },
+            },
+            () => false,
+            now,
+        )).toEqual({
+            text: new Intl.DateTimeFormat(['en-US'], { dateStyle: 'medium' }).format(instant),
+            error: 'unavailable-time-zone',
+        });
+    });
+
+    it('falls back to the locale format when a custom pattern has nothing left to show', () => {
+        const ranges = [{ hours: 1, precision: DATE_PRECISION.DAY }];
+        expect(formatDateWithPresentation(
+            instant,
+            ['en-US'],
+            {
+                formatMode: 'custom',
+                pattern: 'HH:mm',
+                timeZone: { mode: 'utc' },
+                precisionPolicy: { ...precisionPolicy, ranges },
+            },
+            () => true,
+            now,
+        )).toEqual({ text: intl({ dateStyle: 'medium' }) });
     });
 });

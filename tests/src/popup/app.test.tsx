@@ -510,10 +510,14 @@ describe('PopupApp contract', () => {
         }
     });
 
-    it('contains Settings-opening failures', async () => {
+    it('contains Settings-opening failures and stays usable', async () => {
+        let openCalls = 0;
         const rendered = await renderPopup(active, {
             transport: { sendMessage: () => Promise.resolve(active) },
-            openOptionsPage: () => Promise.reject(new Error('Options page unavailable')),
+            openOptionsPage: () => {
+                openCalls += 1;
+                return Promise.reject(new Error('Options page unavailable'));
+            },
         });
         try {
             const settings = findButton(rendered.container, 'Settings');
@@ -524,7 +528,14 @@ describe('PopupApp contract', () => {
                 settings.click();
                 await Promise.resolve();
             });
-            expect(rendered.container.textContent).toContain('Settings');
+            expect(openCalls).toBe(1);
+            expect(findButton(rendered.container, 'Settings')).toBe(settings);
+
+            await act(async () => {
+                settings.click();
+                await Promise.resolve();
+            });
+            expect(openCalls).toBe(2);
         } finally {
             await rendered.unmount();
         }

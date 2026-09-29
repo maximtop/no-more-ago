@@ -61,12 +61,18 @@ function timestampSource(
  * Dispatches one same-window Facebook bridge message.
  *
  * @param data - Structurally valid or malformed bridge message payload.
+ * @param sender - Message provenance; defaults to this window on its own origin.
+ * @param sender.source - Event source reported to the runtime.
+ * @param sender.origin - Event origin reported to the runtime.
  */
-function dispatchBridgeMessage(data: unknown): void {
+function dispatchBridgeMessage(
+    data: unknown,
+    sender: { source?: MessageEventSource | null; origin?: string } = {},
+): void {
     window.dispatchEvent(new MessageEvent('message', {
         data,
-        origin: window.location.origin,
-        source: window,
+        origin: sender.origin ?? window.location.origin,
+        source: 'source' in sender ? sender.source : window,
     }));
 }
 
@@ -180,6 +186,40 @@ describe('Facebook isolated payload runtime', () => {
         }, window.location.origin);
     });
 
+    it.each([
+        ['another origin', () => ({ origin: 'https://evil.test' })],
+        ['a different source window', () => {
+            const frame = document.createElement('iframe');
+            document.body.append(frame);
+            return { source: frame.contentWindow };
+        }],
+        ['no source window', () => ({ source: null })],
+    ])('ignores bridge messages from %s', async (_name, createSender) => {
+        const sender = createSender();
+        const source = timestampSource();
+        const callback = vi.fn<(sources: readonly Element[]) => void>();
+        const postMessage = vi.spyOn(window, 'postMessage');
+        const handle = install(callback);
+        handle.setEnabled(true);
+        postMessage.mockClear();
+
+        dispatchBridgeMessage(createFacebookPayloadMessage({
+            records: [RECORD],
+            invalidatedTrackingTokens: [],
+            invalidateAll: false,
+        }), sender);
+        dispatchBridgeMessage(createFacebookPayloadBridgeReadyMessage(), sender);
+        await flushMutations();
+
+        expect(getFacebookTimestampRecord(source)).toBeNull();
+        expect(callback).not.toHaveBeenCalled();
+        expect(postMessage).not.toHaveBeenCalled();
+
+        dispatchRecords([RECORD]);
+        await flushMutations();
+        expect(getFacebookTimestampRecord(source)).toEqual(RECORD);
+    });
+
     it('reconciles when bounded evidence arrives before the source', async () => {
         const callback = vi.fn<(sources: readonly Element[]) => void>();
         const handle = install(callback);
@@ -191,6 +231,26 @@ describe('Facebook isolated payload runtime', () => {
         await flushMutations();
 
         expect(callback).toHaveBeenCalledWith([source]);
+    });
+
+    it('keeps unmatched evidence and retries when the reconciliation callback throws', async () => {
+        const callback = vi.fn<(sources: readonly Element[]) => void>()
+            .mockImplementationOnce(() => {
+                throw new Error('consumer failure');
+            });
+        const handle = install(callback);
+        handle.setEnabled(true);
+        dispatchRecords([RECORD]);
+        const source = timestampSource();
+        await flushMutations();
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        const unrelated = document.createElement('div');
+        unrelated.append(timestampSource(SECOND_TRACKING_TOKEN));
+        document.body.append(unrelated);
+        await flushMutations();
+
+        expect(callback).toHaveBeenLastCalledWith([source]);
     });
 
     it('skips link searches when an unrelated mutation has no pending change', async () => {

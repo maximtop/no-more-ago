@@ -47,6 +47,11 @@ export interface BuildEvent {
      * Build-process identifier.
      */
     readonly pid?: number;
+
+    /**
+     * Compilation error text of a failed build.
+     */
+    readonly error?: string;
 }
 
 /**
