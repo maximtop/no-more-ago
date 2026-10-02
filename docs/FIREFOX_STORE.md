@@ -21,6 +21,12 @@ The submitted source archive reproduced the extension archive byte for byte
 when built with the documented commands. Review notes are in
 [AMO_REVIEW.md](AMO_REVIEW.md).
 
+Version 0.1.1 was released on 2026-09-15 and is the current public version
+(file `5032635`, SHA-256
+`41bc3810493d438977859fb9a0559932e1ebee591522c79273d9b3cebeb407ea`).
+Version 0.1.0 remains listed as an older version. The AMO description still
+ends with the 0.1.0 release notes.
+
 ## Public verification — September 15, 2026
 
 The anonymous AMO API reports add-on ID `3070516`, version record `6479158`,
@@ -98,18 +104,22 @@ switch off and on restored and reapplied the timestamp without a page reload.
 Adding and removing `github.com` from Excluded sites did the same. The custom
 format and UTC setting remained selected after reloading the options page.
 
-Hacker News did not pass. Relative timestamps remained unchanged. Diagnostics
-recorded an adapter match followed by 30 `invalid-timestamp` skips and zero
-transformed timestamps. The live timestamp source was
+Hacker News did not pass in 0.1.0. Relative timestamps remained unchanged.
+Diagnostics recorded an adapter match followed by 30 `invalid-timestamp` skips
+and zero transformed timestamps. The live timestamp source was
 `2026-09-15T12:31:10`, which has no explicit time-zone designator and is
 therefore rejected by the adapter's `EXPLICIT_ISO_ZONE` validation rule.
-Current `master` uses the same Hacker News parsing behavior.
+Version 0.1.1 fixes this by treating Hacker News titles as UTC. Keep upload,
+review approval, public availability, and runtime verification as separate
+release states.
 
-Do not assume this unzoned Hacker News value is UTC. Before another release,
-establish its authoritative time-zone semantics, add a regression test for the
-live format, implement the narrowest evidenced fix, publish a new version, and
-repeat the native Firefox test. Keep upload, review approval, public
-availability, and runtime verification as separate release states.
+## Hacker News re-test in 0.1.1 — September 29, 2026
+
+Passed. The public AMO 0.1.1 XPI was installed in Firefox 156.0.1 with a
+fresh profile and access to all websites, and `https://news.ycombinator.com/`
+was loaded. All 30 story timestamps were replaced and none stayed relative.
+A title of `2026-09-29T11:14:45` was shown as `Sep 29, 2026, 2:14 PM` in the
+UTC+3 test machine's time zone, so the unzoned value is read as UTC.
 
 ## Official references
 
