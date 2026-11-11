@@ -37,6 +37,10 @@ gh workflow run deploy-stores.yml -f target=firefox -f tag=vX.Y.Z -f mode=submit
 | Edge | `validate`, `upload`, `submit` | `upload` fills the draft; `submit` also requests certification. |
 | Firefox | `validate`, `status`, `submit` | `status` reads review state; `submit` uploads package, source, and short reviewer notes that link the full instructions. |
 
+The Mac App Store is outside this boundary: `deploy-apple-app-store.yml`
+builds the macOS app from the release tag, because the store takes an Xcode
+archive rather than a ZIP. See [Mac App Store](APP_STORE.md).
+
 Chrome still needs the final publish action after approval. Edge publishes a
 certified submission, and Firefox publishes a reviewed and signed listed
 version. A successful workflow proves only the action and state reported in its

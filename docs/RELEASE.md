@@ -69,7 +69,9 @@ delete it with `gh release delete vX.Y.Z --yes` before re-running.
 ## Store deployment
 
 Nothing is sent to a store automatically. Chrome, Edge, and Firefox each
-have a manual workflow that takes an already published GitHub Release.
+have a manual workflow that takes an already published GitHub Release. The
+Mac App Store upload archives the released source instead; see
+[Mac App Store](APP_STORE.md).
 
 ```sh
 gh workflow run deploy-chrome-store.yml -f tag=vX.Y.Z

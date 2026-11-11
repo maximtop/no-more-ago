@@ -9,12 +9,19 @@ export const BROWSER = {
     CHROME: 'chrome',
     FIREFOX: 'firefox',
     EDGE: 'edge',
+    SAFARI: 'safari',
 } as const;
 
 /**
- * Browser artifacts emitted by development and release builds.
+ * Browser artifacts accepted by explicit development and release builds.
  */
-export const BROWSERS = [BROWSER.CHROME, BROWSER.FIREFOX, BROWSER.EDGE] as const;
+export const BROWSERS = [BROWSER.CHROME, BROWSER.FIREFOX, BROWSER.EDGE, BROWSER.SAFARI] as const;
+
+/**
+ * Browser artifacts published as GitHub Release ZIPs and built by a release without a browser.
+ * Safari is explicit because its WebExtension resources ship inside a macOS app built by Xcode.
+ */
+export const STORE_ARCHIVE_BROWSERS = [BROWSER.CHROME, BROWSER.FIREFOX, BROWSER.EDGE] as const;
 
 /**
  * Browser artifact target accepted by the build pipeline.

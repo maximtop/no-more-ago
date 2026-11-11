@@ -599,7 +599,8 @@ source types are deferred.
 - YouTube support is Watch-only. Home, Search, and Channel list publication
   labels remain unchanged, and no fallback request is made for them.
 - The interface supports 40 languages; the browser selects the catalog.
-- Safari is not a current build target.
+- Safari support requires Safari 16.4 or later on macOS. Safari on iOS and
+  iPadOS is not a build target.
 - Browser-internal and other restricted pages cannot run the content script.
 - Frames that are inaccessible or use a non-HTTP(S) scheme remain unchanged.
 - Shadow DOM, unapproved page labels, durations, generic date-only values,
@@ -613,6 +614,7 @@ source types are deferred.
 - [Support](docs/SUPPORT.md)
 - [Chrome store materials](docs/STORE.md)
 - [Firefox Add-ons submission](docs/FIREFOX_STORE.md)
+- [Mac App Store](docs/APP_STORE.md)
 
 - [Development](DEVELOPMENT.md)
 - [LLM agent rules](AGENTS.md)
