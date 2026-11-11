@@ -1,0 +1,8 @@
+"app.version_format" = "Version %@";
+"app.explanation" = "No More Ago replaces relative timestamps such as “3 hours ago” with exact dates. Turn it on in Safari Settings → Extensions and allow it on the websites where you want exact dates.";
+"app.open_settings" = "Open Safari Extension Settings";
+"app.refresh" = "Refresh";
+"app.status.checking" = "Checking extension status…";
+"app.status.unavailable" = "Extension status unavailable";
+"app.status.enabled" = "Safari extension is enabled";
+"app.status.disabled" = "Safari extension is not enabled";

@@ -81,10 +81,25 @@ jobs:
           asset-prefix: no-more-ago
           locale-dir: src/_locales
 
+  safari:
+    name: Safari
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-toolchain
+      - name: Build and validate the local Safari app
+        run: pnpm safari:build
+      - name: Build and validate the unsigned App Store archive
+        run: pnpm safari:archive --unsigned
+
   check:
     name: check
     if: always()
-    needs: [lint, typecheck, test, package, locales]
+    needs: [lint, typecheck, test, package, locales, safari]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -95,5 +110,6 @@ jobs:
             needs.typecheck.result == 'success' &&
             needs.test.result == 'success' &&
             needs.package.result == 'success' &&
-            needs.locales.result == 'success' }}
+            needs.locales.result == 'success' &&
+            needs.safari.result == 'success' }}
         run: test "$PASSED" = true

@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { BROWSERS } from '../../../scripts/build/contracts';
+import { BROWSER, BROWSERS } from '../../../scripts/build/contracts';
 import {
     EXTENSION_ICON_BASENAME,
     EXTENSION_ICON_SIZES,
@@ -51,7 +51,7 @@ describe('build commands', () => {
         const workspace = createBuildWorkspace();
         try {
             await expect(
-                execFileAsync(PNPM_COMMAND, ['dev', 'safari'], { cwd: workspace.root }),
+                execFileAsync(PNPM_COMMAND, ['dev', 'opera'], { cwd: workspace.root }),
             ).rejects.toMatchObject({ code: 2 });
             expect(existsSync(`${workspace.root}/dist`)).toBe(false);
         } finally {
@@ -89,9 +89,9 @@ describe('build commands', () => {
                     'webNavigation',
                 ]);
                 expect(manifest.host_permissions).toEqual(['<all_urls>']);
-                expect(background[browser === 'firefox' ? 'scripts' : 'service_worker'])
+                expect(background[browser === BROWSER.FIREFOX ? 'scripts' : 'service_worker'])
                     .toBeDefined();
-                if (browser === 'firefox') {
+                if (browser === BROWSER.FIREFOX) {
                     expect(manifest.browser_specific_settings).toEqual({
                         gecko: {
                             data_collection_permissions: {
@@ -100,6 +100,11 @@ describe('build commands', () => {
                             id: 'no-more-ago@maximtop.dev',
                             strict_min_version: '140.0',
                         },
+                    });
+                    expect(manifest.minimum_chrome_version).toBeUndefined();
+                } else if (browser === BROWSER.SAFARI) {
+                    expect(manifest.browser_specific_settings).toEqual({
+                        safari: { strict_min_version: '16.4' },
                     });
                     expect(manifest.minimum_chrome_version).toBeUndefined();
                 } else {
