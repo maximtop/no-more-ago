@@ -20,7 +20,9 @@ and are discarded when processing stops. It does not retain response bodies,
 post content, authors or account data in logs, or transmit them as telemetry.
 
 Other supported integrations generally use data already present on the page.
-Bluesky has the specific network behavior described below.
+After in-page navigation between YouTube videos, YouTube support reads the
+publication date from the page's own video player; it reads nothing else
+from the player. Bluesky has the specific network behavior described below.
 
 ## Bluesky public lookups
 

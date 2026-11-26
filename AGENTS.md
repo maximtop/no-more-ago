@@ -251,6 +251,11 @@ is needed.
 - Bound loaded page-data parsing. Reuse at most one YouTube player-response
   parse record per document, including invalid results, and invalidate it when
   the selected assignment element or exact text changes or becomes ambiguous.
+- Read the live YouTube player only from a Watch handoff session, only in the
+  `MAIN` world of the requesting frame, and only on readiness events up to
+  `YOUTUBE_LIVE_PLAYER_READ_LIMIT`. Require the page route and both player
+  identities to match, parse the returned value in the background page, and
+  release it when the route ends. Never poll the player.
 - Scope dynamic-route provenance to the current URL and lifecycle generation.
   Identity-bound loaded data may remain live when its identity matches the
   current route, but unbound reused data must fail closed until a full-document

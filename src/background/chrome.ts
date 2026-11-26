@@ -2,6 +2,10 @@
  * @file Chrome API wiring for the background application and runtime messages.
  */
 
+import {
+    READ_YOUTUBE_PUBLICATION_MESSAGE,
+    type ReadYouTubePublicationMessage,
+} from '../shared/adapters/youtube-player';
 import { DIAGNOSTIC_BROWSER_FAMILY } from '../shared/diagnostics/contracts';
 import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from '../shared/extension-files';
 import {
@@ -49,6 +53,7 @@ import {
     installDocumentRouteUpdates,
     type HistoryStateUpdateSource,
 } from './runtime/document-route-updates';
+import { readYouTubePlayerPublication } from './runtime/youtube-player-publication';
 import { SettingsService, type SettingsStorage } from './settings/service';
 
 import type { ScriptingRuntime } from './runtime/scripting';
@@ -78,12 +83,27 @@ const settingsBroadcast: SettingsBroadcast = {
 };
 
 /**
+ * Background services built from the available Chrome APIs.
+ */
+interface InstalledBackground {
+    /**
+     * Configured background application.
+     */
+    readonly application: BackgroundApplication;
+
+    /**
+     * Scripting API boundary shared with page-world reads.
+     */
+    readonly scripting: ScriptingRuntime;
+}
+
+/**
  * Constructs the background application from available Chrome APIs, or returns undefined for
  * incomplete shims.
  *
- * @returns - Configured application, or undefined when required Chrome APIs are unavailable.
+ * @returns - Configured services, or undefined when required Chrome APIs are unavailable.
  */
-function installApplication(): BackgroundApplication | undefined {
+function installBackground(): InstalledBackground | undefined {
     const candidate = chrome as unknown as {
         readonly storage?: {
             readonly local?: Pick<DiagnosticStorage, 'get' | 'set'> & {
@@ -194,7 +214,7 @@ function installApplication(): BackgroundApplication | undefined {
         browserFamily,
         ...(extensionVersion === undefined ? {} : { extensionVersion }),
     };
-    return new BackgroundApplication({
+    const application = new BackgroundApplication({
         settings: new SettingsService(storage),
         coordinator,
         tabs,
@@ -202,9 +222,10 @@ function installApplication(): BackgroundApplication | undefined {
         diagnosticEnvironment,
         broadcast: settingsBroadcast,
     });
+    return { application, scripting };
 }
 
-const application = installApplication();
+const background = installBackground();
 
 /**
  * Accepts only messages sent from this extension's own options page or popup.
@@ -255,9 +276,10 @@ function unavailableSurfaceState(
         : createUnavailableSitesState();
 }
 
-if (application && chrome.runtime?.onMessage?.addListener) {
+if (background && chrome.runtime?.onMessage?.addListener) {
+    const { application, scripting } = background;
     chrome.runtime.onMessage.addListener((value: unknown, sender, sendResponse) => {
-        const message = value as BackgroundMessage | DiagnosticEventMessage | undefined;
+        const message = value as BackgroundMessage | DiagnosticEventMessage | ReadYouTubePublicationMessage | undefined;
         let responseSent = false;
 
         /**
@@ -272,6 +294,10 @@ if (application && chrome.runtime?.onMessage?.addListener) {
             responseSent = true;
             sendResponse(payload);
         };
+        if (message?.type === READ_YOUTUBE_PUBLICATION_MESSAGE) {
+            void readYouTubePlayerPublication(scripting, sender, message.href).then(sendOnce);
+            return true;
+        }
         if (message?.type === DIAGNOSTIC_EVENT_MESSAGE) {
             void application.recordDocumentEvent(message.event, sender).then(
                 (accepted) => sendOnce({ ok: accepted }),

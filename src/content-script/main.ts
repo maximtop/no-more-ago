@@ -2,6 +2,10 @@
  * @file Starts the page-local runtime with the current document, URL, and Chrome messaging API.
  */
 
+import {
+    READ_YOUTUBE_PUBLICATION_MESSAGE,
+    type ReadYouTubePublicationMessage,
+} from '../shared/adapters/youtube-player';
 import { GET_DOCUMENT_STATE_MESSAGE } from '../shared/messaging/contracts';
 import { DIAGNOSTIC_EVENT_MESSAGE } from '../shared/messaging/document-messages';
 import { isFacebookUrl } from '../shared/url/facebook';
@@ -34,7 +38,17 @@ runtimeComposition.content = installContentRuntime({
             window.addEventListener('popstate', listener);
         },
     },
-    routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
+    routeHandoffClassifier: (route) => classifyYouTubeWatchRouteHandoff(
+        route,
+        async (href) => {
+            const message: ReadYouTubePublicationMessage = { type: READ_YOUTUBE_PUBLICATION_MESSAGE, href };
+            // A worker that stopped before answering leaves the reply undefined.
+            const reply = await chrome.runtime.sendMessage<ReadYouTubePublicationMessage, string | null | undefined>(
+                message,
+            );
+            return reply ?? null;
+        },
+    ),
     locales: navigator.languages,
     localesProvider: () => navigator.languages,
     ...(typeof chrome.runtime.sendMessage === 'function'

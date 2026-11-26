@@ -23,7 +23,10 @@ import {
 } from './types';
 import { readYouTubePlayerResponsePublication } from './youtube-player-response';
 
-const WATCH_PUBLICATION_SELECTOR = 'ytd-watch-metadata #info-strings > yt-formatted-string';
+const WATCH_PUBLICATION_SELECTOR = [
+    'ytd-watch-metadata #info-strings > yt-formatted-string',
+    'ytd-watch-metadata yt-formatted-string#info > span',
+].join(', ');
 const DATE_PUBLISHED_SELECTOR = 'meta[itemprop="datePublished"][content]';
 
 /**

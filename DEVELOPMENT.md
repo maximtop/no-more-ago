@@ -329,8 +329,21 @@ one approved `datePublished` metadata value as an initial-document fallback.
 Either source may provide a strict calendar date or a complete explicitly
 zoned instant. The visible Watch label must separately match the relative
 classifier; absolute and unknown labels remain unchanged. Same-document
-changed-video handoffs admit only current dual-ID loaded data; unbound metadata
-remains quarantined. The content script never requests YouTube data.
+changed-video handoffs admit only current dual-ID player data; unbound metadata
+remains quarantined. The extension never requests YouTube data over the
+network.
+
+YouTube keeps the loaded assignment of the first video after a same-document
+navigation. The Watch handoff session therefore asks the background page to
+read the page's own player, `#movie_player.getPlayerResponse()`, in the
+sending frame's `MAIN` world. The reader in
+`src/shared/adapters/youtube-player.ts` returns a value only when the page
+route and both player identities match;
+`src/background/runtime/youtube-player-publication.ts` parses the result,
+because page scripts control that world. The session reads once at activation
+and after each `yt-navigate-finish`, `yt-page-data-updated`, or
+`loadedmetadata` event, at most `YOUTUBE_LIVE_PLAYER_READ_LIMIT` times, and
+releases the value when its route ends.
 
 YouTube history-state updates produce a strict payload-free command for the
 exact frame, coalesced to one in-flight and one pending-latest delivery per
@@ -558,7 +571,7 @@ a synchronously throwing fake and assert zero calls after every case. Never
 install a successful response or refresh fixtures from a live page during the
 test run. Route tests use invented video IDs and both signal/data orderings.
 This path does not cover list surfaces, general YouTube SPA behavior, mobile,
-Music, Shorts, embeds, fallback, or player/API lookup.
+Music, Shorts, embeds, fallback, or network or API lookup.
 
 Run its focused source and public-boundary tests with:
 

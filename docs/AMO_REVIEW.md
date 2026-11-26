@@ -38,6 +38,8 @@ and site scope. Absolute or unrecognized labels remain unchanged.
 Bluesky support makes credential-free requests to
 `https://public.api.bsky.app` using public post identifiers. Facebook support
 inspects selected Story-bearing page responses while processing is enabled.
+After in-page navigation between YouTube videos, a bundled function runs in the
+page's world to read the publication date from the page's own video player.
 These behaviors and all requested permissions are described in
 `docs/PRIVACY.md` and the project `README.md`.
 
