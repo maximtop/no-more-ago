@@ -82,7 +82,8 @@ function createPublicationCandidate(
 }
 
 /**
- * Preferred YouTube source for already-loaded, identity-bound player data.
+ * Preferred YouTube source for identity-bound player data: the loaded assignment, or the live
+ * player's value retained by a Watch handoff session.
  */
 export const youtubePlayerResponseRule: TimestampSourceRule = {
     id: YOUTUBE_PLAYER_RESPONSE_RULE_ID,

@@ -783,6 +783,7 @@ class RuntimeSlot {
  * @param input.urlProvider - Lazy current page URL source used for route signals.
  * @param input.routeEvents - Optional same-document route event source.
  * @param input.routeHandoffClassifier - Optional total retained-policy classifier.
+ * @param input.documentLoadUrl - URL the document was loaded for, when the browser reports one.
  * @param input.locales - Static preferred locale tags.
  * @param input.localesProvider - Dynamic source of preferred locale tags.
  * @param input.registry - Trusted adapter registry override.
@@ -800,6 +801,7 @@ export function installContentRuntime(input: {
     readonly urlProvider?: () => URL;
     readonly routeEvents?: ContentRouteEventSource;
     readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
+    readonly documentLoadUrl?: URL;
     readonly locales: readonly string[];
     readonly localesProvider?: () => readonly string[];
     readonly registry?: AdapterRegistry;
@@ -841,6 +843,7 @@ export function installContentRuntime(input: {
             ...(input.routeHandoffClassifier === undefined
                 ? {}
                 : { routeHandoffClassifier: input.routeHandoffClassifier }),
+            ...(input.documentLoadUrl === undefined ? {} : { documentLoadUrl: input.documentLoadUrl }),
         },
         messages: input.messages,
         reportDiagnostic: input.reportDiagnostic,

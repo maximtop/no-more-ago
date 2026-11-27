@@ -2,10 +2,6 @@
  * @file Chrome API wiring for the background application and runtime messages.
  */
 
-import {
-    READ_YOUTUBE_PUBLICATION_MESSAGE,
-    type ReadYouTubePublicationMessage,
-} from '../shared/adapters/youtube-player';
 import { DIAGNOSTIC_BROWSER_FAMILY } from '../shared/diagnostics/contracts';
 import { OPTIONS_PAGE_FILE, POPUP_PAGE_FILE } from '../shared/extension-files';
 import {
@@ -28,7 +24,9 @@ import {
 } from '../shared/messaging/contracts';
 import {
     DIAGNOSTIC_EVENT_MESSAGE,
+    READ_YOUTUBE_PUBLICATION_MESSAGE,
     type DiagnosticEventMessage,
+    type ReadYouTubePublicationMessage,
 } from '../shared/messaging/document-messages';
 import { createUnavailableDocumentState } from '../shared/messaging/document-state';
 import { SETTINGS_CHANGED_MESSAGE } from '../shared/messaging/settings-notifications';

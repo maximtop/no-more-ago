@@ -31,6 +31,14 @@ const WATCH_B = 'https://www.youtube.com/watch?v=testVID0002';
 const VIDEO_B = 'testVID0002';
 
 /**
+ * Fires media readiness the way the browser does: on a connected video, without bubbling.
+ */
+function dispatchVideoMetadataLoaded(): void {
+    const video = document.querySelector('video') ?? document.body.appendChild(document.createElement('video'));
+    video.dispatchEvent(new Event('loadedmetadata', { bubbles: false }));
+}
+
+/**
  * Flushes observer delivery and the session's coalescing microtask.
  *
  * @returns - Promise settled after queued microtasks.
@@ -248,7 +256,7 @@ describe('YouTube Watch live player reads', () => {
             }))
             .mockResolvedValueOnce('2025-06-16');
         const { session } = activateWithLivePlayer(read);
-        document.dispatchEvent(new Event('loadedmetadata'));
+        dispatchVideoMetadataLoaded();
         answerFirst?.(null);
         await flushMutations();
 
@@ -261,7 +269,7 @@ describe('YouTube Watch live player reads', () => {
         const read = vi.fn<ReadLivePlayerPublication>(async () => null);
         const { session } = activateWithLivePlayer(read);
         for (let event = 0; event < YOUTUBE_LIVE_PLAYER_READ_LIMIT * 2; event += 1) {
-            document.dispatchEvent(new Event('loadedmetadata'));
+            dispatchVideoMetadataLoaded();
 
             await flushMutations();
         }

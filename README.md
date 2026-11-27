@@ -36,7 +36,7 @@ extension.
 - **Specialized source:** a site-specific rule for richer markup, such as
   Facebook Story payloads, GitHub's relative-time widgets, Hacker News age
   widgets, approved Stack Exchange, Telegram Web K, and TikTok timestamps; the
-  approved YouTube watch label and identity-matched loaded data or
+  approved YouTube watch label and identity-matched player data or
   initial-document metadata; best-effort LinkedIn ID timestamps; or confirmed
   Bluesky post labels backed by public AppView `indexedAt`. Specialized
   rules take precedence over the generic rule when both accept the same source.
@@ -268,6 +268,12 @@ such as `3 months ago`; an absolute label such as `Aug 29, 2026` remains
 unchanged even when valid local publication data exists. Visible text and
 arbitrary attributes are never inferred as dates.
 
+When the extension starts on a page that already navigated in place, for
+example after it is installed or turned on, the browser still reports the URL
+the page was loaded for. The start is then treated as the same-document
+handoff described below, so the first video's metadata is never shown under
+another video.
+
 The generic runtime watches relevant dynamic content in each reachable
 HTTP(S) document. Newly added or changed timestamps are processed without a
 full page reload. Before processing dynamic YouTube content, the runtime
@@ -472,7 +478,7 @@ everything**. It restores:
 | TikTok profile card without an existing timestamp label | No date is appended. |
 | Relative canonical YouTube watch label backed by a calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
 | Relative canonical YouTube watch label backed by a zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
-| Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
+| Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID player publication data, loaded or read from the page's player, may produce new output. |
 | Same-document navigation to a list or unsupported route | Obsolete Watch output is restored and the unsupported route remains unchanged. |
 | YouTube Home, Search, or Channel list page | Publication labels remain unchanged. |
 | Generic date-only `time[datetime]` | Page content remains unchanged because generic processing is instant-only. |
@@ -554,7 +560,9 @@ external service. Successful processing does not retain post IDs, raw source
 timestamps, URL paths, authors, titles, or page content in diagnostics.
 
 YouTube publication processing reads only recognized values already present
-in the document. It does not make a network request or perform a player lookup.
+in the page: the loaded assignment, the head metadata, and, after in-page
+navigation, the video ID and publication date of the page's own player. It
+does not make a network request.
 
 It does not derive YouTube dates from visible relative text, page titles, ARIA
 labels, arbitrary `data-*` attributes, nearby text, or elapsed time, and does

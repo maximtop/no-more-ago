@@ -340,10 +340,16 @@ sending frame's `MAIN` world. The reader in
 `src/shared/adapters/youtube-player.ts` returns a value only when the page
 route and both player identities match;
 `src/background/runtime/youtube-player-publication.ts` parses the result,
-because page scripts control that world. The session reads once at activation
-and after each `yt-navigate-finish`, `yt-page-data-updated`, or
-`loadedmetadata` event, at most `YOUTUBE_LIVE_PLAYER_READ_LIMIT` times, and
-releases the value when its route ends.
+because page scripts control that world, by the same calendar-date or
+explicit-zone rule the Watch candidate uses. The session reads at activation
+and after `yt-navigate-finish`, `yt-page-data-updated`, or `loadedmetadata`
+until it gets a value, at most `YOUTUBE_LIVE_PLAYER_READ_LIMIT` times; events
+during a read give one more read. It releases the value when its route ends.
+
+The content script also takes the URL of the document's navigation entry as
+`documentLoadUrl`. When the page navigated in place before the runtime
+started, the controller classifies the start as a route change from that URL,
+so head metadata of the first video stays quarantined.
 
 YouTube history-state updates produce a strict payload-free command for the
 exact frame, coalesced to one in-flight and one pending-latest delivery per

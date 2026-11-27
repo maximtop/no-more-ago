@@ -8,26 +8,6 @@
 export const YOUTUBE_PLAYER_PUBLICATION_MAX_CHARACTERS = 64;
 
 /**
- * Asks the background to read the live Watch player of the sending frame.
- */
-export const READ_YOUTUBE_PUBLICATION_MESSAGE = 'no-more-ago:read-youtube-publication';
-
-/**
- * Request for the live player's publication value of one Watch route.
- */
-export interface ReadYouTubePublicationMessage {
-    /**
-     * Message discriminator.
-     */
-    readonly type: typeof READ_YOUTUBE_PUBLICATION_MESSAGE;
-
-    /**
-     * Watch URL the sending runtime currently processes.
-     */
-    readonly href: string;
-}
-
-/**
  * Reads the publication value of the live Watch player when its identity matches the route.
  * The browser serializes this function into the page's world without its module scope, so it
  * must stay self-contained. Page scripts can replace every global it touches, so its result
@@ -41,11 +21,12 @@ export interface ReadYouTubePublicationMessage {
 export function readLiveYouTubePlayerPublication(href: string, videoId: string): unknown {
     const expected = new URL(href);
     const current = new URL(window.location.href);
+    const currentVideoIds = current.searchParams.getAll('v');
     if (
         current.origin !== expected.origin
         || current.pathname !== expected.pathname
-        || current.searchParams.getAll('v').length !== 1
-        || current.searchParams.get('v') !== videoId
+        || currentVideoIds.length !== 1
+        || currentVideoIds[0] !== videoId
     ) {
         return null;
     }

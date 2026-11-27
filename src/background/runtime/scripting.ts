@@ -128,7 +128,7 @@ interface ExplicitFramesScriptTarget {
 }
 
 /**
- * Supported all-frame or explicit-frame one-off script target.
+ * One-off script target: every reachable frame of a tab, or the listed frames.
  */
 export type ScriptInjectionTarget = AllFramesScriptTarget | ExplicitFramesScriptTarget;
 
@@ -202,7 +202,7 @@ export interface ScriptingRuntime {
     updateContentScripts(scripts: RegisteredContentScriptSpec[]): Promise<void>;
 
     /**
-     * Executes a content file in every frame of a tab.
+     * Executes bundled files or a self-contained function in the targeted frames of a tab.
      */
     executeScript(
         input: FileScriptInjection | FunctionScriptInjection,
@@ -220,7 +220,7 @@ export interface ScriptingRuntime {
 }
 
 /**
- * Successful result returned by the browser's all-frame script execution.
+ * Per-frame result of a one-off script execution.
  */
 export interface InjectionResult {
     /**

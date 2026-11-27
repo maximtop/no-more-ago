@@ -57,7 +57,7 @@ function scriptingWith(execute: () => Promise<readonly InjectionResult[]>): {
 
 describe('live YouTube player publication boundary', () => {
     it('runs the reader in the page world of exactly the sending frame', async () => {
-        const { scripting, executeScript } = scriptingWith(async () => [{ frameId: 0, result: '2025-06-16' }]);
+        const { scripting, executeScript } = scriptingWith(async () => [{ frameId: 3, result: '2025-06-16' }]);
 
         await expect(readYouTubePlayerPublication(scripting, SENDER, WATCH)).resolves.toBe('2025-06-16');
         expect(executeScript).toHaveBeenCalledWith({
@@ -76,7 +76,7 @@ describe('live YouTube player publication boundary', () => {
         ['a URL that is not a Watch route', SENDER, 'https://www.youtube.com/results?search_query=fixture'],
         ['a URL that is not HTTP', SENDER, 'ftp://www.youtube.com/watch?v=testVID0001'],
     ])('refuses %s without running page code', async (_case, sender, href) => {
-        const { scripting, executeScript } = scriptingWith(async () => [{ frameId: 0, result: '2025-06-16' }]);
+        const { scripting, executeScript } = scriptingWith(async () => [{ frameId: 3, result: '2025-06-16' }]);
 
         await expect(readYouTubePlayerPublication(scripting, sender, href)).resolves.toBeNull();
         expect(executeScript).not.toHaveBeenCalled();
@@ -86,12 +86,21 @@ describe('live YouTube player publication boundary', () => {
         ['an object', { toString: '2025-06-16' }],
         ['a number', 20250616],
         ['an empty string', ''],
+        ['a relative label', '3 months ago'],
+        ['an impossible calendar date', '2025-02-30'],
+        ['a date-time without a zone', '2025-06-16T08:00:08'],
         ['an over-long string', '2'.repeat(YOUTUBE_PLAYER_PUBLICATION_MAX_CHARACTERS + 1)],
         ['nothing', undefined],
     ])('rejects %s returned by the page', async (_case, result) => {
-        const { scripting } = scriptingWith(async () => [{ frameId: 0, result }]);
+        const { scripting } = scriptingWith(async () => [{ frameId: 3, result }]);
 
         await expect(readYouTubePlayerPublication(scripting, SENDER, WATCH)).resolves.toBeNull();
+    });
+
+    it('accepts an explicitly zoned date-time', async () => {
+        const { scripting } = scriptingWith(async () => [{ frameId: 3, result: '2025-06-16T08:00:08-07:00' }]);
+
+        await expect(readYouTubePlayerPublication(scripting, SENDER, WATCH)).resolves.toBe('2025-06-16T08:00:08-07:00');
     });
 
     it('answers null when the browser refuses the injection', async () => {

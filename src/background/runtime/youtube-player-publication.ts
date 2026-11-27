@@ -9,19 +9,22 @@ import {
     YOUTUBE_PLAYER_PUBLICATION_MAX_CHARACTERS,
     readLiveYouTubePlayerPublication,
 } from '../../shared/adapters/youtube-player';
+import { parseCalendarDate } from '../../shared/date/calendar-date';
+import { parseExplicitZoneDatetime } from '../../shared/date/parse-explicit-zone-datetime';
 import { parseHttpUrl } from '../../shared/url/http';
 
 import { SCRIPT_EXECUTION_WORLD, type ScriptingRuntime } from './scripting';
 import { settleBrowserOperation } from './settle';
 
 /**
- * Publication value returned from the page world. Page scripts control that world, so the
- * value is parsed here before it reaches the content runtime.
+ * Publication value returned from the page world. Page scripts control that world, so the value
+ * is parsed here, by the same calendar-date-or-explicit-zone rule the Watch candidate uses. An
+ * unusable value then never displaces valid loaded data in the content runtime.
  */
 const livePublicationSchema = v.pipe(
     v.string(),
-    v.nonEmpty(),
     v.maxLength(YOUTUBE_PLAYER_PUBLICATION_MAX_CHARACTERS),
+    v.check((value) => parseCalendarDate(value) !== null || parseExplicitZoneDatetime(value) !== null),
 );
 
 /**

@@ -20,6 +20,7 @@ import { DOCUMENT_RUNTIME_SLOT } from '../../../src/content-script/runtime';
 import { GET_DOCUMENT_STATE_MESSAGE } from '../../../src/shared/messaging/contracts';
 import {
     DOCUMENT_POLICY_RECONCILED_MESSAGE,
+    READ_YOUTUBE_PUBLICATION_MESSAGE,
     RECONCILE_DOCUMENT_POLICY_MESSAGE,
 } from '../../../src/shared/messaging/document-messages';
 import { SETTINGS_STATE_FAILURE } from '../../../src/shared/messaging/view-state-values';
@@ -27,8 +28,12 @@ import { SETTINGS_STATE_FAILURE } from '../../../src/shared/messaging/view-state
 import {
     YOUTUBE_LIST_FIXTURE_ID,
     YOUTUBE_LIST_FIXTURES,
+    youtubePlayerResponseAssignment,
     type YouTubeListFixtureId,
 } from './adapters/youtube-test-data';
+
+const WATCH_A = 'https://www.youtube.com/watch?v=testVID0001';
+const WATCH_B = 'https://www.youtube.com/watch?v=testVID0002';
 
 const YOUTUBE_LIST_LABEL_SELECTORS = {
     [YOUTUBE_LIST_FIXTURE_ID.HOME]: '.ytContentMetadataViewModelMetadataTextLastPart',
@@ -98,6 +103,25 @@ function expectLocalOnlyDocument(
 }
 
 /**
+ * Installs a Watch page whose head data belongs to the first video and whose label is relative.
+ */
+function installWatchPageOfFirstVideo(): void {
+    document.head.innerHTML = '<meta itemprop="datePublished" content="2024-11-12">'
+        + `<script>${youtubePlayerResponseAssignment('2024-11-12', 'testVID0001')}</script>`;
+    document.body.innerHTML = '<ytd-watch-metadata><div id="info-strings">'
+        + '<yt-formatted-string>3 months ago</yt-formatted-string></div></ytd-watch-metadata>';
+}
+
+/**
+ * Returns the date of the current Watch output.
+ *
+ * @returns - Output date, or null without output.
+ */
+function watchOutputDate(): string | null {
+    return document.querySelector<HTMLTimeElement>('time[data-no-more-ago-output]')?.dateTime ?? null;
+}
+
+/**
  * Creates a ready document-state response.
  *
  * @param enabled - Effective top-level policy.
@@ -125,6 +149,7 @@ describe('content entrypoint', () => {
         } | undefined>)[DOCUMENT_RUNTIME_SLOT];
         current?.handle?.teardown();
         Reflect.deleteProperty(document, DOCUMENT_RUNTIME_SLOT);
+        document.head.replaceChildren();
         document.body.innerHTML = '<time datetime="2026-08-23T10:15:00Z">2 hours ago</time>';
     });
 
@@ -216,6 +241,64 @@ describe('content entrypoint', () => {
             expect(chrome.onMessage.addListener).toHaveBeenCalledTimes(1);
         },
     );
+
+    it('reads the live player through the background after navigating to another video', async () => {
+        installWatchPageOfFirstVideo();
+        const livePublications = ['2025-06-16', null];
+        const sendMessage = vi.fn(async (message: unknown) => {
+            const { type } = message as { readonly type: string };
+            return type === READ_YOUTUBE_PUBLICATION_MESSAGE ? livePublications.pop() : state();
+        });
+        installChromeMock(sendMessage);
+        let currentHref = WATCH_A;
+        let popstate: (() => void) | undefined;
+        vi.stubGlobal('window', {
+            location: {
+                get href() {
+                    return currentHref;
+                },
+            },
+            addEventListener: (type: string, listener: () => void) => {
+                if (type === 'popstate') {
+                    popstate = listener;
+                }
+            },
+        });
+
+        await import('../../../src/content-script/main');
+        await flushRuntime();
+        expect(watchOutputDate()).toBe('2024-11-12');
+
+        currentHref = WATCH_B;
+        popstate?.();
+        await flushRuntime();
+        expect(watchOutputDate()).toBeNull();
+
+        document.dispatchEvent(new Event('yt-page-data-updated'));
+        await flushRuntime();
+        expect(watchOutputDate()).toBe('2025-06-16');
+        expect(sendMessage).toHaveBeenCalledWith({ type: READ_YOUTUBE_PUBLICATION_MESSAGE, href: WATCH_B });
+    });
+
+    it('does not show the first video\'s metadata when it starts after navigating in place', async () => {
+        installWatchPageOfFirstVideo();
+        const livePublications = ['2025-06-16', null];
+        const sendMessage = vi.fn(async (message: unknown) => {
+            const { type } = message as { readonly type: string };
+            return type === READ_YOUTUBE_PUBLICATION_MESSAGE ? livePublications.pop() : state();
+        });
+        installChromeMock(sendMessage);
+        vi.stubGlobal('window', { location: { href: WATCH_B }, addEventListener: vi.fn() });
+        vi.spyOn(performance, 'getEntriesByType').mockReturnValue([{ name: WATCH_A } as PerformanceEntry]);
+
+        await import('../../../src/content-script/main');
+        await flushRuntime();
+        expect(watchOutputDate()).toBeNull();
+
+        document.dispatchEvent(new Event('yt-navigate-finish'));
+        await flushRuntime();
+        expect(watchOutputDate()).toBe('2025-06-16');
+    });
 
     it.each(YOUTUBE_LIST_FIXTURES)(
         'keeps the $name fixture local-only through disable and re-enable',
