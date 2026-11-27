@@ -9,6 +9,7 @@ import {
     BROWSER,
     BUILD_EXIT_CODE,
     BUILD_MODE,
+    STORE_ARCHIVE_BROWSERS,
     isBrowser,
     type Browser,
     type BuildMode,
@@ -62,7 +63,7 @@ export function createBuildRequest(
     if (browser !== undefined && !isBrowser(browser)) {
         throw new Error(`Unknown browser: ${browser}`);
     }
-    const defaultBrowsers = mode === BUILD_MODE.DEV ? [BROWSER.CHROME] : [...BROWSERS];
+    const defaultBrowsers = mode === BUILD_MODE.DEV ? [BROWSER.CHROME] : [...STORE_ARCHIVE_BROWSERS];
     return {
         mode,
         browsers: browser === undefined ? defaultBrowsers : [browser],

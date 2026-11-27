@@ -1,0 +1,198 @@
+name: Deploy Apple App Store
+
+# Archives the source of a published GitHub Release as the macOS Safari app and
+# uploads it to App Store Connect for processing. Manual only. Selecting the
+# build for a version, completing the listing, and submitting it for App Review
+# stay manual steps in App Store Connect. Setup: docs/APP_STORE.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published release tag to upload (vX.Y.Z); blank = latest release'
+        required: false
+        type: string
+      mode:
+        description: 'submit: archive and upload; validate: only resolve the release and check the configuration'
+        required: false
+        type: choice
+        default: submit
+        options:
+          - submit
+          - validate
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Archive and upload for processing
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: apple-app-store
+    concurrency:
+      group: apple-app-store-deploy
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEPLOY_MODE: ${{ inputs.mode || 'submit' }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ vars.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_API_ISSUER_ID }}
+    steps:
+      - name: Check out the repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Resolve and validate release
+        id: release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [[ -n "$INPUT_TAG" ]]; then ARGS+=("$INPUT_TAG"); fi
+          RELEASE="$(gh release view "${ARGS[@]}" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,isPrerelease)"
+          TAG="$(jq -er .tagName <<< "$RELEASE")"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must match vX.Y.Z: $TAG" >&2
+            exit 1
+          fi
+          if ! jq -e '(.isDraft | not) and (.isPrerelease | not)' <<< "$RELEASE" >/dev/null; then
+            echo "Release $TAG is a draft or a pre-release" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          git merge-base --is-ancestor "refs/tags/$TAG" origin/master
+          if [[ "$(git show "refs/tags/$TAG:package.json" | jq -r .version)" != "$VERSION" ]]; then
+            echo "Tagged package.json version does not match $TAG" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Verified $TAG in $DEPLOY_MODE mode"
+
+      - name: Check App Store configuration
+        env:
+          APPLE_APP_STORE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_APP_STORE_CERTIFICATE_P12_BASE64 }}
+          APPLE_APP_STORE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}
+          APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64: >-
+            ${{ secrets.APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            APPLE_APP_STORE_CERTIFICATE_P12_BASE64 \
+            APPLE_APP_STORE_CERTIFICATE_PASSWORD \
+            APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64 \
+            APP_STORE_CONNECT_API_KEY_P8_BASE64 \
+            APP_STORE_CONNECT_API_KEY_ID \
+            APP_STORE_CONNECT_API_ISSUER_ID; do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            echo "Missing App Store configuration: ${missing[*]}" >&2
+            echo "Configure the apple-app-store environment as described in docs/APP_STORE.md." >&2
+            exit 1
+          fi
+
+      - name: Check out the released source
+        if: env.DEPLOY_MODE == 'submit'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up toolchain and dependencies
+        if: env.DEPLOY_MODE == 'submit'
+        uses: ./.github/actions/setup-toolchain
+
+      - name: Configure isolated Apple credentials
+        if: env.DEPLOY_MODE == 'submit'
+        env:
+          APPLE_APP_STORE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_APP_STORE_CERTIFICATE_P12_BASE64 }}
+          APPLE_APP_STORE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}
+          APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64: >-
+            ${{ secrets.APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/no-more-ago-app-store.keychain-db"
+          CERTIFICATE_PATH="$RUNNER_TEMP/no-more-ago-distribution.p12"
+          INSTALLER_CERTIFICATE_PATH="$RUNNER_TEMP/no-more-ago-installer.p12"
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+
+          printf '%s' "$APPLE_APP_STORE_CERTIFICATE_P12_BASE64" | base64 -D > "$CERTIFICATE_PATH"
+          printf '%s' "$APPLE_APP_STORE_INSTALLER_CERTIFICATE_P12_BASE64" \
+            | base64 -D > "$INSTALLER_CERTIFICATE_PATH"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_P8_BASE64" | base64 -D > "$API_KEY_PATH"
+          chmod 600 "$CERTIFICATE_PATH" "$INSTALLER_CERTIFICATE_PATH" "$API_KEY_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_APP_STORE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import "$INSTALLER_CERTIFICATE_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_APP_STORE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/productbuild -T /usr/bin/productsign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -F 'Apple Distribution:'
+          security find-identity -v "$KEYCHAIN_PATH" | grep -F '3rd Party Mac Developer Installer:'
+
+          echo "SIGNING_KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "APP_STORE_CONNECT_API_KEY_PATH=$API_KEY_PATH" >> "$GITHUB_ENV"
+          # A new number for every run and retry, within Apple's 4.2.2-digit limits.
+          BUILD_ORDINAL=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          BUILD_MAJOR=$((BUILD_ORDINAL / 10000 + 1))
+          BUILD_MINOR=$(((BUILD_ORDINAL / 100) % 100))
+          BUILD_PATCH=$((BUILD_ORDINAL % 100))
+          if [[ "$BUILD_MAJOR" -gt 9999 ]]; then
+            echo "GitHub run cannot be represented as an Apple build number" >&2
+            exit 1
+          fi
+          echo "SAFARI_BUILD_NUMBER=$BUILD_MAJOR.$BUILD_MINOR.$BUILD_PATCH" >> "$GITHUB_ENV"
+
+      - name: Install App Store provisioning profiles
+        if: env.DEPLOY_MODE == 'submit'
+        run: pnpm safari:profiles
+
+      - name: Build and validate the signed App Store archive
+        if: env.DEPLOY_MODE == 'submit'
+        run: pnpm safari:archive
+
+      - name: Upload the build to App Store Connect
+        if: env.DEPLOY_MODE == 'submit'
+        run: pnpm safari:upload
+
+      - name: Report upload
+        if: env.DEPLOY_MODE == 'submit'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          {
+            echo "## Apple App Store upload"
+            echo
+            echo "- Release: \`$RELEASE_TAG\`, build \`$SAFARI_BUILD_NUMBER\`"
+            echo "- Uploaded to App Store Connect for processing."
+            echo "- Select the build, finish the listing, and submit for App Review in App Store Connect."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove Apple credentials
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/no-more-ago-app-store.keychain-db" || true
+          rm -f "$RUNNER_TEMP"/no-more-ago-*.p12 "$RUNNER_TEMP"/AuthKey_*.p8

@@ -19,9 +19,11 @@ building. `lint`, `typecheck`, and `test` also have matching Make targets;
 Store upload/publish commands and CI deployment workflows are separate:
 `release` and `package` never submit to a store or create a GitHub release.
 
-Rspack supports Chrome, Edge, and Firefox and writes
+Rspack supports Chrome, Edge, Firefox, and Safari and writes
 `dist/dev/<browser>` or `dist/release/<browser>`, with matching ZIPs.
-Development includes source maps; release omits them. Safari is unsupported.
+Development includes source maps; release omits them. Safari runs only inside
+the macOS app built from `safari/macos`; see
+[Build the Safari App](#build-the-safari-app).
 
 
 ## Table of Contents
@@ -36,6 +38,7 @@ Development includes source maps; release omits them. Safari is unsupported.
   - [Development Workflow](#development-workflow)
     - [Branches and Pull Requests](#branches-and-pull-requests)
     - [Development Builds](#development-builds)
+    - [Build the Safari App](#build-the-safari-app)
     - [Regenerate the Icons](#regenerate-the-icons)
     - [Quality Checks](#quality-checks)
     - [Runtime Architecture](#runtime-architecture)
@@ -62,6 +65,7 @@ Install these tools before working on the project:
   `git@github.com:maximtop/no-more-ago.git` repository.
 - Chrome or Edge 111+, or Firefox 128+, for manual extension testing.
 - GNU Make only if you want to use the optional Makefile aliases.
+- macOS with Xcode 26 and Safari 16.4+ only for the Safari app.
 - Go 1.26+ with `go-webext` only for the optional
   [local store commands](#local-store-commands).
 
@@ -166,6 +170,7 @@ The development build includes source maps.
 | `pnpm dev chrome` | Build Chrome once. |
 | `pnpm dev firefox` | Build Firefox once. |
 | `pnpm dev edge` | Build Edge once. |
+| `pnpm dev safari` | Build the Safari WebExtension resources once. |
 | `pnpm dev chrome --watch` | Watch Chrome. |
 | `pnpm dev firefox --watch` | Watch Firefox. |
 | `pnpm dev edge --watch` | Watch Edge. |
@@ -173,6 +178,29 @@ The development build includes source maps.
 
 Unpacked builds are written to `dist/dev/<browser>`. Matching ZIP files are
 written to `dist/dev/<browser>.zip`.
+
+### Build the Safari App
+
+Safari loads the extension only from a macOS app. Build, ad-hoc sign, and
+validate the local app:
+
+~~~sh
+pnpm safari:build
+~~~
+
+The app is written to `dist/safari/dev/No More Ago.app`. To run it:
+
+1. In Safari, open **Settings → Advanced** and turn on **Show features for web
+   developers**. Then turn on **Allow unsigned extensions** in the
+   **Developer** tab. Safari turns it off again when it quits.
+2. Open `dist/safari/dev/No More Ago.app` and choose **Open Safari Extension
+   Settings**.
+3. Enable **No More Ago** and allow it on the site under test.
+
+Rebuild with `pnpm safari:build` after a change and reopen the app. The CI
+`Safari` job runs the same build and `pnpm safari:archive --unsigned`. Signed
+archives and App Store uploads are described in
+[Mac App Store](docs/APP_STORE.md).
 
 ### Regenerate the Icons
 
@@ -184,8 +212,9 @@ pnpm icons
 ~~~
 
 `scripts/icons.ts` renders `icon-16.png`, `icon-32.png`, `icon-48.png`, and
-`icon-128.png` beside the master with `@resvg/resvg-js`. Commit the PNGs
-together with the SVG; watch mode does not re-export them.
+`icon-128.png` beside the master with `@resvg/resvg-js`, and the macOS app
+icon set in `safari/macos/No More Ago/No More Ago/Assets.xcassets`. Commit the
+PNGs together with the SVG; watch mode does not re-export them.
 
 ### Quality Checks
 
@@ -384,10 +413,11 @@ archives.
 
 | Command | Result |
 | --- | --- |
-| `pnpm release` | Build Chrome, Firefox, and Edge release artifacts. |
+| `pnpm release` | Build Chrome, Firefox, and Edge release artifacts; Safari only on request. |
 | `pnpm release chrome` | Build the Chrome release artifact. |
 | `pnpm release firefox` | Build the Firefox release artifact. |
 | `pnpm release edge` | Build the Edge release artifact. |
+| `pnpm release safari` | Build the Safari WebExtension resources for the App Store archive. |
 | `pnpm release --help` | Show the supported browser choices. |
 
 Outputs are written to `dist/release/<browser>` and

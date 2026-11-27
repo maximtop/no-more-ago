@@ -46,7 +46,8 @@ The extension provides a global switch, a run mode (`All supported sites` or
 lists, date format and time-zone settings, an Appearance choice (`System`,
 `Light`, or `Dark`), and opt-in diagnostic logs. The UI ships 40 translated
 locale catalogs and uses the browser-selected catalog, falling back to English.
-Chrome, Firefox, and Edge are build targets; Safari is out of scope.
+Chrome, Firefox, and Edge are build targets with store ZIPs; Safari ships as
+a macOS app that embeds the Safari build.
 
 ## Technical Context
 
@@ -85,7 +86,9 @@ Chrome, Firefox, and Edge are build targets; Safari is out of scope.
   hostnames, numbers, format patterns — never another translated string.
 - **Testing:** Vitest with JSDOM and offline HTML fixtures.
 - **Static checks:** ESLint with type-aware TypeScript and JSDoc rules.
-- **Browser targets:** Chrome, Firefox, and Edge.
+- **Browser targets:** Chrome, Firefox, Edge, and Safari 16.4+ on macOS. The
+  Safari WebExtension is wrapped by the Xcode project in `safari/macos` and
+  shipped through the Mac App Store.
 - **Permissions:** `<all_urls>` is intentional so the universal HTTP(S)
   runtime can process standard timestamps and future specialized sources;
   `webNavigation` enumerates HTTP(S) frames for verified settings refreshes.
@@ -112,11 +115,12 @@ has an obvious, simpler standard-library replacement.
 .
 ├── .github/
 │   ├── actions/                # Shared toolchain setup and release archive verification
-│   └── workflows/              # CI, release, and Chrome, Edge, and Firefox deployment
+│   └── workflows/              # CI, release, and Chrome, Edge, Firefox, and App Store deployment
 ├── assets/
 │   ├── store-listings/         # 40 ready-to-paste localized descriptions
 │   └── store/                  # Finished Chrome listing images
-├── docs/                      # Privacy, support, and Chrome materials handoff
+├── docs/                      # Privacy, support, store materials, and deployment guides
+├── safari/macos/              # Xcode project of the macOS app that embeds the Safari extension
 ├── src/
 │   ├── assets/                 # Icon SVG master and exported PNGs
 │   ├── background/             # Service-worker composition root
@@ -143,7 +147,8 @@ has an obvious, simpler standard-library replacement.
 │   ├── validate-locales.ts     # Catalog integrity check run by pnpm check
 │   ├── audit-locales.ts        # Release-time hardcoded-copy and orphan-key audit
 │   ├── build/                  # Build pipeline and artifacts
-│   └── icons.ts                # Icon PNG export from the SVG master
+│   ├── safari/                 # Xcode build, archive, validation, and App Store upload
+│   └── icons.ts                # Toolbar and macOS app icon export from the SVG master
 ├── tests/
 │   ├── src/                    # Tests mirroring src/
 │   └── scripts/                # Tests mirroring scripts/
@@ -174,6 +179,9 @@ Run commands from the repository root.
 | `pnpm release chrome` | Build the Chrome release artifact. |
 | `pnpm release firefox` | Build the Firefox release artifact. |
 | `pnpm release edge` | Build the Edge release artifact. |
+| `pnpm dev safari` | Build the Safari WebExtension resources only. |
+| `pnpm safari:build` | Build and validate the local macOS app; needs Xcode. |
+| `pnpm safari:archive --unsigned` | Build and validate the unsigned App Store archive. |
 | `pnpm lint` | Run ESLint, formatting rules, and JSDoc checks. |
 | `pnpm typecheck` | Run TypeScript without emitting files. |
 | `pnpm test` | Run the Vitest suite once. |
@@ -570,8 +578,12 @@ Known architectural exclusions to improve when their area changes:
 
 - Keep source copy and translator notes in the English catalog; translate
   user-facing copy through the shipped UI catalogs.
-- Build for Chrome, Firefox, and Edge. Do not add Safari support without an
-  explicit requirement.
+- Build for Chrome, Firefox, Edge, and Safari. Keep Safari differences in
+  `src/manifest/safari.json` and the Xcode wrapper; the WebExtension code is
+  shared. Safari is not part of `pnpm release` without a browser or of the
+  GitHub Release assets, because its artifact is the macOS app archive.
+- Keep the Xcode project free of native code beyond the template handler and
+  onboarding window. The extension sends no native messages.
 - Keep GitHub-, Hacker News-, Stack Exchange-, Instagram-, Telegram Web K-, and
   TikTok-, LinkedIn-, Bluesky-, and YouTube-specific selectors, timestamp sources,
   presentation rules, and trusted evidence logic inside their respective

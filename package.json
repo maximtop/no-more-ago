@@ -11,6 +11,10 @@
   "scripts": {
     "dev": "node --experimental-strip-types scripts/build.ts dev",
     "release": "node --experimental-strip-types scripts/build.ts release",
+    "safari:build": "node --experimental-strip-types scripts/safari/build.ts",
+    "safari:archive": "node --experimental-strip-types scripts/safari/archive.ts",
+    "safari:profiles": "node --experimental-strip-types scripts/safari/profiles.ts",
+    "safari:upload": "node --experimental-strip-types scripts/safari/upload.ts",
     "icons": "node --experimental-strip-types scripts/icons.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
