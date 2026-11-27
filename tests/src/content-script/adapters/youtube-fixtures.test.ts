@@ -131,6 +131,21 @@ describe('offline YouTube watch fixture', () => {
         );
     }
 
+    it('renders the compact watch date beside the view count', () => {
+        loadFixture();
+        document.body.innerHTML = '<ytd-watch-metadata><yt-formatted-string id="info">'
+            + '<span>376K views</span> <span id="watch-publication">1y ago</span>'
+            + '</yt-formatted-string></ytd-watch-metadata>'
+            + '<aside><yt-formatted-string id="info"><span>2y ago</span></yt-formatted-string></aside>';
+
+        const outputs = processDocument({ url: WATCH_URL, root: document, locales: ['en-US'] });
+
+        expect(outputs).toHaveLength(1);
+        expect(outputs[0]?.dateTime).toBe('2024-02-29');
+        expect(requireWatchSource().nextElementSibling).toBe(outputs[0]);
+        expect(document.querySelector('#info > span')?.textContent).toBe('376K views');
+    });
+
     it('uses valid loaded data without invoking metadata extraction', () => {
         loadLocalSourcesFixture();
         const metadataExtract = vi.spyOn(youtubeAdapter, 'extract');

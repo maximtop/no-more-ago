@@ -3,7 +3,11 @@
  */
 
 import { GET_DOCUMENT_STATE_MESSAGE } from '../shared/messaging/contracts';
-import { DIAGNOSTIC_EVENT_MESSAGE } from '../shared/messaging/document-messages';
+import {
+    DIAGNOSTIC_EVENT_MESSAGE,
+    READ_YOUTUBE_PUBLICATION_MESSAGE,
+    type ReadYouTubePublicationMessage,
+} from '../shared/messaging/document-messages';
 import { isFacebookUrl } from '../shared/url/facebook';
 
 import { classifyYouTubeWatchRouteHandoff } from
@@ -12,6 +16,8 @@ import { installFacebookPayloadRuntime } from './facebook/payload-runtime';
 import { installContentRuntime } from './runtime';
 
 const documentUrl = new URL(window.location.href);
+// Same-document navigation keeps the navigation entry of the original load.
+const [documentLoad] = performance.getEntriesByType('navigation');
 const runtimeComposition: {
     content?: ReturnType<typeof installContentRuntime>;
 } = {};
@@ -34,7 +40,18 @@ runtimeComposition.content = installContentRuntime({
             window.addEventListener('popstate', listener);
         },
     },
-    routeHandoffClassifier: classifyYouTubeWatchRouteHandoff,
+    ...(documentLoad === undefined ? {} : { documentLoadUrl: new URL(documentLoad.name) }),
+    routeHandoffClassifier: (route) => classifyYouTubeWatchRouteHandoff(
+        route,
+        async (href) => {
+            const message: ReadYouTubePublicationMessage = { type: READ_YOUTUBE_PUBLICATION_MESSAGE, href };
+            // A worker that stopped before answering leaves the reply undefined.
+            const reply = await chrome.runtime.sendMessage<ReadYouTubePublicationMessage, string | null | undefined>(
+                message,
+            );
+            return reply ?? null;
+        },
+    ),
     locales: navigator.languages,
     localesProvider: () => navigator.languages,
     ...(typeof chrome.runtime.sendMessage === 'function'

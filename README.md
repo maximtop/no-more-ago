@@ -36,7 +36,7 @@ extension.
 - **Specialized source:** a site-specific rule for richer markup, such as
   Facebook Story payloads, GitHub's relative-time widgets, Hacker News age
   widgets, approved Stack Exchange, Telegram Web K, and TikTok timestamps; the
-  approved YouTube watch label and identity-matched loaded data or
+  approved YouTube watch label and identity-matched player data or
   initial-document metadata; best-effort LinkedIn ID timestamps; or confirmed
   Bluesky post labels backed by public AppView `indexedAt`. Specialized
   rules take precedence over the generic rule when both accept the same source.
@@ -268,6 +268,12 @@ such as `3 months ago`; an absolute label such as `Aug 29, 2026` remains
 unchanged even when valid local publication data exists. Visible text and
 arbitrary attributes are never inferred as dates.
 
+When the extension starts on a page that already navigated in place, for
+example after it is installed or turned on, the browser still reports the URL
+the page was loaded for. The start is then treated as the same-document
+handoff described below, so the first video's metadata is never shown under
+another video.
+
 The generic runtime watches relevant dynamic content in each reachable
 HTTP(S) document. Newly added or changed timestamps are processed without a
 full page reload. Before processing dynamic YouTube content, the runtime
@@ -275,15 +281,19 @@ samples the current URL. On a provenance-changing transition, such as changing
 the Watch video or leaving Watch, it restores obsolete extension-owned output
 and processes the new route generation. Same-video query changes and
 non-Watch-to-non-Watch changes leave the current processing generation intact.
-A changed-video Watch handoff accepts only loaded player data whose two video
-identities match the current URL. It watches only the exact recognized
-player-assignment scripts, so either signal-first or data-first navigation can
-become live without polling.
+A changed-video Watch handoff accepts only player data whose two video
+identities match the current URL. YouTube keeps the loaded assignment of the
+first video, so after each navigation or player-readiness event the extension
+also reads the publication value of the page's own video player, which carries
+the same two identities. It watches only the exact recognized
+player-assignment scripts and these events, so either signal-first or
+data-first navigation can become live without polling.
 
 YouTube publication metadata has no video identity. It therefore remains
 quarantined for the entire same-document changed-video handoff, even after
-metadata or label mutations. If valid identity-matched loaded publication data
-never appears, that Watch label remains page-owned until a full document load.
+metadata or label mutations. If neither the loaded assignment nor the player
+provides identity-matched publication data, that Watch label remains
+page-owned until a full document load.
 Navigating to the captured Home, Search, Channel, or another unsupported route
 restores obsolete Watch output but does not add list-surface or fallback
 support.
@@ -468,7 +478,7 @@ everything**. It restores:
 | TikTok profile card without an existing timestamp label | No date is appended. |
 | Relative canonical YouTube watch label backed by a calendar date | The label is replaced with the same localized calendar day and no time; time-zone selection is ignored. |
 | Relative canonical YouTube watch label backed by a zoned instant | The label is replaced with a localized date and time using the selected instant presentation. |
-| Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID loaded publication data may produce new output. |
+| Same-document navigation to another eligible Watch video | Obsolete output is restored; only current dual-ID player publication data, loaded or read from the page's player, may produce new output. |
 | Same-document navigation to a list or unsupported route | Obsolete Watch output is restored and the unsupported route remains unchanged. |
 | YouTube Home, Search, or Channel list page | Publication labels remain unchanged. |
 | Generic date-only `time[datetime]` | Page content remains unchanged because generic processing is instant-only. |
@@ -550,7 +560,9 @@ external service. Successful processing does not retain post IDs, raw source
 timestamps, URL paths, authors, titles, or page content in diagnostics.
 
 YouTube publication processing reads only recognized values already present
-in the document. It does not make a network request or perform a player lookup.
+in the page: the loaded assignment, the head metadata, and, after in-page
+navigation, the video ID and publication date of the page's own player. It
+does not make a network request.
 
 It does not derive YouTube dates from visible relative text, page titles, ARIA
 labels, arbitrary `data-*` attributes, nearby text, or elapsed time, and does
@@ -588,10 +600,11 @@ source types are deferred.
   visible relative label and recognized loaded publication data, or one
   `datePublished` metadata value at the initial full-document boundary. Values
   must be a strict calendar date or a complete explicitly zoned instant.
-  Same-document changed-video handoffs require current dual-ID loaded data;
-  unbound metadata stays quarantined until a full document load. Mobile,
-  Music, embed, Shorts, list surfaces, general YouTube SPA support, fallback,
-  and player/API lookup are not supported by this path.
+  Same-document changed-video handoffs require current dual-ID player data
+  from the loaded assignment or the page's own player; unbound metadata stays
+  quarantined until a full document load. Mobile, Music, embed, Shorts, list
+  surfaces, general YouTube SPA support, fallback, and network or API lookup
+  are not supported by this path.
 - YouTube calendar dates use the localized medium date style in System mode.
   Custom mode projects only the configured calendar fields and falls back to
   that localized date-only style when the projection is unusable. It never

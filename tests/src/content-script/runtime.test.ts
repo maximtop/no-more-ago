@@ -1193,6 +1193,42 @@ describe('installContentRuntime', () => {
         },
     );
 
+    it('uses the active player after navigation and ignores a late reply from a departed video', async () => {
+        setWatchMarkup('testVID0001', '2024-11-12');
+        let currentHref = WATCH_A;
+        let finishB: ((date: string) => void) | undefined;
+        const readPublication = vi.fn()
+            .mockImplementationOnce(() => new Promise<string>((resolve) => {
+                finishB = resolve;
+            }))
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce('2025-06-16T08:00:08-07:00');
+        const events = routeEvents();
+        installContentRuntime({
+            document,
+            url: new URL(currentHref),
+            urlProvider: () => new URL(currentHref),
+            routeEvents: events,
+            routeHandoffClassifier: (route) => classifyYouTubeWatchRouteHandoff(route, readPublication),
+            locales: ['en-US'],
+            loadDocumentState: async () => state(),
+            messages: messages(),
+        });
+        await flushMutations();
+        expect(watchOutput()?.dateTime).toBe('2024-11-12');
+        currentHref = WATCH_B;
+        events.dispatch();
+        currentHref = WATCH_C;
+        events.dispatch();
+        finishB?.('2015-11-30');
+        await flushMutations();
+        expect(watchOutput()).toBeNull();
+
+        document.dispatchEvent(new Event('yt-navigate-finish'));
+        await flushMutations();
+        expect(watchOutput()?.dateTime).toBe('2025-06-16T08:00:08-07:00');
+    });
+
     it('samples the live Watch route before both DOM-driven processing paths', async () => {
         setWatchMarkup('testVID0001', '2026-08-01');
         let currentHref = WATCH_A;

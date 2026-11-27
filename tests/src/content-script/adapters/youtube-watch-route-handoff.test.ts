@@ -10,10 +10,16 @@ import {
 } from 'vitest';
 
 import {
+    readYouTubePlayerResponsePublication,
+} from '../../../../src/content-script/adapters/youtube-player-response';
+import {
+    YOUTUBE_LIVE_PLAYER_READ_LIMIT,
     classifyYouTubeWatchRouteHandoff,
+    type ReadLivePlayerPublication,
 } from '../../../../src/content-script/adapters/youtube-watch-route-handoff';
 import {
     DOCUMENT_ROUTE_HANDOFF_TRANSITION,
+    type DocumentRouteHandoffSession,
 } from '../../../../src/content-script/transformation/route-handoff';
 import {
     YOUTUBE_ADAPTER_ID,
@@ -22,6 +28,15 @@ import {
 
 const WATCH_A = 'https://www.youtube.com/watch?v=testVID0001';
 const WATCH_B = 'https://www.youtube.com/watch?v=testVID0002';
+const VIDEO_B = 'testVID0002';
+
+/**
+ * Fires media readiness the way the browser does: on a connected video, without bubbling.
+ */
+function dispatchVideoMetadataLoaded(): void {
+    const video = document.querySelector('video') ?? document.body.appendChild(document.createElement('video'));
+    video.dispatchEvent(new Event('loadedmetadata', { bubbles: false }));
+}
 
 /**
  * Flushes observer delivery and the session's coalescing microtask.
@@ -167,5 +182,115 @@ describe('YouTube Watch handoff session', () => {
         await flushMutations();
 
         expect(requestReconciliation).not.toHaveBeenCalled();
+    });
+});
+
+describe('YouTube Watch live player reads', () => {
+    /**
+     * Activates the session of a changed-video handoff to Watch B with a live player transport.
+     *
+     * @param readLivePublication - Live player transport under test.
+     *
+     * @returns - Active session and its reconciliation spy.
+     *
+     * @throws If the handoff is not classified as a replacement.
+     */
+    function activateWithLivePlayer(readLivePublication: ReadLivePlayerPublication): {
+        readonly session: DocumentRouteHandoffSession;
+        readonly requestReconciliation: ReturnType<typeof vi.fn>;
+    } {
+        document.head.replaceChildren();
+        const transition = classifyYouTubeWatchRouteHandoff({
+            previousUrl: new URL(WATCH_A),
+            currentUrl: new URL(WATCH_B),
+        }, readLivePublication);
+        if (transition.kind !== DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE) {
+            throw new Error('Expected replacement policy');
+        }
+        const requestReconciliation = vi.fn();
+        const session = transition.policy.activate({
+            document,
+            currentUrl: new URL(WATCH_B),
+            generation: 5,
+            requestReconciliation,
+        });
+        return { session, requestReconciliation };
+    }
+
+    it('retains the value only for its own video and releases it with the route', async () => {
+        const read = vi.fn<ReadLivePlayerPublication>(async () => '2025-06-16');
+        const { session, requestReconciliation } = activateWithLivePlayer(read);
+        await flushMutations();
+
+        expect(read).toHaveBeenCalledWith(WATCH_B);
+        expect(requestReconciliation).toHaveBeenCalledOnce();
+        expect(readYouTubePlayerResponsePublication(document, VIDEO_B)).toBe('2025-06-16');
+        expect(readYouTubePlayerResponsePublication(document, 'testVID0001')).toBeNull();
+
+        session.dispose();
+        expect(readYouTubePlayerResponsePublication(document, VIDEO_B)).toBeNull();
+    });
+
+    it('asks again on the next readiness event after a lost reply', async () => {
+        const read = vi.fn<ReadLivePlayerPublication>()
+            .mockRejectedValueOnce(new Error('Could not establish connection'))
+            .mockResolvedValueOnce('2025-06-16');
+        const { session, requestReconciliation } = activateWithLivePlayer(read);
+        await flushMutations();
+        expect(requestReconciliation).not.toHaveBeenCalled();
+
+        document.dispatchEvent(new Event('yt-navigate-finish'));
+        await flushMutations();
+
+        expect(read).toHaveBeenCalledTimes(2);
+        expect(requestReconciliation).toHaveBeenCalledOnce();
+        expect(readYouTubePlayerResponsePublication(document, VIDEO_B)).toBe('2025-06-16');
+        session.dispose();
+    });
+
+    it('reads once more after a readiness event that arrived during a read', async () => {
+        let answerFirst: ((value: string | null) => void) | undefined;
+        const read = vi.fn<ReadLivePlayerPublication>()
+            .mockImplementationOnce(() => new Promise<string | null>((resolve) => {
+                answerFirst = resolve;
+            }))
+            .mockResolvedValueOnce('2025-06-16');
+        const { session } = activateWithLivePlayer(read);
+        dispatchVideoMetadataLoaded();
+        answerFirst?.(null);
+        await flushMutations();
+
+        expect(read).toHaveBeenCalledTimes(2);
+        expect(readYouTubePlayerResponsePublication(document, VIDEO_B)).toBe('2025-06-16');
+        session.dispose();
+    });
+
+    it('stops asking a player that never matches after the read limit', async () => {
+        const read = vi.fn<ReadLivePlayerPublication>(async () => null);
+        const { session } = activateWithLivePlayer(read);
+        for (let event = 0; event < YOUTUBE_LIVE_PLAYER_READ_LIMIT * 2; event += 1) {
+            dispatchVideoMetadataLoaded();
+
+            await flushMutations();
+        }
+
+        expect(read).toHaveBeenCalledTimes(YOUTUBE_LIVE_PLAYER_READ_LIMIT);
+        session.dispose();
+    });
+
+    it('ignores readiness events and late replies after disposal', async () => {
+        let answer: ((value: string) => void) | undefined;
+        const read = vi.fn<ReadLivePlayerPublication>(() => new Promise<string>((resolve) => {
+            answer = resolve;
+        }));
+        const { session, requestReconciliation } = activateWithLivePlayer(read);
+        session.dispose();
+        answer?.('2025-06-16');
+        document.dispatchEvent(new Event('yt-page-data-updated'));
+        await flushMutations();
+
+        expect(read).toHaveBeenCalledOnce();
+        expect(requestReconciliation).not.toHaveBeenCalled();
+        expect(readYouTubePlayerResponsePublication(document, VIDEO_B)).toBeNull();
     });
 });

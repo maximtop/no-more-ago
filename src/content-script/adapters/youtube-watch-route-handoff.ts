@@ -14,7 +14,28 @@ import {
 } from '../transformation/route-handoff';
 
 import { isYouTubeWatchPublicationSource } from './youtube';
-import { findYouTubePlayerResponseScripts } from './youtube-player-response';
+import {
+    findYouTubePlayerResponseScripts,
+    releaseLivePlayerPublication,
+    retainLivePlayerPublication,
+} from './youtube-player-response';
+
+/**
+ * Asks the background to read the live player for a Watch URL. Resolves to null, or rejects,
+ * when no answer arrives: the worker restarted or the extension was reloaded.
+ */
+export type ReadLivePlayerPublication = (href: string) => Promise<string | null>;
+
+/**
+ * Live player reads one Watch route may start. The player becomes ready after an unknown number
+ * of navigation and media events; a video whose player never matches stops asking here.
+ */
+export const YOUTUBE_LIVE_PLAYER_READ_LIMIT = 6;
+
+/**
+ * Page events after which the live player may hold the new video.
+ */
+const LIVE_PLAYER_READY_EVENTS = ['yt-navigate-finish', 'yt-page-data-updated', 'loadedmetadata'] as const;
 
 /**
  * Creates an inert handoff session for invalid activation input.
@@ -32,14 +53,17 @@ function inertSession(): DocumentRouteHandoffSession {
  * Activates exact recognized player-assignment monitoring for one route generation.
  *
  * @param input - Current route generation and reconciliation capability.
+ * @param readLivePublication - Live player transport; without it only loaded data qualifies.
  *
  * @returns - Disposable route handoff session.
  */
 function activateWatchHandoff(
     input: Parameters<DocumentRouteHandoffPolicy['activate']>[0],
+    readLivePublication?: ReadLivePlayerPublication,
 ): DocumentRouteHandoffSession {
+    const videoId = getYouTubeWatchVideoId(input.currentUrl);
     if (
-        getYouTubeWatchVideoId(input.currentUrl) === null
+        videoId === null
         || !Number.isSafeInteger(input.generation)
         || input.generation < 0
     ) {
@@ -95,6 +119,54 @@ function activateWatchHandoff(
         return added;
     };
 
+    let liveReads = 0;
+    let reading = false;
+    let readAgain = false;
+    let retained = false;
+
+    /**
+     * Reads the live player once per readiness signal. Navigation and media readiness arrive in
+     * either order, so a signal during a read starts one more read after it.
+     */
+    const readLivePlayer = async (): Promise<void> => {
+        if (!readLivePublication) {
+            return;
+        }
+        if (reading) {
+            readAgain = true;
+            return;
+        }
+        reading = true;
+        while (!disposed && !retained && liveReads < YOUTUBE_LIVE_PLAYER_READ_LIMIT) {
+            readAgain = false;
+            liveReads += 1;
+            let rawDatetime: string | null = null;
+            try {
+                rawDatetime = await readLivePublication(input.currentUrl.href);
+            } catch {
+                // No answer: the worker restarted or the extension was reloaded.
+            }
+            if (!disposed && rawDatetime) {
+                retained = true;
+                retainLivePlayerPublication(input.document, { videoId, rawDatetime });
+                queueReconciliation();
+            }
+            if (!readAgain) {
+                break;
+            }
+        }
+        reading = false;
+    };
+
+    const liveReadyListener = (): void => {
+        void readLivePlayer();
+    };
+    if (readLivePublication) {
+        for (const event of LIVE_PLAYER_READY_EVENTS) {
+            input.document.addEventListener(event, liveReadyListener, true);
+        }
+    }
+    void readLivePlayer();
     bind(input.document);
     return {
         noteStructure: ({ addedRoots, removedRoots }) => {
@@ -123,6 +195,12 @@ function activateWatchHandoff(
                 return;
             }
             disposed = true;
+            for (const event of LIVE_PLAYER_READY_EVENTS) {
+                input.document.removeEventListener(event, liveReadyListener, true);
+            }
+            if (retained) {
+                releaseLivePlayerPublication(input.document);
+            }
             reconciliationQueued = false;
             for (const observer of observers.values()) {
                 observer.disconnect();
@@ -133,23 +211,17 @@ function activateWatchHandoff(
 }
 
 /**
- * Immutable loaded-only policy for a same-document Watch video handoff.
- */
-const YOUTUBE_WATCH_HANDOFF_POLICY: DocumentRouteHandoffPolicy = Object.freeze({
-    allowsRule: (ruleId: string, source: Element) => (
-        ruleId !== YOUTUBE_ADAPTER_ID || !isYouTubeWatchPublicationSource(source)
-    ),
-    activate: activateWatchHandoff,
-});
-
-/**
  * Classifies every changed route into one total retained-policy transition.
  *
  * @param input - Cloned previous and current route URLs.
+ * @param readLivePublication - Live player transport; without it only loaded data qualifies.
  *
  * @returns - Total retained-policy transition for the changed route.
  */
-export const classifyYouTubeWatchRouteHandoff: DocumentRouteHandoffClassifier = (input) => {
+export function classifyYouTubeWatchRouteHandoff(
+    input: Parameters<DocumentRouteHandoffClassifier>[0],
+    readLivePublication?: ReadLivePlayerPublication,
+): ReturnType<DocumentRouteHandoffClassifier> {
     const { previousUrl, currentUrl } = input;
     const previousVideoId = getYouTubeWatchVideoId(previousUrl);
     const currentVideoId = getYouTubeWatchVideoId(currentUrl);
@@ -165,6 +237,9 @@ export const classifyYouTubeWatchRouteHandoff: DocumentRouteHandoffClassifier = 
     }
     return {
         kind: DOCUMENT_ROUTE_HANDOFF_TRANSITION.REPLACE,
-        policy: YOUTUBE_WATCH_HANDOFF_POLICY,
+        policy: {
+            allowsRule: (ruleId, source) => ruleId !== YOUTUBE_ADAPTER_ID || !isYouTubeWatchPublicationSource(source),
+            activate: (session) => activateWatchHandoff(session, readLivePublication),
+        },
     };
-};
+}

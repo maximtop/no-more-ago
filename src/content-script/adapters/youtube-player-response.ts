@@ -1,5 +1,5 @@
 /**
- * @file Bounded document-local reader for loaded YouTube player publication data.
+ * @file Bounded document-local reader for loaded and live YouTube player publication data.
  */
 
 import * as v from 'valibot';
@@ -192,10 +192,47 @@ export function createYouTubePlayerResponseReader(
     };
 }
 
+/**
+ * Publication value read from the live player for one video after a same-document navigation.
+ */
+interface LivePlayerPublication {
+    /**
+     * Video whose player supplied the value.
+     */
+    readonly videoId: string;
+
+    /**
+     * Exact unvalidated publication value.
+     */
+    readonly rawDatetime: string;
+}
+
 const defaultPlayerResponseReader = createYouTubePlayerResponseReader();
+const livePlayerPublications = new WeakMap<Document, LivePlayerPublication>();
 
 /**
- * Reads one approved loaded publication value through the production cache.
+ * Retains the live player's publication value for the current Watch route of a document. The
+ * Watch handoff session owns the record and releases it when its route ends.
+ *
+ * @param document - Document whose route the value belongs to.
+ * @param publication - Video identity and publication value.
+ */
+export function retainLivePlayerPublication(document: Document, publication: LivePlayerPublication): void {
+    livePlayerPublications.set(document, publication);
+}
+
+/**
+ * Releases the live player's publication value of a document.
+ *
+ * @param document - Document whose Watch route ended.
+ */
+export function releaseLivePlayerPublication(document: Document): void {
+    livePlayerPublications.delete(document);
+}
+
+/**
+ * Reads one approved publication value: the live player's value retained for this video, else
+ * the loaded assignment through the production cache.
  *
  * @param document - Current loaded page document.
  * @param expectedVideoId - Canonical ID from the current processing URL.
@@ -206,5 +243,8 @@ export function readYouTubePlayerResponsePublication(
     document: Document,
     expectedVideoId: string,
 ): string | null {
-    return defaultPlayerResponseReader.read(document, expectedVideoId);
+    const live = livePlayerPublications.get(document);
+    return live?.videoId === expectedVideoId
+        ? live.rawDatetime
+        : defaultPlayerResponseReader.read(document, expectedVideoId);
 }

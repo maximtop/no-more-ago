@@ -50,6 +50,11 @@ export const DEBUG_POLICY_UPDATED_MESSAGE = 'no-more-ago:debug-policy-updated';
 export const DIAGNOSTIC_EVENT_MESSAGE = 'no-more-ago:diagnostic-event';
 
 /**
+ * Asks the background to read the live YouTube Watch player of the sending frame.
+ */
+export const READ_YOUTUBE_PUBLICATION_MESSAGE = 'no-more-ago:read-youtube-publication';
+
+/**
  * Lifecycle phases returned by a content document runtime.
  */
 export const DOCUMENT_PHASE = {
@@ -236,6 +241,22 @@ export interface DiagnosticEventMessage {
      * Page-derived diagnostic fields, sanitized by the background boundary.
      */
     readonly event: unknown;
+}
+
+/**
+ * Request from a document runtime for the live YouTube player's publication value of one Watch
+ * route. The background answers with a validated value or null.
+ */
+export interface ReadYouTubePublicationMessage {
+    /**
+     * Live-player request discriminant.
+     */
+    readonly type: typeof READ_YOUTUBE_PUBLICATION_MESSAGE;
+
+    /**
+     * Watch URL the sending runtime currently processes.
+     */
+    readonly href: string;
 }
 
 /**

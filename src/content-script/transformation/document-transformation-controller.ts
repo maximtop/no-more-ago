@@ -82,6 +82,13 @@ export interface DocumentTransformationControllerInput
     readonly routeHandoffClassifier?: DocumentRouteHandoffClassifier;
 
     /**
+     * URL the document was loaded for, when the browser reports one. A different starting URL
+     * means the page navigated in place before the controller existed, so the start is classified
+     * as a route change from this URL.
+     */
+    readonly documentLoadUrl?: URL;
+
+    /**
      * Optional live URL sampler used to close DOM-before-route-signal races.
      */
     readonly urlProvider?: () => URL;
@@ -190,6 +197,7 @@ export class DocumentTransformationController {
             participantFactory,
             routeHandoffClassifier,
             urlProvider,
+            documentLoadUrl,
             ...processInput
         } = input;
         this.participant = participantFactory?.({
@@ -209,6 +217,12 @@ export class DocumentTransformationController {
         this.routeHandoffClassifier = routeHandoffClassifier ?? clearDocumentRouteHandoff;
         this.urlProvider = urlProvider;
         this.diagnosticSink = input.diagnosticSink;
+        if (documentLoadUrl && documentLoadUrl.href !== this.currentUrl.href) {
+            this.applyRouteTransition(this.routeHandoffClassifier({
+                previousUrl: new URL(documentLoadUrl.href),
+                currentUrl: new URL(this.currentUrl.href),
+            }));
+        }
     }
 
     /**
